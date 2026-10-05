@@ -1,0 +1,14 @@
+{
+  "extends": "@nothingleft/config/tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@config/*": ["./src/config/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@plugins/*": ["./src/plugins/*"],
+      "@middleware/*": ["./src/middleware/*"],
+      "@routes/*": ["./src/routes/*"],
+      "@services/*": ["./src/services/*"]
+    }
+  },
+  "include": ["src", "test"]
+}

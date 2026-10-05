@@ -1,0 +1,125 @@
+name: Deploy OCI API
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Deploy current main or roll back an installed release
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      migration_mode:
+        description: Expand acknowledges schema/job compatibility with the previous release
+        type: choice
+        options: [none, expand]
+        default: none
+      rollback_release:
+        description: Installed 40-character release SHA (rollback only)
+        type: string
+        required: false
+
+concurrency:
+  group: oci-production-api
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.id == github.repository_id)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 55
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      DEPLOY_ACTION: ${{ inputs.action || 'deploy' }}
+      MIGRATION_MODE: ${{ inputs.migration_mode || 'none' }}
+      ROLLBACK_RELEASE: ${{ inputs.rollback_release }}
+      TURBO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - name: Check required production configuration
+        env:
+          OCI_CONFIG: ${{ secrets.API_OCI_CONFIG }}
+          OCI_API_PRIVATE_KEY: ${{ secrets.API_OCI_API_PRIVATE_KEY }}
+          OCI_DEPLOY_SSH_KEY: ${{ secrets.API_OCI_DEPLOY_SSH_KEY }}
+          OCI_DEPLOY_HOST: ${{ vars.API_OCI_DEPLOY_HOST }}
+          OCI_DEPLOY_KNOWN_HOSTS: ${{ vars.API_OCI_DEPLOY_KNOWN_HOSTS }}
+          OCI_DEPLOY_NSG: ${{ vars.API_OCI_DEPLOY_NSG }}
+        run: |
+          python3 - <<'PY'
+          import os
+          for name in ('OCI_CONFIG', 'OCI_API_PRIVATE_KEY', 'OCI_DEPLOY_SSH_KEY',
+                       'OCI_DEPLOY_HOST', 'OCI_DEPLOY_KNOWN_HOSTS', 'OCI_DEPLOY_NSG'):
+              if not os.environ.get(name):
+                  raise SystemExit(f'Missing production configuration: {name}')
+          PY
+      - name: Require successful CI for current main
+        if: env.DEPLOY_ACTION == 'deploy'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 infra/oci/check-deploy-ci.py
+      - uses: oven-sh/setup-bun@v2
+        if: env.DEPLOY_ACTION == 'deploy'
+        with:
+          bun-version-file: package.json
+      - name: Build Linux ARM64 release
+        if: env.DEPLOY_ACTION == 'deploy'
+        run: |
+          bun install --frozen-lockfile
+          python3 infra/oci/build-release.py "$DEPLOY_SHA" "$RUNNER_TEMP/release.tar.gz"
+      - name: Prepare API configuration from GitHub
+        if: env.DEPLOY_ACTION == 'deploy'
+        env:
+          DEPLOY_VARS_JSON: ${{ toJson(vars) }}
+          DEPLOY_SECRETS_JSON: ${{ toJson(secrets) }}
+        run: python3 infra/oci/render-deploy-env.py API "$RUNNER_TEMP/api-env.json"
+      - name: Install OCI transport dependency
+        run: |
+          python3 -m venv "$RUNNER_TEMP/oci-tools"
+          "$RUNNER_TEMP/oci-tools/bin/pip" install --disable-pip-version-check oci
+      - name: Allow this runner's SSH source
+        id: ingress
+        env:
+          OCI_CONFIG: ${{ secrets.API_OCI_CONFIG }}
+          OCI_API_PRIVATE_KEY: ${{ secrets.API_OCI_API_PRIVATE_KEY }}
+          OCI_DEPLOY_NSG: ${{ vars.API_OCI_DEPLOY_NSG }}
+        run: '"$RUNNER_TEMP/oci-tools/bin/python" infra/oci/ci-connection.py open'
+      - name: Upload and roll out, or roll back
+        env:
+          OCI_DEPLOY_SSH_KEY: ${{ secrets.API_OCI_DEPLOY_SSH_KEY }}
+          OCI_DEPLOY_HOST: ${{ vars.API_OCI_DEPLOY_HOST }}
+          OCI_DEPLOY_KNOWN_HOSTS: ${{ vars.API_OCI_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ "$DEPLOY_ACTION" = rollback ]; then
+            python3 infra/oci/ci-connection.py rollback --release "$ROLLBACK_RELEASE" --migration-mode "$MIGRATION_MODE"
+          else
+            python3 infra/oci/ci-connection.py upload --release "$DEPLOY_SHA" --archive "$RUNNER_TEMP/release.tar.gz"
+            python3 infra/oci/ci-connection.py config --release "$DEPLOY_SHA" --archive "$RUNNER_TEMP/api-env.json"
+            python3 infra/oci/ci-connection.py deploy --release "$DEPLOY_SHA" --migration-mode "$MIGRATION_MODE"
+          fi
+      - name: Remove runner SSH ingress
+        if: always() && steps.ingress.outcome != 'skipped'
+        env:
+          OCI_CONFIG: ${{ secrets.API_OCI_CONFIG }}
+          OCI_API_PRIVATE_KEY: ${{ secrets.API_OCI_API_PRIVATE_KEY }}
+          OCI_DEPLOY_NSG: ${{ vars.API_OCI_DEPLOY_NSG }}
+        run: '"$RUNNER_TEMP/oci-tools/bin/python" infra/oci/ci-connection.py close'
+      - name: Remove temporary credentials
+        if: always()
+        run: |
+          rm -rf -- "$RUNNER_TEMP/oci-deploy"
+          rm -f -- "$RUNNER_TEMP/api-env.json" "$RUNNER_TEMP/release.tar.gz"

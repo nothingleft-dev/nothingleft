@@ -1,0 +1,62 @@
+name: Deploy Vercel UI
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-production-ui
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.id == github.repository_id)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      TURBO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - name: Require successful CI for current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 infra/oci/check-deploy-ci.py
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install Vercel CLI outside the deployment source
+        run: |
+          mkdir -p "$RUNNER_TEMP/vercel-cli"
+          cd "$RUNNER_TEMP/vercel-cli"
+          bun init -y > /dev/null
+          bun add vercel@latest
+      - name: Prepare UI configuration from GitHub
+        env:
+          DEPLOY_VARS_JSON: ${{ toJson(vars) }}
+          DEPLOY_SECRETS_JSON: ${{ toJson(secrets) }}
+        run: python3 infra/oci/render-deploy-env.py UI "$RUNNER_TEMP/ui-env.json"
+      - name: Synchronize configuration and deploy production
+        env:
+          VERCEL_TOKEN: ${{ secrets.UI_VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.UI_VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.UI_VERCEL_PROJECT_ID }}
+        run: python3 infra/oci/vercel-deploy.py "$RUNNER_TEMP/ui-env.json" --cli "$RUNNER_TEMP/vercel-cli/node_modules/.bin/vercel"
+      - name: Remove temporary configuration
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/ui-env.json" .vercel/project.json

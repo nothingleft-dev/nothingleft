@@ -1,0 +1,31 @@
+{
+  "name": "nothingleft",
+  "private": true,
+  "packageManager": "bun@1.4.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "scripts": {
+    "dev": "turbo run dev --ui=stream",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write . --ignore-path .gitignore --ignore-path .prettierignore --ignore-path .git/info/exclude",
+    "format:check": "prettier --check . --ignore-path .gitignore --ignore-path .prettierignore --ignore-path .git/info/exclude"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@nothingleft/config": "workspace:*",
+    "@types/bun": "^1.4.2",
+    "eslint": "^10.11.0",
+    "prettier": "^3.9.8",
+    "turbo": "^2.11.2",
+    "typescript": "~5",
+    "typescript-eslint": "^8.70.1"
+  }
+}

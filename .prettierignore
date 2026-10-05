@@ -1,0 +1,9 @@
+node_modules
+.vercel/
+dist
+.turbo
+bun.lock
+docs/
+design/
+*.md
+packages/db/migrations/

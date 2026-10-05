@@ -1,0 +1,47 @@
+# Offline / self-hosting stack — see docs/infrastructure.md#avoiding-vendor-lock-in.
+# Default local development uses Neon + Upstash via apps/api/.env and does not need this.
+# To run the API against it, `docker compose up -d postgres redis`, then in apps/api/.env:
+#
+#   DATABASE_URL=postgres://nothingleft:nothingleft@localhost:5432/nothingleft
+#   DATABASE_URL_POOLED=postgres://nothingleft:nothingleft@localhost:5432/nothingleft
+#   REDIS_URL=redis://localhost:6379
+#   POSTHOG_ANALYTICS_ENABLED=false
+#   POSTHOG_ERRORS_ENABLED=false
+#
+# and `cd packages/db && bun run db:migrate` once before `bun run dev`.
+#
+# To keep dev on Neon and run only the tests here, put those lines in apps/api/.env.test
+# instead (copy apps/api/.env.test.example) and migrate with `bun run db:migrate:test`.
+services:
+  postgres:
+    image: postgres:16
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - log_min_duration_statement=200
+    environment:
+      POSTGRES_USER: nothingleft
+      POSTGRES_PASSWORD: nothingleft
+      POSTGRES_DB: nothingleft
+    ports: ['5432:5432']
+    volumes: ['postgres-data:/var/lib/postgresql/data']
+
+  redis:
+    image: redis:7
+    ports: ['6379:6379']
+
+  # S3-compatible stand-in for R2 (MinIO no longer publishes images). Create the buckets once
+  # with `cd apps/api && bun run storage:init` after putting the S3_* lines in .env or .env.test.
+  storage:
+    image: rustfs/rustfs:latest
+    environment:
+      RUSTFS_ACCESS_KEY: nothingleft
+      RUSTFS_SECRET_KEY: nothingleft-secret
+    ports: ['9000:9000']
+    volumes: ['storage-data:/data']
+
+volumes:
+  postgres-data:
+  storage-data:

@@ -1,0 +1,25 @@
+{
+  "name": "@nothingleft/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./eslint": "./eslint.mjs",
+    "./eslint-plugin": "./eslint-plugin.mjs",
+    "./prettier": "./prettier.mjs"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint eslint-rules ci test *.mjs",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "typescript-eslint": "^8.70.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2"
+  }
+}

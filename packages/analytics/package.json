@@ -1,0 +1,21 @@
+{
+  "name": "@nothingleft/analytics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src test",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@nothingleft/types": "workspace:*",
+    "posthog-node": "^5.52.4"
+  },
+  "devDependencies": {
+    "@nothingleft/config": "workspace:*"
+  }
+}

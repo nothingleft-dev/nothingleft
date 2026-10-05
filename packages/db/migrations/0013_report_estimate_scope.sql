@@ -1,0 +1,1 @@
+ALTER TABLE "sprint_snapshots" ADD COLUMN "total_estimate_minutes" integer;

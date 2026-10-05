@@ -1,0 +1,22 @@
+{
+  "name": "@nothingleft/query",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src test",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@nothingleft/format": "workspace:*",
+    "@nothingleft/i18n": "workspace:*",
+    "@nothingleft/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@nothingleft/config": "workspace:*"
+  }
+}

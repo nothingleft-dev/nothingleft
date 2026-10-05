@@ -1,0 +1,30 @@
+{
+  "name": "@nothingleft/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src test",
+    "test": "bun --env-file=../../apps/api/.env --env-file=../../apps/api/.env.test test --timeout 30000",
+    "db:generate": "bun --env-file=../../apps/api/.env drizzle-kit generate",
+    "db:migrate": "bun --env-file=../../apps/api/.env drizzle-kit migrate",
+    "db:migrate:test": "bun --env-file=../../apps/api/.env --env-file=../../apps/api/.env.test drizzle-kit migrate",
+    "db:studio": "bun --env-file=../../apps/api/.env drizzle-kit studio"
+  },
+  "dependencies": {
+    "@nothingleft/format": "workspace:*",
+    "@nothingleft/query": "workspace:*",
+    "@nothingleft/types": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@nothingleft/config": "workspace:*",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10"
+  }
+}

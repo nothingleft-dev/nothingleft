@@ -1,0 +1,13 @@
+.local/
+.git/
+node_modules/
+**/node_modules/
+.env
+.env.*
+**/.env
+**/.env.*
+.next/
+**/.next/
+coverage/
+*.pem
+*.key

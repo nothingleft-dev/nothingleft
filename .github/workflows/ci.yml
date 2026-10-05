@@ -1,0 +1,190 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  lint-typecheck:
+    name: Lint and typecheck
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Dependency ranges come from @latest
+        run: bun packages/config/ci/dependency-policy.ts
+      - name: Deployment and backup safety checks
+        run: python3 -m unittest discover -s infra/oci -p 'test_*.py'
+      - run: bun run format:check
+      - run: bun run lint
+      - run: bun run typecheck
+
+  test:
+    name: Unit and integration tests
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: nothingleft
+          POSTGRES_PASSWORD: nothingleft
+          POSTGRES_DB: nothingleft
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nothingleft"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      storage:
+        image: rustfs/rustfs:latest
+        env:
+          RUSTFS_ACCESS_KEY: nothingleft
+          RUSTFS_SECRET_KEY: nothingleft-secret
+        ports: ['9000:9000']
+    env:
+      DATABASE_URL: postgres://nothingleft:nothingleft@localhost:5432/nothingleft
+      DATABASE_URL_POOLED: postgres://nothingleft:nothingleft@localhost:5432/nothingleft
+      REDIS_URL: redis://localhost:6379
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY_ID: nothingleft
+      S3_SECRET_ACCESS_KEY: nothingleft-secret
+      S3_PRIVATE_BUCKET: nl-private
+      S3_PUBLIC_BUCKET: nl-public
+      S3_PUBLIC_BUCKET_BASE_URL: http://localhost:9000/nl-public
+      FILES_BASE_URL: http://localhost:4000/files
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run db:migrate
+        working-directory: packages/db
+      - name: Create the buckets
+        working-directory: apps/api
+        run: |
+          for i in $(seq 1 30); do curl -s -o /dev/null http://localhost:9000 && break; sleep 1; done
+          bun run storage:init
+      - run: bun run test
+
+  migrations:
+    name: Migrations apply to a fresh database
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: nothingleft
+          POSTGRES_PASSWORD: nothingleft
+          POSTGRES_DB: nothingleft
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U nothingleft"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://nothingleft:nothingleft@localhost:5432/nothingleft
+    defaults:
+      run:
+        working-directory: packages/db
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Migrate from zero
+        run: bun run db:migrate
+      - name: Schema has no ungenerated changes
+        run: |
+          bun run db:generate
+          if [ -n "$(git status --porcelain -- migrations)" ]; then
+            git status --porcelain -- migrations
+            echo "::error::src/schema differs from the committed migrations. Run 'bun run db:generate' in packages/db and commit the result."
+            exit 1
+          fi
+
+  docs-sync:
+    name: Routes change with openapi.yaml
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Check
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: bun packages/config/ci/docs-sync.ts "$BASE"
+
+  typescript-next:
+    name: Typecheck against typescript@next
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bunx next typegen
+        working-directory: apps/web
+      # Only the compiler is swapped: apps/api tests use the typescript@~5 compiler API, which 7.x drops.
+      - name: tsc@next in every workspace
+        run: |
+          failed=0
+          for ws in apps/* packages/*; do
+            [ -f "$ws/tsconfig.json" ] || continue
+            echo "::group::$ws"
+            bunx --package typescript@next tsc -p "$ws/tsconfig.json" || failed=1
+            echo "::endgroup::"
+          done
+          exit "$failed"
+
+  outdated:
+    name: Outdated dependencies (report)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun outdated --recursive

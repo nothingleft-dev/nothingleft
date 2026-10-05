@@ -1,0 +1,25 @@
+{
+  "name": "@nothingleft/mcp-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src test scripts",
+    "test": "bun test",
+    "docs:tools": "bun scripts/tool-reference.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.1.0",
+    "@nothingleft/format": "workspace:*",
+    "@nothingleft/i18n": "workspace:*",
+    "@nothingleft/types": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@nothingleft/config": "workspace:*"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@nothingleft/mcp",
+  "version": "0.1.0",
+  "description": "Connect a stdio MCP client (Claude Desktop, Claude Code) to Nothing Left.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "nothingleft-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target=node --outfile dist/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src test",
+    "test": "bun run build && bun test"
+  },
+  "devDependencies": {
+    "@nothingleft/config": "workspace:*"
+  }
+}
