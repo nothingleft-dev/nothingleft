@@ -53,7 +53,7 @@ case, not an `eslint-disable`.
 | Password hashing | **argon2id** | Current OWASP recommendation |
 | Secret encryption | **AES-256-GCM** | For BYO storage credentials and TOTP secrets, under a server master key from env |
 | Two-factor | **otplib** | Standard TOTP; works with Google Authenticator, 1Password, Authy |
-| Avatars | Upload (public bucket) → provider URL → **Gravatar** → **DiceBear** initials; organisations always DiceBear blobs | Gravatar and DiceBear are free and need no API key — `file-storage.md#avatars` |
+| Avatars | Upload (public bucket) → provider URL → **Gravatar** → generated initials; organisations always a generated blob | Marks are rendered by the API with `@dicebear/core` and `@dicebear/styles` (MIT, CC0 styles), so no name leaves for a hosted service — `file-storage.md#avatars` |
 
 ## Frontend
 

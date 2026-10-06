@@ -73,7 +73,7 @@ describe('POST /v1/organizations', () => {
       membership: { org_role: 'org_admin', is_owner: true },
     });
     expect(res.json().data.owner.username).toBe(res.json().data.membership.username);
-    expect(res.json().data.avatar_url).toContain('dicebear.com');
+    expect(res.json().data.avatar_url).toContain('/avatars/organization?seed=');
 
     const sessions = await call(owner, 'GET', '/v1/me/sessions');
     expect(sessions.json().data.find((s: { current: boolean }) => s.current).current_organization_slug).toBe(slug);

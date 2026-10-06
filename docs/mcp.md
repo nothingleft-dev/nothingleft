@@ -642,7 +642,7 @@ Each operation in openapi.yaml without a tool names one of these categories as
 | `editor` | the two `tasks/toggle` routes | A click on a rendered checkbox; an agent edits the markdown |
 | `lifecycle` | account deactivation, organisation deletion and its cancel, ownership transfer offer / cancel / read, and the offer's preview, accept and decline (6b) | Destructive and step-up confirmed by the holder; session only, so no token can reach them |
 | `byo_storage` | the organisation's own bucket: connect or rotate its key, the browser check, verify, start the migration, disconnect (6c) | They carry the bucket's secret or act on it; session only, and connect, rotate and disconnect confirm with step-up |
-| `avatar` | profile avatar upload and removal | An image picked in the settings screen |
+| `avatar` | profile avatar upload and removal; `GET /avatars/{kind}` | An image picked in the settings screen; a generated image the browser loads |
 | `infrastructure` | `/health`, `/health/deep`, `/mcp` | Not product data |
 | `email_link` | the two `notifications/unsubscribe` routes (6a) | The credential is the signed link in an email; an agent has no email to click |
 

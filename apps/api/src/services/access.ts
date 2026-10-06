@@ -22,6 +22,7 @@ import {
   type TenantContext,
   type UserRow,
 } from '@nothingleft/db';
+import type { AvatarMarks } from '@lib/avatar';
 import { AppError } from '@lib/errors';
 import type { Storage } from '@lib/storage';
 import { can, missingScope, type Capability, type Scope } from '@services/permissions';
@@ -45,10 +46,13 @@ export interface AccessDeps {
   projects: ProjectsRepository;
   tenancy: TenancyService;
   storage: Storage;
+  marks: AvatarMarks;
   freeSeatLimit?: number | undefined;
   freeStorageBytes?: number | undefined;
   /** Told of every organisation a request resolves, so its writes can invalidate that organisation's reports. */
   touched?: (orgId: number) => void;
+  /** Told of every project a request may read, so an idempotent replay can re-check it. */
+  touchedProject?: (orgId: number, projectId: number) => void;
 }
 
 /**
@@ -82,9 +86,11 @@ export function accessService({
   projects,
   tenancy,
   storage,
+  marks,
   freeSeatLimit,
   freeStorageBytes,
   touched,
+  touchedProject,
 }: AccessDeps) {
   async function orgScopeFor(organization: OrganizationRow, userId: number): Promise<OrgAccess | null> {
     const ctx = tenantContext(organization.id, userId);
@@ -132,6 +138,7 @@ export function accessService({
       projectId: project.id,
     };
     if (!can(principal, 'project.read', scope)) throw denial(principal, 'project.read', scope, notFound);
+    touchedProject?.(org.organization.id, project.id);
     const elevated = scope.isOwner || scope.orgRole === 'org_admin';
     return { ...org, scope, project, role: elevated ? 'project_admin' : (scope.projectRole as ProjectRole) };
   }
@@ -139,11 +146,12 @@ export function accessService({
   const storageLimit = (plan: OrgPlan): number =>
     planLimits(plan, freeStorageBytes === undefined ? {} : { storage_bytes: freeStorageBytes }).storage_bytes;
 
-  const avatarUrl = (user: Pick<UserRow, 'avatar_url' | 'avatar_object_key'>): string | null =>
-    user.avatar_object_key ? storage.publicUrl(user.avatar_object_key) : user.avatar_url;
+  const avatarUrl = (user: Pick<UserRow, 'name' | 'avatar_url' | 'avatar_object_key'>): string =>
+    user.avatar_object_key ? storage.publicUrl(user.avatar_object_key) : (user.avatar_url ?? marks.person(user.name));
 
   return {
     avatarUrl,
+    marks,
 
     /** A null membership is someone who left no row in this organisation; they render as former too. */
     memberRef(

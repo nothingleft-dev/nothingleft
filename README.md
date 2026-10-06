@@ -15,7 +15,12 @@ For anything visual, see [design/DESIGN-SYSTEM.md](./design/DESIGN-SYSTEM.md).
 [CLAUDE.md](./CLAUDE.md) is the working agreement every coding session reads
 first.
 
+## Security
+
+Report vulnerabilities privately, as described in [SECURITY.md](./SECURITY.md).
+
 ## Licence
 
-[AGPL-3.0](./LICENSE). Contributions require agreement to the
-[CLA](./CLA.md) — see that document for why.
+[AGPL-3.0](./LICENSE), except the `@nothingleft/mcp` client in
+[packages/mcp-stdio](./packages/mcp-stdio), which is [MIT](./packages/mcp-stdio/LICENSE).
+Contributions require agreement to the [CLA](./CLA.md) — see that document for why.

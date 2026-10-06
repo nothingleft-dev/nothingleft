@@ -264,8 +264,7 @@ export function stubWorld() {
         recoveryCodes: inTx('recoveryCodes', recoveryCodesRepo) as unknown as TransactionalRepos['recoveryCodes'],
       }),
     isPasswordBreached: async () => false,
-    resolveAvatarUrl: async ({ name, providerUrl }) =>
-      providerUrl ?? `https://api.dicebear.com/10.x/initials/svg?seed=${name}`,
+    resolveAvatarUrl: async ({ providerUrl }) => providerUrl ?? null,
     users: usersRepo as unknown as AccountsDeps['users'],
     sessions: sessionsRepo as unknown as AccountsDeps['sessions'],
     oneTimeTokens: oneTimeTokensRepo as unknown as AccountsDeps['oneTimeTokens'],

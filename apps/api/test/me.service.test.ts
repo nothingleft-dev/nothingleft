@@ -3,7 +3,9 @@ import { noopAnalytics } from '@nothingleft/analytics';
 import type { Principal } from '@nothingleft/types';
 import { AVATAR_MAX_BYTES, AvatarPresignRequestSchema } from '@nothingleft/types';
 import { meService, type MeDeps, type MeService } from '@services/me.service';
-import { dicebearInitialsUrl, organizationMarkUrl } from '@lib/avatar';
+import { avatarMarks } from '@lib/avatar';
+
+const marks = avatarMarks('https://api.example.test');
 import type { PublicPutSpec, Storage, StoredObject } from '@lib/storage';
 import { stubWorld } from './stubs.ts';
 
@@ -56,6 +58,7 @@ function harness(configured = true) {
     preferences: world.repos.preferences,
     organizations,
     storage,
+    marks,
     analytics: noopAnalytics,
     readableProjectId: async () => 1,
     twoFactor: async () => ({ enabled: false, enabled_at: null, recovery_codes_remaining: 0 }),
@@ -81,7 +84,7 @@ beforeEach(async () => {
     {
       email: 'jordan@test.local',
       name: 'Jordan Rivera',
-      avatar_url: dicebearInitialsUrl('Jordan Rivera'),
+      avatar_url: null,
     },
   );
   await h.world.repos.preferences.create({ kind: 'system', reason: 'seed' }, 1);
@@ -93,7 +96,7 @@ describe('the Me DTO', () => {
       id: 1,
       email: 'jordan@test.local',
       name: 'Jordan Rivera',
-      avatar_url: dicebearInitialsUrl('Jordan Rivera'),
+      avatar_url: marks.person('Jordan Rivera'),
       timezone: 'UTC',
       email_verified_at: null,
       has_password: false,
@@ -150,7 +153,7 @@ describe('the avatar chain', () => {
     await me.completeAvatar(principal, OWN_PNG);
 
     const dto = await me.removeAvatar(principal);
-    expect(dto.avatar_url).toBe(dicebearInitialsUrl('Jordan Rivera'));
+    expect(dto.avatar_url).toBe(marks.person('Jordan Rivera'));
     expect(h.deleted).toEqual([OWN_PNG]);
   });
 
@@ -169,10 +172,11 @@ describe('the avatar chain', () => {
     expect(h.deleted).toEqual([legacy]);
   });
 
-  test('a rename re-seeds a DiceBear avatar, which is seeded from the name', async () => {
+  test('a generated mark follows the current name, with nothing stored', async () => {
     const dto = await me.update(principal, { name: 'Jordan N' });
     expect(dto.name).toBe('Jordan N');
-    expect(dto.avatar_url).toBe(dicebearInitialsUrl('Jordan N'));
+    expect(dto.avatar_url).toBe(marks.person('Jordan N'));
+    expect((await h.world.repos.users.findById(sys, 1))?.avatar_url).toBeNull();
   });
 
   test('a rename leaves a Gravatar or provider URL alone', async () => {
@@ -181,11 +185,6 @@ describe('the avatar chain', () => {
     });
     const dto = await me.update(principal, { name: 'Jordan N' });
     expect(dto.avatar_url).toBe('https://gravatar.com/avatar/abc');
-  });
-
-  test('an organisation mark is a computed DiceBear blob, never stored', () => {
-    expect(organizationMarkUrl('Acme Corporation')).toContain('blobs/svg');
-    expect(organizationMarkUrl('Acme Corporation')).toContain('seed=Acme%20Corporation');
   });
 });
 

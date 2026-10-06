@@ -23,3 +23,6 @@ parent row, then made `NOT NULL`, and each referenced UNIQUE key is created befo
 `0020` was generated in two passes and joined into one file, with the hand-edited backfill
 between them: drizzle-kit asks interactively whether an added column renames a dropped one,
 and that prompt cannot run without a terminal. The second pass only dropped columns.
+
+`0021` is data only, written by hand from `drizzle-kit generate --custom`: it clears stored
+generated-avatar URLs, which are now built at read time.

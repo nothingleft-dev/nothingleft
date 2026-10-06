@@ -19,7 +19,6 @@ import {
 import type { Analytics } from '@nothingleft/analytics';
 import { generateOrganizationSlug, parseOrganizationSlug, usernameFromEmail } from '@nothingleft/format';
 import { AppError } from '@lib/errors';
-import { organizationMarkUrl } from '@lib/avatar';
 import type { AccessService, OrgAccess } from '@services/access';
 import { bringYourOwnState } from '@services/object-stores';
 import type { SessionsService } from '@services/sessions.service';
@@ -55,7 +54,7 @@ export function organizationsService(deps: OrganizationsDeps) {
     return {
       slug: organization.slug,
       name: organization.name,
-      avatar_url: organizationMarkUrl(organization.name),
+      avatar_url: access.marks.organization(organization.name),
       plan: organization.plan as OrgPlan,
       owner: access.memberRef(owner.user, owner.membership),
       workday_minutes: organization.workday_minutes,

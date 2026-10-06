@@ -148,6 +148,13 @@
       "when": 1790847294709,
       "tag": "0020_storage_locations",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791261365464,
+      "tag": "0021_generated_avatars",
+      "breakpoints": true
     }
   ]
 }

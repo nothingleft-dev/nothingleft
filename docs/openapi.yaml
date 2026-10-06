@@ -34,6 +34,32 @@ paths:
                         properties:
                           status: { type: string, enum: [ok] }
 
+  /avatars/{kind}:
+    get:
+      x-mcp-exempt: avatar
+      summary: A generated mark — a person's initials, a project's initials or an organisation's blob
+      description: |
+        The URLs the API hands out in `avatar_url` for anyone without a photo, and for every
+        project and organisation. Rendered here, so no name, key or organisation name is sent
+        to a third party. Anonymous, like any image an `<img>` loads. The SVG is a pure function
+        of the URL and is served `immutable`, with a CSP that lets it load and run nothing.
+      tags: [avatars]
+      security: []
+      parameters:
+        - { name: kind, in: path, required: true, schema: { type: string, enum: [person, project, organization] } }
+        - name: seed
+          in: query
+          required: true
+          description: A person's name, a project key or an organisation name.
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200':
+          description: The mark.
+          content:
+            image/svg+xml:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/ValidationFailed' }
+
   /health/deep:
     get:
       x-mcp-exempt: infrastructure
@@ -6721,7 +6747,7 @@ components:
       properties:
         slug: { type: string, example: acme-corporation }
         name: { type: string }
-        avatar_url: { type: string, description: DiceBear blob computed from the name; not stored. }
+        avatar_url: { type: string, description: 'The `/avatars/organization` blob, seeded by the name and computed at read time; not stored.' }
         plan: { type: string, enum: [free, pro, pro_lite, unlimited] }
         owner: { $ref: '#/components/schemas/MemberRef' }
         workday_minutes: { type: integer }
@@ -6800,7 +6826,7 @@ components:
           properties:
             slug: { type: string }
             name: { type: string }
-            avatar_url: { type: string, description: The organisation's DiceBear mark, as on Organization. }
+            avatar_url: { type: string, description: The organisation's generated mark, as on Organization. }
         from: { $ref: '#/components/schemas/MemberRef' }
         to: { $ref: '#/components/schemas/MemberRef' }
         created_at: { type: string, format: date-time }
@@ -6874,7 +6900,7 @@ components:
         description_md: { type: [string, 'null'], description: Markdown. }
         avatar_color: { $ref: '#/components/schemas/PaletteHue' }
         avatar_initials: { type: string }
-        avatar_url: { type: string, description: 'DiceBear initials on the electric set with dark text, seeded by the project key and computed at read time. `avatar_color` and `avatar_initials` draw the mark while it loads.' }
+        avatar_url: { type: string, description: 'The `/avatars/project` initials on the electric set with dark text, seeded by the project key and computed at read time. `avatar_color` and `avatar_initials` draw the mark while it loads.' }
         lead:
           oneOf:
             - $ref: '#/components/schemas/MemberRef'

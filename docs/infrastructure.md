@@ -113,7 +113,7 @@ SESSION_COOKIE_DOMAIN         .nothingleft.dev
 TRUST_PROXY                   1             proxy hops in front of the API, or their IPs / CIDRs (comma-separated); false trusts none. Unset: 1 in production, false elsewhere
 GOOGLE_CLIENT_ID / _SECRET
 GITHUB_CLIENT_ID / _SECRET
-RESEND_API_KEY
+RESEND_API_KEY                required in production; unset elsewhere, mail is logged instead of sent (with its body only in development)
 EMAIL_FROM                    "Nothing Left <noreply@notifications.nothingleft.dev>"
 EMAIL_LINK_SECRET             32+ characters — signs unsubscribe links; required in production, never rotated casually
 POSTHOG_KEY / POSTHOG_HOST

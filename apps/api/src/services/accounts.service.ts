@@ -83,7 +83,7 @@ export interface AccountsDeps {
   inTransaction: <T>(body: (repos: TransactionalRepos) => Promise<T>) => Promise<T>;
   /** Injected so a test never reaches the breach list or Gravatar over the network. */
   isPasswordBreached: (password: string) => Promise<boolean>;
-  resolveAvatarUrl: (input: { email: string; name: string; providerUrl?: string | null }) => Promise<string>;
+  resolveAvatarUrl: (input: { email: string; providerUrl?: string | null }) => Promise<string | null>;
   users: UsersRepository;
   sessions: SessionsRepository;
   oneTimeTokens: OneTimeTokensRepository;
@@ -188,7 +188,7 @@ export function accountsService(deps: AccountsDeps) {
 
       const [password_hash, avatar_url, invited] = await Promise.all([
         hashPassword(input.password),
-        resolveAvatarUrl({ email: input.email, name: input.name }),
+        resolveAvatarUrl({ email: input.email }),
         input.invitation_token ? invitationProvesEmail(input.invitation_token, input.email) : false,
       ]);
 
@@ -304,11 +304,7 @@ export function accountsService(deps: AccountsDeps) {
         const userId = existing.id;
         const patch: Partial<NewUserRow> = {};
         if (!existing[column]) patch[column] = profile.provider_id;
-        const avatar_url = await resolveAvatarUrl({
-          email: existing.email,
-          name: existing.name,
-          providerUrl: profile.avatar_url,
-        });
+        const avatar_url = await resolveAvatarUrl({ email: existing.email, providerUrl: profile.avatar_url });
         if (avatar_url !== existing.avatar_url) patch.avatar_url = avatar_url;
         if (timezone.device && timezone.device !== existing.timezone) patch.timezone = timezone.device;
 
@@ -354,7 +350,7 @@ export function accountsService(deps: AccountsDeps) {
       }
 
       const name = profile.name ?? profile.email.split('@')[0] ?? profile.email;
-      const avatar_url = await resolveAvatarUrl({ email: profile.email, name, providerUrl: profile.avatar_url });
+      const avatar_url = await resolveAvatarUrl({ email: profile.email, providerUrl: profile.avatar_url });
       const user = await inTransaction(async repos => {
         const created = await repos.users.create(ctx, {
           email: profile.email,

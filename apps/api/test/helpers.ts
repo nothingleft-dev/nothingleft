@@ -21,8 +21,7 @@ export async function testApp(opts: BuildOptions = {}, env: Env = testEnv) {
   const app = await buildApp(env, {
     ...isolatedRateLimit(),
     isPasswordBreached: async () => false,
-    resolveAvatarUrl: async ({ name, providerUrl }) =>
-      providerUrl ?? `https://api.dicebear.com/10.x/initials/svg?seed=${name}`,
+    resolveAvatarUrl: async ({ providerUrl }) => providerUrl ?? null,
     ...opts,
   });
   await app.ready();

@@ -241,7 +241,7 @@ describe('ownership transfer', () => {
     expect(wrong.json().error.code).toBe('ownership_transfer.wrong_account');
     const preview = (await w.call(w.contributor, 'POST', '/v1/ownership-transfers/preview', { token })).json().data;
     expect(preview).toMatchObject({ organization: { slug: w.slug }, from: { username: w.admin.username } });
-    expect(preview.organization.avatar_url).toStartWith('https://api.dicebear.com/');
+    expect(preview.organization.avatar_url).toContain('/avatars/organization?seed=');
   });
 
   test('declining leaves the Owner in place and tells them', async () => {

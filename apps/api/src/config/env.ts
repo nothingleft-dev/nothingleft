@@ -103,6 +103,10 @@ const CheckedEnvSchema = EnvSchema.refine(e => e.NODE_ENV !== 'production' || e.
     path: ['ENCRYPTION_MASTER_KEY'],
     message: 'required in production: it seals two-factor and storage secrets',
   })
+  .refine(e => e.NODE_ENV !== 'production' || e.RESEND_API_KEY !== undefined, {
+    path: ['RESEND_API_KEY'],
+    message: 'required in production: without it, mail would be logged instead of sent',
+  })
   .refine(e => e.NODE_ENV !== 'production' || !e.BYO_ALLOW_ANY_ENDPOINT, {
     path: ['BYO_ALLOW_ANY_ENDPOINT'],
     message: 'never in production: storage endpoints are built from an account id or a region there',

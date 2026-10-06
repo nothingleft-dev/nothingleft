@@ -47,6 +47,17 @@ function toHtml(text: string): string {
   return `<div style="font:14px/1.6 -apple-system,Segoe UI,sans-serif;white-space:pre-wrap">${linked}</div>`;
 }
 
+// Only the provider's error code leaves this file: its message can quote the recipient, and
+// the thrown error goes to the error tracker, which never receives an email address.
+async function providerErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as { name?: unknown };
+    return typeof body.name === 'string' && /^[a-z_]{1,64}$/.test(body.name) ? body.name : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createMailer(env: Env, log: Logger): Mailer {
   const render = (message: Message) => {
     const text =
@@ -65,10 +76,14 @@ export function createMailer(env: Env, log: Logger): Mailer {
 
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) {
-    // Development without a key logs instead of sending, so nobody ever silently emails
-    // a real address from a laptop.
+    // Without a key mail is logged instead of sent, so nobody silently emails a real address
+    // from a laptop. Bodies carry reset and invitation links, so only development logs them.
     return {
       async send(message) {
+        if (env.NODE_ENV !== 'development') {
+          log.info({ subject: message.subject }, 'email not sent: RESEND_API_KEY unset');
+          return;
+        }
         const mail = render(message);
         log.info(
           { to: message.to, subject: mail.subject, body: mail.text, headers: mail.headers },
@@ -87,9 +102,9 @@ export function createMailer(env: Env, log: Logger): Mailer {
         signal: AbortSignal.timeout(EMAIL_SEND_TIMEOUT_MS),
       });
       if (!response.ok) {
-        const detail = await response.text().catch(() => '');
-        log.error({ to: message.to, subject: message.subject, status: response.status }, 'email rejected by resend');
-        throw new Error(`resend ${response.status}: ${detail.slice(0, 200)}`);
+        const code = await providerErrorCode(response);
+        log.error({ subject: message.subject, status: response.status, code }, 'email rejected by resend');
+        throw new Error(code ? `resend ${response.status} ${code}` : `resend ${response.status}`);
       }
     },
   };

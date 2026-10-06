@@ -12,8 +12,9 @@ declare module 'fastify' {
     ): FastifyReply;
     /** A collection with no paging of its own still carries meta.pagination — api-conventions.md#rules. */
     okList<T>(data: T[], extra?: { status?: number }): FastifyReply;
-    /** The one success that is not an envelope: a download. Errors still use the envelope. */
+    /** The successes that are not an envelope: a download and an image. Errors still use the envelope. */
     csv(filename: string, body: string | AsyncIterable<string>): FastifyReply;
+    svg(body: string, maxAgeSeconds: number): FastifyReply;
   }
 }
 
@@ -44,6 +45,16 @@ const envelopePlugin: FastifyPluginAsync = async app => {
     this.header('content-type', 'text/csv; charset=utf-8');
     this.header('content-disposition', `attachment; filename="${filename.replace(/[^\w.-]/g, '_')}"`);
     return this.status(200).send(typeof body === 'string' ? body : Readable.from(body));
+  });
+
+  app.decorateReply('svg', function (body: string, maxAgeSeconds: number) {
+    this.header(REQUEST_ID_HEADER, this.request.id);
+    this.header('content-type', 'image/svg+xml; charset=utf-8');
+    this.header('cache-control', `public, max-age=${maxAgeSeconds}, immutable`);
+    // Opened directly, the SVG runs nothing and loads nothing.
+    this.header('content-security-policy', "default-src 'none'; style-src 'unsafe-inline'");
+    this.header('x-content-type-options', 'nosniff');
+    return this.status(200).send(body);
   });
 };
 

@@ -24,7 +24,6 @@ import type {
 import type { Analytics } from '@nothingleft/analytics';
 import { t } from '@nothingleft/i18n';
 import { generateProjectKey, parseProjectKey, uniqueSlug } from '@nothingleft/format';
-import { projectMarkUrl } from '@lib/avatar';
 import { AppError } from '@lib/errors';
 import { bestEffort, type Mailer } from '@lib/email';
 import type { AccessService, OrgAccess, ProjectAccess } from '@services/access';
@@ -133,7 +132,7 @@ export function projectsService(deps: ProjectsDeps) {
       description_md: project.description_md,
       avatar_color: project.avatar_color as PaletteHue,
       avatar_initials: project.avatar_initials,
-      avatar_url: projectMarkUrl(project.key),
+      avatar_url: access.marks.project(project.key),
       lead: lead ? access.memberRef(lead.user, lead.membership) : null,
       is_archived: project.is_archived,
       time_tracking_enabled: project.time_tracking_enabled,

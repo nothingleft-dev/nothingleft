@@ -57,13 +57,20 @@ The chain, in priority order — the first that exists wins:
 3. **Gravatar** — `https://gravatar.com/avatar/<sha256(email)>?d=404`,
    checked once server-side at account creation and on OAuth login; kept only
    if it answers `200`.
-4. **DiceBear initials** —
-   `https://api.dicebear.com/10.x/initials/svg?seed=<name>&fontWeight=600&fontSize=42&backgroundColor=<pastels>&textColor=<text>`
-   — the pastel set of design/DESIGN-SYSTEM.md § 3.4, from `AVATAR_PASTEL_BACKGROUNDS` in
+4. **Generated initials** — `<API_BASE_URL>/avatars/person?seed=<name>`, an SVG the API
+   renders itself with DiceBear's `initials` style (`@dicebear/core`, no hosted service) on the
+   pastel set of design/DESIGN-SYSTEM.md § 3.4, from `AVATAR_PASTEL_BACKGROUNDS` in
    `apps/api/src/config/constants.ts`.
 
-Steps 2–4 resolve into `users.avatar_url` at write time, so rendering never
-probes anything. Step 1 overrides at read time. Provider avatars are later
+Steps 2–3 resolve into `users.avatar_url` at write time, so rendering never
+probes anything. Step 1 overrides at read time, and step 4 fills in at read time when
+`avatar_url` is empty, from the current name, so a rename needs no rewrite.
+
+**What leaves for a third party.** A provider avatar is the URL Google or GitHub gave us
+until `avatar.mirror` copies it. Gravatar receives the SHA-256 of the address, once, from the
+API, and then the browser loads the Gravatar image for anyone who has one. Nothing else: the
+generated marks, for people, projects and organisations, are served by the API from
+`GET /avatars/{kind}`, so no name, key or organisation name is sent anywhere. Provider avatars are later
 mirrored into the public bucket by `avatar.mirror` (M6), which simply fills
 `avatar_object_key`.
 
@@ -81,9 +88,9 @@ deleting it — when it is empty, over `AVATAR_MAX_BYTES` (2 MiB) or not one of
 pending-upload row.
 
 **Organisations** have no upload: the mark is always
-`https://api.dicebear.com/10.x/blobs/svg?size=64&borderRadius=0&seed=<org name>`,
-the one deliberately colourful element on screen (design system § 3.4).
-Projects keep the colour + initials badge.
+`<API_BASE_URL>/avatars/organization?seed=<org name>`, DiceBear's `blobs` style rendered by
+the API, the one deliberately colourful element on screen (design system § 3.4).
+Projects keep the colour + initials badge, from `/avatars/project?seed=<key>`.
 
 ## Upload
 

@@ -27,7 +27,6 @@ import { formatCalendarDate, parseUsername } from '@nothingleft/format';
 import { dateInZone } from '@nothingleft/query';
 import type { MessageKey } from '@nothingleft/i18n';
 import { ORG_DELETE_BATCH } from '@config/constants';
-import { organizationMarkUrl } from '@lib/avatar';
 import { AppError } from '@lib/errors';
 import { issueOneTimeToken, sha256 } from '@lib/crypto';
 import { bestEffort, type Mailer } from '@lib/email';
@@ -116,7 +115,7 @@ export function organizationLifecycleService(deps: OrganizationLifecycleDeps) {
     ]);
     if (!from || !to) throw new AppError('ownership_transfer.invalid', 400, {}, 'token');
     return {
-      organization: { slug: org.slug, name: org.name, avatar_url: organizationMarkUrl(org.name) },
+      organization: { slug: org.slug, name: org.name, avatar_url: access.marks.organization(org.name) },
       from: access.memberRef(from.user, from.membership),
       to: access.memberRef(to.user, to.membership),
       created_at: row.created_at.toISOString(),

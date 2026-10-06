@@ -23,6 +23,10 @@ not assigning ownership.
 Your contribution also remains available to everyone under AGPL-3.0. Nothing
 here can be used to remove code from the open-source project.
 
+The one exception is `packages/mcp-stdio`, the `@nothingleft/mcp` client that people
+install next to their agent. It is MIT-licensed (see its [LICENSE](./packages/mcp-stdio/LICENSE)),
+so a contribution to that directory is available to everyone under MIT.
+
 ## Agreement
 
 By submitting a contribution to this project, You accept and agree to the

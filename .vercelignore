@@ -11,3 +11,4 @@ node_modules/
 coverage/
 *.pem
 *.key
+ops/

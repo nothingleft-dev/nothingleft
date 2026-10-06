@@ -29,7 +29,6 @@ import { t } from '@nothingleft/i18n';
 import { usernameFromEmail } from '@nothingleft/format';
 import { AppError } from '@lib/errors';
 import { issueInvitationToken, sha256 } from '@lib/crypto';
-import { organizationMarkUrl } from '@lib/avatar';
 import { bestEffort, type Mailer } from '@lib/email';
 import { denial, type AccessService, type OrgAccess } from '@services/access';
 import { can } from '@services/permissions';
@@ -456,7 +455,7 @@ export function invitationsService(deps: InvitationsDeps) {
         organization: {
           slug: organization.slug,
           name: organization.name,
-          avatar_url: organizationMarkUrl(organization.name),
+          avatar_url: access.marks.organization(organization.name),
         },
         project: project ? { key: project.key, name: project.name } : null,
         invited_by: { name: inviter?.name ?? '', avatar_url: inviter ? access.avatarUrl(inviter) : null },

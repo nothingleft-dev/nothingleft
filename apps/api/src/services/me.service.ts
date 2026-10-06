@@ -25,7 +25,7 @@ import {
 } from '@nothingleft/db';
 import type { Analytics } from '@nothingleft/analytics';
 import { AppError } from '@lib/errors';
-import { avatarKeyOwner, avatarObjectKey, dicebearInitialsUrl } from '@lib/avatar';
+import { avatarKeyOwner, avatarObjectKey, type AvatarMarks } from '@lib/avatar';
 import type { Storage, StoredObject } from '@lib/storage';
 
 const withinAvatarLimits = ({ size, content_type }: StoredObject): boolean =>
@@ -36,6 +36,7 @@ export interface MeDeps {
   preferences: UserPreferencesRepository;
   organizations: OrganizationsRepository;
   storage: Storage;
+  marks: AvatarMarks;
   analytics: Analytics;
   /** The project's id when the caller can read it; a 404 otherwise. */
   readableProjectId: (principal: Principal, key: string) => Promise<number>;
@@ -48,6 +49,7 @@ export function meService({
   preferences,
   organizations,
   storage,
+  marks,
   analytics,
   readableProjectId,
   currentToken,
@@ -55,9 +57,9 @@ export function meService({
 }: MeDeps) {
   const ctx = systemContext('a user reads and edits their own account, which has no organisation');
 
-  /** Step 1 of the chain overrides at read time; steps 2–4 are already in avatar_url. */
-  const avatarUrl = (user: UserRow): string | null =>
-    user.avatar_object_key ? storage.publicUrl(user.avatar_object_key) : user.avatar_url;
+  /** Step 1 of the chain overrides at read time; steps 2–3 are in avatar_url; step 4 follows the current name. */
+  const avatarUrl = (user: UserRow): string =>
+    user.avatar_object_key ? storage.publicUrl(user.avatar_object_key) : (user.avatar_url ?? marks.person(user.name));
 
   /** Null for a PAT, a session in no organisation yet, and one whose membership has since gone. */
   async function currentOrganizationSlug(principal: Principal | null): Promise<string | null> {
@@ -120,11 +122,6 @@ export function meService({
       const changes: Partial<UserRow> = {};
       if (patch.name !== undefined) changes.name = patch.name;
       if (patch.timezone !== undefined) changes.timezone = patch.timezone;
-
-      // A resolved DiceBear URL is seeded from the old name, so renaming must re-seed it.
-      if (patch.name !== undefined && user.avatar_url?.includes('dicebear.com')) {
-        changes.avatar_url = dicebearInitialsUrl(patch.name);
-      }
 
       const updated = Object.keys(changes).length > 0 ? await users.update(ctx, user.id, changes) : user;
       if (!updated) throw AppError.notFound();

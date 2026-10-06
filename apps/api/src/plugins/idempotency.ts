@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
@@ -16,8 +17,16 @@ import {
 declare module 'fastify' {
   interface FastifyRequest {
     idempotency: { storeKey: string; fingerprint: string } | null;
+    touchedProjects: Map<number, number> | null;
   }
 }
+
+/** Project id → organisation id, for every project the current request resolved through the access layer. */
+const touchedProjects = new AsyncLocalStorage<Map<number, number>>();
+
+export const recordProjectTouched = (orgId: number, projectId: number): void => {
+  touchedProjects.getStore()?.set(projectId, orgId);
+};
 
 export interface IdempotencyStore {
   /** Sets the key only if absent; false when another request already holds it. */
@@ -52,12 +61,19 @@ interface Done {
   body: string;
   /** The organisations the first request acted in; a replay re-checks membership of each. */
   orgIds: number[];
+  /** `[orgId, projectId]` for each project it acted in; a replay re-checks that each is still readable. */
+  projects?: [number, number][];
+}
+
+export interface ReplayScope {
+  orgIds: readonly number[];
+  projects: readonly (readonly [orgId: number, projectId: number])[];
 }
 
 export interface IdempotencyOptions {
   store: IdempotencyStore;
-  /** Throws, as the route itself would, when the principal no longer belongs to one of these organisations. */
-  recheckTenancy: (principal: Principal, orgIds: readonly number[]) => Promise<void>;
+  /** Throws, as the route itself would, when the principal can no longer read one of these organisations or projects. */
+  recheckAccess: (principal: Principal, scope: ReplayScope) => Promise<void>;
 }
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -70,8 +86,14 @@ const organisation = (request: FastifyRequest, p: Principal): string =>
 
 // Keyed by credential, organisation and key — docs/api-conventions.md#idempotency. A Redis failure
 // degrades to no replay protection, never to a failed request.
-const idempotencyPlugin: FastifyPluginAsync<IdempotencyOptions> = async (app, { store, recheckTenancy }) => {
+const idempotencyPlugin: FastifyPluginAsync<IdempotencyOptions> = async (app, { store, recheckAccess }) => {
   app.decorateRequest('idempotency', null);
+  app.decorateRequest('touchedProjects', null);
+  app.addHook('onRequest', (request, _reply, done) => {
+    const projects = new Map<number, number>();
+    request.touchedProjects = projects;
+    touchedProjects.run(projects, done);
+  });
 
   app.addHook('preHandler', async (request, reply) => {
     const raw = request.headers[IDEMPOTENCY_KEY_HEADER];
@@ -101,7 +123,7 @@ const idempotencyPlugin: FastifyPluginAsync<IdempotencyOptions> = async (app, { 
     if (stored.fingerprint !== fingerprint)
       throw new AppError('idempotency.key_reused', 422, {}, IDEMPOTENCY_KEY_HEADER);
     if (stored.state === 'pending') throw new AppError('idempotency.in_progress', 409, {}, IDEMPOTENCY_KEY_HEADER);
-    await recheckTenancy(request.principal, stored.orgIds ?? []);
+    await recheckAccess(request.principal, { orgIds: stored.orgIds ?? [], projects: stored.projects ?? [] });
 
     reply
       .header(REQUEST_ID_HEADER, request.id)
@@ -127,6 +149,10 @@ const idempotencyPlugin: FastifyPluginAsync<IdempotencyOptions> = async (app, { 
           contentType: String(reply.getHeader('content-type') ?? 'application/json; charset=utf-8'),
           body: payload,
           orgIds: [...(request.touchedOrgs ?? [])],
+          projects: [...(request.touchedProjects ?? [])].map(([projectId, orgId]): [number, number] => [
+            orgId,
+            projectId,
+          ]),
         };
         await store.replace(claim.storeKey, JSON.stringify(done));
       }

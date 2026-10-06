@@ -167,11 +167,12 @@ How it behaves (decided 24 Sep 2026, built in 1b as `@plugins/idempotency`):
 - Every completed response is stored, 4xx included, and replayed byte for
   byte with `Idempotent-Replayed: true`. **5xx and `429` are not stored**:
   they say nothing about the request, so the key is released for the retry.
-- A replay re-checks that you still belong to the organisation. The organisations the
-  first request acted in are stored with its response; a caller who has since been
-  removed from one gets that organisation's `404 organization.not_found`, and the
-  stored response stays in place. It does not re-check project access; the cached
-  response lives 24 hours.
+- A replay re-checks that you can still read what the first request acted in. The
+  organisations and projects it resolved are stored with its response; a caller who has
+  since been removed from one gets that organisation's `404 organization.not_found` or
+  that project's `404 project.not_found`, and the stored response stays in place. The
+  re-check is read access only: a role lowered since the first request still replays
+  the response that request already returned.
 - The 24 hours run from the first request; storing the response keeps that
   expiry.
 

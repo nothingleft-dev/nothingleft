@@ -53,9 +53,9 @@ data.
 
 **Sent instead:** internal IDs, counts, enum values, durations, booleans.
 
-So `search_executed` carries `{ attributes_used: ["status","assignee"],
-has_free_text: true, result_count: 42, duration_ms: 38 }` — never the query.
-That says which attributes people actually use, without the text they typed.
+So `issues_searched` carries `{ via: "web", clause_count: 3, grouped: true,
+result_count: 42, custom_attribute_count: 1 }` — never the query. That says
+how people search, without the text they typed.
 
 Users are identified by their internal ID, sent as a prefixed string
 (`user_1234`, `org_56`) so the two namespaces never collide in PostHog. If
@@ -72,6 +72,22 @@ privacy policy, in a form that cannot quietly diverge from it.
 That auditability is an asset, not a constraint. A closed-source tracker
 asking to collect usage data is asking for trust; an open one is offering
 proof.
+
+### Google Analytics on the web app
+
+Off unless `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set at build time. When it is, the tag never
+sees a real URL or title: `components/site-scripts.tsx` turns off the automatic page view and
+sends its own, built by `lib/analytics/page-context.ts`. The location keeps only the words of
+the route scheme, so `/issue/PP-847/fix-login` becomes `/issue/:id/:id` and
+`/invite/<token>` becomes `/invite/:id`. The query string and fragment are dropped, which
+covers search text, emails and reset tokens. The title is always `Nothing Left`, since page
+titles carry issue and article titles. A referrer from inside the app is redacted the same
+way; one from elsewhere is cut to its origin. The location is also `set` for every later event,
+so enhanced measurement reports it instead of the real URL. A path word the list does not
+know is redacted, so a new route leaks nothing until it is added.
+
+In the property's stream settings, turn off *Page changes based on browser history events*;
+the app sends its own page views on navigation, and leaving it on counts each one twice.
 
 ### Self-hosters
 

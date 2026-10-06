@@ -2,13 +2,14 @@
   "name": "@nothingleft/mcp",
   "version": "0.1.0",
   "description": "Connect a stdio MCP client (Claude Desktop, Claude Code) to Nothing Left.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "nothingleft-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"

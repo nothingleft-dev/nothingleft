@@ -94,9 +94,9 @@ describe('signUp', () => {
     expect(reported).toHaveLength(1);
   });
 
-  test('resolves the avatar chain at write time so no render probes Gravatar', async () => {
+  test('stores no generated mark, so a render never probes Gravatar and a rename needs no re-seed', async () => {
     const { user } = await accounts.signUp(signUp, facts, 'UTC');
-    expect(user.avatar_url).toContain('dicebear.com');
+    expect(user.avatar_url).toBeNull();
   });
 
   test('records the sign-up country and login facts', async () => {
@@ -435,7 +435,7 @@ describe('signInWithProvider', () => {
     });
     expect(user.name).toBe('jordan');
     expect(user.timezone).toBe('Europe/London');
-    expect(user.avatar_url).toContain('dicebear.com');
+    expect(user.avatar_url).toBeNull();
   });
 
   test('refuses an address the provider has not verified, before anything is written', async () => {

@@ -37,6 +37,7 @@ describe('BYO_ALLOW_ANY_ENDPOINT', () => {
     NODE_ENV: 'production',
     EMAIL_LINK_SECRET: 'x'.repeat(32),
     ENCRYPTION_MASTER_KEY: Buffer.alloc(32, 1).toString('base64'),
+    RESEND_API_KEY: 're_test',
   };
 
   test('is off unless set, and allowed outside production', () => {
@@ -47,6 +48,20 @@ describe('BYO_ALLOW_ANY_ENDPOINT', () => {
 
   test('production refuses to boot with it', () => {
     expect(() => loadEnv({ ...production, BYO_ALLOW_ANY_ENDPOINT: 'true' })).toThrow('BYO_ALLOW_ANY_ENDPOINT');
+  });
+});
+
+describe('RESEND_API_KEY', () => {
+  test('production refuses to boot without it, so mail is never logged there', () => {
+    expect(() =>
+      loadEnv({
+        ...source,
+        REDIS_URL: 'redis://localhost:6379',
+        NODE_ENV: 'production',
+        EMAIL_LINK_SECRET: 'x'.repeat(32),
+        ENCRYPTION_MASTER_KEY: Buffer.alloc(32, 1).toString('base64'),
+      }),
+    ).toThrow('RESEND_API_KEY');
   });
 });
 

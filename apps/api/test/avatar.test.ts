@@ -1,13 +1,34 @@
 import { describe, expect, test } from 'bun:test';
-import { AVATAR_INITIALS_TEXT, AVATAR_PASTEL_BACKGROUNDS } from '@config/constants';
-import { avatarKeyOwner, avatarObjectKey, dicebearInitialsUrl } from '@lib/avatar';
+import { AVATAR_ELECTRIC_BACKGROUNDS, AVATAR_INITIALS_TEXT, AVATAR_PASTEL_BACKGROUNDS } from '@config/constants';
+import { avatarKeyOwner, avatarMarks, avatarObjectKey, renderAvatar } from '@lib/avatar';
 
-describe('dicebearInitialsUrl', () => {
-  test('draws from the pastel set with fixed dark text, seeded by the name', () => {
-    const url = new URL(dicebearInitialsUrl('Jordan Rivera'));
-    expect(url.searchParams.get('seed')).toBe('Jordan Rivera');
-    expect(url.searchParams.get('backgroundColor')).toBe(AVATAR_PASTEL_BACKGROUNDS.join(','));
-    expect(url.searchParams.get('textColor')).toBe(AVATAR_INITIALS_TEXT);
+describe('generated marks', () => {
+  test('a person draws from the pastel set with fixed dark text, the same for the same name', () => {
+    const svg = renderAvatar('person', 'Jordan Rivera');
+    expect(svg).toStartWith('<svg');
+    expect(svg).toContain('>JR<');
+    expect(svg).toContain(`fill="#${AVATAR_INITIALS_TEXT}"`);
+    expect(AVATAR_PASTEL_BACKGROUNDS.some(c => svg.includes(`fill="#${c}"`))).toBe(true);
+    expect(renderAvatar('person', 'Jordan Rivera')).toBe(svg);
+  });
+
+  test('a project draws from the electric set, an organisation is a blob', () => {
+    const project = renderAvatar('project', 'PP');
+    expect(AVATAR_ELECTRIC_BACKGROUNDS.some(c => project.includes(`fill="#${c}"`))).toBe(true);
+    expect(renderAvatar('organization', 'Acme Corporation')).toContain('<path');
+  });
+
+  test('a mark loads nothing from elsewhere', () => {
+    for (const svg of [renderAvatar('person', 'A'), renderAvatar('project', 'PP'), renderAvatar('organization', 'A')]) {
+      expect(svg).not.toMatch(/(href|src)="https?:/);
+    }
+  });
+
+  test('mark URLs point at this API, never a third party', () => {
+    const marks = avatarMarks('https://api.example.test/');
+    expect(marks.person('Jordan Rivera')).toBe('https://api.example.test/avatars/person?seed=Jordan%20Rivera');
+    expect(marks.project('PP')).toBe('https://api.example.test/avatars/project?seed=PP');
+    expect(marks.organization('A&B')).toBe('https://api.example.test/avatars/organization?seed=A%26B');
   });
 });
 

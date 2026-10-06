@@ -238,7 +238,7 @@ the OAuth email-verification rule.
 
 ```
 users(id, email, email_verified_at, name,
-      avatar_url NULL,          -- resolved external URL: provider, Gravatar or DiceBear
+      avatar_url NULL,          -- resolved external URL: provider or Gravatar; NULL renders the generated mark
       avatar_object_key NULL,   -- a manual upload in the public bucket; wins over avatar_url
       password_hash NULL, google_id NULL UNIQUE, github_id NULL UNIQUE,
       timezone, country_code char(2), last_login_at, last_login_ip inet,
@@ -260,9 +260,11 @@ upload and cleared by "remove photo". Its value is
 names ([file-storage.md § Avatars](./file-storage.md#avatars)); a key from before 1 Oct 2026
 has no user segment. `avatar_url` is resolved once at
 account creation and on each OAuth login — provider URL if present, else
-Gravatar if the address has one, else a DiceBear initials URL — so a render
-never has to probe Gravatar. The DTO exposes a single `avatar_url`, computed
-as the object key's public URL when present, otherwise the stored URL.
+Gravatar if the address has one, else NULL — so a render never has to probe
+Gravatar. The DTO exposes a single `avatar_url`, computed as the object key's
+public URL when present, otherwise the stored URL, otherwise the API's generated
+initials mark for the current name. Migration `0021` cleared the generated-mark URLs
+stored before 6 Oct 2026.
 
 **Email is unique case-insensitively**, on `lower(email)` rather than on
 `email`. Without that, `Foo@example.com` and `foo@example.com` become two

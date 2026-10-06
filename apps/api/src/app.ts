@@ -59,7 +59,7 @@ import {
 } from '@config/constants';
 import { createLogger } from '@lib/logger';
 import { bestEffort, createMailer, type Mailer } from '@lib/email';
-import { resolveAvatarUrl } from '@lib/avatar';
+import { avatarMarks, resolveAvatarUrl } from '@lib/avatar';
 import { createOAuthClients, type OAuthClients } from '@lib/oauth';
 import { isPasswordBreached } from '@lib/password';
 import { createStorage, type Storage } from '@lib/storage';
@@ -68,11 +68,12 @@ import { requestIdOptions } from '@plugins/request-id';
 import envelope from '@plugins/envelope';
 import errorHandler from '@plugins/error-handler';
 import analyticsPlugin from '@plugins/analytics';
-import idempotency, { redisIdempotencyStore } from '@plugins/idempotency';
+import idempotency, { recordProjectTouched, redisIdempotencyStore } from '@plugins/idempotency';
 import reportVersion, { recordOrgTouched } from '@plugins/report-version';
 import notify from '@plugins/notify';
 import auth from '@middleware/auth';
 import originCheck from '@middleware/origin';
+import avatarsRoutes from '@routes/avatars';
 import healthRoutes from '@routes/health';
 import authRoutes from '@routes/auth';
 import meRoutes from '@routes/me';
@@ -195,6 +196,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
 
   const mailer = opts.mailer ?? createMailer(env, app.log);
   const storage = opts.storage ?? createStorage(env);
+  const marks = avatarMarks(env.API_BASE_URL);
 
   const repos = {
     users: usersRepository(db),
@@ -311,6 +313,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     preferences: repos.preferences,
     organizations: repos.organizations,
     storage,
+    marks,
     analytics,
     readableProjectId: async (principal, key) => (await access.project(principal, key)).project.id,
     currentToken: principal => services.tokens.current(principal),
@@ -351,9 +354,11 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     projects: repos.projects,
     tenancy,
     storage,
+    marks,
     freeSeatLimit: env.FREE_SEAT_LIMIT,
     freeStorageBytes: env.FREE_STORAGE_BYTES,
     touched: recordOrgTouched,
+    touchedProject: recordProjectTouched,
   });
   const stores = objectStores({
     storage,
@@ -683,8 +688,12 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   await app.register(originCheck, { allowedOrigin: env.APP_BASE_URL });
   await app.register(idempotency, {
     store: redisIdempotencyStore(app.redis),
-    recheckTenancy: async (principal, orgIds) => {
-      for (const orgId of orgIds) await access.orgById(principal, orgId);
+    recheckAccess: async (principal, { orgIds, projects }) => {
+      const orgs = new Map<number, Awaited<ReturnType<typeof access.orgById>>>();
+      for (const orgId of new Set([...orgIds, ...projects.map(([orgId]) => orgId)])) {
+        orgs.set(orgId, await access.orgById(principal, orgId));
+      }
+      for (const [orgId, projectId] of projects) await access.projectById(principal, orgs.get(orgId)!, projectId);
     },
   });
   await app.register(rateLimit, {
@@ -708,6 +717,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   });
 
   await app.register(healthRoutes, { db, storage, ...(opts.now ? { now: opts.now } : {}) });
+  await app.register(avatarsRoutes);
   await app.register(authRoutes, {
     accounts: services.accounts,
     me: services.me,

@@ -42,8 +42,7 @@ describe('POST /v1/projects', () => {
       key: 'PP',
       slug: 'partner-portal',
       avatar_initials: 'PP',
-      avatar_url:
-        'https://api.dicebear.com/10.x/initials/svg?backgroundColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff&textColor=151618&seed=PP',
+      avatar_url: expect.stringMatching(/\/avatars\/project\?seed=PP$/),
       is_archived: false,
       my_role: 'project_admin',
       lead: null,

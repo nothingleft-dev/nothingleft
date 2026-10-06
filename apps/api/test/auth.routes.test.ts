@@ -53,7 +53,7 @@ describe('POST /v1/auth/sign-up', () => {
       linked_providers: [],
     });
     expect(body.data.preferences).toEqual({ theme: 'system', last_project_key: null, ui: {} });
-    expect(body.data.avatar_url).toContain('dicebear.com');
+    expect(body.data.avatar_url).toEndWith('/avatars/person?seed=' + encodeURIComponent(body.data.name));
 
     const setCookie = res.cookies.find(c => c.name === SESSION_COOKIE_NAME);
     expect(setCookie).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/' });

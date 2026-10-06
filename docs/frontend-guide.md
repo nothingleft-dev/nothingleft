@@ -446,7 +446,8 @@ other strict flag from the shared config is on.
 - **Scripts on every page**: `components/site-scripts.tsx`, rendered once by
   the root layout with `next/script`. Each tag is gated by its own
   `NEXT_PUBLIC_*` variable (`NEXT_PUBLIC_GA_MEASUREMENT_ID` is the worked
-  example) and renders nothing when unset. Product analytics remain PostHog
+  example; its redaction is in [analytics.md](./analytics.md#google-analytics-on-the-web-app))
+  and renders nothing when unset. Product analytics remain PostHog
   through `packages/analytics`; whatever is added here obeys CLAUDE.md rule
   11 — no customer content.
 

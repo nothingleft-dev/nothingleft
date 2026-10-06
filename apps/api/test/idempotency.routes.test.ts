@@ -164,3 +164,36 @@ describe('09: a replay re-checks membership', () => {
     expect(again.headers['idempotent-replayed']).toBe('true');
   });
 });
+
+describe('10: a replay re-checks project access', () => {
+  test('a member removed from the project, not the organisation, gets 404 instead of the stored body', async () => {
+    const member = await contributor('Unassigned');
+    const token = await pat(member);
+    const headers = { ...idempotencyKey(), 'x-organization': w.slug };
+    const body = { project: KEY, title: 'Filed before losing the project' };
+    const first = await w.call(token, 'POST', '/v1/issues', body, headers);
+    expect(first.statusCode).toBe(201);
+    const stored = await w.app.redis.get(`idem:t:${token.tokenId}:${w.slug}:${headers['idempotency-key']}`);
+    expect(JSON.parse(stored!).projects).toHaveLength(1);
+
+    const removed = await w.call(w.admin, 'DELETE', `/v1/projects/${KEY}/members/${member.username}`);
+    expect(removed.statusCode).toBeLessThan(300);
+    const replay = await w.call(token, 'POST', '/v1/issues', body, headers);
+    expect(replay.statusCode).toBe(404);
+    expect(replay.json().error.code).toBe('project.not_found');
+    expect(replay.headers['idempotent-replayed']).toBeUndefined();
+    expect(replay.body).not.toContain(first.json().data.key);
+  });
+
+  test('a member who keeps the project still replays', async () => {
+    const member = await contributor('Staying');
+    const token = await pat(member);
+    const headers = { ...idempotencyKey(), 'x-organization': w.slug };
+    const body = { project: KEY, title: 'Filed and still visible' };
+    const first = await w.call(token, 'POST', '/v1/issues', body, headers);
+    const again = await w.call(token, 'POST', '/v1/issues', body, headers);
+    expect(again.statusCode).toBe(201);
+    expect(again.headers['idempotent-replayed']).toBe('true');
+    expect(again.json().data.key).toBe(first.json().data.key);
+  });
+});

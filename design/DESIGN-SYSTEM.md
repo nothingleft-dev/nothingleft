@@ -209,7 +209,7 @@ Resolved issue keys (done + cancelled) render struck through everywhere.
 **Tags** are neutral outlined chips in lists and board cards. Their palette colour shows
 on the issue page (beneath the title), in the tag manager, and in charts.
 
-**Avatars** come from DiceBear. People use the `initials` style over a **five-colour
+**Avatars** are DiceBear styles, rendered by the API (`GET /avatars/{kind}`) rather than a hosted service. People use the `initials` style over a **five-colour
 pastel set**, picked deterministically from the seed so one person keeps one colour:
 
 ```

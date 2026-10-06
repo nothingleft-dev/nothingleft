@@ -54,12 +54,16 @@ export const OAUTH_REQUEST_TIMEOUT_MS = 10_000;
 export const ACTIVITY_EXPORT_MAX_ROWS = 50_000;
 export const ACTIVITY_EXPORT_PAGE_SIZE = 1_000;
 
-// The one copy of these values outside design/tokens.css: they travel inside a DiceBear URL
-// - design/DESIGN-SYSTEM.md § 3.4.
+// The one copy of these values outside design/tokens.css: generated marks are SVGs rendered by
+// the API, which cannot read the stylesheet - design/DESIGN-SYSTEM.md § 3.4.
 export const AVATAR_PASTEL_BACKGROUNDS = ['ffe3ea', 'e3edff', 'e2f5e9', 'fdf1d4', 'efe6ff'] as const;
 export const AVATAR_INITIALS_TEXT = '151618';
 // Project marks: loud on purpose, so a project reads apart from a person at a glance.
 export const AVATAR_ELECTRIC_BACKGROUNDS = ['ff2e88', '00e5ff', 'ffe600', '7cff00', 'ff6a00', 'b400ff'] as const;
+// Longer than any name, key or organisation name a mark is seeded from.
+export const AVATAR_SEED_MAX_LENGTH = 200;
+// A mark is a pure function of its URL, so it never needs revalidating.
+export const AVATAR_CACHE_SECONDS = 365 * 24 * 60 * 60;
 
 export const ISSUE_EXPORT_MAX_ROWS = 10_000;
 export const ISSUE_EXPORT_PAGE_SIZE = 500;
