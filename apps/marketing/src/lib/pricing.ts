@@ -9,11 +9,16 @@ export interface CurrentTool {
 
 export const CURRENT_TOOLS: CurrentTool[] = [
   { id: 'jira', name: 'Jira', pricingUrl: 'https://www.atlassian.com/software/jira/pricing' },
-  { id: 'monday', name: 'monday.com', pricingUrl: 'https://monday.com/pricing' },
   { id: 'linear', name: 'Linear', pricingUrl: 'https://linear.app/pricing' },
   { id: 'youtrack', name: 'YouTrack', pricingUrl: 'https://www.jetbrains.com/youtrack/buy/' },
+  { id: 'clickup', name: 'ClickUp', pricingUrl: 'https://clickup.com/pricing' },
+  { id: 'asana', name: 'Asana', pricingUrl: 'https://asana.com/pricing' },
+  { id: 'notion', name: 'Notion', pricingUrl: 'https://www.notion.com/pricing' },
+  { id: 'monday', name: 'monday.com', pricingUrl: 'https://monday.com/pricing' },
   { id: 'other', name: 'Another tool' },
 ];
+
+export type CurrentToolId = 'jira' | 'linear' | 'youtrack' | 'clickup' | 'asana' | 'notion' | 'monday' | 'other';
 
 export const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'] as const;
 

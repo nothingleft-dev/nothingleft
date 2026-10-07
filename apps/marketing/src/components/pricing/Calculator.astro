@@ -1,19 +1,30 @@
 ---
-import { CURRENCIES, CURRENT_TOOLS, TEAM_SIZE } from '@lib/pricing';
+import { CURRENCIES, CURRENT_TOOLS, TEAM_SIZE, type CurrentToolId } from '@lib/pricing';
 
-const firstTool = CURRENT_TOOLS[0];
+interface Props {
+  /** The tool chosen when the page loads; a comparison page passes the product it compares. */
+  preselect?: CurrentToolId;
+  title?: string;
+  intro?: string;
+  id?: string;
+}
+
+const {
+  preselect = 'jira',
+  title = 'Compare what you pay now.',
+  intro = 'Enter your current subscription and see what the beta takes off the bill. Your figure only: no list price is filled in for you, and nothing you type leaves this page.',
+  id = 'compare',
+} = Astro.props;
+const selectedTool = CURRENT_TOOLS.find(tool => tool.id === preselect) ?? CURRENT_TOOLS[0];
 ---
 
-<section id="compare" class="border-t border-line bg-app" aria-labelledby="calc-title">
+<section id={id} class="border-t border-line bg-app" aria-labelledby="calc-title">
   <div class="wrap py-16 md:py-24">
     <div class="max-w-[640px]">
       <h2 id="calc-title" class="h2">
-        Compare what you pay now.
+        {title}
       </h2>
-      <p class="prose mt-5">
-        Enter your current subscription and see what the beta takes off the bill. Your figure only: no list price is
-        filled in for you, and nothing you type leaves this page.
-      </p>
+      <p class="prose mt-5">{intro}</p>
     </div>
     <noscript>
       <p class="prose mt-8 max-w-[640px]">
@@ -29,12 +40,12 @@ const firstTool = CURRENT_TOOLS[0];
             Currently using
           </p>
           <div class="seg mt-2" role="radiogroup" aria-labelledby="tool-label" data-group="tool">
-            {CURRENT_TOOLS.map((tool, index) => (
+            {CURRENT_TOOLS.map(tool => (
               <button
                 type="button"
                 role="radio"
-                aria-checked={index === 0 ? 'true' : 'false'}
-                tabindex={index === 0 ? 0 : -1}
+                aria-checked={tool.id === selectedTool?.id ? 'true' : 'false'}
+                tabindex={tool.id === selectedTool?.id ? 0 : -1}
                 data-value={tool.id}
                 data-name={tool.name}
                 data-pricing-url={tool.pricingUrl}
@@ -44,13 +55,19 @@ const firstTool = CURRENT_TOOLS[0];
             ))}
           </div>
           <p class="mt-3 text-xs text-fg-2">
-            <a class="link font-normal" data-tool-link href={firstTool?.pricingUrl} rel="noopener">
-              Check your plan on <span data-tool-name>{firstTool?.name}</span>'s pricing page
+            <a
+              class="link font-normal"
+              data-tool-link
+              href={selectedTool?.pricingUrl}
+              rel="noopener"
+              hidden={!selectedTool?.pricingUrl}
+            >
+              Check your plan on <span data-tool-name>{selectedTool?.name}</span>'s pricing page
               <span class="arr ext" aria-hidden="true">
                 ↗
               </span>
             </a>
-            <span data-tool-note hidden>
+            <span data-tool-note hidden={Boolean(selectedTool?.pricingUrl)}>
               Use the figure on your latest invoice.
             </span>
           </p>

@@ -9,6 +9,12 @@ import { PRODUCT_TEAMS_FAQ } from '@lib/solutions/product-teams';
 import { STARTUPS_FAQ } from '@lib/solutions/startups';
 import { SELF_HOSTING_FAQ } from '@lib/solutions/self-hosting';
 import { SUPPORT_FAQ } from '@lib/support';
+import { LINEAR_FAQ } from '@lib/compare/linear-alternative';
+import { JIRA_FAQ } from '@lib/compare/jira-alternative';
+import { YOUTRACK_FAQ } from '@lib/compare/youtrack-alternative';
+import { CLICKUP_FAQ } from '@lib/compare/clickup-alternative';
+import { ASANA_FAQ } from '@lib/compare/asana-alternative';
+import { NOTION_PROJECTS_FAQ } from '@lib/compare/notion-projects-alternative';
 import { HOME_FAQ, type FaqEntry } from '@lib/faq';
 import { PRICING_FAQ } from '@lib/pricing';
 import { SITE_DESCRIPTION } from '@lib/site';
@@ -139,6 +145,54 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Support', path: '/support' }],
     faq: SUPPORT_FAQ,
+  },
+  '/compare/linear-alternative': {
+    title: 'Open Source Linear Alternative | Nothing Left',
+    description:
+      'Compare Nothing Left with Linear on issues, sprints, agent access, time logs, reports, pricing posture and self-hosting.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Linear alternative', path: '/compare/linear-alternative' }],
+    faq: LINEAR_FAQ,
+  },
+  '/compare/jira-alternative': {
+    title: 'Open Source Jira Alternative | Nothing Left',
+    description:
+      'Compare a simpler tracker with Jira on issues, sprints, reports, custom fields, agents and administration tradeoffs.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Jira alternative', path: '/compare/jira-alternative' }],
+    faq: JIRA_FAQ,
+  },
+  '/compare/youtrack-alternative': {
+    title: 'YouTrack Alternative for Growing Teams | Nothing Left',
+    description:
+      'Compare Nothing Left with YouTrack on issues, agile boards, search, time, knowledge base, MCP, hosting and setup depth.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'YouTrack alternative', path: '/compare/youtrack-alternative' }],
+    faq: YOUTRACK_FAQ,
+  },
+  '/compare/clickup-alternative': {
+    title: 'Open Source ClickUp Alternative | Nothing Left',
+    description:
+      "Compare a focused issue and sprint tracker with ClickUp's broad workspace on tasks, docs, time, reports, AI and setup.",
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'ClickUp alternative', path: '/compare/clickup-alternative' }],
+    faq: CLICKUP_FAQ,
+  },
+  '/compare/asana-alternative': {
+    title: 'Open Source Asana Alternative | Nothing Left',
+    description:
+      'Compare Nothing Left and Asana for engineering work, including issues, sprint planning, agent access, reports and team fit.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Asana alternative', path: '/compare/asana-alternative' }],
+    faq: ASANA_FAQ,
+  },
+  '/compare/notion-projects-alternative': {
+    title: 'Notion Projects Alternative | Nothing Left',
+    description:
+      'Compare Notion Projects with a dedicated issue tracker for bugs, sprints, reports, project docs and AI-agent workflows.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Notion Projects alternative', path: '/compare/notion-projects-alternative' }],
+    faq: NOTION_PROJECTS_FAQ,
   },
 };
 

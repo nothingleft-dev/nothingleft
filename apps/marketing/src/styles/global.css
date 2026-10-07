@@ -1283,7 +1283,8 @@
     flex-wrap: wrap;
     gap: 6px;
   }
-  .seg [role='radio'] {
+  .seg [role='radio'],
+  .seg button[aria-pressed] {
     height: 32px;
     padding: 0 12px;
     border-radius: var(--radius-sm);
@@ -1296,20 +1297,24 @@
       color var(--dur-fast) var(--ease-out),
       box-shadow var(--dur-fast) var(--ease-out);
   }
-  .seg [role='radio']:hover {
+  .seg [role='radio']:hover,
+  .seg button[aria-pressed='false']:hover {
     background: var(--bg-hover);
     color: var(--text);
     box-shadow: inset 0 0 0 1px var(--border-strong);
   }
-  .seg [role='radio']:active {
+  .seg [role='radio']:active,
+  .seg button[aria-pressed='false']:active {
     background: var(--bg-active);
   }
-  .seg [role='radio'][aria-checked='true'] {
+  .seg [role='radio'][aria-checked='true'],
+  .seg button[aria-pressed='true'] {
     background: var(--ink);
     color: var(--ink-fg);
     box-shadow: inset 0 0 0 1px var(--ink);
   }
-  .seg [role='radio']:focus-visible {
+  .seg [role='radio']:focus-visible,
+  .seg button[aria-pressed]:focus-visible {
     box-shadow:
       inset 0 0 0 1px var(--ink),
       var(--focus-ring);

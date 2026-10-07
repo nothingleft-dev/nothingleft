@@ -1,0 +1,256 @@
+---
+import { GROUP_LABEL, GROUP_ORDER, SUPPORT_LABEL, SUPPORT_MEANING, displayDate, type Comparison } from '@lib/compare';
+
+interface Props {
+  comparison: Comparison;
+  title: string;
+  intro: string;
+  id?: string;
+}
+
+const { comparison, title, intro, id = 'matrix' } = Astro.props;
+const groups = GROUP_ORDER.map(group => ({
+  group,
+  rows: comparison.rows.filter(row => row.group === group),
+})).filter(entry => entry.rows.length > 0);
+---
+
+<section id={id} class="border-t border-line" aria-labelledby={`${id}-title`}>
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id={`${id}-title`} class="h2">
+        {title}
+      </h2>
+      <p class="prose mt-5">{intro}</p>
+      <p class="mt-4 text-xs text-fg-3">
+        {comparison.competitor} column last verified against its own pages on{' '}
+        <time datetime={comparison.lastVerified}>{displayDate(comparison.lastVerified)}</time>. Product names are
+        trademarks of their owners.
+      </p>
+    </div>
+
+    <div class="matrix-tools mt-8" data-matrix-filter={id} hidden>
+      <p class="calc-label" id={`${id}-filter-label`}>
+        Show
+      </p>
+      <div class="seg mt-2" role="group" aria-labelledby={`${id}-filter-label`}>
+        <button type="button" aria-pressed="true" data-matrix-group="all">
+          All
+        </button>
+        {groups.map(entry => (
+          <button type="button" aria-pressed="false" data-matrix-group={entry.group}>
+            {GROUP_LABEL[entry.group]}
+          </button>
+        ))}
+      </div>
+      <p class="sr-only" aria-live="polite" data-matrix-status></p>
+    </div>
+
+    <div class="matrix-wrap mt-6">
+      <table class="matrix" data-matrix={id}>
+        <caption class="sr-only">
+          {title}Nothing Left compared with{comparison.competitor}, by capability.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Capability</th>
+            <th scope="col">Nothing Left</th>
+            <th scope="col">{comparison.competitor}</th>
+          </tr>
+        </thead>
+        {groups.map(entry => (
+          <tbody data-group={entry.group}>
+            <tr class="matrix-group">
+              <th scope="rowgroup" colspan="3">
+                {GROUP_LABEL[entry.group]}
+              </th>
+            </tr>
+            {entry.rows.map(row => (
+              <tr>
+                <th scope="row">{row.capability}</th>
+                {[
+                  { label: 'Nothing Left', cell: row.ours },
+                  { label: comparison.competitor, cell: row.theirs },
+                ].map(({ label, cell }) => (
+                  <td data-label={label}>
+                    <span class:list={['support', `support-${cell.support}`]}>
+                      <i aria-hidden="true" />
+                      {SUPPORT_LABEL[cell.support]}
+                    </span>
+                    <span class="matrix-note">{cell.note}</span>
+                    {cell.source && (
+                      <a class="link font-normal matrix-source" href={cell.source.href} rel="noopener">
+                        {cell.source.label}
+                        <span class="arr ext" aria-hidden="true">
+                          ↗
+                        </span>
+                      </a>
+                    )}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        ))}
+      </table>
+    </div>
+
+    <dl class="matrix-legend mt-6">
+      {(['yes', 'limited', 'planned', 'no'] as const).map(support => (
+        <div>
+          <dt>
+            <span class:list={['support', `support-${support}`]}>
+              <i aria-hidden="true" />
+              {SUPPORT_LABEL[support]}
+            </span>
+          </dt>
+          <dd>{SUPPORT_MEANING[support]}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>
+
+<style>
+  .matrix-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 20px;
+    table-layout: fixed;
+  }
+  .matrix thead th {
+    background: var(--bg-app);
+    text-align: left;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .matrix thead th:first-child {
+    width: 30%;
+  }
+  .matrix tbody th[scope='row'] {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text);
+    vertical-align: top;
+  }
+  .matrix th[scope='row'],
+  .matrix td {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border-subtle);
+    vertical-align: top;
+  }
+  .matrix-group th {
+    text-align: left;
+    padding: 18px 16px 8px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+  .matrix tbody:first-of-type .matrix-group th {
+    border-top: 0;
+  }
+  .support {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .support i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+    box-sizing: border-box;
+  }
+  .support-yes i {
+    background: var(--text);
+  }
+  .support-limited i {
+    background: linear-gradient(90deg, var(--text) 50%, transparent 50%);
+    box-shadow: inset 0 0 0 1.5px var(--text);
+  }
+  .support-planned i {
+    border: 1.5px dashed var(--text-secondary);
+  }
+  .support-no i {
+    border: 1.5px solid var(--border-strong);
+  }
+  .support-no {
+    color: var(--text-secondary);
+  }
+  .matrix-note {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+  }
+  .matrix-source {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 12.5px;
+  }
+  .matrix-legend {
+    display: grid;
+    gap: 8px 32px;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .matrix-legend > div {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 12px;
+  }
+  .matrix-legend dd {
+    color: var(--text-secondary);
+  }
+  @media (min-width: 768px) {
+    .matrix-legend {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .matrix,
+    .matrix tbody,
+    .matrix tr,
+    .matrix th,
+    .matrix td {
+      display: block;
+      width: auto;
+    }
+    .matrix thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+    .matrix tbody th[scope='row'] {
+      padding-bottom: 4px;
+    }
+    .matrix td {
+      border-top: 0;
+      padding-top: 6px;
+    }
+    .matrix td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+  }
+</style>
