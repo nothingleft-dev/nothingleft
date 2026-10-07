@@ -38,7 +38,7 @@ repos that is five PRs and a version-bump dance.
 | App | Host | Build |
 |---|---|---|
 | `apps/web` | Vercel | Root Directory = `apps/web`; Vercel resolves workspace deps natively |
-| `apps/marketing` | Cloudflare Workers, static assets only | `astro build` to `dist/`; `wrangler.jsonc` has no `main`, so no request runs Worker code and the free plan's 10 ms CPU limit never applies |
+| `apps/marketing` | Cloudflare Workers, static assets plus one small Worker | `astro build` to `dist/`; pages are served as assets without running Worker code, and only `/api/*` (the support form) runs `worker/index.ts`, so the free plan's 10 ms CPU limit only meets that handler, which spends its time awaiting Turso |
 | `apps/api` | Railway / Fly.io | Docker image built from `turbo prune --scope=api --docker` output, so the image contains only the API and its workspace dependencies |
 
 Shared packages are workspace dependencies resolved at build time. Nothing is

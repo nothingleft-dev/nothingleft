@@ -77,7 +77,8 @@ case, not an `eslint-disable`.
 | Styling | Tailwind v4 through `@tailwindcss/vite`. Light theme only: the site owns a light-only copy of the design tokens in `apps/marketing/src/styles/tokens.css` (owner, 7 Oct 2026) |
 | Fonts | Inter and JetBrains Mono self-hosted through Fontsource, `font-display: swap` |
 | Content | Markdown/MDX in-repo |
-| Hosting | Cloudflare Workers static assets (`wrangler.jsonc`, no Worker script), `nothingleft.dev` |
+| Hosting | Cloudflare Workers static assets, `nothingleft.dev`. Pages are served as assets and never run Worker code; only `/api/*` runs the Worker (`worker/index.ts`, `run_worker_first`) |
+| Support form | `POST /api/support` validates against `src/lib/support-contract.ts` (shared with the page), drops honeypot and too-fast submissions with the same success answer, and inserts a `support_requests` row into Turso over its HTTP API. No client library; credentials are Worker secrets (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`). The table is created on first write and holds no IP address |
 | SEO | Canonical, Open Graph, `@astrojs/sitemap`, `robots.txt`, JSON-LD (Organization, WebSite, WebPage, SoftwareApplication, FAQPage) |
 | Analytics | `track()` in `src/lib/analytics.ts` is a no-op until `packages/analytics` is wired; `PUBLIC_GA_MEASUREMENT_ID` and `PUBLIC_CLARITY_PROJECT_ID` are declared in `.env.example` and not loaded yet |
 

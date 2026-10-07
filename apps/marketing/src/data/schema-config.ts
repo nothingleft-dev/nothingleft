@@ -4,6 +4,11 @@ import { SEARCH_VIEWS_FAQ } from '@lib/features/search-saved-views';
 import { TIME_TRACKING_FAQ } from '@lib/features/time-tracking';
 import { PROJECT_REPORTS_FAQ } from '@lib/features/project-reports';
 import { KNOWLEDGE_BASE_FAQ } from '@lib/features/project-knowledge-base';
+import { ENGINEERING_TEAMS_FAQ } from '@lib/solutions/engineering-teams';
+import { PRODUCT_TEAMS_FAQ } from '@lib/solutions/product-teams';
+import { STARTUPS_FAQ } from '@lib/solutions/startups';
+import { SELF_HOSTING_FAQ } from '@lib/solutions/self-hosting';
+import { SUPPORT_FAQ } from '@lib/support';
 import { HOME_FAQ, type FaqEntry } from '@lib/faq';
 import { PRICING_FAQ } from '@lib/pricing';
 import { SITE_DESCRIPTION } from '@lib/site';
@@ -92,6 +97,48 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Knowledge base', path: '/features/project-knowledge-base' }],
     faq: KNOWLEDGE_BASE_FAQ,
+  },
+  '/solutions/engineering-teams': {
+    title: 'Project Tracking for Engineering Teams | Nothing Left',
+    description:
+      'Give engineers a clear issue list, backlog, sprint board and searchable project context that their AI coding agents can use too.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Engineering teams', path: '/solutions/engineering-teams' }],
+    faq: ENGINEERING_TEAMS_FAQ,
+  },
+  '/solutions/product-teams': {
+    title: 'Product Backlogs and Decisions | Nothing Left',
+    description:
+      'Prioritize a product backlog, plan sprints and keep decisions beside the issues they affect, with reports that lead back to the work.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Product teams', path: '/solutions/product-teams' }],
+    faq: PRODUCT_TEAMS_FAQ,
+  },
+  '/solutions/startups': {
+    title: 'Focused Project Tracking for Startups | Nothing Left',
+    description:
+      'Start with issues, add sprints and reports as you grow, and give your AI tools useful access. Join the free Nothing Left beta.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Startups', path: '/solutions/startups' }],
+    faq: STARTUPS_FAQ,
+  },
+  '/solutions/self-hosting': {
+    title: 'Self-Host Nothing Left | Open Source Project Tracking',
+    description:
+      'Run the same AGPL project tracker from your own infrastructure, with PostgreSQL, S3-compatible storage and an MCP surface for agents.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Self-hosting', path: '/solutions/self-hosting' }],
+    faq: SELF_HOSTING_FAQ,
+    // Out of search until the install guide ships with launch.
+    noindex: true,
+  },
+  '/support': {
+    title: 'Nothing Left Support | Docs, Feedback and Contact',
+    description:
+      'Get help with Nothing Left, report a bug, share beta feedback or contact the team. Start with the docs or send a focused request.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Support', path: '/support' }],
+    faq: SUPPORT_FAQ,
   },
 };
 
