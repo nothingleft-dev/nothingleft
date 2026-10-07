@@ -1,3 +1,21 @@
+import {
+  assigneesOf,
+  burndown,
+  formatClock,
+  formatDate,
+  formatDayMonth,
+  isResolvedAt,
+  issuesInSprint,
+  NOW,
+  PEOPLE as SAMPLE_PEOPLE,
+  pointsOf,
+  sprint,
+  sprintSummary,
+  statusOf,
+  weekday,
+  type Priority,
+  type Status,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 import {
   DAYS,
@@ -28,11 +46,13 @@ function csvCell(value: string | number | boolean | null): string {
 }
 const csvLine = (cells: (string | number | boolean | null)[]) => cells.map(csvCell).join(',');
 
+const SPRINT_NAME = 'Sprint 08';
+
 export const SPRINT = {
-  name: 'Sprint 08',
-  goal: 'Make invitations clearer',
-  start: '4 Oct 2026',
-  end: '17 Oct 2026',
+  name: SPRINT_NAME,
+  goal: sprint(SPRINT_NAME).goal ?? '',
+  start: formatDate(sprint(SPRINT_NAME).start),
+  end: formatDate(sprint(SPRINT_NAME).end),
 };
 
 export interface BurndownDay {
@@ -47,61 +67,28 @@ export interface BurndownDay {
   live: boolean;
 }
 
-const SPRINT_DAYS: { day: number; weekday: string; scope: number | null; completed: number | null }[] = [
-  { day: 4, weekday: 'Sun', scope: 31, completed: 0 },
-  { day: 5, weekday: 'Mon', scope: 34, completed: 0 },
-  { day: 6, weekday: 'Tue', scope: 34, completed: 3 },
-  { day: 7, weekday: 'Wed', scope: 34, completed: 8 },
-  { day: 8, weekday: 'Thu', scope: 34, completed: 11 },
-  { day: 9, weekday: 'Fri', scope: 34, completed: 16 },
-  { day: 10, weekday: 'Sat', scope: 34, completed: 16 },
-  { day: 11, weekday: 'Sun', scope: 34, completed: 16 },
-  { day: 12, weekday: 'Mon', scope: 34, completed: 18 },
-  { day: 13, weekday: 'Tue', scope: 34, completed: 21 },
-  { day: 14, weekday: 'Wed', scope: null, completed: null },
-  { day: 15, weekday: 'Thu', scope: null, completed: null },
-  { day: 16, weekday: 'Fri', scope: null, completed: null },
-  { day: 17, weekday: 'Sat', scope: null, completed: null },
-];
-const TODAY = 13;
-
-function buildBurndown(): BurndownDay[] {
-  const first = SPRINT_DAYS[0];
-  const startRemaining = (first?.scope ?? 0) - (first?.completed ?? 0);
-  const isWorking = (weekday: string) => weekday !== 'Sat' && weekday !== 'Sun';
-  const planned = SPRINT_DAYS.slice(1).filter(d => isWorking(d.weekday)).length;
-  let elapsed = 0;
-  return SPRINT_DAYS.map((d, index) => {
-    const working = isWorking(d.weekday);
-    if (index > 0 && working) elapsed += 1;
-    const last = index === SPRINT_DAYS.length - 1;
-    return {
-      iso: `2026-10-${String(d.day).padStart(2, '0')}`,
-      date: `${d.day} Oct 2026`,
-      short: `${d.weekday} ${d.day}`,
-      working,
-      remaining: d.scope === null || d.completed === null ? null : d.scope - d.completed,
-      ideal: last ? 0 : round1(startRemaining * Math.max(0, 1 - elapsed / planned)),
-      scope: d.scope,
-      completed: d.completed,
-      live: d.day === TODAY,
-    };
-  });
-}
-
-export const BURNDOWN = buildBurndown();
+export const BURNDOWN: BurndownDay[] = burndown(SPRINT_NAME).map(d => ({
+  iso: d.date,
+  date: formatDate(d.date),
+  short: `${weekday(d.date)} ${Number(d.date.slice(8))}`,
+  working: d.working,
+  remaining: d.remaining,
+  ideal: d.ideal,
+  scope: d.scope,
+  completed: d.completed,
+  live: d.live,
+}));
 
 const startScope = BURNDOWN[0]?.scope ?? 0;
 export const scopeAdded = (day: BurndownDay) => (day.scope === null ? null : day.scope - startScope);
 
-const today = BURNDOWN.find(d => d.live);
-export const BURNDOWN_SUMMARY = {
-  committed: startScope,
-  added: today?.scope === null || !today ? 0 : today.scope - startScope,
-  completed: today?.completed ?? 0,
-  remaining: today?.remaining ?? 0,
-  scope: today?.scope ?? 0,
-};
+export const BURNDOWN_SUMMARY = sprintSummary(SPRINT_NAME);
+
+export const SCOPE_STEP_DAY = formatDayMonth(
+  BURNDOWN.find(day => (scopeAdded(day) ?? 0) > 0)?.iso ?? sprint(SPRINT_NAME).start,
+);
+
+export const AS_OF = formatClock(NOW);
 
 export const BURNDOWN_AXIS_MAX = 40;
 
@@ -113,79 +100,28 @@ export const BURNDOWN_CSV = [
 export interface SprintIssue {
   key: string;
   title: string;
-  priority: 'Major' | 'Normal';
+  priority: Priority;
   assignees: string[];
   points: number;
-  status: 'Open' | 'In Progress';
+  status: Status;
 }
 
-export const SCOPE_QUERY = 'sprint: {Sprint 08} #Unresolved';
+export const SCOPE_QUERY = `sprint: {${SPRINT_NAME}} #Unresolved`;
 
-export const OPEN_ISSUES: SprintIssue[] = [
-  {
-    key: 'ACME-10',
-    title: 'Invite landing shows the inviter',
-    priority: 'Normal',
-    assignees: ['alex'],
-    points: 3,
-    status: 'In Progress',
-  },
-  {
-    key: 'ACME-14',
-    title: 'Invite email subject names the org',
-    priority: 'Normal',
-    assignees: ['casey'],
-    points: 2,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-15',
-    title: 'Resend invite from the members list',
-    priority: 'Normal',
-    assignees: ['sam'],
-    points: 1,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-17',
-    title: 'Invite expiry shown in the members list',
-    priority: 'Major',
-    assignees: ['alex', 'casey'],
-    points: 2,
-    status: 'In Progress',
-  },
-  {
-    key: 'ACME-18',
-    title: 'Pending invite count on the people page',
-    priority: 'Normal',
-    assignees: ['jordan'],
-    points: 1,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-19',
-    title: 'Tell the inviter when an invite is accepted',
-    priority: 'Normal',
-    assignees: ['sam'],
-    points: 2,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-20',
-    title: 'Accessible name for the invite dialog',
-    priority: 'Normal',
-    assignees: [],
-    points: 2,
-    status: 'Open',
-  },
-];
+export const OPEN_ISSUES: SprintIssue[] = issuesInSprint(SPRINT_NAME)
+  .filter(candidate => !isResolvedAt(candidate.key))
+  .map(candidate => ({
+    key: candidate.key,
+    title: candidate.title,
+    priority: candidate.priority,
+    assignees: assigneesOf(candidate.key).map(who => who.handle),
+    points: pointsOf(candidate.key) ?? 0,
+    status: statusOf(candidate.key),
+  }));
 
-export const PEOPLE: Record<string, { name: string; initials: string }> = {
-  alex: { name: 'Alex Lee', initials: 'AL' },
-  casey: { name: 'Casey Kim', initials: 'CK' },
-  jordan: { name: 'Jordan', initials: 'J' },
-  sam: { name: 'Sam Ortiz', initials: 'SO' },
-};
+export const PEOPLE: Record<string, { name: string; initials: string }> = Object.fromEntries(
+  SAMPLE_PEOPLE.map(who => [who.handle, { name: who.name, initials: who.initials }]),
+);
 
 export interface AssigneeGroup {
   id: string;
@@ -231,6 +167,8 @@ function buildAssigneeGroups(): AssigneeGroup[] {
 
 export const ASSIGNEE_GROUPS = buildAssigneeGroups();
 
+export const MULTI_ASSIGNED = OPEN_ISSUES.filter(issue => issue.assignees.length > 1).map(issue => issue.key);
+
 export const ASSIGNEE_TOTALS = {
   issues: OPEN_ISSUES.length,
   counted: ASSIGNEE_GROUPS.reduce((sum, group) => sum + group.count, 0),
@@ -240,7 +178,7 @@ export const ASSIGNEE_TOTALS = {
 
 export const ASSIGNEE_AXIS_MAX = Math.max(...ASSIGNEE_GROUPS.map(group => group.count));
 
-export const ASSIGNEE_CSV_NAME = 'acme-issues-per-assignee-2026-10-13.csv';
+export const ASSIGNEE_CSV_NAME = `acme-issues-per-assignee-${NOW.slice(0, 10)}.csv`;
 
 export const ASSIGNEE_CSV = [
   csvLine(['label', 'value', 'issues', 'share']),
@@ -270,10 +208,15 @@ export const RUN_REPORT_ANSWER = [
   `Chart: series 1–${ASSIGNEE_GROUPS.length}, the ${ASSIGNEE_GROUPS.length} largest in their own order. The table is the series.`,
 ].join('\n');
 
+const EMPTY_PRIORITY = 'Critical';
+if (issuesInSprint(SPRINT_NAME).some(candidate => candidate.priority === EMPTY_PRIORITY)) {
+  throw new Error(`The empty-state example needs no ${EMPTY_PRIORITY} issue in ${SPRINT_NAME}`);
+}
+
 export const EMPTY_STATE = {
-  query: 'sprint: {Sprint 08} priority: Critical',
-  message: 'No issues match sprint: {Sprint 08}, priority: Critical, in ACME.',
-  widen: ['Drop sprint: {Sprint 08}', 'Drop priority: Critical', 'Every project'],
+  query: `sprint: {${SPRINT_NAME}} priority: ${EMPTY_PRIORITY}`,
+  message: `No issues match sprint: {${SPRINT_NAME}}, priority: ${EMPTY_PRIORITY}, in ACME.`,
+  widen: [`Drop sprint: {${SPRINT_NAME}}`, `Drop priority: ${EMPTY_PRIORITY}`, 'Every project'],
 };
 
 export const TIME_PERIOD = PERIOD_LABEL;
@@ -425,7 +368,7 @@ export const PROJECT_REPORTS_FAQ: FaqEntry[] = [
   {
     question: 'Why can the bars add up to more than the number of issues?',
     answer: [
-      'An issue assigned to two people, or carrying two tags, counts once under each. The report states both numbers, as in "7 issues; 1 has more than one assignee, so the bars add up to 8", and the CSV’s total row counts each issue once.',
+      `An issue assigned to two people, or carrying two tags, counts once under each. The report states both numbers, as in "${ASSIGNEE_TOTALS.issues} issues; ${ASSIGNEE_TOTALS.multi} has more than one assignee, so the bars add up to ${ASSIGNEE_TOTALS.counted}", and the CSV’s total row counts each issue once.`,
     ],
   },
   {

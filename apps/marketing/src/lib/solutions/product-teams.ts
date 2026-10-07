@@ -1,3 +1,19 @@
+import {
+  article,
+  formatDate,
+  formatDayMonth,
+  issue,
+  person,
+  pointsOf,
+  resolvedAt,
+  sprint,
+  sprintOf,
+  sprintSummary,
+  statusOf,
+  NOW,
+  articleUri,
+  type Moment,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const SEARCH_FEATURE_PATH = '/features/search-saved-views';
@@ -30,69 +46,48 @@ export const VIEW = {
   query: 'tag: invitations sprint: {No sprint} #Unresolved sort by: impact, priority',
 };
 
+const SPRINT_NAME = 'Sprint 08';
+
 export const SPRINT = {
-  name: 'Sprint 08',
-  goal: 'Make invitations clearer',
-  ends: '17 Oct 2026',
+  name: SPRINT_NAME,
+  goal: sprint(SPRINT_NAME).goal ?? '',
+  ends: formatDate(sprint(SPRINT_NAME).end),
 };
 
-// `picked` is the finished state the markup carries; the script starts the visitor from an empty sprint.
-export const CANDIDATES: Candidate[] = [
-  {
-    key: 'ACME-12',
-    title: 'Invite link blank after it expires',
-    type: 'Bug',
-    priority: 'Major',
-    impact: 'High',
-    points: 3,
-    picked: true,
-  },
-  {
-    key: 'ACME-15',
-    title: 'Resend invite from the members list',
-    type: 'Feature',
-    priority: 'Normal',
-    impact: 'High',
-    points: 1,
-    picked: true,
-  },
-  {
-    key: 'ACME-14',
-    title: 'Invite email subject names the org',
-    type: 'Task',
-    priority: 'Normal',
-    impact: 'Medium',
-    points: 2,
-    picked: true,
-  },
-  {
-    key: 'ACME-18',
-    title: 'Revoke a pending invitation',
-    type: 'Feature',
-    priority: 'Normal',
-    impact: 'Medium',
-    points: 5,
-    picked: false,
-  },
-  {
-    key: 'ACME-16',
-    title: 'Reminder email before an invite expires',
-    type: 'Feature',
-    priority: 'Normal',
-    impact: 'Low',
-    points: 3,
-    picked: false,
-  },
-  {
-    key: 'ACME-19',
-    title: 'Invite form explains each role',
-    type: 'Task',
-    priority: 'Minor',
-    impact: null,
-    points: 1,
-    picked: false,
-  },
+// The planning meeting, just before the picks were moved into the sprint.
+export const PLANNED_AT: Moment = '2026-10-03 10:00';
+export const PLANNING_DAY = formatDate(PLANNED_AT);
+
+interface Pick {
+  key: string;
+  impact: Impact | null;
+  picked: boolean;
+}
+
+// Impact is this team's own field; `picked` is the finished state the markup carries, and the script starts the visitor from an empty sprint.
+const PICKS: Pick[] = [
+  { key: 'ACME-12', impact: 'High', picked: true },
+  { key: 'ACME-15', impact: 'High', picked: true },
+  { key: 'ACME-14', impact: 'Medium', picked: true },
+  { key: 'ACME-18', impact: 'Medium', picked: false },
+  { key: 'ACME-16', impact: 'Low', picked: false },
+  { key: 'ACME-19', impact: null, picked: false },
 ];
+
+export const CANDIDATES: Candidate[] = PICKS.map(pick => {
+  const found = issue(pick.key);
+  if (pick.picked !== (sprintOf(pick.key) === SPRINT_NAME))
+    throw new Error(`${pick.key} is picked only if it is in ${SPRINT_NAME}`);
+  return {
+    key: pick.key,
+    title: found.title,
+    type: found.type as IssueType,
+    priority: found.priority as Priority,
+    impact: pick.impact,
+    points: pointsOf(pick.key) ?? 0,
+    picked: pick.picked,
+  };
+});
 
 export const impactLabel = (impact: Impact | null) => impact ?? IMPACT_EMPTY_LABEL;
 
@@ -117,7 +112,31 @@ export const plural = (count: number, noun: string) => `${count} ${noun}${count 
 export const PICKED = CANDIDATES.filter(issue => issue.picked);
 export const PICKED_POINTS = PICKED.reduce((sum, issue) => sum + issue.points, 0);
 
-export const BURNDOWN_CHECK = { scope: 34, added: 3, remaining: 13, on: '13 Oct 2026' };
+const summary = sprintSummary(SPRINT_NAME);
+export const BURNDOWN_CHECK = {
+  scope: summary.scope,
+  added: summary.added,
+  remaining: summary.remaining,
+  on: formatDate(NOW),
+};
+
+const decision = article('invitation-links-and-expiry');
+const lead = issue(decision.references[0] ?? '');
+const waiting = CANDIDATES.filter(candidate => !candidate.picked).sort((a, b) => b.points - a.points)[0];
+
+export const STORY = {
+  lead: { key: lead.key, title: lead.title, reporter: person(lead.reporter), status: statusOf(lead.key, PLANNED_AT) },
+  others: CANDIDATES.length - 1,
+  decision: {
+    title: decision.title,
+    author: person(decision.author),
+    updatedBy: person(decision.updatedBy).name,
+    decided: formatDate(decision.decided ?? decision.published),
+    updated: `${decision.folder} · ACME · updated ${formatDate(decision.updated)}`,
+  },
+  waiting: waiting && { key: waiting.key, points: waiting.points, sprint: sprintOf(waiting.key) },
+  fixed: formatDayMonth(resolvedAt(lead.key) ?? NOW),
+};
 
 export interface WorkflowStep {
   title: string;
@@ -162,7 +181,7 @@ export const WORKFLOW: WorkflowStep[] = [
   {
     title: 'Write the decision beside the issues',
     body: 'A decision record in the project’s knowledge base names the issue keys. Each issue then lists it under Referenced by.',
-    detail: 'article://ACME/invitation-links-and-expiry',
+    detail: articleUri(decision.slug),
     link: { href: KB_FEATURE_PATH, label: 'Knowledge base' },
   },
 ];

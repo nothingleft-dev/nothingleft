@@ -1,6 +1,17 @@
 ---
+import { article, comment, formatDate, formatMoment, issue, ISSUES, person, resolvedAt, statusOf } from '@data/sample';
+
+const runbook = article('restoring-a-failed-sync');
+const incident = issue(runbook.references[0] ?? '');
+const fixer = person(incident.assignees.at(-1)?.value[0] ?? runbook.author);
+const reporter = person(incident.reporter);
+const fix = comment(incident.key, fixer.handle, (resolvedAt(incident.key) ?? '').slice(0, 10));
+const outageTag = runbook.tags.find(tag => tag !== 'runbook') ?? '';
+const tagged = ISSUES.filter(candidate => candidate.tags?.includes(outageTag));
+const author = person(runbook.author);
+
 const STEPS = [
-  { title: 'Start from the resolved incident', detail: 'ACME-18 is fixed, and the fix lives in a comment.' },
+  { title: 'Start from the resolved incident', detail: `${incident.key} is fixed, and the fix lives in a comment.` },
   {
     title: 'Draft a runbook from a starter',
     detail: 'Title first, then the Runbook starter. Only you and admins see it.',
@@ -19,8 +30,8 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
         From a resolved incident to a runbook anyone on the project can find.
       </h2>
       <p class="prose mt-5">
-        Sam Ortiz fixed a failed partner sync on 29 Sep 2026. Pick a step to see how the fix becomes a runbook the next
-        person on call will actually find.
+        {fixer.name} fixed a failed partner sync on {formatDate(fix.at)}. Pick a step to see how the fix becomes a
+        runbook the next person on call will actually find.
       </p>
     </div>
     <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
@@ -49,48 +60,49 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
             <span class="sep">/</span>
             <span>Issues</span>
             <span class="sep">/</span>
-            <span class="mono text-xs text-fg">ACME-18</span>
+            <span class="mono text-xs text-fg">{incident.key}</span>
           </div>
           <div class="wf-body">
             <div class="flex items-center gap-2 text-xs text-fg-2">
               <span class="badge l-bug" aria-hidden="true">
                 B
               </span>
-              Bug
-              <span class="badge l-critical ml-2" aria-hidden="true">
-                C
+              {incident.type}
+              <span class:list={['badge ml-2', `l-${incident.priority.toLowerCase()}`]} aria-hidden="true">
+                {incident.priority.charAt(0)}
               </span>
-              Critical
+              {incident.priority}
             </div>
-            <h3 class="wf-title">Partner sync stops after a key rotation</h3>
+            <h3 class="wf-title">{incident.title}</h3>
             <div class="comment">
               <div class="by">
                 <span class="av" aria-hidden="true">
-                  SO
+                  {fixer.initials}
                 </span>
-                Sam Ortiz<span class="text-fg-3">29 Sep 2026, 4:10pm</span>
+                {fixer.name}
+                <span class="text-fg-3">{formatMoment(fix.at)}</span>
               </div>
-              Sync is running again. The rotated key had not reached the sync service, so every batch was rejected.
-              Updated the key, replayed the failed batch, and the next run succeeded.
+              {fix.text}
             </div>
             <dl class="fields">
               <dt>Assignee</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  SO
+                  {fixer.initials}
                 </span>
-                Sam Ortiz
+                {fixer.name}
               </dd>
               <dt>Status</dt>
               <dd>
-                <i class="dot done"></i>Fixed
+                <i class="dot done"></i>
+                {statusOf(incident.key)}
               </dd>
               <dt>Reporter</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  CK
+                  {reporter.initials}
                 </span>
-                Casey Kim
+                {reporter.name}
               </dd>
             </dl>
           </div>
@@ -107,9 +119,9 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
           <div class="wf-body">
             <dl class="fields mt-0 pt-0 border-t-0">
               <dt>Title</dt>
-              <dd>Restoring a failed sync</dd>
+              <dd>{runbook.title}</dd>
               <dt>Address</dt>
-              <dd class="mono text-xs kb-wrap">restoring-a-failed-sync</dd>
+              <dd class="mono text-xs kb-wrap">{runbook.slug}</dd>
               <dt>Start from</dt>
               <dd class="flex-wrap">
                 {STARTERS.map(starter => (
@@ -141,16 +153,18 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
             <span class="sep kb-mid">/</span>
             <span>Runbooks</span>
             <span class="sep">/</span>
-            <span class="text-fg kb-last">Restoring a failed sync</span>
+            <span class="text-fg kb-last">{runbook.title}</span>
           </div>
           <div class="wf-body">
-            <p class="text-xs text-fg-2">Runbook · Published to project members · Last updated by Sam Ortiz</p>
-            <h3 class="wf-title">Restoring a failed sync</h3>
+            <p class="text-xs text-fg-2">
+              Runbook · Published to project members · Last updated by {person(runbook.updatedBy).name}
+            </p>
+            <h3 class="wf-title">{runbook.title}</h3>
             <div class="wf-md">
               <p class="text-fg font-medium">When to use this</p>
               <p>
                 The partner sync shows <em>Failed</em> on every batch after a key rotation, as in{' '}
-                <s class="kb-done">ACME-18</s>.
+                <s class="kb-done">{incident.key}</s>.
               </p>
               <p class="text-fg font-medium">Steps</p>
               <ol class="kb-ol">
@@ -162,8 +176,8 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
             <div class="kb-published">
               <span class="kb-check" aria-hidden="true"></span>
               <span>
-                Published 30 Sep 2026. Every member of ACME can read it, Observers included. It can return to draft at
-                any time.
+                Published {formatDate(runbook.published)}. Every member of ACME can read it, Observers included. It can
+                return to draft at any time.
               </span>
             </div>
           </div>
@@ -178,19 +192,19 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
           <div class="wf-body">
             <div class="kb-tagged">
               <p class="text-xs text-fg-3">Article</p>
-              <p class="mt-1 font-medium">Restoring a failed sync</p>
+              <p class="mt-1 font-medium">{runbook.title}</p>
               <p class="kb-chips">
-                <span class="kb-chip kb-chip-new">sync-outage</span>
+                <span class="kb-chip kb-chip-new">{outageTag}</span>
                 <span class="kb-chip">runbook</span>
               </p>
             </div>
             <div class="kb-tagged">
               <p class="text-xs text-fg-3">Issue</p>
               <p class="mt-1">
-                <span class="key">ACME-18</span> Partner sync stops after a key rotation
+                <span class="key">{incident.key}</span> {incident.title}
               </p>
               <p class="kb-chips">
-                <span class="kb-chip kb-chip-new">sync-outage</span>
+                <span class="kb-chip kb-chip-new">{outageTag}</span>
               </p>
             </div>
             <p class="mt-5 text-xs text-fg-2">
@@ -202,34 +216,32 @@ const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
 
         <div data-view="5">
           <div class="querybar">
-            <span class="q">tag: sync-outage</span>
+            <span class="q">tag: {outageTag}</span>
           </div>
           <div class="kb-group">
             <p class="kb-group-head">
-              Issues <span>2</span>
+              Issues <span>{tagged.length}</span>
             </p>
-            <p class="kb-hit">
-              <span class="key">ACME-18</span>
-              <span class="kb-hit-title">Partner sync stops after a key rotation</span>
-              <span class="kb-hit-meta">
-                <i class="dot done"></i>Fixed
-              </span>
-            </p>
-            <p class="kb-hit">
-              <span class="key">ACME-16</span>
-              <span class="kb-hit-title">Sync log hides the rejected key error</span>
-              <span class="kb-hit-meta">
-                <i class="dot done"></i>Fixed
-              </span>
-            </p>
+            {tagged.map(hit => (
+              <p class="kb-hit">
+                <span class="key">{hit.key}</span>
+                <span class="kb-hit-title">{hit.title}</span>
+                <span class="kb-hit-meta">
+                  <i class="dot done"></i>
+                  {statusOf(hit.key)}
+                </span>
+              </p>
+            ))}
           </div>
           <div class="kb-group">
             <p class="kb-group-head">
               Articles <span>1</span>
             </p>
             <div class="kb-article-hit">
-              <p class="font-medium">Restoring a failed sync</p>
-              <p class="text-xs text-fg-2 mt-0.5">Runbooks · Sam Ortiz · 30 Sep 2026</p>
+              <p class="font-medium">{runbook.title}</p>
+              <p class="text-xs text-fg-2 mt-0.5">
+                {runbook.folder} · {author.name} · {formatDate(runbook.published)}
+              </p>
               <p class="mt-1.5 text-fg-2">
                 The partner sync shows Failed on every batch after a key rotation. Copy the new key into the sync
                 service…

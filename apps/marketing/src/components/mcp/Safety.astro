@@ -1,3 +1,7 @@
+---
+import { CASEY_OPEN_ISSUES } from '@lib/mcp';
+---
+
 <section class="border-t border-line bg-app" aria-labelledby="safety-title">
   <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
     <div class="lg:col-span-5">
@@ -25,7 +29,7 @@
           changes unless you accept, and the agent cannot answer for you.
         </p>
         <p class="quote mt-3">
-          remove_member will remove @casey from ACME: 3 open issues reassigned to @alex … Go ahead?
+          remove_member will remove @casey from ACME: {CASEY_OPEN_ISSUES} open issues reassigned to @alex … Go ahead?
         </p>
       </div>
       <div class="py-6">

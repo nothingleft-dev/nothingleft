@@ -3,12 +3,15 @@ import ChartTip from './ChartTip.astro';
 import {
   ASSIGNEE_AXIS_MAX,
   ASSIGNEE_GROUPS,
+  AS_OF,
   ASSIGNEE_TOTALS,
   BURNDOWN,
   BURNDOWN_SUMMARY,
   EMPTY_STATE,
+  MULTI_ASSIGNED,
   PEOPLE,
   SCOPE_QUERY,
+  SPRINT,
   type AssigneeGroup,
 } from '@lib/features/project-reports';
 
@@ -28,7 +31,7 @@ const today = BURNDOWN.find(day => day.live);
         Follow every number back to its issues.
       </h2>
       <p class="prose mt-5">
-        Sprint 08 has {BURNDOWN_SUMMARY.remaining} points left where the ideal line has {today?.ideal}. The next
+        {SPRINT.name} has {BURNDOWN_SUMMARY.remaining} points left where the ideal line has {today?.ideal}. The next
         question is who is holding the rest, and the answer is one click from the issues themselves.
       </p>
     </div>
@@ -71,7 +74,7 @@ const today = BURNDOWN.find(day => day.live);
           <span>
             <span class="text-fg-3">Projects</span> ACME
           </span>
-          <span class="text-fg-3">As of 9:20am</span>
+          <span class="text-fg-3">As of {AS_OF}</span>
         </div>
         <p class="sentence" id="ipa-caption">
           {ASSIGNEE_TOTALS.issues} issues in ACME. {ASSIGNEE_TOTALS.multi} has more than one assignee, so the bars add
@@ -240,7 +243,7 @@ const today = BURNDOWN.find(day => day.live);
             <p class="drill-note">
               {issuesText(group.count)}, the same number as the bar.
               {group.issues.some(issue => issue.assignees.length > 1) &&
-                ' ACME-17 has two assignees, so it is listed under each of them.'}
+                ` ${MULTI_ASSIGNED.join(' and ')} has two assignees, so it is listed under each of them.`}
             </p>
           </section>
         ))}

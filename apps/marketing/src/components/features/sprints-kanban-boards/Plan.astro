@@ -3,6 +3,7 @@ import {
   BACKLOG_ROWS,
   BACKLOG_TOTAL,
   INITIAL_STATE,
+  PLANNED_SPRINT,
   PLANNED_SPRINT_ROWS,
   plural,
   SPRINT,
@@ -71,13 +72,13 @@ const typeClass = (row: BacklogRow) => ({ Bug: 'l-bug', Feature: 'l-feature', Ta
             <span class="chev open" aria-hidden="true">
               ›
             </span>
-            <span class="text-fg font-medium">Sprint 09</span>
+            <span class="text-fg font-medium">{PLANNED_SPRINT.name}</span>
             <span class="pill">Planned</span>
             <span class="bl-meta">
-              {`19 Oct – 30 Oct 2026 · ${plural(PLANNED_SPRINT_ROWS.length, 'issue')} · ${plannedPoints} points`}
+              {`${PLANNED_SPRINT.dates} · ${plural(PLANNED_SPRINT_ROWS.length, 'issue')} · ${plannedPoints} points`}
             </span>
           </p>
-          <p class="bl-goal">Goal: members can manage invitations without asking an admin.</p>
+          <p class="bl-goal">Goal: {PLANNED_SPRINT.goal}.</p>
           <ul>
             {PLANNED_SPRINT_ROWS.map(row => (
               <li class="bl-row">

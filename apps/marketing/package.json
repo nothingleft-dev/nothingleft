@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview --port 4321",
     "typecheck": "astro check",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:data": "bun scripts/check-sample-data.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

@@ -10,7 +10,9 @@ interface Props {
 
 const { issue, compact = false, hidden = false, ...data } = Astro.props;
 const typeClass = { Bug: 'l-bug', Feature: 'l-feature', Task: 'l-task' }[issue.type];
-const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-normal' }[issue.priority];
+const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-normal', Minor: 'p-minor' }[
+  issue.priority
+];
 ---
 
 <div class:list={['card', 'sk-card', priorityClass, { compact }]} hidden={hidden} {...data}>
@@ -32,10 +34,12 @@ const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-nor
         <span aria-hidden="true">{issue.priority.charAt(0)}</span>
         <span class="sr-only">{issue.priority}</span>
       </span>
-      <span class="av" title={issue.assignee.name}>
-        <span aria-hidden="true">{issue.assignee.initials}</span>
-        <span class="sr-only">{issue.assignee.name}</span>
-      </span>
+      {issue.assignees.map((who, index) => (
+        <span class:list={['av', { first: index === 0 }]} title={who.name}>
+          <span aria-hidden="true">{who.initials}</span>
+          <span class="sr-only">{who.name}</span>
+        </span>
+      ))}
     </div>
   )}
 </div>
@@ -54,6 +58,9 @@ const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-nor
   }
   .p-normal {
     --edge: var(--label-green-1-bg);
+  }
+  .p-minor {
+    --edge: var(--palette-gray-bg);
   }
   .top {
     display: flex;
@@ -79,7 +86,7 @@ const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-nor
     gap: 4px;
     margin-top: 8px;
   }
-  .meta .av {
+  .meta .av.first {
     margin-left: auto;
   }
   .compact {
@@ -89,7 +96,8 @@ const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-nor
     --c-bg: var(--palette-blue-bg);
     --c-fg: var(--palette-blue-fg);
   }
-  .l-task {
+  .l-task,
+  .l-minor {
     --c-bg: var(--palette-gray-bg);
     --c-fg: var(--palette-gray-fg);
   }

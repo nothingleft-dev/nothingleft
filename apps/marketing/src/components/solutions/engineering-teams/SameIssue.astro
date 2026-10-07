@@ -1,8 +1,10 @@
 ---
 import { BURNDOWN, BURNDOWN_AXIS_MAX, SPRINT } from '@lib/features/project-reports';
-import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH } from '@lib/solutions/engineering-teams';
+import { article, formatDate } from '@data/sample';
+import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, STORY } from '@lib/solutions/engineering-teams';
 
-const FIX_ISO = '2026-10-08';
+const FIX_ISO = STORY.board.iso;
+const decision = article('invitation-links-and-expiry');
 const last = BURNDOWN.length - 1;
 const x = (index: number) => (index / last) * 100;
 const y = (value: number) => 100 - (value / BURNDOWN_AXIS_MAX) * 100;
@@ -18,6 +20,7 @@ if (!fixDay || !dayBefore || fixDay.remaining === null || dayBefore.remaining ==
   throw new Error(`The burndown needs figures for ${FIX_ISO} and the day before`);
 }
 const fell = dayBefore.remaining - fixDay.remaining;
+if (fell !== STORY.points) throw new Error(`Only ${STORY.key} may resolve on ${FIX_ISO} for this caption to hold`);
 const ticks = [0, 20, 40];
 const labelled = new Set([0, fixIndex, last]);
 ---
@@ -69,7 +72,7 @@ const labelled = new Set([0, fixIndex, last]);
                 </svg>
                 <span class="et-dot" style={`left:${x(fixIndex)}%;top:${y(fixDay.remaining)}%`}></span>
                 <span class="et-flag" style={`left:${x(fixIndex)}%;top:${y(fixDay.remaining)}%`}>
-                  ACME-12 Fixed, −{fell}
+                  {STORY.key} Fixed, −{fell}
                 </span>
               </div>
               <div class="et-x" aria-hidden="true">
@@ -85,7 +88,7 @@ const labelled = new Set([0, fixIndex, last]);
           </div>
         </div>
         <figcaption id="et-bd-caption" class="mt-4 text-sm text-fg-2">
-          {`On ${fixDay.date}, remaining work in ${SPRINT.name} fell from ${dayBefore.remaining} to ${fixDay.remaining} story points: the ${fell} points of ACME-12, resolved when Alex moved it to Fixed.`}
+          {`On ${fixDay.date}, remaining work in ${SPRINT.name} fell from ${dayBefore.remaining} to ${fixDay.remaining} story points: the ${fell} points of ${STORY.key}, resolved when ${STORY.developer.name.split(' ')[0]} moved it to Fixed.`}
           <a class="link ml-1 inline-block" href={REPORTS_FEATURE_PATH}>
             Project reports
             <span class="arr" aria-hidden="true">
@@ -104,19 +107,21 @@ const labelled = new Set([0, fixIndex, last]);
             <span class="sep et-mid">/</span>
             <span>Decisions</span>
             <span class="sep">/</span>
-            <span class="text-fg et-last">Invitation links and expiry</span>
+            <span class="text-fg et-last">{decision.title}</span>
           </div>
           <div class="wf-body">
             <p class="text-xs text-fg-2">Decision record · Published to project members</p>
-            <h3 class="wf-title">Invitation links and expiry</h3>
+            <h3 class="wf-title">{decision.title}</h3>
             <div class="wf-md">
               <p>
                 Invitation links expire after seven days (<code>INVITE_TTL_DAYS</code>). An expired link must explain
                 itself and offer a new one. A blank page or a redirect to sign-in is a bug.
               </p>
               <p>
-                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
-                invitation landing page itself, before any sign-in prompt. See{' '}
+                <strong class="text-fg font-medium">
+                  Decided {formatDate(decision.decided ?? decision.published)}.
+                </strong>{' '}
+                The expiry message is shown on the invitation landing page itself, before any sign-in prompt. See{' '}
                 <s class="et-struck">
                   <span class="sr-only">resolved issue </span>ACME-12
                 </s>{' '}
@@ -126,7 +131,7 @@ const labelled = new Set([0, fixIndex, last]);
             <div class="ref">
               <p class="lbl">On ACME-12, under Referenced by</p>
               <p class="flex items-center gap-2 min-w-0">
-                <span class="et-ellipsis">Invitation links and expiry</span>
+                <span class="et-ellipsis">{decision.title}</span>
                 <span class="text-xs text-fg-2 flex-none">Decisions · ACME</span>
               </p>
             </div>

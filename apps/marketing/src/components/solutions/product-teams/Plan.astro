@@ -4,6 +4,8 @@ import {
   groupCandidates,
   PICKED,
   PICKED_POINTS,
+  PLANNING_DAY,
+  STORY,
   plural,
   SPRINT,
   VIEW,
@@ -24,8 +26,8 @@ const groupings: { by: GroupBy; label: string }[] = [
         Priorities change. The reasoning should stay findable.
       </h2>
       <p class="prose mt-5 max-w-[40ch]">
-        It is 2 Oct 2026, and Acme is planning <strong>{SPRINT.name}</strong> from a saved view of invitation feedback.
-        Run the meeting yourself.
+        It is {PLANNING_DAY}, and Acme is planning <strong>{SPRINT.name}</strong> from a saved view of invitation
+        feedback. Run the meeting yourself.
       </p>
       <ol class="steps-list mt-6 prose text-base">
         <li>
@@ -156,7 +158,7 @@ const groupings: { by: GroupBy; label: string }[] = [
             <span class="sep">/</span>
             <span>Issues</span>
             <span class="sep">/</span>
-            <span class="mono text-xs text-fg">ACME-12</span>
+            <span class="mono text-xs text-fg">{STORY.lead.key}</span>
           </div>
           <div class="wf-body">
             <div class="flex items-center gap-2 text-xs text-fg-2">
@@ -169,7 +171,7 @@ const groupings: { by: GroupBy; label: string }[] = [
               </span>
               Major
             </div>
-            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <h3 class="wf-title">{STORY.lead.title}</h3>
             <div class="wf-md">
               <p>
                 <strong class="text-fg font-medium">Actual.</strong> Opening an invitation link older than seven days
@@ -180,13 +182,14 @@ const groupings: { by: GroupBy; label: string }[] = [
               <dt>Reporter</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  CK
+                  {STORY.lead.reporter.initials}
                 </span>
-                Casey Kim
+                {STORY.lead.reporter.name}
               </dd>
               <dt>Status</dt>
               <dd>
-                <i class="dot"></i>Open
+                <i class="dot"></i>
+                {STORY.lead.status}
               </dd>
               <dt>Impact</dt>
               <dd>
@@ -199,10 +202,10 @@ const groupings: { by: GroupBy; label: string }[] = [
               <p class="lbl">Referenced by</p>
               <p>
                 <a class="pt-ref-link" href="#pt-panel-article" data-pt-follow="article" data-pt-landing="issue">
-                  Invitation links and expiry
+                  {STORY.decision.title}
                 </a>
               </p>
-              <p class="mt-1 text-xs text-fg-2">Decisions · ACME · updated 2 Oct 2026</p>
+              <p class="mt-1 text-xs text-fg-2">{STORY.decision.updated}</p>
             </div>
           </div>
         </div>
@@ -216,20 +219,22 @@ const groupings: { by: GroupBy; label: string }[] = [
             <span class="sep pt-mid">/</span>
             <span>Decisions</span>
             <span class="sep">/</span>
-            <span class="text-fg pt-last">Invitation links and expiry</span>
+            <span class="text-fg pt-last">{STORY.decision.title}</span>
           </div>
           <div class="wf-body">
-            <p class="text-xs text-fg-2">Decision record · Published to project members · Last updated by Alex Lee</p>
-            <h3 class="wf-title">Invitation links and expiry</h3>
+            <p class="text-xs text-fg-2">
+              Decision record · Published to project members · Last updated by {STORY.decision.updatedBy}
+            </p>
+            <h3 class="wf-title">{STORY.decision.title}</h3>
             <div class="wf-md">
               <p>
                 Invitation links expire after seven days (<code>INVITE_TTL_DAYS</code>). An expired link must explain
                 itself and offer a new one. A blank page or a redirect to sign-in is a bug.
               </p>
               <p>
-                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
-                invitation landing page itself, before any sign-in prompt, because the person may not have an account
-                yet. See{' '}
+                <strong class="text-fg font-medium">Decided {STORY.decision.decided}.</strong> The expiry message is
+                shown on the invitation landing page itself, before any sign-in prompt, because the person may not have
+                an account yet. See{' '}
                 <a class="pt-key-link" href="#pt-panel-issue" data-pt-follow="issue" data-pt-landing="article">
                   ACME-12
                 </a>{' '}

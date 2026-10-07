@@ -1,5 +1,12 @@
 ---
-import { CONNECTIONS } from '@lib/features/issue-tracking';
+import { CONNECTIONS, DETAIL, SHOWN_AT } from '@lib/features/issue-tracking';
+import { formatMoment } from '@data/sample';
+
+const linked = [
+  ...DETAIL.subtasks.map(child => ({ ...child, label: `its subtask ${child.key}` })),
+  ...DETAIL.dependsOn.map(link => ({ ...link, label: `${link.key}, which it depends on,` })),
+];
+if (!linked.every(link => link.resolved)) throw new Error(`${DETAIL.key}'s links must all be resolved for this answer`);
 import Keyed from './Keyed.astro';
 ---
 
@@ -29,13 +36,13 @@ import Keyed from './Keyed.astro';
         </ul>
         <div class="answer">
           <p>
-            <strong class="font-medium">ACME-12</strong> Invite link blank after it expires is{' '}
-            <strong class="font-medium">Fixed</strong>, resolved 8 Oct 2026, 4:40pm, assigned to Alex Lee. Severity
-            Critical, 1h 45m spent of 2h.
+            <strong class="font-medium">{DETAIL.key}</strong> {DETAIL.title} is{' '}
+            <strong class="font-medium">{DETAIL.status}</strong>, resolved {formatMoment(SHOWN_AT)}, assigned to{' '}
+            {DETAIL.assignee.name}. Severity {DETAIL.severity}, {DETAIL.spent} spent of {DETAIL.estimate}.
           </p>
           <p class="mt-2">
-            Nothing is left open: its subtask ACME-13 and ACME-4, which it depends on, are both Fixed. The decision is
-            in the article <em>Invitation links and expiry</em>.
+            Nothing is left open: {linked.map(link => link.label).join(' and ')} are both {DETAIL.status}. The decision
+            is in the article <em>{DETAIL.reference}</em>.
           </p>
         </div>
       </figure>

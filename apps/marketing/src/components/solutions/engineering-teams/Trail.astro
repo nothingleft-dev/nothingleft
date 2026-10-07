@@ -1,17 +1,12 @@
 ---
-const TRAIL = [
-  { when: '2 Oct', what: 'Reported' },
-  { when: '3 Oct', what: 'Triaged' },
-  { when: '3 Oct', what: 'In Sprint 08' },
-  { when: '6 Oct', what: 'Reproduced' },
-  { when: '8 Oct', what: 'Fixed' },
-  { when: '9 Oct', what: 'In the standup' },
-];
+import { STORY } from '@lib/solutions/engineering-teams';
+
+const TRAIL = STORY.trail;
 ---
 
 <div class="mt-10 md:mt-12">
   <p class="text-xs text-fg-2">
-    <span class="mono text-fg">ACME-12</span> · Invite link blank after it expires
+    <span class="mono text-fg">{STORY.key}</span> · {STORY.title}
   </p>
   <ol class="et-trail mt-3" aria-label="ACME-12 from report to standup">
     {TRAIL.map((stop, index) => (

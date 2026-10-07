@@ -7,6 +7,7 @@ import {
   PRIORITIES,
   TYPE_CHOICES,
   countLabel,
+  countWord,
   issuesAddress,
   perAssignee,
   reportAddress,
@@ -219,7 +220,8 @@ const assigneeLabel = (choice: string) => (choice === 'anyone' ? 'Anyone' : choi
         </div>
         <p class="sr-only" aria-live="polite" data-status></p>
         <p class="mt-3 text-xs text-fg-3">
-          Sample project ACME with eleven fictional issues. In the app the query runs when you press Enter.
+          Sample project ACME with {countWord(ISSUES.length)} fictional issues. In the app the query runs when you press
+          Enter.
         </p>
       </div>
     </div>

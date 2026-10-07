@@ -1,31 +1,30 @@
+import {
+  datesBetween,
+  entriesFor,
+  formatDate,
+  formatDuration,
+  isWorkingDay,
+  issue as sampleIssue,
+  minutesFor,
+  PEOPLE as SAMPLE_PEOPLE,
+  person as samplePerson,
+  spentOn,
+  subtasksOf,
+  TIME_ENTRIES,
+  TIME_WEEK,
+  weekday,
+  type Handle,
+  type Issue,
+  type TimeEntry,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const TIME_MANUAL_PATH = '/docs/manual/issues#time-tracking';
 export const TIMESHEET_MANUAL_PATH = '/docs/manual/reports#timesheet';
 
-// Acme keeps the default working calendar: 1d is 8h and 1w is five days.
-const WORKDAY_MINUTES = 480;
-const WORKWEEK_DAYS = 5;
+export { formatDuration };
 
-export function formatDuration(minutes: number): string {
-  const sign = minutes < 0 ? '−' : '';
-  let rest = Math.abs(minutes);
-  if (rest === 0) return '0m';
-  const parts: string[] = [];
-  for (const [size, unit] of [
-    [WORKDAY_MINUTES * WORKWEEK_DAYS, 'w'],
-    [WORKDAY_MINUTES, 'd'],
-    [60, 'h'],
-    [1, 'm'],
-  ] as const) {
-    const count = Math.floor(rest / size);
-    if (count > 0) parts.push(`${count}${unit}`);
-    rest -= count * size;
-  }
-  return sign + parts.join(' ');
-}
-
-export type PersonId = 'alex' | 'casey' | 'sam';
+export type PersonId = Handle;
 
 export interface Person {
   id: PersonId;
@@ -33,16 +32,16 @@ export interface Person {
   initials: string;
 }
 
-export const PEOPLE: Person[] = [
-  { id: 'alex', name: 'Alex Lee', initials: 'AL' },
-  { id: 'casey', name: 'Casey Kim', initials: 'CK' },
-  { id: 'sam', name: 'Sam Ortiz', initials: 'SO' },
-];
+// The people with time in the week, in the sample's order.
+export const PEOPLE: Person[] = SAMPLE_PEOPLE.filter(who => minutesFor({ author: who.handle }) > 0).map(who => ({
+  id: who.handle,
+  name: who.name,
+  initials: who.initials,
+}));
 
 export function person(id: PersonId): Person {
-  const found = PEOPLE.find(candidate => candidate.id === id);
-  if (!found) throw new Error(`Unknown person ${id}`);
-  return found;
+  const found = samplePerson(id);
+  return { id: found.handle, name: found.name, initials: found.initials };
 }
 
 export interface Day {
@@ -53,17 +52,15 @@ export interface Day {
   working: boolean;
 }
 
-export const DAYS: Day[] = [
-  { date: '2026-10-05', weekday: 'Mon', short: '5', long: '5 Oct 2026', working: true },
-  { date: '2026-10-06', weekday: 'Tue', short: '6', long: '6 Oct 2026', working: true },
-  { date: '2026-10-07', weekday: 'Wed', short: '7', long: '7 Oct 2026', working: true },
-  { date: '2026-10-08', weekday: 'Thu', short: '8', long: '8 Oct 2026', working: true },
-  { date: '2026-10-09', weekday: 'Fri', short: '9', long: '9 Oct 2026', working: true },
-  { date: '2026-10-10', weekday: 'Sat', short: '10', long: '10 Oct 2026', working: false },
-  { date: '2026-10-11', weekday: 'Sun', short: '11', long: '11 Oct 2026', working: false },
-];
+export const DAYS: Day[] = datesBetween(TIME_WEEK.start, TIME_WEEK.end).map(date => ({
+  date,
+  weekday: weekday(date),
+  short: String(Number(date.slice(8))),
+  long: formatDate(date),
+  working: isWorkingDay(date),
+}));
 
-export const PERIOD_LABEL = '5–11 Oct 2026';
+export const PERIOD_LABEL = TIME_WEEK.label;
 
 export function day(date: string): Day {
   const found = DAYS.find(candidate => candidate.date === date);
@@ -71,105 +68,54 @@ export function day(date: string): Day {
   return found;
 }
 
-export type IssueType = 'Bug' | 'Task' | 'Epic';
+export type IssueType = Issue['type'];
 
-export interface Issue {
+export interface TimedIssue {
   key: string;
   title: string;
   type: IssueType;
   estimate: number;
-  parent?: string;
 }
 
 export const EPIC_KEY = 'ACME-3';
 
-export const ISSUES: Issue[] = [
-  { key: 'ACME-3', title: 'Make invitations clearer', type: 'Epic', estimate: 960 },
-  { key: 'ACME-10', title: 'Invite landing shows the inviter', type: 'Task', estimate: 300, parent: EPIC_KEY },
-  { key: 'ACME-15', title: 'Resend invite from the members list', type: 'Task', estimate: 360, parent: EPIC_KEY },
-  { key: 'ACME-12', title: 'Invite link blank after it expires', type: 'Bug', estimate: 120, parent: EPIC_KEY },
-  { key: 'ACME-14', title: 'Invite email subject names the org', type: 'Task', estimate: 60, parent: EPIC_KEY },
-  { key: 'ACME-11', title: 'Swimlane header overlaps count', type: 'Bug', estimate: 120 },
-  { key: 'ACME-8', title: 'Saved view count is stale', type: 'Bug', estimate: 60 },
-];
-
-export function issue(key: string): Issue {
-  const found = ISSUES.find(candidate => candidate.key === key);
-  if (!found) throw new Error(`Unknown issue ${key}`);
-  return found;
+export function issue(key: string): TimedIssue {
+  const found = sampleIssue(key);
+  return { key: found.key, title: found.title, type: found.type, estimate: found.estimate ?? 0 };
 }
 
-export interface TimeEntry {
-  author: PersonId;
-  date: string;
-  issue: string;
-  minutes: number;
-  workType: string;
-  loggedBy?: PersonId;
-}
+export type { TimeEntry };
 
-// Every logged minute of the week, for every page that shows it. All other figures are sums of these, so no two can disagree.
-export const ENTRIES: TimeEntry[] = [
-  { author: 'alex', date: '2026-10-05', issue: 'ACME-10', minutes: 90, workType: 'Development' },
-  { author: 'alex', date: '2026-10-06', issue: 'ACME-10', minutes: 90, workType: 'Development' },
-  { author: 'alex', date: '2026-10-06', issue: 'ACME-12', minutes: 20, workType: 'Development' },
-  { author: 'alex', date: '2026-10-07', issue: 'ACME-10', minutes: 45, workType: 'Testing' },
-  { author: 'alex', date: '2026-10-08', issue: 'ACME-12', minutes: 85, workType: 'Development' },
-  { author: 'alex', date: '2026-10-09', issue: 'ACME-15', minutes: 60, workType: 'Investigation' },
-  { author: 'casey', date: '2026-10-05', issue: 'ACME-11', minutes: 60, workType: 'Development' },
-  { author: 'casey', date: '2026-10-06', issue: 'ACME-11', minutes: 30, workType: 'Testing' },
-  { author: 'casey', date: '2026-10-07', issue: 'ACME-14', minutes: 60, workType: 'Development' },
-  { author: 'casey', date: '2026-10-08', issue: 'ACME-14', minutes: 30, workType: 'Testing' },
-  { author: 'sam', date: '2026-10-05', issue: 'ACME-8', minutes: 45, workType: 'Investigation' },
-  { author: 'sam', date: '2026-10-07', issue: 'ACME-15', minutes: 120, workType: 'Development', loggedBy: 'casey' },
-  { author: 'sam', date: '2026-10-08', issue: 'ACME-15', minutes: 75, workType: 'Development' },
-  { author: 'sam', date: '2026-10-09', issue: 'ACME-10', minutes: 30, workType: 'Testing' },
-];
+export const ENTRIES: TimeEntry[] = TIME_ENTRIES;
 
-const sum = (entries: TimeEntry[]) => entries.reduce((total, entry) => total + entry.minutes, 0);
-
-export function cellEntries(author: PersonId, date: string): TimeEntry[] {
-  return ENTRIES.filter(entry => entry.author === author && entry.date === date);
-}
-
-export function personEntries(author: PersonId): TimeEntry[] {
-  return ENTRIES.filter(entry => entry.author === author);
-}
-
-export const cellTotal = (author: PersonId, date: string) => sum(cellEntries(author, date));
-export const personTotal = (author: PersonId) => sum(personEntries(author));
-export const dayTotal = (date: string) => sum(ENTRIES.filter(entry => entry.date === date));
-export const weekTotal = () => sum(ENTRIES);
-
-export function issueEntries(key: string): TimeEntry[] {
-  return ENTRIES.filter(entry => entry.issue === key);
-}
-
-export function subtaskKeys(key: string): string[] {
-  return ISSUES.filter(candidate => candidate.parent === key).map(candidate => candidate.key);
-}
-
-// An issue's spent time is its own entries plus its whole subtree's.
-export function issueSpent(key: string): number {
-  return sum(issueEntries(key)) + subtaskKeys(key).reduce((total, child) => total + issueSpent(child), 0);
-}
+export const cellEntries = (author: PersonId, date: string) => entriesFor({ author, date });
+export const personEntries = (author: PersonId) => entriesFor({ author });
+export const cellTotal = (author: PersonId, date: string) => minutesFor({ author, date });
+export const personTotal = (author: PersonId) => minutesFor({ author });
+export const dayTotal = (date: string) => minutesFor({ date });
+export const weekTotal = () => minutesFor({});
+export const issueEntries = (key: string) => entriesFor({ issue: key });
+export const subtaskKeys = (key: string) => subtasksOf(key).map(child => child.key);
+export const issueSpent = (key: string) => spentOn(key);
 
 export interface ReportRow {
-  issue: Issue;
+  issue: TimedIssue;
   spent: number;
   difference: number;
 }
 
 // The time report adds up entries by the issue they were logged on, so a parent never gets a row for its subtasks' time.
 export function timeReportByIssue(): ReportRow[] {
-  return ISSUES.map(candidate => ({ issue: candidate, entries: issueEntries(candidate.key) }))
-    .filter(row => row.entries.length > 0)
-    .map(row => {
-      const spent = sum(row.entries);
-      return { issue: row.issue, spent, difference: row.issue.estimate - spent };
+  return [...new Set(ENTRIES.map(entry => entry.issue))]
+    .map(key => {
+      const spent = minutesFor({ issue: key });
+      const row = issue(key);
+      return { issue: row, spent, difference: row.estimate - spent };
     })
-    .sort((a, b) => b.spent - a.spent);
+    .sort((a, b) => b.spent - a.spent || epicFirst(a.issue.key) - epicFirst(b.issue.key));
 }
+
+const epicFirst = (key: string) => (subtaskKeys(EPIC_KEY).includes(key) ? 0 : 1);
 
 export function cellId(author: PersonId, date: string): string {
   return `ts-${author}-${date}`;

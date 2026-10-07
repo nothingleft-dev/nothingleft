@@ -4,7 +4,9 @@ import {
   BURNDOWN,
   BURNDOWN_AXIS_MAX,
   BURNDOWN_CSV,
+  AS_OF,
   BURNDOWN_SUMMARY,
+  SCOPE_STEP_DAY,
   SPRINT,
   scopeAdded,
   type BurndownDay,
@@ -35,7 +37,7 @@ const dayLabels = BURNDOWN.map((day, index) => ({ day, index })).filter(({ index
 
 const signed = (value: number | null) => (value === null ? '—' : value > 0 ? `+${value}` : String(value));
 const shown = (value: number | null) => (value === null ? '—' : String(value));
-const csvName = 'acme-burndown-acme-sprint-08.csv';
+const csvName = `acme-burndown-acme-${SPRINT.name.toLowerCase().replace(' ', '-')}.csv`;
 ---
 
 <section id="burndown" class="border-t border-line bg-app" aria-labelledby="burndown-title">
@@ -65,7 +67,7 @@ const csvName = 'acme-burndown-acme-sprint-08.csv';
         <span>
           <span class="text-fg-3">Measure</span> Story points
         </span>
-        <span class="text-fg-3">As of 9:20am</span>
+        <span class="text-fg-3">As of {AS_OF}</span>
       </div>
       <dl class="stats">
         <div>
@@ -161,11 +163,11 @@ const csvName = 'acme-burndown-acme-sprint-08.csv';
           </div>
           <figcaption id="bd-caption" class="caption">
             <strong>
-              Sprint 08 burndown, {SPRINT.start} to {SPRINT.end}.
+              {SPRINT.name} burndown, {SPRINT.start} to {SPRINT.end}.
             </strong>{' '}
-            Scope is its own line: it steps from {BURNDOWN_SUMMARY.committed} to {BURNDOWN_SUMMARY.scope} on 5 Oct, when{' '}
-            {BURNDOWN_SUMMARY.added} points were added after the start. The remaining line rises with it, and you can
-            see why instead of reading it as a day of lost progress.
+            Scope is its own line: it steps from {BURNDOWN_SUMMARY.committed} to {BURNDOWN_SUMMARY.scope} on{' '}
+            {SCOPE_STEP_DAY}, when {BURNDOWN_SUMMARY.added} points were added after the start. The remaining line rises
+            with it, and you can see why instead of reading it as a day of lost progress.
           </figcaption>
           <p class="sr-only" data-live aria-live="polite"></p>
         </div>

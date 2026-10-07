@@ -1,5 +1,23 @@
 ---
-import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib/solutions/product-teams';
+import {
+  BURNDOWN_CHECK,
+  CANDIDATES,
+  KB_FEATURE_PATH,
+  PICKED,
+  PICKED_POINTS,
+  PLANNING_DAY,
+  REPORTS_FEATURE_PATH,
+  SEARCH_FEATURE_PATH,
+  SPRINT,
+  STORY,
+} from '@lib/solutions/product-teams';
+
+const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const word = (count: number) => WORDS[count] ?? String(count);
+const resend = CANDIDATES.find(candidate => candidate.key === 'ACME-15');
+const untriaged = CANDIDATES.find(candidate => candidate.impact === null);
+const pickedKeys = PICKED.map(candidate => candidate.key);
+const keyList = `${pickedKeys.slice(0, -1).join(', ')} and ${pickedKeys.at(-1)}`;
 ---
 
 <section class="border-t border-line bg-app" aria-labelledby="pt-howto-title">
@@ -11,7 +29,7 @@ import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib
         </h2>
         <p class="prose mt-5 max-w-[40ch]">
           A backlog stays useful when anyone can explain its order. This routine suits a product team planning two-week
-          sprints with engineering. The worked example follows Acme’s planning meeting on 2 Oct 2026.
+          sprints with engineering. The worked example follows Acme’s planning meeting on {PLANNING_DAY}.
         </p>
         <p class="prose mt-4 text-base max-w-[40ch]">
           Nothing here is automatic. The fields, the order and the reasons belong to the team; the tracker keeps them
@@ -31,8 +49,8 @@ import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib
         </p>
         <p class="pt-example">
           <span class="pt-example-label">Acme</span>
-          Casey files ACME-12, <em>Invite link blank after it expires</em>, from two support emails and tags it
-          invitations, next to five older requests.
+          {STORY.lead.reporter.name.split(' ')[0]} files {STORY.lead.key}, <em>{STORY.lead.title}</em>, from two support
+          emails and tags it invitations, next to {word(STORY.others)} other requests.
         </p>
       </div>
 
@@ -47,8 +65,8 @@ import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib
         </p>
         <p class="pt-example">
           <span class="pt-example-label">Acme</span>
-          ACME-15, <em>Resend invite from the members list</em>, is Normal priority but High impact: admins ask for it
-          every week. ACME-19 has no Impact yet, so it reads Not triaged instead of being guessed.
+          {resend?.key}, <em>{resend?.title}</em>, is {resend?.priority} priority but {resend?.impact} impact: admins
+          ask for it every week. {untriaged?.key} has no Impact yet, so it reads Not triaged instead of being guessed.
         </p>
       </div>
 
@@ -62,8 +80,9 @@ import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib
         </p>
         <p class="pt-example">
           <span class="pt-example-label">Acme</span>
-          Alex writes <em>Invitation links and expiry</em>: an expired link must explain itself before any sign-in
-          prompt. It names ACME-12, so the issue lists the article under Referenced by.
+          {STORY.decision.author.name.split(' ')[0]} writes <em>{STORY.decision.title}</em>: an expired link must
+          explain itself before any sign-in prompt. It names {STORY.lead.key}, so the issue lists the article under
+          Referenced by.
         </p>
       </div>
 
@@ -77,8 +96,9 @@ import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib
         </p>
         <p class="pt-example">
           <span class="pt-example-label">Acme</span>
-          ACME-12, ACME-15 and ACME-14 go into Sprint 08, six points towards the goal <em>Make invitations clearer</em>.
-          ACME-18 is five points on its own and waits for Sprint 09.
+          {keyList} go into {SPRINT.name}, {word(PICKED_POINTS)} points towards the goal <em>{SPRINT.goal}</em>.{' '}
+          {STORY.waiting?.key} is {word(STORY.waiting?.points ?? 0)} points on its own and waits for{' '}
+          {STORY.waiting?.sprint}.
         </p>
       </div>
 
@@ -93,8 +113,8 @@ import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib
         </p>
         <p class="pt-example">
           <span class="pt-example-label">Acme</span>
-          ACME-12 is fixed on 8 Oct, and its key is struck through in the article. The burndown shows three points added
-          after the start, which goes into the next planning conversation.
+          {STORY.lead.key} is fixed on {STORY.fixed}, and its key is struck through in the article. The burndown shows{' '}
+          {word(BURNDOWN_CHECK.added)} points added after the start, which goes into the next planning conversation.
         </p>
       </div>
 

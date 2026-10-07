@@ -1,5 +1,12 @@
 ---
-import { BURNDOWN, BURNDOWN_MAX, REPORTS_FEATURE_PATH, REPORTS_MANUAL_PATH } from '@lib/features/sprints-kanban-boards';
+import {
+  BURNDOWN,
+  BURNDOWN_MAX,
+  PREVIOUS_SPRINT,
+  REPORTS_FEATURE_PATH,
+  REPORTS_MANUAL_PATH,
+  weekdayName,
+} from '@lib/features/sprints-kanban-boards';
 
 const last = BURNDOWN.length - 1;
 const x = (index: number) => (index / last) * 100;
@@ -27,15 +34,18 @@ const final = BURNDOWN[last];
       <p class="prose mt-5">
         The figures are recorded every night and when the sprint starts and finishes, so the chart shows how the sprint
         really went even after issues are edited. Scope added after the start is its own line, so{' '}
-        <em>we finished nothing</em> and <em>they added 6 points on Tuesday</em> look different. Measure it in story
-        points, issue count or remaining estimate.
+        <em>we finished nothing</em> and{' '}
+        <em>
+          they added {added?.scopeAdded} points on {added && weekdayName(added.iso)}
+        </em>{' '}
+        look different. Measure it in story points, issue count or remaining estimate.
       </p>
     </div>
 
     <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
       <figure class="lg:col-span-7">
         <div class="panel panel-pad">
-          <p class="text-sm font-medium">Burndown · Sprint 07 · Story points</p>
+          <p class="text-sm font-medium">Burndown · {PREVIOUS_SPRINT} · Story points</p>
           <ul class="legend mt-3">
             <li>
               <span class="key-line remaining" aria-hidden="true"></span>Remaining
@@ -78,10 +88,10 @@ const final = BURNDOWN[last];
           </div>
         </div>
         <figcaption id="burndown-caption" class="mt-4 text-sm text-fg-2 max-w-[60ch]">
-          On {added?.date}, {added?.scopeAdded} points joined Sprint 07 after it started. Remaining work rose that day
-          because of new work, not lost progress; the orange line counts what was added. The ideal line stays flat over
-          the weekend. Sprint 07 finished with {final?.completed} of {(final?.completed ?? 0) + (final?.remaining ?? 0)}{' '}
-          points resolved.
+          On {added?.date}, {added?.scopeAdded} points joined {PREVIOUS_SPRINT} after it started. Remaining work rose
+          that day because of new work, not lost progress; the orange line counts what was added. The ideal line stays
+          flat over the weekend. {PREVIOUS_SPRINT} finished with {final?.completed} of{' '}
+          {(final?.completed ?? 0) + (final?.remaining ?? 0)} points resolved.
         </figcaption>
       </figure>
 

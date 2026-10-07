@@ -1,3 +1,5 @@
+import { assigneesOf, ISSUES, isResolvedAt, severityOf, sprint } from '@data/sample';
+
 export const MCP_URL = 'https://api.nothingleft.dev/mcp';
 export const SETUP_GUIDE_PATH = '/docs/manual/mcp';
 export const TOOL_REFERENCE_PATH = '/docs/manual/mcp-tools';
@@ -64,17 +66,21 @@ export interface AgentRequest {
   note?: string;
 }
 
+const CURRENT = sprint('Sprint 08');
+const criticalBugs = ISSUES.filter(
+  candidate => candidate.key !== 'ACME-12' && severityOf(candidate.key) === 'Critical',
+).map(candidate => candidate.key);
+const backlogBugs = ['ACME-20', 'ACME-21'];
+
 export const REQUESTS: AgentRequest[] = [
   {
     area: 'Sprints',
-    prompt:
-      'Plan September 2026 in ACME for 1–30 Sep, put ACME-12 and ACME-14 in it with ACME-14 on top, start it, and show me the board.',
+    prompt: `Plan Sprint 10 in ACME for 2–13 Nov, put ${backlogBugs.join(' and ')} in it with ${backlogBugs[1]} on top, start it, and show me the board.`,
     calls: [{ tool: 'create_sprint' }, { tool: 'move_to_sprint' }, { tool: 'start_sprint' }, { tool: 'get_board' }],
   },
   {
     area: 'Custom fields',
-    prompt:
-      'Add a Severity select to ACME for Bugs with Low, High and Critical, set ACME-12 and ACME-14 to Critical, and show me the critical bugs.',
+    prompt: `Add a Severity select to ACME for Bugs with Low, High and Critical, set ${criticalBugs.join(' and ')} to Critical, and show me the critical bugs.`,
     calls: [{ tool: 'create_custom_field' }, { tool: 'set_field_values' }, { tool: 'search_issues' }],
   },
   {
@@ -85,7 +91,7 @@ export const REQUESTS: AgentRequest[] = [
   },
   {
     area: 'Reports',
-    prompt: 'How much of last week went on testing in ACME, and how is the September 2026 burndown looking?',
+    prompt: `How much of last week went on testing in ACME, and how is the ${CURRENT.name} burndown looking?`,
     calls: [
       { tool: 'run_report', args: 'report: time' },
       { tool: 'run_report', args: 'report: burndown' },
@@ -98,6 +104,10 @@ export const REQUESTS: AgentRequest[] = [
     calls: [{ tool: 'list_notifications' }, { tool: 'mark_notifications_read' }],
   },
 ];
+
+export const CASEY_OPEN_ISSUES = ISSUES.filter(
+  candidate => !isResolvedAt(candidate.key) && assigneesOf(candidate.key).some(who => who.handle === 'casey'),
+).length;
 
 export const TOOL_AREAS = [
   { area: 'Finding your way', detail: 'Who you are, your organisations, projects and each project’s schema.' },

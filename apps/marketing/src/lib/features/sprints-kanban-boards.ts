@@ -1,3 +1,27 @@
+import {
+  assigneesOf,
+  backlogAt,
+  burndown,
+  daysLeft,
+  formatDate,
+  formatDayMonth,
+  formatSprintDates,
+  issue,
+  issuesInSprint,
+  NOW,
+  parentOf,
+  PEOPLE as SAMPLE_PEOPLE,
+  pointsOf,
+  sprint,
+  SPRINT_07_CARRIED_OVER,
+  statusOf,
+  sumPoints,
+  weekday,
+  type Issue,
+  type Person as SamplePerson,
+  type Priority as SamplePriority,
+  type Status,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const AGILE_MANUAL_PATH = '/docs/manual/agile';
@@ -9,15 +33,9 @@ export interface Person {
   initials: string;
 }
 
-const ALEX: Person = { name: 'Alex Lee', initials: 'AL' };
-const CASEY: Person = { name: 'Casey Kim', initials: 'CK' };
-const SAM: Person = { name: 'Sam Ortiz', initials: 'SO' };
-
-export const PEOPLE: Person[] = [ALEX, CASEY, SAM];
-
 export type ColumnId = 'open' | 'in-progress' | 'fixed';
 export type IssueType = 'Bug' | 'Feature' | 'Task';
-export type Priority = 'Critical' | 'Major' | 'Normal';
+export type Priority = SamplePriority;
 
 export interface BoardColumn {
   id: ColumnId;
@@ -32,8 +50,12 @@ export const COLUMNS: BoardColumn[] = [
   { id: 'fixed', name: 'Fixed', resolved: true },
 ];
 
-export const TYPES: IssueType[] = ['Bug', 'Feature', 'Task'];
-export const PRIORITIES: Priority[] = ['Critical', 'Major', 'Normal'];
+const COLUMN_OF_STATUS: Record<Status, ColumnId> = {
+  Open: 'open',
+  Reopened: 'open',
+  'In Progress': 'in-progress',
+  Fixed: 'fixed',
+};
 
 export interface SprintIssue {
   key: string;
@@ -41,131 +63,85 @@ export interface SprintIssue {
   points: number;
   type: IssueType;
   priority: Priority;
-  assignee: Person;
+  assignees: Person[];
   column: ColumnId;
 }
 
+const SPRINT_NAME = 'Sprint 08';
+const PLANNED_NAME = 'Sprint 09';
+const PREVIOUS_NAME = 'Sprint 07';
+
 export const SPRINT = {
-  name: 'Sprint 08',
-  goal: 'Make invitations clearer',
-  dates: '5 Oct – 17 Oct 2026',
-  daysLeft: 10,
-  today: '7 Oct 2026',
+  name: SPRINT_NAME,
+  goal: sprint(SPRINT_NAME).goal ?? '',
+  dates: formatSprintDates(SPRINT_NAME),
+  daysLeft: daysLeft(SPRINT_NAME),
+  today: formatDate(NOW),
 };
 
-export const SPRINT_ISSUES: SprintIssue[] = [
-  {
-    key: 'ACME-12',
-    title: 'Invite link blank after it expires',
-    points: 3,
-    type: 'Bug',
-    priority: 'Major',
-    assignee: ALEX,
-    column: 'open',
-  },
-  {
-    key: 'ACME-13',
-    title: 'Pending invites sorted by date sent',
-    points: 2,
-    type: 'Task',
-    priority: 'Normal',
-    assignee: CASEY,
-    column: 'open',
-  },
-  {
-    key: 'ACME-14',
-    title: 'Invite email subject names the org',
-    points: 2,
-    type: 'Task',
-    priority: 'Normal',
-    assignee: CASEY,
-    column: 'open',
-  },
-  {
-    key: 'ACME-15',
-    title: 'Resend invite from the members list',
-    points: 1,
-    type: 'Feature',
-    priority: 'Normal',
-    assignee: ALEX,
-    column: 'open',
-  },
-  {
-    key: 'ACME-11',
-    title: 'Swimlane header overlaps count',
-    points: 5,
-    type: 'Bug',
-    priority: 'Normal',
-    assignee: SAM,
-    column: 'in-progress',
-  },
-  {
-    key: 'ACME-10',
-    title: 'Invite landing shows the inviter',
-    points: 3,
-    type: 'Feature',
-    priority: 'Normal',
-    assignee: SAM,
-    column: 'in-progress',
-  },
-  {
-    key: 'ACME-6',
-    title: 'Project-scoped invite links',
-    points: 8,
-    type: 'Feature',
-    priority: 'Major',
-    assignee: ALEX,
-    column: 'fixed',
-  },
-  {
-    key: 'ACME-5',
-    title: 'Accept invite while signed in',
-    points: 5,
-    type: 'Feature',
-    priority: 'Critical',
-    assignee: CASEY,
-    column: 'fixed',
-  },
-  {
-    key: 'ACME-4',
-    title: 'Invite expiry setting per org',
-    points: 3,
-    type: 'Task',
-    priority: 'Normal',
-    assignee: SAM,
-    column: 'fixed',
-  },
-  {
-    key: 'ACME-9',
-    title: 'Expiry date in the invite email',
-    points: 2,
-    type: 'Task',
-    priority: 'Normal',
-    assignee: ALEX,
-    column: 'fixed',
-  },
+const toPerson = (who: SamplePerson): Person => ({ name: who.name, initials: who.initials });
+
+export const SPRINT_ISSUES: SprintIssue[] = issuesInSprint(SPRINT_NAME).map(candidate => ({
+  key: candidate.key,
+  title: candidate.title,
+  points: pointsOf(candidate.key) ?? 0,
+  type: candidate.type as IssueType,
+  priority: candidate.priority,
+  assignees: assigneesOf(candidate.key).map(toPerson),
+  column: COLUMN_OF_STATUS[statusOf(candidate.key)],
+}));
+
+// A card with several assignees sits in the lane of the first one, alphabetically.
+export const laneOf = (issue: SprintIssue): string => issue.assignees.map(who => who.name).sort()[0] ?? 'Unassigned';
+
+export const LANES: string[] = [
+  ...SAMPLE_PEOPLE.map(who => who.name).filter(name => SPRINT_ISSUES.some(issue => laneOf(issue) === name)),
+  ...(SPRINT_ISSUES.some(issue => laneOf(issue) === 'Unassigned') ? ['Unassigned'] : []),
 ];
 
+export const TYPES: IssueType[] = ['Bug', 'Feature', 'Task'];
+
+const EPIC_KEY = 'ACME-3';
+export const EPIC = {
+  key: EPIC_KEY,
+  title: issue(EPIC_KEY).title,
+  cards: SPRINT_ISSUES.filter(card => parentOf(card.key) === EPIC_KEY).length,
+};
+export const PRIORITIES: Priority[] = (['Critical', 'Major', 'Normal', 'Minor'] as Priority[]).filter(priority =>
+  SPRINT_ISSUES.some(issue => issue.priority === priority),
+);
+
 export const TOTAL_POINTS = SPRINT_ISSUES.reduce((sum, issue) => sum + issue.points, 0);
+
+const previous = burndown(PREVIOUS_NAME);
+const previousFinal = previous[previous.length - 1];
+const planned = issuesInSprint(PLANNED_NAME);
+const plannedPoints = sumPoints(planned);
+
+export const PLANNED_SPRINT = {
+  name: PLANNED_NAME,
+  goal: sprint(PLANNED_NAME).goal ?? '',
+  dates: formatSprintDates(PLANNED_NAME),
+};
 
 export const LIFECYCLE = [
   {
     state: 'Planned',
-    sprint: 'Sprint 09',
-    dates: '19 Oct – 30 Oct 2026',
-    note: '4 issues, 11 points. Waiting for its start.',
+    sprint: PLANNED_NAME,
+    dates: PLANNED_SPRINT.dates,
+    note: `${planned.length} issues, ${plannedPoints} points. Waiting for its start.`,
   },
   {
     state: 'Active',
-    sprint: 'Sprint 08',
+    sprint: SPRINT_NAME,
     dates: SPRINT.dates,
     note: `${SPRINT.daysLeft} days left. One active sprint per project.`,
   },
   {
     state: 'Completed',
-    sprint: 'Sprint 07',
-    dates: '21 Sep – 2 Oct 2026',
-    note: '27 of 30 points resolved. ACME-10 moved on to Sprint 08.',
+    sprint: PREVIOUS_NAME,
+    dates: formatSprintDates(PREVIOUS_NAME),
+    note: `${previousFinal?.completed} of ${previousFinal?.scope} points resolved. ${SPRINT_07_CARRIED_OVER.join(', ')} moved on to ${SPRINT_NAME}.`,
   },
 ];
 
@@ -176,21 +152,23 @@ export interface BacklogRow {
   type: IssueType;
 }
 
-export const PLANNED_SPRINT_ROWS: BacklogRow[] = [
-  { key: 'ACME-16', title: 'Reminder email before an invite expires', points: 3, type: 'Feature' },
-  { key: 'ACME-17', title: 'Show who invited each member', points: 2, type: 'Feature' },
-  { key: 'ACME-18', title: 'Revoke a pending invitation', points: 5, type: 'Feature' },
-  { key: 'ACME-19', title: 'Invite form explains each role', points: 1, type: 'Task' },
-];
+const toRow = (candidate: Issue): BacklogRow => ({
+  key: candidate.key,
+  title: candidate.title,
+  points: pointsOf(candidate.key),
+  type: candidate.type as IssueType,
+});
 
-export const BACKLOG_ROWS: BacklogRow[] = [
-  { key: 'ACME-20', title: 'Members list stops at 50 people', points: 3, type: 'Bug' },
-  { key: 'ACME-21', title: 'Avatar initials clash for similar names', points: 2, type: 'Bug' },
-  { key: 'ACME-22', title: 'Remember the last board filter', points: null, type: 'Feature' },
-  { key: 'ACME-23', title: 'Due date picker starts on Monday', points: 1, type: 'Task' },
-];
+export const PLANNED_SPRINT_ROWS: BacklogRow[] = planned.map(toRow);
 
-export const BACKLOG_TOTAL = { issues: 9, points: 14 };
+const backlog = backlogAt();
+// The backlog view lists its four newest issues and counts the rest.
+export const BACKLOG_ROWS: BacklogRow[] = backlog
+  .filter(candidate => candidate.type !== 'Epic')
+  .slice(-4)
+  .map(toRow);
+
+export const BACKLOG_TOTAL = { issues: backlog.length, points: sumPoints(backlog) };
 
 export type MoveId = 'start' | 'fix';
 
@@ -200,8 +178,9 @@ export interface DemoMove {
   to: ColumnId;
 }
 
+// What the visitor tries next on today's board; neither move has happened in the sample.
 export const DEMO_MOVES: DemoMove[] = [
-  { id: 'start', key: 'ACME-12', to: 'in-progress' },
+  { id: 'start', key: 'ACME-14', to: 'in-progress' },
   { id: 'fix', key: 'ACME-10', to: 'fixed' },
 ];
 
@@ -217,7 +196,13 @@ export interface Destination {
 
 export const DESTINATIONS: Destination[] = [
   { id: 'backlog', name: 'Backlog', detail: 'Issues in no sprint', ...BACKLOG_TOTAL },
-  { id: 'sprint-09', name: 'Sprint 09', detail: 'Planned, 19 Oct – 30 Oct 2026', issues: 4, points: 11 },
+  {
+    id: 'sprint-09',
+    name: PLANNED_NAME,
+    detail: `Planned, ${PLANNED_SPRINT.dates}`,
+    issues: planned.length,
+    points: plannedPoints,
+  },
 ];
 
 export interface DemoState {
@@ -304,6 +289,7 @@ export function destinationAfter(destination: Destination, state: DemoState): Ta
 }
 
 export interface BurndownDay {
+  iso: string;
   date: string;
   remaining: number;
   ideal: number;
@@ -311,50 +297,48 @@ export interface BurndownDay {
   completed: number;
 }
 
-const WORKING_DAY = [true, true, true, true, true, false, false, true, true, true, true, true];
-const SPRINT_07_DATES = [
-  '21 Sep',
-  '22 Sep',
-  '23 Sep',
-  '24 Sep',
-  '25 Sep',
-  '26 Sep',
-  '27 Sep',
-  '28 Sep',
-  '29 Sep',
-  '30 Sep',
-  '1 Oct',
-  '2 Oct',
-];
-const SPRINT_07_REMAINING = [24, 24, 21, 18, 16, 16, 16, 13, 19, 14, 8, 3];
-const SPRINT_07_SCOPE_ADDED = [0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 6];
-const SPRINT_07_COMMITTED = 24;
+const previousCommitted = previous[0]?.scope ?? 0;
 
-// The ideal line falls only on working days after the first, reaching zero on the end date.
-function idealLine(): number[] {
-  const steps = WORKING_DAY.slice(1).filter(Boolean).length;
-  let fallen = 0;
-  return WORKING_DAY.map((working, index) => {
-    if (index > 0 && working) fallen += 1;
-    return Math.round(SPRINT_07_COMMITTED * (1 - fallen / steps) * 10) / 10;
-  });
-}
+export const PREVIOUS_SPRINT = PREVIOUS_NAME;
 
-const IDEAL = idealLine();
-
-export const BURNDOWN: BurndownDay[] = SPRINT_07_DATES.map((date, index) => {
-  const remaining = SPRINT_07_REMAINING[index] ?? 0;
-  const scopeAdded = SPRINT_07_SCOPE_ADDED[index] ?? 0;
-  return {
-    date,
-    remaining,
-    ideal: IDEAL[index] ?? 0,
-    scopeAdded,
-    completed: SPRINT_07_COMMITTED + scopeAdded - remaining,
-  };
-});
+export const BURNDOWN: BurndownDay[] = previous.map(day => ({
+  iso: day.date,
+  date: formatDayMonth(day.date),
+  remaining: day.remaining ?? 0,
+  ideal: day.ideal,
+  scopeAdded: (day.scope ?? 0) - previousCommitted,
+  completed: day.completed ?? 0,
+}));
 
 export const BURNDOWN_MAX = 30;
+
+const WEEKDAY_NAMES: Record<string, string> = {
+  Mon: 'Monday',
+  Tue: 'Tuesday',
+  Wed: 'Wednesday',
+  Thu: 'Thursday',
+  Fri: 'Friday',
+  Sat: 'Saturday',
+  Sun: 'Sunday',
+};
+export const weekdayName = (iso: string) => WEEKDAY_NAMES[weekday(iso)] ?? '';
+
+const COUNT_WORDS = [
+  'no',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+];
+export const countWord = (count: number) => COUNT_WORDS[count] ?? String(count);
 
 export const SPRINTS_BOARDS_FAQ: FaqEntry[] = [
   {

@@ -1,3 +1,4 @@
+import { firstName, formatDate, issue } from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const LIMITS_PATH = '/docs/limits-and-billing';
@@ -18,7 +19,7 @@ export const FIRST_RUN_STEPS: FirstRunStep[] = [
   {
     id: 'organisation',
     title: 'Name the organisation',
-    detail: 'Alex types Acme. The ID is derived from the name and can be edited.',
+    detail: `${firstName(issue('ACME-1').reporter)} types Acme. The ID is derived from the name and can be edited.`,
   },
   {
     id: 'project',
@@ -131,33 +132,26 @@ export interface FirstIssue {
   created: string;
 }
 
+const TYPE_LOOK: Record<string, { tone: string; letter: string }> = {
+  Bug: { tone: 'bug', letter: 'B' },
+  Feature: { tone: 'blue', letter: 'F' },
+  Task: { tone: 'gray', letter: 'T' },
+  Epic: { tone: 'pink', letter: 'E' },
+};
+
 // Only ACME-3 had a field changed from the defaults: its type, to Epic.
-export const FIRST_ISSUES: FirstIssue[] = [
-  {
-    key: 'ACME-3',
-    title: 'Make invitations clearer',
-    type: 'Epic',
-    typeTone: 'pink',
-    typeLetter: 'E',
-    created: '28 Sep 2026',
-  },
-  {
-    key: 'ACME-2',
-    title: 'Password hint is cut off on small screens',
-    type: 'Bug',
-    typeTone: 'bug',
-    typeLetter: 'B',
-    created: '28 Sep 2026',
-  },
-  {
-    key: 'ACME-1',
-    title: 'Sign-up form rejects plus addresses',
-    type: 'Bug',
-    typeTone: 'bug',
-    typeLetter: 'B',
-    created: '28 Sep 2026',
-  },
-];
+export const FIRST_ISSUES: FirstIssue[] = ['ACME-3', 'ACME-2', 'ACME-1'].map(key => {
+  const found = issue(key);
+  const look = TYPE_LOOK[found.type] ?? { tone: 'gray', letter: found.type.charAt(0) };
+  return {
+    key,
+    title: found.title,
+    type: found.type,
+    typeTone: look.tone,
+    typeLetter: look.letter,
+    created: formatDate(found.created),
+  };
+});
 
 export interface GrowthStep {
   when: string;

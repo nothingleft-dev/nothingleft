@@ -10,10 +10,12 @@ import {
   cellEntries,
   cellId,
   cellTotal,
+  day,
   dayTotal,
   formatDuration,
   issueEntries,
   issueSpent,
+  person,
   personEntries,
   personTotal,
   subtaskKeys,
@@ -43,7 +45,12 @@ const personPanels = PEOPLE.map(who => ({
 }));
 
 const sumLine = (parts: number[]) => parts.map(formatDuration).join(' + ');
-const bugParts = issueEntries('ACME-12').map(entry => entry.minutes);
+const bugEntries = issueEntries('ACME-12');
+const bugParts = bugEntries.map(entry => entry.minutes);
+const bugAuthor = person(bugEntries[0]?.author ?? 'alex');
+const bugDays = bugEntries.map(entry => day(entry.date).short);
+const week = weekTotal();
+const inHours = (minutes: number) => `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}`;
 const epicParts = subtaskKeys(EPIC_KEY)
   .map(issueSpent)
   .sort((a, b) => b - a);
@@ -53,8 +60,7 @@ const CHECKS = [
   {
     label: 'ACME-12',
     sum: `${sumLine(bugParts)} = ${formatDuration(issueSpent('ACME-12'))}`,
-    where:
-      'Its two entries sit in Alex’s cells for 6 and 8 Oct. The same total shows in the issue’s sidebar, the epic’s subtask list and the time report’s row.',
+    where: `Its ${bugEntries.length === 2 ? 'two' : bugEntries.length} entries sit in ${bugAuthor.name.split(' ')[0]}’s cells for ${bugDays.join(' and ')} Oct. The same total shows in the issue’s sidebar, the epic’s subtask list and the time report’s row.`,
   },
   {
     label: EPIC_KEY,
@@ -64,7 +70,7 @@ const CHECKS = [
   {
     label: 'The week',
     sum: `${sumLine(personParts)} = ${formatDuration(weekTotal())}`,
-    where: 'The timesheet’s corner and the time report’s total. Acme’s working day is 8h, so 1d 6h is 14h.',
+    where: `The timesheet’s corner and the time report’s total. Acme’s working day is 8h, so ${formatDuration(week)} is ${inHours(week)}.`,
   },
 ];
 ---

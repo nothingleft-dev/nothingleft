@@ -1,3 +1,34 @@
+import {
+  ARTICLES,
+  articleUri,
+  assigneesOf,
+  comment,
+  dependsOnOf,
+  existsAt,
+  firstName,
+  formatDate,
+  formatDuration,
+  formatMoment,
+  HISTORY,
+  isResolved,
+  isResolvedAt,
+  issue,
+  ISSUES,
+  minutesFor,
+  NOW,
+  person,
+  pointsOf,
+  resolvedAt,
+  severityOf,
+  spentOn,
+  sprintOf,
+  statusOf,
+  subtasksOf,
+  updatedAt,
+  type Moment,
+  type Priority,
+  type Status,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const ISSUES_MANUAL_PATH = '/docs/manual/issues';
@@ -12,46 +43,93 @@ export interface SampleRow {
   status: { name: string; dot?: 'started' | 'done' };
 }
 
-const MAJOR = { name: 'Major', letter: 'M', className: 'l-major' };
-const CRITICAL = { name: 'Critical', letter: 'C', className: 'l-critical' };
-const NORMAL = { name: 'Normal', letter: 'N', className: 'l-normal' };
-
-export const SAMPLE_ISSUE: SampleRow = {
-  key: 'ACME-12',
-  title: 'Invite link blank after it expires',
-  priority: MAJOR,
-  assignee: { initials: 'AL', name: 'Alex Lee' },
-  spent: '1h 45m',
-  status: { name: 'Fixed', dot: 'done' },
+const PRIORITY_LABELS: Record<Priority, { letter: string; className: string }> = {
+  Critical: { letter: 'C', className: 'l-critical' },
+  Major: { letter: 'M', className: 'l-major' },
+  Normal: { letter: 'N', className: 'l-normal' },
+  Minor: { letter: 'M', className: 'l-minor' },
 };
 
-export const BUG_LIST: SampleRow[] = [
-  SAMPLE_ISSUE,
-  {
-    key: 'ACME-9',
-    title: 'Upload stalls at 100% on slow links',
-    priority: MAJOR,
-    status: { name: 'Open' },
-  },
-  {
-    key: 'ACME-8',
-    title: 'Saved view count is stale',
-    priority: NORMAL,
-    assignee: { initials: 'SO', name: 'Sam Ortiz' },
-    spent: '45m',
-    status: { name: 'Reopened' },
-  },
-  {
-    key: 'ACME-7',
-    title: 'Burndown ignores late additions',
-    priority: CRITICAL,
-    assignee: { initials: 'CK', name: 'Casey Kim' },
-    spent: '30m',
-    status: { name: 'In Progress', dot: 'started' },
-  },
-];
+const KEY = 'ACME-12';
+const bug = issue(KEY);
 
-export const OTHER_CRITICAL_BUGS: SampleRow[] = BUG_LIST.filter(row => row.key === 'ACME-9' || row.key === 'ACME-7');
+// The issue page is shown just after ACME-12 was fixed.
+export const SHOWN_AT: Moment = resolvedAt(KEY) ?? NOW;
+
+const dotFor = (status: Status): 'started' | 'done' | undefined =>
+  status === 'In Progress' ? 'started' : isResolved(status) ? 'done' : undefined;
+
+export function sampleRow(key: string, at: Moment = SHOWN_AT): SampleRow {
+  const found = issue(key);
+  const assignee = assigneesOf(key, at)[0];
+  const spent = minutesFor({ issue: key });
+  const status = statusOf(key, at);
+  return {
+    key,
+    title: found.title,
+    priority: { name: found.priority, ...PRIORITY_LABELS[found.priority] },
+    assignee: assignee && { initials: assignee.initials, name: assignee.name },
+    spent: spent > 0 ? formatDuration(spent) : undefined,
+    status: { name: status, dot: dotFor(status) },
+  };
+}
+
+export const SAMPLE_ISSUE: SampleRow = sampleRow(KEY);
+
+const LIST_PRIORITIES: Priority[] = ['Critical', 'Major'];
+export const BUG_LIST_QUERY = `type: Bug priority: ${LIST_PRIORITIES.join(', ')} sort by: updated desc`;
+
+export const BUG_LIST: SampleRow[] = ISSUES.filter(
+  candidate =>
+    candidate.type === 'Bug' && LIST_PRIORITIES.includes(candidate.priority) && existsAt(candidate.key, SHOWN_AT),
+)
+  .sort((a, b) => updatedAt(b.key, SHOWN_AT).localeCompare(updatedAt(a.key, SHOWN_AT)))
+  .map(candidate => sampleRow(candidate.key));
+
+export const SEVERITY_DEFAULT_VALUE = severityOf(KEY, SHOWN_AT) ?? 'High';
+
+export const OTHER_CRITICAL_BUGS: SampleRow[] = ISSUES.filter(
+  candidate =>
+    candidate.key !== KEY && existsAt(candidate.key, SHOWN_AT) && severityOf(candidate.key, SHOWN_AT) === 'Critical',
+).map(candidate => sampleRow(candidate.key));
+
+const subtasks = subtasksOf(KEY, SHOWN_AT);
+const dependencies = dependsOnOf(KEY, SHOWN_AT);
+const reference = ARTICLES.find(candidate => candidate.references.includes(KEY));
+const reproduction = comment(KEY, 'alex', '2026-10-06');
+const lastChange = HISTORY.filter(entry => entry.key === KEY && entry.at <= SHOWN_AT).at(-1);
+
+export const DETAIL = {
+  key: KEY,
+  title: bug.title,
+  type: bug.type,
+  priority: bug.priority,
+  status: statusOf(KEY, SHOWN_AT),
+  assignee: assigneesOf(KEY, SHOWN_AT)[0] ?? person('alex'),
+  estimate: formatDuration(bug.estimate ?? 0),
+  spent: formatDuration(spentOn(KEY, SHOWN_AT)),
+  sprint: sprintOf(KEY, SHOWN_AT),
+  points: pointsOf(KEY, SHOWN_AT),
+  due: formatDate(bug.due ?? ''),
+  severity: SEVERITY_DEFAULT_VALUE,
+  subtasks: subtasks.map(child => ({
+    key: child.key,
+    title: child.title,
+    resolved: isResolvedAt(child.key, SHOWN_AT),
+  })),
+  dependsOn: dependencies.map(key => ({ key, title: issue(key).title, resolved: isResolvedAt(key, SHOWN_AT) })),
+  reference: reference?.title ?? '',
+  attachments: bug.attachments ?? [],
+  reproduction: {
+    by: person(reproduction.by),
+    when: formatMoment(reproduction.at),
+    text: reproduction.text,
+  },
+  created: `Created by ${person(bug.reporter).name}, ${formatDate(bug.created)}.`,
+  updated: lastChange ? `Updated by ${person(lastChange.by).name}, ${formatMoment(lastChange.at)}.` : '',
+};
+
+export const isKeyResolved = (key: string) => isResolvedAt(key, SHOWN_AT);
 
 export interface HistoryEntry {
   who: string;
@@ -59,21 +137,19 @@ export interface HistoryEntry {
   when: string;
 }
 
-export const HISTORY: HistoryEntry[] = [
-  { who: 'Casey Kim', what: 'created the issue', when: '2 Oct 2026, 9:05am' },
-  {
-    who: 'Casey Kim',
-    what: 'Assignee: Unassigned → Alex Lee, Estimation: 2h, Due date: 9 Oct 2026',
-    when: '3 Oct 2026, 10:14am',
-  },
-  { who: 'Alex Lee', what: 'Severity: High → Critical', when: '5 Oct 2026, 11:30am' },
-  { who: 'Alex Lee', what: 'linked: depends on ACME-4', when: '5 Oct 2026, 11:32am' },
-  { who: 'Alex Lee', what: 'created subtask ACME-13', when: '5 Oct 2026, 11:34am' },
-  { who: 'Alex Lee', what: 'Status: Open → In Progress', when: '6 Oct 2026, 9:20am' },
-  { who: 'Alex Lee', what: 'attached invite-expired.log', when: '6 Oct 2026, 2:12pm' },
-  { who: 'Alex Lee', what: 'logged 1h 25m, Development', when: '8 Oct 2026, 4:38pm' },
-  { who: 'Alex Lee', what: 'Status: In Progress → Fixed', when: '8 Oct 2026, 4:40pm' },
-];
+export const HISTORY_ENTRIES: HistoryEntry[] = HISTORY.filter(entry => entry.key === KEY && entry.at <= SHOWN_AT).map(
+  entry => ({
+    who: person(entry.by).name,
+    what: entry.what,
+    when: formatMoment(entry.at),
+  }),
+);
+
+const historyAt = (what: string) => {
+  const found = HISTORY.find(entry => entry.key === KEY && entry.what.startsWith(what));
+  if (!found) throw new Error(`ACME-12 has no history entry starting "${what}"`);
+  return found;
+};
 
 export interface WorkflowStep {
   title: string;
@@ -81,36 +157,39 @@ export interface WorkflowStep {
   record: string;
 }
 
+const firstSubtask = subtasks[0]?.key ?? '';
+const firstDependency = dependencies[0] ?? '';
+
 export const WORKFLOW_STEPS: WorkflowStep[] = [
   {
-    title: 'Casey files the bug.',
-    body: 'Only a title is required. Status, priority and type start at the project’s defaults, so Casey writes the steps to reproduce in Markdown and raises the priority to Major.',
-    record: 'Casey Kim created ACME-12 · Bug · Open · Major',
+    title: `${firstName(bug.reporter)} files the bug.`,
+    body: `Only a title is required. Status, priority and type start at the project’s defaults, so ${firstName(bug.reporter)} writes the steps to reproduce in Markdown and raises the priority to ${bug.priority}.`,
+    record: `${person(bug.reporter).name} created ${KEY} · ${bug.type} · ${statusOf(KEY, bug.created)} · ${bug.priority}`,
   },
   {
-    title: 'Alex takes it.',
-    body: 'Assignee, estimate and due date saved together make one history entry. Being assigned makes Alex a watcher, so new comments and status changes reach Alex’s inbox.',
-    record: 'Assignee: Unassigned → Alex Lee · Estimation: 2h · Due date: 9 Oct 2026',
+    title: `${firstName(DETAIL.assignee.handle)} takes it.`,
+    body: `Assignee, estimate and due date saved together make one history entry. Being assigned makes ${firstName(DETAIL.assignee.handle)} a watcher, so new comments and status changes reach ${firstName(DETAIL.assignee.handle)}’s inbox.`,
+    record: historyAt('Assignee:').what.replaceAll(', ', ' · '),
   },
   {
     title: 'It gets a subtask and a dependency.',
-    body: 'Create subtask files ACME-13 under it. A depends on link to ACME-4 shows on both issues, in both histories, and can never loop back on itself.',
-    record: 'ACME-12 parent for ACME-13 · depends on ACME-4',
+    body: `A parent for link puts ${firstSubtask} under it. A depends on link to ${firstDependency} shows on both issues, in both histories, and can never loop back on itself.`,
+    record: `${KEY} parent for ${firstSubtask} · depends on ${firstDependency}`,
   },
   {
     title: 'The log goes on the issue.',
     body: 'Drop the file onto the editor or paste a screenshot. Files are private: a link opens only for someone signed in who can open the issue.',
-    record: 'Alex Lee attached invite-expired.log',
+    record: `${person(historyAt('attached').by).name} ${historyAt('attached').what}`,
   },
   {
     title: 'The reproduction is discussed in place.',
-    body: 'A comment mentions @casey, who is told in the inbox. ACME-4 typed in the text becomes a link, struck through once that issue is resolved.',
-    record: '@casey reproduced with a ten-day-old link. The fix waits on ACME-4.',
+    body: `A comment mentions @${bug.reporter}, who is told in the inbox. ${firstDependency} typed in the text becomes a link, struck through once that issue is resolved.`,
+    record: reproduction.text,
   },
   {
     title: 'It is resolved, with the record intact.',
-    body: 'Fixed is a done status, so the issue is marked resolved and the time recorded. Casey, who filed it, hears that it was resolved.',
-    record: 'Status: In Progress → Fixed · resolved 8 Oct 2026, 4:40pm',
+    body: `Fixed is a done status, so the issue is marked resolved and the time recorded. ${firstName(bug.reporter)}, who filed it, hears that it was resolved.`,
+    record: `${historyAt('Status: In Progress').what} · resolved ${formatMoment(SHOWN_AT)}`,
   },
 ];
 
@@ -124,7 +203,6 @@ export const DEFAULT_LISTS = [
 ];
 
 export const SEVERITY_OPTIONS = ['Low', 'High', 'Critical'] as const;
-export const SEVERITY_DEFAULT_VALUE = 'Critical';
 
 export const SEVERITY_FIELD = [
   { term: 'Name', detail: 'Severity, renamed whenever you like' },
@@ -135,25 +213,28 @@ export const SEVERITY_FIELD = [
   { term: 'Empty label', detail: 'No Severity' },
 ];
 
+const criticalBugs = OTHER_CRITICAL_BUGS.length + (SEVERITY_DEFAULT_VALUE === 'Critical' ? 1 : 0);
+const subtasksDone = DETAIL.subtasks.filter(child => child.resolved).length;
+
 export const CONNECTIONS = [
   {
     title: 'On the sprint board.',
-    body: 'Planned into Sprint 08 with 3 story points, ACME-12 is a card with its key, title, priority, people, points and subtask progress. On a board by status, moving the card changes its status.',
-    record: 'Sprint 08 · ACME-12 · 3 points · 1/1 subtasks done',
+    body: `Planned into ${DETAIL.sprint} with ${DETAIL.points} story points, ${KEY} is a card with its key, title, priority, people, points and subtask progress. On a board by status, moving the card changes its status.`,
+    record: `${DETAIL.sprint} · ${KEY} · ${DETAIL.points} points · ${subtasksDone}/${DETAIL.subtasks.length} subtasks done`,
     href: '/features/sprints-kanban-boards',
     label: 'Sprints and boards',
   },
   {
     title: 'In the reports.',
-    body: 'Issues per field, grouped by Severity, counts ACME-12 under Critical. Click the bar and the issue list opens with exactly the issues it counted.',
-    record: 'Issues per field · Severity · Critical 3',
+    body: `Issues per field, grouped by Severity, counts ${KEY} under ${SEVERITY_DEFAULT_VALUE}. Click the bar and the issue list opens with exactly the issues it counted.`,
+    record: `Issues per field · Severity · ${SEVERITY_DEFAULT_VALUE} ${criticalBugs}`,
     href: '/features/project-reports',
     label: 'Project reports',
   },
   {
     title: 'Beside the decision.',
-    body: 'The knowledge base article on invitation expiry mentions ACME-12, so the issue lists it under Referenced by. Whoever picks the bug up finds the reasoning.',
-    record: 'article://ACME/invitation-links-and-expiry → ACME-12',
+    body: `The knowledge base article on invitation expiry mentions ${KEY}, so the issue lists it under Referenced by. Whoever picks the bug up finds the reasoning.`,
+    record: `${articleUri(reference?.slug ?? '')} → ${KEY}`,
     href: '/features/project-knowledge-base',
     label: 'Knowledge base',
   },

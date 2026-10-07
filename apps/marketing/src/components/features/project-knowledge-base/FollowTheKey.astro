@@ -1,3 +1,7 @@
+---
+import { DECISION, DECISION_META, REFERENCED_ISSUE as ISSUE } from '@lib/features/project-knowledge-base';
+---
+
 <section class="border-t border-line bg-app" aria-labelledby="kb-follow-title">
   <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
     <div class="lg:col-span-4">
@@ -53,11 +57,13 @@
             <span class="sep kb-mid">/</span>
             <span>Decisions</span>
             <span class="sep">/</span>
-            <span class="text-fg kb-last">Invitation links and expiry</span>
+            <span class="text-fg kb-last">{DECISION.title}</span>
           </div>
           <div class="wf-body">
-            <p class="text-xs text-fg-2">Decision record · Published to project members · Last updated by Alex Lee</p>
-            <h3 class="wf-title">Invitation links and expiry</h3>
+            <p class="text-xs text-fg-2">
+              Decision record · Published to project members · Last updated by {DECISION_META.updatedBy}
+            </p>
+            <h3 class="wf-title">{DECISION.title}</h3>
             <p class="kb-tags" aria-label="Tags">
               <span class="kb-tag kb-amber">invitations</span>
               <span class="kb-tag kb-blue">decision</span>
@@ -68,9 +74,9 @@
                 itself and offer a new one. A blank page or a redirect to sign-in is a bug.
               </p>
               <p>
-                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
-                invitation landing page itself, before any sign-in prompt, because the person may not have an account
-                yet. See{' '}
+                <strong class="text-fg font-medium">Decided {DECISION_META.decided}.</strong> The expiry message is
+                shown on the invitation landing page itself, before any sign-in prompt, because the person may not have
+                an account yet. See{' '}
                 <a class="kb-key" href="#kb-panel-issue" data-kb-follow="issue" data-kb-landing="article">
                   ACME-12
                 </a>{' '}
@@ -79,9 +85,9 @@
             </div>
             <dl class="fields">
               <dt>Page</dt>
-              <dd class="mono text-xs kb-wrap">/projects/ACME/articles/invitation-links-and-expiry</dd>
+              <dd class="mono text-xs kb-wrap">{DECISION_META.path}</dd>
               <dt>For agents</dt>
-              <dd class="mono text-xs kb-wrap">article://ACME/invitation-links-and-expiry</dd>
+              <dd class="mono text-xs kb-wrap">{DECISION_META.uri}</dd>
             </dl>
           </div>
         </div>
@@ -93,7 +99,7 @@
             <span class="sep">/</span>
             <span>Issues</span>
             <span class="sep">/</span>
-            <span class="mono text-xs text-fg">ACME-12</span>
+            <span class="mono text-xs text-fg">{ISSUE.key}</span>
           </div>
           <div class="wf-body">
             <div class="flex items-center gap-2 text-xs text-fg-2">
@@ -106,7 +112,7 @@
               </span>
               Major
             </div>
-            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <h3 class="wf-title">{ISSUE.title}</h3>
             <div class="wf-md">
               <p>
                 <strong class="text-fg font-medium">Actual.</strong> Opening an invitation link older than seven days
@@ -117,32 +123,33 @@
               <dt>Reporter</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  CK
+                  {ISSUE.reporter.initials}
                 </span>
-                Casey Kim
+                {ISSUE.reporter.name}
               </dd>
               <dt>Assignee</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  AL
+                  {ISSUE.assignee.initials}
                 </span>
-                Alex Lee
+                {ISSUE.assignee.name}
               </dd>
               <dt>Status</dt>
               <dd>
-                <i class="dot"></i>Open
+                <i class="dot"></i>
+                {ISSUE.status}
               </dd>
               <dt>Sprint</dt>
-              <dd>Sprint 08</dd>
+              <dd>{ISSUE.sprint}</dd>
             </dl>
             <div class="ref kb-ref" data-kb-ref>
               <p class="lbl">Referenced by</p>
               <p>
                 <a class="kb-ref-link" href="#kb-panel-article" data-kb-follow="article" data-kb-landing="issue">
-                  Invitation links and expiry
+                  {DECISION.title}
                 </a>
               </p>
-              <p class="mt-1 text-xs text-fg-2">Decisions · ACME · updated 2 Oct 2026</p>
+              <p class="mt-1 text-xs text-fg-2">{DECISION_META.updated}</p>
             </div>
           </div>
         </div>

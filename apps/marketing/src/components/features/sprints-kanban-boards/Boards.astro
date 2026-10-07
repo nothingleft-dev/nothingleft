@@ -2,8 +2,12 @@
 import Card from './Card.astro';
 import {
   COLUMNS,
-  PEOPLE,
+  countWord,
+  EPIC,
+  LANES,
+  laneOf,
   PRIORITIES,
+  SPRINT,
   SPRINT_ISSUES,
   TYPES,
   type SprintIssue,
@@ -52,9 +56,9 @@ const VIEWS: View[] = [
     label: 'Lanes',
     note: 'Status columns, one row per assignee. Cards move within their own row.',
     columns: byStatus(SPRINT_ISSUES),
-    lanes: PEOPLE.map(person => ({
-      name: person.name,
-      columns: byStatus(SPRINT_ISSUES.filter(issue => issue.assignee === person)),
+    lanes: LANES.map(lane => ({
+      name: lane,
+      columns: byStatus(SPRINT_ISSUES.filter(issue => laneOf(issue) === lane)),
     })),
   },
 ];
@@ -157,8 +161,9 @@ const VIEWS: View[] = [
         ))}
       </div>
       <p class="mt-4 text-xs text-fg-3">
-        The same ten cards of Sprint 08, keys and points only. Every project starts with one board: <em>To do</em>,{' '}
-        <em>In progress</em> and <em>Done</em>, with a row per epic.
+        The same {countWord(SPRINT_ISSUES.length)} cards of {SPRINT.name}, keys and points only. Every project starts
+        with one board: <em>To do</em>, <em>In progress</em> and <em>Done</em>, with a row per epic. Here the epic{' '}
+        {EPIC.key}, <em>{EPIC.title}</em>, would hold {countWord(EPIC.cards)} of the cards.
       </p>
     </div>
   </div>

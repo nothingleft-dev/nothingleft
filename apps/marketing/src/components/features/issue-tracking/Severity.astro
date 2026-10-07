@@ -9,7 +9,9 @@ import {
 } from '@lib/features/issue-tracking';
 import IssueRow from './IssueRow.astro';
 
-const total = OTHER_CRITICAL_BUGS.length + 1;
+const matches = SEVERITY_DEFAULT_VALUE === 'Critical';
+const total = OTHER_CRITICAL_BUGS.length + (matches ? 1 : 0);
+const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five'];
 ---
 
 <section class="border-t border-line bg-app" aria-labelledby="fields-title">
@@ -101,7 +103,7 @@ const total = OTHER_CRITICAL_BUGS.length + 1;
               {total} issues
             </span>
           </div>
-          <IssueRow row={SAMPLE_ISSUE} data-it-severity-row />
+          <IssueRow row={SAMPLE_ISSUE} data-it-severity-row hidden={!matches} />
           {OTHER_CRITICAL_BUGS.map(row => (
             <IssueRow row={row} />
           ))}
@@ -114,7 +116,8 @@ const total = OTHER_CRITICAL_BUGS.length + 1;
         </div>
       </div>
       <p class="mt-4 text-xs text-fg-3">
-        Hand-drawn product views with fictional data. Two other bugs in ACME are Critical.
+        Hand-drawn product views with fictional data.{' '}
+        {COUNT_WORDS[OTHER_CRITICAL_BUGS.length] ?? OTHER_CRITICAL_BUGS.length} other bugs in ACME are Critical.
       </p>
     </div>
   </div>

@@ -1,8 +1,14 @@
 ---
-import { STANDUP_PROMPT, WORKFLOW_STEPS } from '@lib/solutions/engineering-teams';
+import { STANDUP_PROMPT, STORY, WORKFLOW_STEPS } from '@lib/solutions/engineering-teams';
 
 const BAR_WIDTHS = [40, 34, 28, 22, 16, 10];
 const total = WORKFLOW_STEPS.length;
+const pointsText = (points: number | null) =>
+  points === null ? 'Not estimated' : `${points} ${points === 1 ? 'point' : 'points'}`;
+const priorityLetter = STORY.priority.charAt(0);
+const lead = STORY.reporter;
+const dev = STORY.developer;
+const reproduction = STORY.develop.comment.text.split(/(@\w+|ACME-\d+)/);
 ---
 
 <section id="et-workflow" class="border-t border-line bg-app" aria-labelledby="et-workflow-title">
@@ -46,27 +52,28 @@ const total = WORKFLOW_STEPS.length;
         <div class="wf-panel" id="et-panel">
           <div data-view="report" class="on">
             <p class="et-cap">
-              <span class="et-n">1 / {total}</span>Casey Kim files it · 2 Oct 2026, 9:05am
+              <span class="et-n">1 / {total}</span>
+              {lead.name} files it · {STORY.report.when}
             </p>
             <div class="pane-bar">
               <span class="mono text-xs">ACME</span>
               <span class="sep">/</span>
               <span>Issues</span>
               <span class="sep">/</span>
-              <span class="mono text-xs text-fg">ACME-12</span>
+              <span class="mono text-xs text-fg">{STORY.key}</span>
             </div>
             <div class="wf-body">
               <div class="flex items-center gap-2 text-xs text-fg-2">
                 <span class="badge l-bug" aria-hidden="true">
                   B
                 </span>
-                Bug
-                <span class="badge l-major ml-2" aria-hidden="true">
-                  M
+                {STORY.type}
+                <span class:list={['badge ml-2', `l-${STORY.priority.toLowerCase()}`]} aria-hidden="true">
+                  {priorityLetter}
                 </span>
-                Major
+                {STORY.priority}
               </div>
-              <h3 class="wf-title">Invite link blank after it expires</h3>
+              <h3 class="wf-title">{STORY.title}</h3>
               <div class="wf-md">
                 <p>
                   <strong class="text-fg font-medium">Steps.</strong> Open an invitation link that is older than seven
@@ -84,32 +91,35 @@ const total = WORKFLOW_STEPS.length;
                 <dt>Reporter</dt>
                 <dd>
                   <span class="av" aria-hidden="true">
-                    CK
+                    {lead.initials}
                   </span>
-                  Casey Kim
+                  {lead.name}
                 </dd>
                 <dt>Assignee</dt>
                 <dd class="empty">Unassigned</dd>
                 <dt>Status</dt>
                 <dd>
-                  <i class="dot"></i>Open
+                  <i class="dot"></i>
+                  {STORY.report.status}
                 </dd>
                 <dt>Sprint</dt>
-                <dd class="empty">Unscheduled</dd>
+                <dd class="empty">{STORY.report.sprint ?? 'Unscheduled'}</dd>
                 <dt>Story points</dt>
-                <dd class="empty">Not estimated</dd>
+                <dd class="empty">{STORY.report.points ?? 'Not estimated'}</dd>
               </dl>
             </div>
             <div class="activity">
               <p>
-                Casey Kim created ACME-12<span class="t">2 Oct 2026</span>
+                {lead.name} created {STORY.key}
+                <span class="t">{STORY.report.day}</span>
               </p>
             </div>
           </div>
 
           <div data-view="triage">
             <p class="et-cap">
-              <span class="et-n">2 / {total}</span>Casey Kim, lead, triages · 3 Oct 2026, 10:05am
+              <span class="et-n">2 / {total}</span>
+              {lead.name}, lead, triages · {STORY.triage.when}
             </p>
             <div class="pane-bar">
               <span class="text-fg">Acme</span>
@@ -119,55 +129,28 @@ const total = WORKFLOW_STEPS.length;
               <span>Issues</span>
             </div>
             <p class="querybar">
-              <span class="q">type: Bug #Unresolved assignee: Unassigned</span>
-              <span class="count">3 issues</span>
+              <span class="q">{STORY.triage.query}</span>
+              <span class="count">{STORY.triage.rows.length} issues</span>
             </p>
             <ul aria-label="Unassigned open bugs">
-              <li class="row sel">
-                <span class="key">ACME-12</span>
-                <span class="title">Invite link blank after it expires</span>
-                <span class="badge l-major pri">
-                  <span aria-hidden="true">M</span>
-                  <span class="sr-only">Major</span>
-                </span>
-                <span class="meta">
-                  <span class="who none">Unassigned</span>
-                  <span class="spent">—</span>
-                  <span class="status">
-                    <i class="dot"></i>Open
+              {STORY.triage.rows.map(row => (
+                <li class:list={['row', { sel: row.key === STORY.key }]}>
+                  <span class="key">{row.key}</span>
+                  <span class="title">{row.title}</span>
+                  <span class:list={['badge pri', `l-${row.priority.toLowerCase()}`]}>
+                    <span aria-hidden="true">{row.priority.charAt(0)}</span>
+                    <span class="sr-only">{row.priority}</span>
                   </span>
-                </span>
-              </li>
-              <li class="row">
-                <span class="key">ACME-9</span>
-                <span class="title">Upload stalls at 100% on slow links</span>
-                <span class="badge l-major pri">
-                  <span aria-hidden="true">M</span>
-                  <span class="sr-only">Major</span>
-                </span>
-                <span class="meta">
-                  <span class="who none">Unassigned</span>
-                  <span class="spent">—</span>
-                  <span class="status">
-                    <i class="dot"></i>Open
+                  <span class="meta">
+                    <span class="who none">Unassigned</span>
+                    <span class="spent">—</span>
+                    <span class="status">
+                      <i class="dot"></i>
+                      {row.status}
+                    </span>
                   </span>
-                </span>
-              </li>
-              <li class="row">
-                <span class="key">ACME-7</span>
-                <span class="title">Burndown ignores late additions</span>
-                <span class="badge l-critical pri">
-                  <span aria-hidden="true">C</span>
-                  <span class="sr-only">Critical</span>
-                </span>
-                <span class="meta">
-                  <span class="who none">Unassigned</span>
-                  <span class="spent">—</span>
-                  <span class="status">
-                    <i class="dot"></i>Open
-                  </span>
-                </span>
-              </li>
+                </li>
+              ))}
             </ul>
             <div class="wf-body et-note">
               <p>
@@ -179,7 +162,8 @@ const total = WORKFLOW_STEPS.length;
 
           <div data-view="plan">
             <p class="et-cap">
-              <span class="et-n">3 / {total}</span>Casey Kim, lead, plans it · 3 Oct 2026, 10:14am
+              <span class="et-n">3 / {total}</span>
+              {lead.name}, lead, plans it · {STORY.plan.when}
             </p>
             <div class="pane-bar">
               <span class="mono text-xs">ACME</span>
@@ -188,30 +172,23 @@ const total = WORKFLOW_STEPS.length;
             </div>
             <div class="et-bl">
               <p class="et-bl-head">
-                <span class="text-fg font-medium">Sprint 08</span>
+                <span class="text-fg font-medium">{STORY.sprint}</span>
                 <span class="et-pill">Planned</span>
-                <span class="et-bl-meta">Make invitations clearer · ends 17 Oct 2026</span>
+                <span class="et-bl-meta">
+                  {STORY.sprintGoal} · {STORY.plan.issues} issues, {STORY.plan.points} points · ends {STORY.sprintEnds}
+                </span>
               </p>
-              <ul aria-label="Sprint 08">
-                <li class="et-bl-row et-dropped">
-                  <span class="et-grip" aria-hidden="true"></span>
-                  <span class="key">ACME-12</span>
-                  <span class="et-bl-title">Invite link blank after it expires</span>
-                  <span class="et-pts">3 points</span>
-                </li>
-                <li class="et-bl-row">
-                  <span class="et-grip" aria-hidden="true"></span>
-                  <span class="key">ACME-14</span>
-                  <span class="et-bl-title">Invite email subject names the org</span>
-                  <span class="et-pts">2 points</span>
-                </li>
-                <li class="et-bl-row">
-                  <span class="et-grip" aria-hidden="true"></span>
-                  <span class="key">ACME-15</span>
-                  <span class="et-bl-title">Resend invite from the members list</span>
-                  <span class="et-pts">1 point</span>
-                </li>
+              <ul aria-label={STORY.sprint}>
+                {STORY.plan.shown.map(row => (
+                  <li class:list={['et-bl-row', { 'et-dropped': row.key === STORY.key }]}>
+                    <span class="et-grip" aria-hidden="true"></span>
+                    <span class="key">{row.key}</span>
+                    <span class="et-bl-title">{row.title}</span>
+                    <span class="et-pts">{pointsText(row.points)}</span>
+                  </li>
+                ))}
               </ul>
+              <p class="et-bl-more">{STORY.plan.more} more issues</p>
             </div>
             <div class="et-bl">
               <p class="et-bl-head">
@@ -219,19 +196,16 @@ const total = WORKFLOW_STEPS.length;
                 <span class="et-bl-meta">Issues in no sprint</span>
               </p>
               <ul aria-label="Backlog">
-                <li class="et-bl-row">
-                  <span class="et-grip" aria-hidden="true"></span>
-                  <span class="key">ACME-7</span>
-                  <span class="et-bl-title">Burndown ignores late additions</span>
-                  <span class="et-pts et-none">Not estimated</span>
-                </li>
-                <li class="et-bl-row">
-                  <span class="et-grip" aria-hidden="true"></span>
-                  <span class="key">ACME-9</span>
-                  <span class="et-bl-title">Upload stalls at 100% on slow links</span>
-                  <span class="et-pts et-none">Not estimated</span>
-                </li>
+                {STORY.plan.backlog.map(row => (
+                  <li class="et-bl-row">
+                    <span class="et-grip" aria-hidden="true"></span>
+                    <span class="key">{row.key}</span>
+                    <span class="et-bl-title">{row.title}</span>
+                    <span class:list={['et-pts', { 'et-none': row.points === null }]}>{pointsText(row.points)}</span>
+                  </li>
+                ))}
               </ul>
+              <p class="et-bl-more">{STORY.plan.backlogMore} more issues</p>
             </div>
             <div class="wf-body et-tight">
               <dl class="fields">
@@ -239,225 +213,188 @@ const total = WORKFLOW_STEPS.length;
                 <dd>
                   <span class="field flash">
                     <span class="av" aria-hidden="true">
-                      AL
+                      {dev.initials}
                     </span>{' '}
-                    Alex Lee
+                    {dev.name}
                   </span>
                 </dd>
                 <dt>Estimation</dt>
-                <dd class="mono text-xs">2h</dd>
+                <dd class="mono text-xs">{STORY.estimate}</dd>
                 <dt>Due date</dt>
-                <dd>9 Oct 2026</dd>
+                <dd>{STORY.due}</dd>
               </dl>
             </div>
             <div class="activity">
               <p>
-                Casey Kim moved ACME-12 into Sprint 08, Story points: 3<span class="t">3 Oct 2026</span>
+                {STORY.plan.moved}
+                <span class="t">{STORY.plan.day}</span>
               </p>
               <p>
-                Casey Kim set Assignee: Unassigned → Alex Lee, Estimation: 2h, Due date: 9 Oct 2026
-                <span class="t">3 Oct 2026</span>
+                {STORY.plan.assigned}
+                <span class="t">{STORY.plan.day}</span>
               </p>
             </div>
           </div>
 
           <div data-view="develop">
             <p class="et-cap">
-              <span class="et-n">4 / {total}</span>Alex Lee, developer, picks it up · 5–6 Oct 2026
+              <span class="et-n">4 / {total}</span>
+              {dev.name}, developer, picks it up · {STORY.develop.days}
             </p>
             <div class="pane-bar">
               <span class="mono text-xs">ACME</span>
               <span class="sep">/</span>
               <span>Issues</span>
               <span class="sep">/</span>
-              <span class="mono text-xs text-fg">ACME-12</span>
+              <span class="mono text-xs text-fg">{STORY.key}</span>
             </div>
             <div class="wf-body">
               <div class="flex items-center gap-2 text-xs text-fg-2">
                 <span class="badge l-bug" aria-hidden="true">
                   B
                 </span>
-                Bug
-                <span class="badge l-major ml-2" aria-hidden="true">
-                  M
+                {STORY.type}
+                <span class:list={['badge ml-2', `l-${STORY.priority.toLowerCase()}`]} aria-hidden="true">
+                  {priorityLetter}
                 </span>
-                Major
+                {STORY.priority}
               </div>
-              <h3 class="wf-title">Invite link blank after it expires</h3>
+              <h3 class="wf-title">{STORY.title}</h3>
               <div class="ref">
                 <p class="lbl">
                   Depends on <span class="mono">1</span>
                 </p>
                 <p class="flex items-center gap-2 min-w-0">
-                  <span class="key">ACME-4</span>
-                  <span class="et-ellipsis">Invite expiry setting per org</span>
+                  <span class="key">{STORY.develop.dependency.key}</span>
+                  <span class="et-ellipsis">{STORY.develop.dependency.title}</span>
                 </p>
               </div>
               <div class="comment">
                 <div class="by">
                   <span class="av" aria-hidden="true">
-                    AL
+                    {STORY.develop.comment.by.initials}
                   </span>
-                  Alex Lee<span class="text-fg-3">6 Oct 2026, 2:20pm</span>
+                  {STORY.develop.comment.by.name}
+                  <span class="text-fg-3">{STORY.develop.comment.when}</span>
                 </div>
-                <code class="et-mention">@casey</code> reproduced with a ten-day-old link: the landing page stays blank.
-                The fix waits on <span class="key">ACME-4</span>.
+                {reproduction.map(part =>
+                  part.startsWith('@') ? (
+                    <code class="et-mention">{part}</code>
+                  ) : /^ACME-\d+$/.test(part) ? (
+                    <span class="key">{part}</span>
+                  ) : (
+                    part
+                  ),
+                )}
               </div>
               <dl class="fields">
                 <dt>Status</dt>
                 <dd>
                   <span class="field flash">
-                    <i class="dot started"></i> In Progress
+                    <i class="dot started"></i> {STORY.develop.status}
                   </span>
                 </dd>
                 <dt>Spent time</dt>
                 <dd class="et-spent">
                   <span class="mono text-xs">
-                    20m <span class="text-fg-2 font-sans">of 2h</span>
+                    {STORY.develop.spent} <span class="text-fg-2 font-sans">of {STORY.estimate}</span>
                   </span>
                   <span class="et-meter" aria-hidden="true">
-                    <span style="width:17%"></span>
+                    <span style={`width:${STORY.develop.spentShare}%`}></span>
                   </span>
                 </dd>
               </dl>
             </div>
             <div class="activity">
-              <p>
-                Alex Lee linked: depends on ACME-4<span class="t">5 Oct 2026</span>
-              </p>
-              <p>
-                Alex Lee changed Status: Open → In Progress<span class="t">6 Oct 2026</span>
-              </p>
-              <p>
-                Alex Lee logged 20m, Development<span class="t">6 Oct 2026</span>
-              </p>
+              {STORY.develop.activity.map(entry => (
+                <p>
+                  {entry.text}
+                  <span class="t">{entry.day}</span>
+                </p>
+              ))}
             </div>
           </div>
 
           <div data-view="board">
             <p class="et-cap">
-              <span class="et-n">5 / {total}</span>Alex Lee moves the card · 8 Oct 2026, 4:40pm
+              <span class="et-n">5 / {total}</span>
+              {dev.name} moves the card · {STORY.board.when}
             </p>
             <div class="pane-bar">
               <span class="mono text-xs">ACME</span>
               <span class="sep">/</span>
               <span>Board</span>
               <span class="sep">/</span>
-              <span class="text-fg">Sprint 08</span>
+              <span class="text-fg">{STORY.sprint}</span>
             </div>
             <div class="et-board-head">
-              <h3 class="text-fg font-medium">Make invitations clearer</h3>
-              <span>Ends 17 Oct 2026</span>
+              <h3 class="text-fg font-medium">{STORY.sprintGoal}</h3>
+              <span>Ends {STORY.sprintEnds}</span>
             </div>
             <div class="board">
-              <div class="col">
-                <h4>
-                  Open<span>2</span>
-                </h4>
-                <div class="card">
-                  <span class="pts">2</span>
-                  <span class="key">ACME-14</span>
-                  <br />
-                  Invite email subject names the org
+              {STORY.board.columns.map(column => (
+                <div class="col">
+                  <h4>
+                    {column.status}
+                    <span>{column.cards.length}</span>
+                  </h4>
+                  {column.cards.map(card => (
+                    <div class:list={['card', { sel: card.key === STORY.key }]}>
+                      <span class="pts">{card.points}</span>
+                      <span class="key">{card.key}</span>
+                      <br />
+                      {card.title}
+                    </div>
+                  ))}
                 </div>
-                <div class="card">
-                  <span class="pts">1</span>
-                  <span class="key">ACME-15</span>
-                  <br />
-                  Resend invite from the members list
-                </div>
-              </div>
-              <div class="col">
-                <h4>
-                  In Progress<span>2</span>
-                </h4>
-                <div class="card">
-                  <span class="pts">5</span>
-                  <span class="key">ACME-11</span>
-                  <br />
-                  Swimlane header overlaps count
-                </div>
-                <div class="card">
-                  <span class="pts">3</span>
-                  <span class="key">ACME-10</span>
-                  <br />
-                  Invite landing shows the inviter
-                </div>
-              </div>
-              <div class="col">
-                <h4>
-                  Fixed<span>4</span>
-                </h4>
-                <div class="card sel">
-                  <span class="pts">3</span>
-                  <span class="key">ACME-12</span>
-                  <br />
-                  Invite link blank after it expires
-                </div>
-                <div class="card">
-                  <span class="pts">8</span>
-                  <span class="key">ACME-6</span>
-                  <br />
-                  Project-scoped invite links
-                </div>
-                <div class="card">
-                  <span class="pts">5</span>
-                  <span class="key">ACME-5</span>
-                  <br />
-                  Accept invite while signed in
-                </div>
-                <div class="card">
-                  <span class="pts">3</span>
-                  <span class="key">ACME-4</span>
-                  <br />
-                  Invite expiry setting per org
-                </div>
-              </div>
+              ))}
             </div>
             <div class="activity">
-              <p>
-                Alex Lee changed Status: In Progress → Fixed<span class="t">8 Oct 2026</span>
-              </p>
-              <p>
-                Alex Lee logged 1h 25m, Development<span class="t">8 Oct 2026</span>
-              </p>
+              {STORY.board.activity.map(entry => (
+                <p>
+                  {entry.text}
+                  <span class="t">{entry.day}</span>
+                </p>
+              ))}
             </div>
             <div class="wf-body et-note">
               <p>
                 Focus the card, <kbd>Space</kbd> to pick it up, the arrow keys to move it, <kbd>Space</kbd> to drop.
-                Fixed is a done status, so ACME-12 is resolved and Casey, who filed it, is told.
+                Fixed is a done status, so {STORY.key} is resolved and {lead.name.split(' ')[0]}, who filed it, is told.
               </p>
             </div>
           </div>
 
           <div data-view="agent">
             <p class="et-cap">
-              <span class="et-n">6 / {total}</span>Alex’s agent, before standup · 9 Oct 2026, 9:10am
+              <span class="et-n">6 / {total}</span>
+              {dev.name.split(' ')[0]}’s agent, before standup · {STORY.standup.when}
             </p>
             <div class="et-agent">
               <div class="pane-bar">
                 <span class="text-fg">Your agent</span>
                 <span class="ml-auto">
-                  connected as <span class="mono text-xs text-fg">@alex</span>
+                  connected as <span class="mono text-xs text-fg">@{dev.handle}</span>
                 </span>
               </div>
               <p class="prompt">
                 <span class="mark" aria-hidden="true">
                   ›
                 </span>
-                <span>Is anything still open on ACME-12?</span>
+                <span>Is anything still open on {STORY.key}?</span>
               </p>
               <ul class="calls" aria-label="Tool calls for the first request">
                 <li>
                   <span class="tool">get_issue</span>
-                  <span class="args">issue: "ACME-12"</span>
+                  <span class="args">issue: "{STORY.key}"</span>
                 </li>
               </ul>
               <div class="answer et-answer">
                 <p>
-                  <strong class="font-medium">ACME-12</strong> is Fixed, resolved 8 Oct 2026, 4:40pm, with 1h 45m spent
-                  of 2h. ACME-4, which it depended on, is Fixed too. The decision record{' '}
-                  <em>Invitation links and expiry</em> references it.
+                  <strong class="font-medium">{STORY.key}</strong> is {STORY.standup.status}, resolved{' '}
+                  {STORY.standup.resolved}, with {STORY.standup.spent} spent of {STORY.estimate}.{' '}
+                  {STORY.standup.dependencies.map(link => `${link.key}, which it depended on, is ${link.status} too.`)}{' '}
+                  The decision record <em>{STORY.decision}</em> references it.
                 </p>
               </div>
               <p class="prompt et-second">
@@ -477,7 +414,7 @@ const total = WORKFLOW_STEPS.length;
                 </li>
                 <li>
                   <span class="tool">get_issue_activity</span>
-                  <span class="args">issue: "ACME-12"</span>
+                  <span class="args">issue: "{STORY.key}"</span>
                 </li>
                 <li>
                   <span class="tool">list_notifications</span>
@@ -488,23 +425,28 @@ const total = WORKFLOW_STEPS.length;
                 <dl class="et-standup">
                   <dt>Done</dt>
                   <dd>
-                    <span class="key">ACME-12</span> Invite link blank after it expires, now Fixed
+                    <span class="key">{STORY.key}</span> {STORY.title}, now {STORY.standup.status}
                   </dd>
                   <dt>In progress</dt>
                   <dd>
-                    <span class="key">ACME-10</span> Invite landing shows the inviter
+                    {STORY.standup.inProgress.map(row => (
+                      <>
+                        <span class="key">{row.key}</span> {row.title}
+                      </>
+                    ))}
                   </dd>
                   <dt>Blocked or waiting</dt>
                   <dd>Nothing</dd>
                   <dt>Time logged</dt>
-                  <dd class="mono text-xs">1h 25m</dd>
+                  <dd class="mono text-xs">{STORY.standup.logged}</dd>
                   <dt>Waiting on you</dt>
                   <dd>Nothing unread</dd>
                 </dl>
               </div>
               <p class="et-agent-foot">
-                Every call here reads; nothing changed. Had Alex asked for a change, it would be made as{' '}
-                <span class="mono text-xs text-fg">@alex</span>, within Alex’s role and token.
+                Every call here reads; nothing changed. Had {dev.name.split(' ')[0]} asked for a change, it would be
+                made as <span class="mono text-xs text-fg">@{dev.handle}</span>, within {dev.name.split(' ')[0]}’s role
+                and token.
               </p>
             </div>
           </div>
@@ -662,6 +604,13 @@ const total = WORKFLOW_STEPS.length;
   }
   .et-pts.et-none {
     color: var(--text-muted);
+  }
+  .et-bl-more {
+    padding: 7px 16px 7px 36px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
   }
   @media (max-width: 640px) {
     .et-bl-meta {

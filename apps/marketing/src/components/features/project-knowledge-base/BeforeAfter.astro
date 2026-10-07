@@ -1,3 +1,7 @@
+---
+import { DECISION, DECISION_META, REFERENCED_ISSUE as ISSUE } from '@lib/features/project-knowledge-base';
+---
+
 <section class="border-t border-line" aria-labelledby="kb-before-title">
   <div class="wrap py-16 md:py-24">
     <div class="max-w-[640px]">
@@ -21,24 +25,25 @@
             <span class="sep">/</span>
             <span>Issues</span>
             <span class="sep">/</span>
-            <span class="mono text-xs text-fg">ACME-12</span>
+            <span class="mono text-xs text-fg">{ISSUE.key}</span>
           </div>
           <div class="wf-body">
-            <h3 class="wf-title mt-0">Invite link blank after it expires</h3>
+            <h3 class="wf-title mt-0">{ISSUE.title}</h3>
             <dl class="fields">
               <dt>Assignee</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  AL
+                  {ISSUE.assignee.initials}
                 </span>
-                Alex Lee
+                {ISSUE.assignee.name}
               </dd>
               <dt>Status</dt>
               <dd>
-                <i class="dot"></i>Open
+                <i class="dot"></i>
+                {ISSUE.status}
               </dd>
               <dt>Links</dt>
-              <dd class="empty">None</dd>
+              <dd class="empty">{ISSUE.links === 0 ? 'None' : ISSUE.links}</dd>
             </dl>
             <p class="kb-absent">
               Why seven days? Should an expired link go to sign-in? The answer is in a thread somewhere, or in someone's
@@ -58,29 +63,30 @@
             <span class="sep">/</span>
             <span>Issues</span>
             <span class="sep">/</span>
-            <span class="mono text-xs text-fg">ACME-12</span>
+            <span class="mono text-xs text-fg">{ISSUE.key}</span>
           </div>
           <div class="wf-body">
-            <h3 class="wf-title mt-0">Invite link blank after it expires</h3>
+            <h3 class="wf-title mt-0">{ISSUE.title}</h3>
             <dl class="fields">
               <dt>Assignee</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  AL
+                  {ISSUE.assignee.initials}
                 </span>
-                Alex Lee
+                {ISSUE.assignee.name}
               </dd>
               <dt>Status</dt>
               <dd>
-                <i class="dot"></i>Open
+                <i class="dot"></i>
+                {ISSUE.status}
               </dd>
               <dt>Links</dt>
-              <dd class="empty">None</dd>
+              <dd class="empty">{ISSUE.links === 0 ? 'None' : ISSUE.links}</dd>
             </dl>
             <div class="ref">
               <p class="lbl">Referenced by</p>
-              <p class="font-medium">Invitation links and expiry</p>
-              <p class="mt-1 text-xs text-fg-2">Decisions · ACME · updated 2 Oct 2026</p>
+              <p class="font-medium">{DECISION.title}</p>
+              <p class="mt-1 text-xs text-fg-2">{DECISION_META.updated}</p>
             </div>
           </div>
         </div>

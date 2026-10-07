@@ -1,12 +1,29 @@
 ---
-import { countLabel, issueByKey } from '@lib/features/search-saved-views';
+import { countLabel, countWord, DEFAULT_STATE, PRIORITIES, runQuery } from '@lib/features/search-saved-views';
 import IssueRow from './IssueRow.astro';
 import QueryBar from './QueryBar.astro';
 
 const VIEW = 'Unassigned urgent bugs';
 const QUERY = 'type: Bug #Unresolved assignee: Unassigned priority: Critical, Major';
-const critical = issueByKey('ACME-7');
-const major = issueByKey('ACME-9');
+const urgent = runQuery({
+  type: 'Bug',
+  priorities: ['Critical', 'Major'],
+  assignee: 'Unassigned',
+  unresolved: true,
+}).issues.sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority));
+const groups = PRIORITIES.map(priority => ({
+  priority,
+  issues: urgent.filter(issue => issue.priority === priority),
+})).filter(group => group.issues.length > 0);
+const largest = Math.max(...groups.map(group => group.issues.length));
+const myOpenBugs = runQuery(DEFAULT_STATE).issues.length;
+const statuses = [...new Set(urgent.map(issue => issue.status))];
+const capitalised = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const answer = `${capitalised(countWord(urgent.length))} bugs, ${statuses.length === 1 ? `${urgent.length === 2 ? 'both' : 'all'} ${statuses[0]}` : statuses.join(' or ')}: ${urgent
+  .map(issue => `${issue.key}, ${issue.title}, is ${issue.priority}`)
+  .join(
+    ', and ',
+  )}. ${groups.every(group => group.issues.length === 1) ? 'One per priority' : 'Split by priority'}, the same numbers as the chart.`;
 
 const steps = [
   { title: 'Ask the question', detail: 'Autocomplete offers the values that exist as you type.' },
@@ -99,10 +116,11 @@ const visibility = [
               anywhere in the app to jump to this bar.
             </p>
           </div>
-          <QueryBar count={countLabel(2)}>{QUERY}</QueryBar>
+          <QueryBar count={countLabel(urgent.length)}>{QUERY}</QueryBar>
           <ul class="list-none" aria-label="Matching issues">
-            <IssueRow issue={critical} />
-            <IssueRow issue={major} />
+            {urgent.map(issue => (
+              <IssueRow issue={issue} />
+            ))}
           </ul>
         </div>
 
@@ -114,10 +132,10 @@ const visibility = [
           </div>
           <div class="view-tabs">
             <span class="view-tab">
-              My open bugs <span class="n">2</span>
+              My open bugs <span class="n">{myOpenBugs}</span>
             </span>
             <span class="view-tab on">
-              {VIEW} <span class="n">2</span>
+              {VIEW} <span class="n">{urgent.length}</span>
             </span>
           </div>
           <div class="wf-body">
@@ -171,18 +189,18 @@ const visibility = [
             <span class="pill">Columns</span>
             <span class="pill ml-auto">Export CSV</span>
           </div>
-          <p class="group-head">
-            Critical <span class="n">1</span>
-          </p>
-          <ul class="list-none" aria-label="Critical">
-            <IssueRow issue={critical} />
-          </ul>
-          <p class="group-head">
-            Major <span class="n">1</span>
-          </p>
-          <ul class="list-none" aria-label="Major">
-            <IssueRow issue={major} />
-          </ul>
+          {groups.map(group => (
+            <>
+              <p class="group-head">
+                {group.priority} <span class="n">{group.issues.length}</span>
+              </p>
+              <ul class="list-none" aria-label={group.priority}>
+                {group.issues.map(issue => (
+                  <IssueRow issue={issue} />
+                ))}
+              </ul>
+            </>
+          ))}
           <div class="wf-body border-t border-line">
             <p class="text-sm text-fg-2">
               Each group header counts the whole list, not only the rows on screen. Export CSV downloads the list as
@@ -217,20 +235,15 @@ const visibility = [
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <th scope="row">Critical</th>
-                  <td>
-                    <span class="bar-fill" style="width:100%"></span>
-                  </td>
-                  <td class="num">1</td>
-                </tr>
-                <tr>
-                  <th scope="row">Major</th>
-                  <td>
-                    <span class="bar-fill" style="width:100%"></span>
-                  </td>
-                  <td class="num">1</td>
-                </tr>
+                {groups.map(group => (
+                  <tr>
+                    <th scope="row">{group.priority}</th>
+                    <td>
+                      <span class="bar-fill" style={`width:${(group.issues.length / largest) * 100}%`}></span>
+                    </td>
+                    <td class="num">{group.issues.length}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
             <p class="mt-4 text-sm text-fg-2">
@@ -261,10 +274,7 @@ const visibility = [
               <span class="args">{`report: issues-per-field, view: ${VIEW}, field: priority`}</span>
             </li>
           </ol>
-          <p class="answer">
-            Two bugs, both Open: ACME-7, Burndown ignores late additions, is Critical, and ACME-9, Upload stalls at 100%
-            on slow links, is Major. One per priority, the same numbers as the chart.
-          </p>
+          <p class="answer">{answer}</p>
         </div>
       </div>
     </div>

@@ -1,6 +1,10 @@
 ---
 import WelcomeFrame from './WelcomeFrame.astro';
+import { firstName, issue as sampleIssue, person } from '@data/sample';
 import { FIRST_ISSUES, FIRST_RUN_STEPS } from '@lib/solutions/startups';
+
+const founder = person(sampleIssue('ACME-1').reporter);
+const founderFirst = firstName(founder.handle);
 
 const total = FIRST_RUN_STEPS.length;
 const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:write'];
@@ -61,7 +65,7 @@ const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:wri
               </p>
               <div class="su-field">
                 <span class="su-label">Full name</span>
-                <span class="su-input">Alex Lee</span>
+                <span class="su-input">{founder.name}</span>
               </div>
               <div class="su-field">
                 <span class="su-label">Work email</span>
@@ -147,7 +151,8 @@ const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:wri
             </WelcomeFrame>
             <p class="su-foot-note">
               The key is derived from the name: initials for several words (Partner Portal becomes <code>PP</code>), the
-              first three letters for one. Acme would give <code>ACM</code>; Alex typed <code>ACME</code> instead.
+              first three letters for one. Acme would give <code>ACM</code>; {founderFirst} typed <code>ACME</code>{' '}
+              instead.
             </p>
             <button type="button" class="su-next" data-su-next="4">
               Next: {FIRST_RUN_STEPS[3]?.title}
@@ -180,7 +185,7 @@ const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:wri
               </Fragment>
             </WelcomeFrame>
             <p class="su-foot-note">
-              Alex skips. A solo trial is a normal way in, and the product does not act broken without a team.
+              {founderFirst} skips. A solo trial is a normal way in, and the product does not act broken without a team.
             </p>
             <button type="button" class="su-next" data-su-next="5">
               Next: {FIRST_RUN_STEPS[4]?.title}
@@ -288,7 +293,7 @@ const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:wri
             <div class="activity">
               {[...FIRST_ISSUES].reverse().map(issue => (
                 <p>
-                  Alex Lee created {issue.key}
+                  {founder.name} created {issue.key}
                   <span class="t">{issue.created}</span>
                 </p>
               ))}

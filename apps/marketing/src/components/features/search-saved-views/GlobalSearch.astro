@@ -1,8 +1,11 @@
 ---
-import { issueByKey } from '@lib/features/search-saved-views';
+import { article } from '@data/sample';
+import { ISSUES } from '@lib/features/search-saved-views';
 import QueryBar from './QueryBar.astro';
 
-const issues = [issueByKey('ACME-12'), issueByKey('ACME-6')];
+const SEARCH = 'invite link';
+const issues = ISSUES.filter(issue => issue.title.toLowerCase().includes(SEARCH));
+const decision = article('invitation-links-and-expiry');
 ---
 
 <section class="border-t border-line bg-app" aria-labelledby="global-title">
@@ -32,9 +35,9 @@ const issues = [issueByKey('ACME-12'), issueByKey('ACME-6')];
     <div class="lg:col-span-6 lg:col-start-7">
       <figure>
         <div class="panel overflow-hidden">
-          <QueryBar>invite link</QueryBar>
+          <QueryBar>{SEARCH}</QueryBar>
           <p class="group-head">
-            Issues <span class="n">2</span>
+            Issues <span class="n">{issues.length}</span>
           </p>
           <ul class="list-none" aria-label="Issues">
             {issues.map(issue => (
@@ -56,7 +59,7 @@ const issues = [issueByKey('ACME-12'), issueByKey('ACME-6')];
           <ul class="list-none" aria-label="Articles">
             <li class="hit">
               <span class="kind">ACME</span>
-              <span class="hit-title">Invitation links and expiry</span>
+              <span class="hit-title">{decision.title}</span>
               <span class="hit-meta">Published</span>
             </li>
           </ul>

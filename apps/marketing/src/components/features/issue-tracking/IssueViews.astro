@@ -1,5 +1,5 @@
 ---
-import { BUG_LIST, HISTORY } from '@lib/features/issue-tracking';
+import { BUG_LIST, BUG_LIST_QUERY, DETAIL, HISTORY_ENTRIES } from '@lib/features/issue-tracking';
 import IssueRow from './IssueRow.astro';
 
 const VIEWS = [
@@ -8,6 +8,8 @@ const VIEWS = [
   { id: 'history', label: 'History' },
 ];
 const DEFAULT_VIEW = 'detail';
+const reproduction = DETAIL.reproduction.text.split(/(@\w+|ACME-\d+)/);
+const priorityLetter = DETAIL.priority.charAt(0);
 ---
 
 <section class="border-t border-line bg-app" aria-labelledby="views-title">
@@ -18,8 +20,9 @@ const DEFAULT_VIEW = 'detail';
           Open the issue and the whole story is there.
         </h2>
         <p class="prose mt-5">
-          <code>ACME-12</code> is a Major bug in the Acme project, now fixed. Read it in the issue list, on its own
-          page, or as the history of every change made to it.
+          <code>{DETAIL.key}</code> is a {DETAIL.priority} {DETAIL.type.toLowerCase()} in the Acme project, now{' '}
+          {DETAIL.status.toLowerCase()}. Read it in the issue list, on its own page, or as the history of every change
+          made to it.
         </p>
       </div>
       <div class="seg it-switch" role="radiogroup" aria-label="Show ACME-12 as" data-it-views>
@@ -48,7 +51,7 @@ const DEFAULT_VIEW = 'detail';
           <span>Issues</span>
         </div>
         <div class="querybar">
-          <span class="q">type: Bug sort by: updated desc</span>
+          <span class="q">{BUG_LIST_QUERY}</span>
           <span class="count">{BUG_LIST.length} issues</span>
         </div>
         {BUG_LIST.map((row, index) => (
@@ -64,7 +67,7 @@ const DEFAULT_VIEW = 'detail';
           <span class="sep">/</span>
           <span>Issues</span>
           <span class="sep">/</span>
-          <span class="mono text-xs text-fg">ACME-12</span>
+          <span class="mono text-xs text-fg">{DETAIL.key}</span>
         </div>
         <div class="it-detail">
           <div class="it-main">
@@ -72,14 +75,14 @@ const DEFAULT_VIEW = 'detail';
               <span class="badge l-bug" aria-hidden="true">
                 B
               </span>
-              Bug
-              <span class="badge l-major ml-2" aria-hidden="true">
-                M
+              {DETAIL.type}
+              <span class:list={['badge ml-2', `l-${DETAIL.priority.toLowerCase()}`]} aria-hidden="true">
+                {priorityLetter}
               </span>
-              Major
+              {DETAIL.priority}
               <span class="it-tag ml-2">area:invites</span>
             </div>
-            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <h3 class="wf-title">{DETAIL.title}</h3>
             <div class="wf-md">
               <p>
                 <strong class="text-fg font-medium">Steps.</strong> Open an invitation link that is older than seven
@@ -96,42 +99,62 @@ const DEFAULT_VIEW = 'detail';
 
             <dl class="it-links">
               <dt>
-                Parent for <span class="mono">1</span>
+                Parent for <span class="mono">{DETAIL.subtasks.length}</span>
               </dt>
               <dd>
-                <s class="key">ACME-13</s>
-                <span>Show the expiry message before sign-in</span>
+                {DETAIL.subtasks.map(child => (
+                  <>
+                    {child.resolved ? <s class="key">{child.key}</s> : <span class="key">{child.key}</span>}
+                    <span>{child.title}</span>
+                  </>
+                ))}
               </dd>
               <dt>
-                Depends on <span class="mono">1</span>
+                Depends on <span class="mono">{DETAIL.dependsOn.length}</span>
               </dt>
               <dd>
-                <s class="key">ACME-4</s>
-                <span>Invite expiry setting per org</span>
+                {DETAIL.dependsOn.map(link => (
+                  <>
+                    {link.resolved ? <s class="key">{link.key}</s> : <span class="key">{link.key}</span>}
+                    <span>{link.title}</span>
+                  </>
+                ))}
               </dd>
               <dt>Referenced by</dt>
               <dd>
-                <span>Invitation links and expiry</span>
+                <span>{DETAIL.reference}</span>
                 <span class="text-fg-3">Knowledge base</span>
               </dd>
               <dt>
-                Attachments <span class="mono">1</span>
+                Attachments <span class="mono">{DETAIL.attachments.length}</span>
               </dt>
               <dd>
-                <span class="mono text-xs text-fg">invite-expired.log</span>
-                <span class="text-fg-3">18 KB</span>
+                {DETAIL.attachments.map(file => (
+                  <>
+                    <span class="mono text-xs text-fg">{file.name}</span>
+                    <span class="text-fg-3">{file.size}</span>
+                  </>
+                ))}
               </dd>
             </dl>
 
             <div class="comment">
               <div class="by">
                 <span class="av" aria-hidden="true">
-                  AL
+                  {DETAIL.reproduction.by.initials}
                 </span>
-                Alex Lee<span class="text-fg-3">6 Oct 2026, 2:15pm</span>
+                {DETAIL.reproduction.by.name}
+                <span class="text-fg-3">{DETAIL.reproduction.when}</span>
               </div>
-              <span class="it-mention">@casey</span> reproduced with a ten-day-old link. The log shows the token check
-              returning before the page renders. The fix waits on <s class="key">ACME-4</s>.
+              {reproduction.map(part =>
+                part.startsWith('@') ? (
+                  <span class="it-mention">{part}</span>
+                ) : /^ACME-\d+$/.test(part) ? (
+                  <s class="key">{part}</s>
+                ) : (
+                  part
+                ),
+              )}
             </div>
           </div>
 
@@ -139,34 +162,37 @@ const DEFAULT_VIEW = 'detail';
             <dl class="fields it-fields">
               <dt>Status</dt>
               <dd>
-                <i class="dot done"></i>Fixed
+                <i class="dot done"></i>
+                {DETAIL.status}
               </dd>
               <dt>Assignee</dt>
               <dd>
                 <span class="av" aria-hidden="true">
-                  AL
+                  {DETAIL.assignee.initials}
                 </span>
-                Alex Lee
+                {DETAIL.assignee.name}
               </dd>
               <dt>Estimation</dt>
-              <dd class="mono text-xs">2h</dd>
+              <dd class="mono text-xs">{DETAIL.estimate}</dd>
               <dt>Spent time</dt>
               <dd class="mono text-xs">
-                1h 45m <span class="text-fg-3 font-sans">of 2h</span>
+                {DETAIL.spent} <span class="text-fg-3 font-sans">of {DETAIL.estimate}</span>
               </dd>
               <dt>Sprint</dt>
-              <dd>Sprint 08</dd>
+              <dd>{DETAIL.sprint}</dd>
               <dt>Due date</dt>
-              <dd>9 Oct 2026</dd>
+              <dd>{DETAIL.due}</dd>
             </dl>
             <p class="it-side-label">Fields</p>
             <dl class="fields it-fields">
               <dt>Severity</dt>
               <dd>
-                <span class="it-opt">Critical</span>
+                <span class="it-opt">{DETAIL.severity}</span>
               </dd>
             </dl>
-            <p class="it-side-note">Created by Casey Kim, 2 Oct 2026. Updated by Alex Lee, 8 Oct 2026, 4:40pm.</p>
+            <p class="it-side-note">
+              {DETAIL.created} {DETAIL.updated}
+            </p>
             <p class="it-side-note">
               <kbd>s</kbd> status · <kbd>a</kbd> assignee · <kbd>e</kbd> description
             </p>
@@ -191,7 +217,7 @@ const DEFAULT_VIEW = 'detail';
           <span class="on">History</span>
         </p>
         <ol class="it-history">
-          {HISTORY.map(entry => (
+          {HISTORY_ENTRIES.map(entry => (
             <li>
               <span>
                 <span class="text-fg">{entry.who}</span> {entry.what}

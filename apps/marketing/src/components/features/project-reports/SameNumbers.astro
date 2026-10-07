@@ -6,6 +6,7 @@ import {
   RUN_REPORT_ANSWER,
   RUN_REPORT_CALL,
   REPORTS_MANUAL_PATH,
+  SPRINT,
 } from '@lib/features/project-reports';
 
 const ACCESS = [
@@ -36,7 +37,7 @@ const ACCESS = [
       </h2>
       <p class="prose mt-5">
         Report definitions live on the server, and the web app, the CSV export and the <code>run_report</code> tool all
-        call the same one. These are the Sprint 08 figures from the chart above, as a download and as an agent reads
+        call the same one. These are the {SPRINT.name} figures from the chart above, as a download and as an agent reads
         them.
       </p>
     </div>

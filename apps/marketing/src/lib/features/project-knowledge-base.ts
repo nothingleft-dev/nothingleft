@@ -1,7 +1,50 @@
+import {
+  article,
+  articlePath,
+  articleUri,
+  assigneesOf,
+  dependsOnOf,
+  formatDate,
+  issue,
+  person,
+  sprintOf,
+  statusOf,
+  subtasksOf,
+  type Moment,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 import type { AgentRequest } from '@lib/mcp';
 
 export const KB_MANUAL_PATH = '/docs/manual/knowledge-base';
+
+export const DECISION = article('invitation-links-and-expiry');
+export const DECISION_META = {
+  updated: `${DECISION.folder} · ACME · updated ${formatDate(DECISION.updated)}`,
+  updatedBy: person(DECISION.updatedBy).name,
+  decided: formatDate(DECISION.decided ?? DECISION.published),
+  path: articlePath(DECISION.slug),
+  uri: articleUri(DECISION.slug),
+};
+
+const RUNBOOK = article('restoring-a-failed-sync');
+const INCIDENT_KEY = RUNBOOK.references[0] ?? '';
+
+// The pages show the decision's issue after it was planned and assigned, before any link was added to it.
+const SHOWN_AT: Moment = '2026-10-04 12:00';
+const shownKey = DECISION.references[0] ?? '';
+const shownIssue = issue(shownKey);
+
+export const REFERENCED_ISSUE = {
+  key: shownKey,
+  title: shownIssue.title,
+  type: shownIssue.type,
+  priority: shownIssue.priority,
+  reporter: person(shownIssue.reporter),
+  assignee: assigneesOf(shownKey, SHOWN_AT)[0] ?? person(shownIssue.reporter),
+  status: statusOf(shownKey, SHOWN_AT),
+  sprint: sprintOf(shownKey, SHOWN_AT) ?? 'Unscheduled',
+  links: subtasksOf(shownKey, SHOWN_AT).length + dependsOnOf(shownKey, SHOWN_AT).length,
+};
 
 export interface TreeArticle {
   title: string;
@@ -15,10 +58,10 @@ export const TREE: TreeArticle[] = [
   { title: 'Billing sync', level: 1 },
   { title: 'Architecture overview', level: 2 },
   { title: 'Runbooks', level: 2 },
-  { title: 'Restoring a failed sync', level: 3, open: true },
+  { title: RUNBOOK.title, level: 3, open: true },
   { title: 'Rotating partner keys', level: 3, draft: true },
   { title: 'Decisions', level: 1 },
-  { title: 'Invitation links and expiry', level: 2 },
+  { title: DECISION.title, level: 2 },
   { title: 'Onboarding', level: 1, folded: true },
 ];
 
@@ -46,17 +89,17 @@ export const AGENT_REQUESTS: AgentRequest[] = [
     area: 'Read before acting',
     prompt: 'What did we decide about expired invite links? Then look at ACME-12.',
     calls: [{ tool: 'search_articles', args: 'invite expiry' }, { tool: 'get_article' }, { tool: 'get_issue' }],
-    note: 'get_article returns the article as Markdown. A client that supports resources can attach article://ACME/invitation-links-and-expiry instead.',
+    note: `get_article returns the article as Markdown. A client that supports resources can attach ${articleUri(DECISION.slug)} instead.`,
   },
   {
     area: 'Draft from the incident',
-    prompt: '/mcp__nothingleft__document-this ACME-18',
+    prompt: `/mcp__nothingleft__document-this ${INCIDENT_KEY}`,
     calls: [{ tool: 'search_articles' }, { tool: 'list_articles' }, { tool: 'create_article', args: 'status: draft' }],
-    note: 'It checks what is already written, cites ACME-18 so the issue lists the article, shows you the draft and creates it only once you agree.',
+    note: `It checks what is already written, cites ${INCIDENT_KEY} so the issue lists the article, shows you the draft and creates it only once you agree.`,
   },
   {
     area: 'Publish and tag',
-    prompt: 'Publish Restoring a failed sync and tag it sync-outage.',
+    prompt: `Publish ${RUNBOOK.title} and tag it ${RUNBOOK.tags.find(tag => tag !== 'runbook') ?? ''}.`,
     calls: [{ tool: 'update_article' }],
     note: 'One partial update: status and tags together.',
   },

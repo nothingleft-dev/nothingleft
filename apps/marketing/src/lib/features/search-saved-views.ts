@@ -1,22 +1,29 @@
+import {
+  assigneesOf,
+  isResolved as isResolvedStatus,
+  issue as sampleIssue,
+  PEOPLE as SAMPLE_PEOPLE,
+  statusOf,
+  type Handle,
+  type Moment,
+  type Status,
+} from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const SEARCH_MANUAL_PATH = '/docs/manual/search';
 
 export type IssueType = 'Bug' | 'Feature' | 'Task';
 export type Priority = 'Critical' | 'Major' | 'Normal' | 'Minor';
-export type Username = 'alex' | 'casey' | 'sam' | 'jordan';
+export type Username = Handle;
 
 export interface Person {
   name: string;
   initials: string;
 }
 
-export const PEOPLE: Record<Username, Person> = {
-  alex: { name: 'Alex Lee', initials: 'AL' },
-  casey: { name: 'Casey Kim', initials: 'CK' },
-  sam: { name: 'Sam Ortiz', initials: 'SO' },
-  jordan: { name: 'Jordan', initials: 'J' },
-};
+export const PEOPLE: Record<Username, Person> = Object.fromEntries(
+  SAMPLE_PEOPLE.map(who => [who.handle, { name: who.name, initials: who.initials }]),
+) as Record<Username, Person>;
 
 export const SIGNED_IN: Username = 'alex';
 
@@ -26,101 +33,38 @@ export interface SampleIssue {
   type: IssueType;
   priority: Priority;
   assignee: Username | null;
-  status: 'Open' | 'In Progress' | 'Reopened' | 'Fixed';
+  status: Status;
 }
 
-export const ISSUES: SampleIssue[] = [
-  {
-    key: 'ACME-15',
-    title: 'Resend invite from the members list',
-    type: 'Feature',
-    priority: 'Normal',
-    assignee: null,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-14',
-    title: 'Invite email subject names the org',
-    type: 'Task',
-    priority: 'Minor',
-    assignee: 'casey',
-    status: 'Open',
-  },
-  {
-    key: 'ACME-13',
-    title: 'Invite expiry date shown in UTC',
-    type: 'Bug',
-    priority: 'Minor',
-    assignee: 'alex',
-    status: 'Open',
-  },
-  {
-    key: 'ACME-12',
-    title: 'Invite link blank after it expires',
-    type: 'Bug',
-    priority: 'Major',
-    assignee: 'alex',
-    status: 'In Progress',
-  },
-  {
-    key: 'ACME-11',
-    title: 'Swimlane header overlaps count',
-    type: 'Bug',
-    priority: 'Normal',
-    assignee: 'casey',
-    status: 'In Progress',
-  },
-  {
-    key: 'ACME-10',
-    title: 'Invite landing shows the inviter',
-    type: 'Feature',
-    priority: 'Major',
-    assignee: 'alex',
-    status: 'In Progress',
-  },
-  {
-    key: 'ACME-9',
-    title: 'Upload stalls at 100% on slow links',
-    type: 'Bug',
-    priority: 'Major',
-    assignee: null,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-8',
-    title: 'Saved view count is stale',
-    type: 'Bug',
-    priority: 'Normal',
-    assignee: 'sam',
-    status: 'Reopened',
-  },
-  {
-    key: 'ACME-7',
-    title: 'Burndown ignores late additions',
-    type: 'Bug',
-    priority: 'Critical',
-    assignee: null,
-    status: 'Open',
-  },
-  {
-    key: 'ACME-6',
-    title: 'Project-scoped invite links',
-    type: 'Feature',
-    priority: 'Major',
-    assignee: 'jordan',
-    status: 'Fixed',
-  },
-  {
-    key: 'ACME-5',
-    title: 'Accept invite while signed in',
-    type: 'Bug',
-    priority: 'Major',
-    assignee: 'alex',
-    status: 'Fixed',
-  },
+// The search demos run on 7 Oct, while ACME-12 is in progress and its subtask still open.
+export const SEARCHED_AT: Moment = '2026-10-07 11:00';
+const SHOWN_KEYS = [
+  'ACME-15',
+  'ACME-14',
+  'ACME-13',
+  'ACME-12',
+  'ACME-11',
+  'ACME-10',
+  'ACME-9',
+  'ACME-8',
+  'ACME-7',
+  'ACME-6',
+  'ACME-5',
 ];
 
-export const isResolved = (issue: SampleIssue) => issue.status === 'Fixed';
+export const ISSUES: SampleIssue[] = SHOWN_KEYS.map(key => {
+  const found = sampleIssue(key);
+  return {
+    key,
+    title: found.title,
+    type: found.type as IssueType,
+    priority: found.priority,
+    assignee: assigneesOf(key, SEARCHED_AT)[0]?.handle ?? null,
+    status: statusOf(key, SEARCHED_AT),
+  };
+});
+
+export const isResolved = (issue: SampleIssue) => isResolvedStatus(issue.status);
 
 export const issueByKey = (key: string): SampleIssue => {
   const issue = ISSUES.find(candidate => candidate.key === key);
@@ -221,6 +165,23 @@ export const reportAddress = (query: string) =>
   `/reports/issues-per-assignee${query ? `?${new URLSearchParams({ q: query })}` : ''}`;
 
 export const ASSIGNEE_BUCKETS: (Username | null)[] = ['alex', 'casey', 'sam', 'jordan', null];
+
+const COUNT_WORDS = [
+  'no',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+];
+export const countWord = (count: number) => COUNT_WORDS[count] ?? String(count);
 
 export const perAssignee = (issues: SampleIssue[]) =>
   ASSIGNEE_BUCKETS.map(bucket => ({
