@@ -1,0 +1,191 @@
+---
+import { CURRENCIES, CURRENT_TOOLS, TEAM_SIZE } from '@lib/pricing';
+
+const firstTool = CURRENT_TOOLS[0];
+---
+
+<section id="compare" class="border-t border-line bg-app" aria-labelledby="calc-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="calc-title" class="h2">
+        Compare what you pay now.
+      </h2>
+      <p class="prose mt-5">
+        Enter your current subscription and see what the beta takes off the bill. Your figure only: no list price is
+        filled in for you, and nothing you type leaves this page.
+      </p>
+    </div>
+    <noscript>
+      <p class="prose mt-8 max-w-[640px]">
+        The calculator needs JavaScript. The short version: during beta the subscription is zero, whatever you pay
+        today.
+      </p>
+    </noscript>
+
+    <div id="calculator" class="calc mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-7 panel panel-pad space-y-7">
+        <div>
+          <p class="calc-label" id="tool-label">
+            Currently using
+          </p>
+          <div class="seg mt-2" role="radiogroup" aria-labelledby="tool-label" data-group="tool">
+            {CURRENT_TOOLS.map((tool, index) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={index === 0 ? 'true' : 'false'}
+                tabindex={index === 0 ? 0 : -1}
+                data-value={tool.id}
+                data-name={tool.name}
+                data-pricing-url={tool.pricingUrl}
+              >
+                {tool.name}
+              </button>
+            ))}
+          </div>
+          <p class="mt-3 text-xs text-fg-2">
+            <a class="link font-normal" data-tool-link href={firstTool?.pricingUrl} rel="noopener">
+              Check your plan on <span data-tool-name>{firstTool?.name}</span>'s pricing page
+              <span class="arr ext" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+            <span data-tool-note hidden>
+              Use the figure on your latest invoice.
+            </span>
+          </p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-7">
+          <div>
+            <p class="calc-label" id="currency-label">
+              Currency
+            </p>
+            <div class="seg mt-2" role="radiogroup" aria-labelledby="currency-label" data-group="currency">
+              {CURRENCIES.map((code, index) => (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={index === 0 ? 'true' : 'false'}
+                  tabindex={index === 0 ? 0 : -1}
+                  data-value={code}
+                >
+                  {code}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p class="calc-label" id="mode-label">
+              You know
+            </p>
+            <div class="seg mt-2" role="radiogroup" aria-labelledby="mode-label" data-group="mode">
+              <button type="button" role="radio" aria-checked="true" tabindex="0" data-value="seat">
+                Price per seat
+              </button>
+              <button type="button" role="radio" aria-checked="false" tabindex="-1" data-value="total">
+                Total monthly bill
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="calc-label" for="calc-size" id="size-label">
+            Team size
+          </label>
+          <div class="mt-3 flex items-center gap-5">
+            <div
+              class="slider"
+              role="slider"
+              tabindex="0"
+              aria-labelledby="size-label"
+              aria-valuemin={TEAM_SIZE.min}
+              aria-valuemax={TEAM_SIZE.max}
+              aria-valuenow={TEAM_SIZE.initial}
+              aria-valuetext={`${TEAM_SIZE.initial} members`}
+            >
+              <span class="slider-track">
+                <span class="slider-fill" data-slider-fill></span>
+              </span>
+              <span class="slider-thumb" data-slider-thumb></span>
+            </div>
+            <div class="input-box w-[112px] flex-none">
+              <input
+                id="calc-size"
+                class="mono"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                value={TEAM_SIZE.initial}
+              />
+              <span class="text-xs text-fg-3">members</span>
+            </div>
+          </div>
+          <p class="mt-2 flex justify-between text-xs text-fg-3 mono" aria-hidden="true">
+            <span>{TEAM_SIZE.min}</span>
+            <span>{TEAM_SIZE.max.toLocaleString('en')}</span>
+          </p>
+        </div>
+
+        <div>
+          <label class="calc-label" for="calc-amount" data-amount-label>
+            Price per seat, per month
+          </label>
+          <div class="input-box mt-2 max-w-[260px]">
+            <span class="text-sm text-fg-2" data-amount-prefix aria-hidden="true">
+              $
+            </span>
+            <input
+              id="calc-amount"
+              class="mono"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5">
+        <div class="panel" aria-live="polite">
+          <dl class="result">
+            <div class="result-row">
+              <dt>Current subscription spend</dt>
+              <dd>
+                <span class="mono" data-out-current>
+                  —
+                </span>
+                <span class="basis" data-out-basis></span>
+              </dd>
+            </div>
+            <div class="result-row">
+              <dt>Nothing Left subscription during beta</dt>
+              <dd>
+                <span class="mono" data-out-ours>
+                  $0
+                </span>
+              </dd>
+            </div>
+            <div class="result-row result-total">
+              <dt>Illustrative subscription spend avoided during beta if you replace and cancel the current plan</dt>
+              <dd>
+                <span class="mono figure-sm" data-out-avoided>
+                  —
+                </span>
+              </dd>
+            </div>
+          </dl>
+          <p class="result-message" data-out-message>
+            Enter what you pay today to see the comparison.
+          </p>
+        </div>
+        <p class="mt-4 text-xs text-fg-3 max-w-[52ch]">
+          Monthly subscription only, in the currency you chose, with no exchange conversion. Migration effort, add-ons,
+          storage and any future seat pricing are outside this comparison. Product names are trademarks of their owners.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

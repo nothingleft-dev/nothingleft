@@ -1,0 +1,52 @@
+---
+import { GITHUB_URL } from '@lib/site';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="why-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="why-title" class="h2">
+        Other trackers have MCP too.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        Agent access alone is no longer a difference. The case for this one rests on how much of the product the agent
+        reaches, and how plainly it reads.
+      </p>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7 rule-list">
+      <div class="py-6">
+        <h3 class="h3">No side door.</h3>
+        <p class="prose mt-2 text-base">
+          The MCP server is a client of the public REST API. If the app can do something, the agent can, credentials
+          aside. If the app cannot, neither can the agent.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Names, not numbers.</h3>
+        <p class="prose mt-2 text-base">
+          <code>ACME-12</code>, <code>@alex</code>, <code>In Progress</code>, <code>My open bugs</code>. Markdown in,
+          Markdown out. Nothing to look up before a model can reason about the work.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">One query language.</h3>
+        <p class="prose mt-2 text-base">
+          The agent searches with the same language as the search bar, saved views and report scopes, so a query it
+          writes is one you can read and reuse.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Open code.</h3>
+        <p class="prose mt-2 text-base">
+          AGPL-3.0. Read every tool definition, or run the same build yourself.
+          <a class="link" href={GITHUB_URL}>
+            Source on GitHub
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

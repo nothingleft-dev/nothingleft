@@ -1,0 +1,41 @@
+---
+import { REQUESTS } from '@lib/mcp';
+---
+
+<section class="border-t border-line" aria-labelledby="requests-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-4">
+      <h2 id="requests-title" class="h2">
+        Beyond triage.
+      </h2>
+      <p class="prose mt-5 max-w-[40ch]">
+        Sprints, fields, knowledge, reports and your inbox, each in a sentence. The agent picks the tools; you read the
+        plan before anything changes.
+      </p>
+    </div>
+    <div class="lg:col-span-8 rule-list">
+      {REQUESTS.map(request => (
+        <div class="request">
+          <p class="text-xs text-fg-3">{request.area}</p>
+          <p class="request-prompt">{request.prompt}</p>
+          <p class="request-calls">
+            {request.calls.map((call, index) => (
+              <>
+                {index > 0 && (
+                  <span class="text-fg-3" aria-hidden="true">
+                    →
+                  </span>
+                )}
+                <code>
+                  {call.tool}
+                  {call.args && <span class="text-fg-2">{call.args}</span>}
+                </code>
+              </>
+            ))}
+          </p>
+          {request.note && <p class="mt-2 text-sm text-fg-2">{request.note}</p>}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

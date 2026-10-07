@@ -1,0 +1,64 @@
+---
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Plan from '@components/pricing/Plan.astro';
+import Statements from '@components/pricing/Statements.astro';
+import Base from '@layouts/Base.astro';
+import { PRICING_FAQ } from '@lib/pricing';
+import { SIGN_UP_URL } from '@lib/site';
+import { breadcrumb, faqPage, graph, organization, softwareApplication, webPage, website } from '@lib/structured-data';
+
+const title = 'Free Project Management Software | Nothing Left';
+const description =
+  'Try Nothing Left free during beta, whatever your team size. The first 20 members stay free forever. See storage terms and join the beta.';
+const jsonLd = graph([
+  organization(),
+  website(),
+  webPage('/pricing', title, description),
+  softwareApplication(),
+  faqPage('/pricing', PRICING_FAQ),
+  breadcrumb([
+    { name: 'Home', path: '/' },
+    { name: 'Pricing', path: '/pricing' },
+  ]),
+]);
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <PageHero
+    eyebrow="Pricing"
+    title="Free during beta, whatever your team size."
+    lede="Join with a team of any size and pay no subscription while Nothing Left is in beta. When billing arrives, the first 20 members of every organisation stay free."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="/docs/limits-and-billing">
+      Read the full terms
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      Already paying for a tracker?{' '}
+      <a class="link font-normal" href="#compare">
+        Compare your bill
+        <span class="arr" aria-hidden="true">
+          ↓
+        </span>
+      </a>
+    </p>
+  </PageHero>
+  <Statements />
+  <Plan />
+  <Calculator />
+  <Faq
+    entries={PRICING_FAQ}
+    title="Questions about cost."
+    intro="Billing, storage and what beta access means. The point of the beta is to try it on real work and decide."
+  />
+</Base>

@@ -93,6 +93,9 @@ Write few, and only where they earn their place.
 **Never name another product.** The repository is public: no code, comment, string,
 test, commit message, OpenAPI description or new doc text names another project
 management or issue tracking product, even as the source of a decision. State the behaviour and its reason on their own.
+The one exception is comparison content on the marketing site (`apps/marketing`): a pricing
+calculator, a comparison page or a migration example may name the products it compares, as
+page data. Code, comments and commit messages there still never do.
 Reference screenshots of other tools stay out of anything committed.
 
 **Before finalising any diff, re-read every comment you added and cut any

@@ -1,0 +1,78 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Connect from '@components/mcp/Connect.astro';
+import Requests from '@components/mcp/Requests.astro';
+import Safety from '@components/mcp/Safety.astro';
+import Switching from '@components/mcp/Switching.astro';
+import ToolAreas from '@components/mcp/ToolAreas.astro';
+import Triage from '@components/mcp/Triage.astro';
+import WhyThis from '@components/mcp/WhyThis.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { SETUP_GUIDE_PATH, TOOL_REFERENCE_PATH } from '@lib/mcp';
+import { SIGN_UP_URL } from '@lib/site';
+import { breadcrumb, graph, organization, softwareApplication, webPage, website } from '@lib/structured-data';
+
+const path = '/features/mcp-ai-agents';
+const title = 'Project Management MCP for AI Agents | Nothing Left';
+const description =
+  "Let AI agents search, create and update issues, sprints, reports and project docs through Nothing Left's MCP tools and shared API.";
+const jsonLd = graph([
+  organization(),
+  website(),
+  webPage(path, title, description),
+  softwareApplication(),
+  breadcrumb([
+    { name: 'Home', path: '/' },
+    { name: 'MCP and AI agents', path },
+  ]),
+]);
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <PageHero
+    eyebrow="MCP and AI agents"
+    title="Give your agent the same project context your team sees."
+    lede="The MCP server calls the same public API as the web app, so everything an agent does passes the same permissions and business rules, and is recorded under your name."
+  >
+    <a class="btn" href={SETUP_GUIDE_PATH}>
+      Read the setup guide
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={TOOL_REFERENCE_PATH}>
+      See the MCP tools
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      Works with Claude Code, Codex, Cursor and other MCP clients that send a token over HTTP, or locally over stdio.
+    </p>
+  </PageHero>
+  <Triage />
+  <Requests />
+  <ToolAreas />
+  <Connect />
+  <Safety />
+  <Switching />
+  <WhyThis />
+  <CallToAction
+    title="Connect an agent in a few minutes."
+    body="Join the beta, create a token with issues:read, and ask your agent who you are. Add scopes when the work needs them."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={SETUP_GUIDE_PATH}>
+      Read the setup guide
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

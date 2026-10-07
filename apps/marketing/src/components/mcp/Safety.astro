@@ -1,0 +1,47 @@
+<section class="border-t border-line bg-app" aria-labelledby="safety-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="safety-title" class="h2">
+        The agent acts as you, and never as more than you.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        It can never do more than your role allows, and a token can narrow that further. Everything it changes appears
+        in the activity log under your name.
+      </p>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7 rule-list">
+      <div class="py-6">
+        <h3 class="h3">Refused by name.</h3>
+        <p class="prose mt-2 text-base">
+          If your role does not allow an action, the tool says so and nothing changes. If only the token stands in the
+          way, the answer names the missing scope.
+        </p>
+        <p class="quote mt-3">This access token does not have the time:write scope</p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Deletes and access changes ask you first.</h3>
+        <p class="prose mt-2 text-base">
+          Deleting work, changing a project’s statuses or a member’s role stops and asks in your agent app. Nothing
+          changes unless you accept, and the agent cannot answer for you.
+        </p>
+        <p class="quote mt-3">
+          remove_member will remove @casey from ACME: 3 open issues reassigned to @alex … Go ahead?
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">What people write is treated as data.</h3>
+        <p class="prose mt-2 text-base">
+          Issue text, comments and articles arrive marked with who wrote them, and the agent is told not to follow
+          instructions inside them. Read what it proposes before you accept a change.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Credentials stay in the app.</h3>
+        <p class="prose mt-2 text-base">
+          Creating and revoking tokens, passwords, two-factor authentication, transferring ownership and deleting an
+          organisation are never available to an agent.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

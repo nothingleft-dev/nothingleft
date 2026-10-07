@@ -1,0 +1,54 @@
+---
+import { INCLUDED } from '@lib/pricing';
+---
+
+<section class="border-t border-line" aria-labelledby="plan-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="plan-title" class="h2">
+        One plan, with everything in it.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        There is no tier to pick and nothing held back for a later one. Every new organisation starts on the same plan.
+      </p>
+      <div class="mt-10 rule-list">
+        <div class="py-6">
+          <h3 class="h3">Growing past 20 members today</h3>
+          <p class="prose mt-2 text-base">
+            Invitations keep working after the 20th member and nothing is charged. Organisation admins see how many
+            members are beyond the free allowance, so the number is never a surprise.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7">
+      <div class="panel">
+        <div class="panel-head">
+          <p class="text-sm font-medium">Beta</p>
+          <p class="mt-3 flex items-baseline gap-3">
+            <span class="figure">$0</span>
+            <span class="text-sm text-fg-2">per month, any team size</span>
+          </p>
+        </div>
+        <dl class="plan-terms">
+          <dt>Members</dt>
+          <dd>Any number. The first 20 stay free forever.</dd>
+          <dt>Storage</dt>
+          <dd>5 GB per organisation, or no platform limit once your own R2 or S3 bucket is verified.</dd>
+          <dt>Agents</dt>
+          <dd>MCP access with personal access tokens you scope.</dd>
+          <dt>Payment</dt>
+          <dd>No card, no checkout.</dd>
+        </dl>
+        <div class="panel-foot">
+          <p class="text-sm font-medium">Included</p>
+          <ul class="included">
+            {INCLUDED.map(item => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

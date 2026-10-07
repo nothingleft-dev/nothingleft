@@ -1,0 +1,91 @@
+---
+import { CLIENTS, SCOPES, SETUP_GUIDE_PATH } from '@lib/mcp';
+---
+
+<section id="connect" class="border-t border-line" aria-labelledby="connect-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="connect-title" class="h2">
+        Connect in two steps.
+      </h2>
+      <ol class="steps-list mt-6 prose">
+        <li>
+          In the app, open <strong>Settings → Access tokens</strong>, create a token with the scopes the agent needs,
+          and copy it. It starts with <code>nl_pat_</code> and is shown once.
+        </li>
+        <li>
+          Add the server to your client with the token in place of <code>nl_pat_…</code>.
+        </li>
+      </ol>
+      <p class="mt-6 text-sm text-fg-2">
+        Then ask: <em>“Who am I in Nothing Left?”</em> The agent answers with your name, your token’s scopes and your
+        organisations.
+      </p>
+      <p class="mt-4 text-sm">
+        <a class="link" href={SETUP_GUIDE_PATH}>
+          Setup guide for more clients
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+    <div class="lg:col-span-7">
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="MCP client">
+          {CLIENTS.map((client, index) => (
+            <button
+              type="button"
+              role="tab"
+              id={`tab-${client.id}`}
+              aria-controls={`panel-${client.id}`}
+              aria-selected={index === 0 ? 'true' : 'false'}
+              tabindex={index === 0 ? 0 : -1}
+            >
+              {client.name}
+            </button>
+          ))}
+        </div>
+        {CLIENTS.map((client, index) => (
+          <div
+            class:list={['tabpanel', { on: index === 0 }]}
+            role="tabpanel"
+            id={`panel-${client.id}`}
+            aria-labelledby={`tab-${client.id}`}
+          >
+            <div class="tabpanel-bar">
+              <span class="tab-title text-sm font-medium text-fg">{client.name}</span>
+              <span class="text-xs text-fg-2">{client.where}</span>
+              <button type="button" class="copy" data-copy={`config-${client.id}`}>
+                Copy
+              </button>
+            </div>
+            <pre
+              id={`config-${client.id}`}
+              class="config"
+              tabindex="0"
+              aria-label={`${client.name} configuration`}
+              set:text={client.config}
+            />
+          </div>
+        ))}
+      </div>
+
+      <h3 class="h3 mt-10">Token scopes</h3>
+      <p class="prose mt-2 text-base">
+        Start with <code>issues:read</code> and add only what the work needs. Tokens are never edited; create another
+        one instead.
+      </p>
+      <dl class="scopes mt-4">
+        {SCOPES.map(item => (
+          <>
+            <dt>
+              <code>{item.scope}</code>
+            </dt>
+            <dd>{item.lets}</dd>
+          </>
+        ))}
+      </dl>
+    </div>
+  </div>
+</section>
