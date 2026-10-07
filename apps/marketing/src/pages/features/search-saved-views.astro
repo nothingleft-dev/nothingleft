@@ -1,0 +1,72 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Builder from '@components/features/search-saved-views/Builder.astro';
+import Confidence from '@components/features/search-saved-views/Confidence.astro';
+import Flow from '@components/features/search-saved-views/Flow.astro';
+import GlobalSearch from '@components/features/search-saved-views/GlobalSearch.astro';
+import HeroQuery from '@components/features/search-saved-views/HeroQuery.astro';
+import Syntax from '@components/features/search-saved-views/Syntax.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { SEARCH_MANUAL_PATH, SEARCH_VIEWS_FAQ } from '@lib/features/search-saved-views';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Search and saved views"
+    title="Ask for the exact slice of work."
+    lede="Readable filters find issues by type, status, people, dates, fields and links. Save a search as a view, then use the same query for the list, a report and your AI agent."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={SEARCH_MANUAL_PATH}>
+      Read the search manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      Want to try it first?{' '}
+      <a class="link font-normal" href="#try">
+        Build a query on sample data
+        <span class="arr" aria-hidden="true">
+          ↓
+        </span>
+      </a>
+    </p>
+  </PageHero>
+  <HeroQuery />
+  <Flow />
+  <Builder />
+  <GlobalSearch />
+  <Syntax />
+  <Confidence />
+  <Faq
+    entries={SEARCH_VIEWS_FAQ}
+    title="Questions about search."
+    intro="How the query language, saved views and exports behave. The manual has every attribute."
+  />
+  <CallToAction
+    title="Ask your first question on real work."
+    body="Join the beta, create a project and type a query into the search bar. Save the ones you keep asking, and point your reports and your agent at them."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={SEARCH_MANUAL_PATH}>
+      Read the search manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

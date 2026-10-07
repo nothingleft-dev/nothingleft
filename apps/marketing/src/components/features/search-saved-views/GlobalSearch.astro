@@ -1,0 +1,129 @@
+---
+import { issueByKey } from '@lib/features/search-saved-views';
+import QueryBar from './QueryBar.astro';
+
+const issues = [issueByKey('ACME-12'), issueByKey('ACME-6')];
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="global-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="global-title" class="h2">
+        Issues and articles, side by side, never mixed.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        The search box at the top of the app answers in two groups: issues, and articles from your projects’ private
+        knowledge bases. One tag reaches both, so the outage issues and the write-up tagged
+        <code>payment-outage</code> come back together.
+      </p>
+      <p class="prose mt-4 max-w-[46ch]">
+        When a query only makes sense for one kind, such as <code>priority: High</code> for issues or
+        <code>status: draft</code> for articles, the other group says so instead of showing results.
+      </p>
+      <p class="mt-6 text-sm">
+        <a class="link" href="/features/project-knowledge-base">
+          The project knowledge base
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7">
+      <figure>
+        <div class="panel overflow-hidden">
+          <QueryBar>invite link</QueryBar>
+          <p class="group-head">
+            Issues <span class="n">2</span>
+          </p>
+          <ul class="list-none" aria-label="Issues">
+            {issues.map(issue => (
+              <li class="hit">
+                <span class="key">{issue.key}</span>
+                <span class="hit-title">{issue.title}</span>
+                <span class="hit-meta">
+                  <i
+                    class:list={['dot', { started: issue.status === 'In Progress', done: issue.status === 'Fixed' }]}
+                  />
+                  {issue.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p class="group-head">
+            Articles <span class="n">1</span>
+          </p>
+          <ul class="list-none" aria-label="Articles">
+            <li class="hit">
+              <span class="kind">ACME</span>
+              <span class="hit-title">Invitation links and expiry</span>
+              <span class="hit-meta">Published</span>
+            </li>
+          </ul>
+        </div>
+        <figcaption class="mt-3 text-xs text-fg-3">
+          Articles are visible only to the members of their project, in search as everywhere else.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+  code,
+  pre {
+    font-variant-ligatures: none;
+  }
+  .group-head {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  ul + .group-head {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .n {
+    margin-left: 4px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .hit {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  @media (max-width: 640px) {
+    .hit {
+      grid-template-columns: 60px minmax(0, 1fr);
+      align-items: start;
+      row-gap: 4px;
+      column-gap: 10px;
+    }
+    .hit-meta {
+      grid-column: 2;
+      font-size: 12.5px;
+    }
+  }
+  .hit:last-child {
+    border-bottom: 0;
+  }
+  .kind {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .hit-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+</style>

@@ -1,0 +1,72 @@
+<section class="border-t border-line bg-app" aria-labelledby="confidence-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="confidence-title" class="h2">
+        Exact answers, only from work you can open.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        A query either runs as written or is refused with a reason. Whatever it returns is limited to the projects the
+        person, or the agent’s token, can open.
+      </p>
+      <ul class="mt-6 space-y-3 text-sm list-none">
+        <li>
+          <a class="link" href="/features/project-reports">
+            Reports scoped by a query or a view
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="link" href="/features/mcp-ai-agents">
+            Agents that search the same way
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7 rule-list">
+      <div class="py-6">
+        <h3 class="h3">A typo is refused, with the fix beside it.</h3>
+        <p class="prose mt-2 text-base">
+          The part at fault is underlined, and the values that exist in the projects you can see appear beneath it as
+          one-click replacements. An agent gets the same list back and corrects itself. Nothing is silently ignored, so
+          a typo never looks like an empty result.
+        </p>
+        <p class="quote mt-3">status: Donee → Donee is not a valid value for status.</p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Only projects you can open.</h3>
+        <p class="prose mt-2 text-base">
+          Jordan is a member of ACME but not of OPS. When Jordan searches <code>#Unresolved</code>, the answer comes
+          from ACME alone: no OPS issue appears in the list, a group count, a report figure or an exported file, and
+          autocomplete suggests only values from ACME. An agent’s token can narrow its projects further.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Views follow their definition.</h3>
+        <p class="prose mt-2 text-base">
+          Change a view and every search that names it follows. Delete it, and a search that still names it says so.
+          Views can build on views: <code>{'#{Open work} assignee: me'}</code> works even when <em>Open work</em> is
+          made from another view.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">A saved view is a query, not a page.</h3>
+        <p class="prose mt-2 text-base">
+          A view keeps a query, its sort and its columns, for you, one project or the whole organisation. Knowledge base
+          articles are documents, private to the members of their project, with a search of their own.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  code,
+  .quote {
+    font-variant-ligatures: none;
+  }
+</style>

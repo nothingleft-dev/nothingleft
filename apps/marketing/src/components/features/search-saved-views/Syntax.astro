@@ -1,0 +1,86 @@
+---
+import { SEARCH_MANUAL_PATH } from '@lib/features/search-saved-views';
+
+const lines = [
+  { code: 'status: Open, Reopened', note: 'either value' },
+  { code: 'status: {In Progress}', note: 'braces around a value with spaces' },
+  { code: 'tag: -ui', note: 'leave a value out' },
+  { code: '#Critical', note: 'a priority, status, type, tag or sprint by name' },
+  { code: 'assignee: Unassigned', note: 'nothing set' },
+  { code: 'due date: Today .. {plus 14d}', note: 'a date range' },
+  { code: 'has: -estimation', note: 'not estimated yet' },
+  { code: '"login redirect loop"', note: 'a phrase in the title or description' },
+  { code: 'severity: High', note: 'a custom field, by its slug' },
+  { code: 'aggregate Parent for: {status: -Resolved}', note: 'issues with an unresolved subtask' },
+  { code: '#{My open bugs} priority: Critical', note: 'a saved view, narrowed' },
+  { code: 'sort by: priority asc, updated desc', note: 'the order' },
+];
+---
+
+<section class="border-t border-line" aria-labelledby="syntax-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-4">
+      <h2 id="syntax-title" class="h2">
+        The whole grammar fits on one page.
+      </h2>
+      <p class="prose mt-5 max-w-[40ch]">
+        <code>attribute: value</code>, side by side for AND, commas for OR, a minus to exclude, braces around spaces.
+        Attributes cover people, dates, numbers, durations, links, custom fields and the sort order.
+      </p>
+      <p class="mt-6 text-sm">
+        <a class="link" href={SEARCH_MANUAL_PATH}>
+          Read the search manual
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+    <div class="lg:col-span-8">
+      <ul class="examples list-none" aria-label="Query examples">
+        {lines.map(line => (
+          <li>
+            <code>{line.code}</code>
+            <span class="note">{`-- ${line.note}`}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .examples {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 2px;
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    font-family: var(--font-mono);
+    font-variant-ligatures: none;
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+  .examples li {
+    display: contents;
+  }
+  .examples code {
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .note {
+    color: var(--text-muted);
+  }
+  @media (max-width: 640px) {
+    .examples {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0;
+    }
+    .note {
+      margin-bottom: 8px;
+    }
+  }
+</style>

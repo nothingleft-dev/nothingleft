@@ -1,0 +1,483 @@
+---
+import { countLabel, issueByKey } from '@lib/features/search-saved-views';
+import IssueRow from './IssueRow.astro';
+import QueryBar from './QueryBar.astro';
+
+const VIEW = 'Unassigned urgent bugs';
+const QUERY = 'type: Bug #Unresolved assignee: Unassigned priority: Critical, Major';
+const critical = issueByKey('ACME-7');
+const major = issueByKey('ACME-9');
+
+const steps = [
+  { title: 'Ask the question', detail: 'Autocomplete offers the values that exist as you type.' },
+  { title: 'Save it as a view', detail: 'Name it once. It becomes a tab with its own count.' },
+  { title: 'Group it, export it', detail: 'Group by priority; export exactly what is listed.' },
+  { title: 'Scope a report with it', detail: 'Pick the view, and the chart counts the same issues.' },
+  { title: 'Hand it to your agent', detail: 'The agent runs the view by name.' },
+];
+
+const suggestions = [
+  { label: 'Show-stopper' },
+  { label: 'Critical' },
+  { label: 'Major' },
+  { label: 'Normal' },
+  { label: 'Minor' },
+  { label: '-', note: 'exclude value' },
+];
+
+const visibility = [
+  { label: 'Only you', hint: 'Appears in your tabs and sidebar; nobody else sees it.' },
+  {
+    label: 'Everyone in a project',
+    hint: 'Every member of that project can use it and reference it as #{Name}.',
+    on: true,
+  },
+  { label: 'Everyone in the organisation', hint: 'Every member of every project can use it.' },
+];
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="flow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="flow-title" class="h2">
+        From a question to a view the team reuses.
+      </h2>
+      <p class="prose mt-5">
+        What high-priority bugs are still unassigned? Ask it once in the search bar, then keep the answer where the
+        list, a report and an agent can all reach it. Pick a step.
+      </p>
+    </div>
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="From question to view">
+        {steps.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-sv-step={String(index + 1)}
+            data-last={index === steps.length - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="sv-flow-panel"
+          >
+            <span class="bar" style={`width:${40 - index * 7}px`} />
+            <span>
+              <b>{step.title}</b>
+              <span>{step.detail}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8 wf-panel" id="sv-flow-panel" aria-live="polite">
+        <div data-view="1" class="on">
+          <div class="pane-bar">
+            <span class="text-fg">Acme</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+          </div>
+          <QueryBar caret>type: Bug #Unresolved assignee: Unassigned priority: </QueryBar>
+          <div class="suggest">
+            <ul class="list-none">
+              {suggestions.map((item, index) => (
+                <li class:list={['suggest-item', { first: index === 0 }]}>
+                  <span class="mono">{item.label}</span>
+                  {item.note && <span class="text-fg-3">{item.note}</span>}
+                </li>
+              ))}
+            </ul>
+            <p class="suggest-foot">
+              <span>
+                Press <kbd>⇥</kbd> to complete the first item
+              </span>
+              <span>
+                <kbd>↵</kbd> runs the search
+              </span>
+            </p>
+          </div>
+          <div class="wf-body">
+            <p class="text-sm text-fg-2">
+              Choose <code class="clause">Critical, Major</code> and press Enter. Press <kbd class="key-cap">/</kbd>{' '}
+              anywhere in the app to jump to this bar.
+            </p>
+          </div>
+          <QueryBar count={countLabel(2)}>{QUERY}</QueryBar>
+          <ul class="list-none" aria-label="Matching issues">
+            <IssueRow issue={critical} />
+            <IssueRow issue={major} />
+          </ul>
+        </div>
+
+        <div data-view="2">
+          <div class="pane-bar">
+            <span class="text-fg">Acme</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+          </div>
+          <div class="view-tabs">
+            <span class="view-tab">
+              My open bugs <span class="n">2</span>
+            </span>
+            <span class="view-tab on">
+              {VIEW} <span class="n">2</span>
+            </span>
+          </div>
+          <div class="wf-body">
+            <div class="dialog">
+              <p class="font-medium text-fg">Save this search as a view</p>
+              <dl class="dialog-fields">
+                <dt>Name</dt>
+                <dd>
+                  <span class="input">{VIEW}</span>
+                </dd>
+                <dt>Visible to</dt>
+                <dd>
+                  <ul class="list-none choices">
+                    {visibility.map(choice => (
+                      <li class:list={['choice', { on: choice.on }]}>
+                        <span class="radio" aria-hidden="true" />
+                        <span>
+                          <span class="block text-fg">
+                            {choice.label}
+                            {choice.on && <span class="sr-only">(chosen)</span>}
+                          </span>
+                          <span class="block text-xs text-fg-3">{choice.hint}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+                <dt>Project</dt>
+                <dd>
+                  <span class="input mono">ACME</span>
+                </dd>
+              </dl>
+            </div>
+            <p class="mt-4 text-sm text-fg-2">
+              It keeps the query, the sort and the columns. Anyone in ACME can now write{' '}
+              <code class="clause">{`#{${VIEW}}`}</code> in a search, alone or with more filters.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="3">
+          <div class="pane-bar">
+            <span class="text-fg">Acme</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="text-fg">{VIEW}</span>
+          </div>
+          <div class="toolbar">
+            <span class="pill">Group: Priority</span>
+            <span class="pill">Columns</span>
+            <span class="pill ml-auto">Export CSV</span>
+          </div>
+          <p class="group-head">
+            Critical <span class="n">1</span>
+          </p>
+          <ul class="list-none" aria-label="Critical">
+            <IssueRow issue={critical} />
+          </ul>
+          <p class="group-head">
+            Major <span class="n">1</span>
+          </p>
+          <ul class="list-none" aria-label="Major">
+            <IssueRow issue={major} />
+          </ul>
+          <div class="wf-body border-t border-line">
+            <p class="text-sm text-fg-2">
+              Each group header counts the whole list, not only the rows on screen. Export CSV downloads the list as
+              searched and sorted, up to 10,000 issues, with the columns you choose.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="4">
+          <div class="pane-bar">
+            <span class="text-fg">Reports</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Issues per field</span>
+          </div>
+          <div class="toolbar">
+            <span class="pill">View: {VIEW}</span>
+            <span class="pill">Field: Priority</span>
+            <span class="pill">Projects: ACME</span>
+          </div>
+          <div class="wf-body">
+            <table class="bars">
+              <caption class="sr-only">Issues per priority in{VIEW}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Priority</th>
+                  <th scope="col">
+                    <span class="sr-only">Share</span>
+                  </th>
+                  <th scope="col" class="num">
+                    Issues
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Critical</th>
+                  <td>
+                    <span class="bar-fill" style="width:100%"></span>
+                  </td>
+                  <td class="num">1</td>
+                </tr>
+                <tr>
+                  <th scope="row">Major</th>
+                  <td>
+                    <span class="bar-fill" style="width:100%"></span>
+                  </td>
+                  <td class="num">1</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="mt-4 text-sm text-fg-2">
+              Every bar opens the issue list with exactly the issues it counts. Change the view and the report follows,
+              because it reads the view by name.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="5">
+          <div class="pane-bar">
+            <span class="text-fg">Your agent</span>
+            <span class="ml-auto">
+              connected as <span class="mono text-xs text-fg">@alex</span>
+            </span>
+          </div>
+          <p class="prompt">
+            <span class="mark">›</span>
+            <span>What is in Unassigned urgent bugs today, and how does it split by priority?</span>
+          </p>
+          <ol class="calls" aria-label="Tool calls">
+            <li>
+              <span class="tool">search_issues</span>
+              <span class="args">{`query: #{${VIEW}}`}</span>
+            </li>
+            <li>
+              <span class="tool">run_report</span>
+              <span class="args">{`report: issues-per-field, view: ${VIEW}, field: priority`}</span>
+            </li>
+          </ol>
+          <p class="answer">
+            Two bugs, both Open: ACME-7, Burndown ignores late additions, is Critical, and ACME-9, Upload stalls at 100%
+            on slow links, is Major. One per priority, the same numbers as the chart.
+          </p>
+        </div>
+      </div>
+    </div>
+    <p class="mt-6 text-xs text-fg-3">
+      Hand-drawn product views with fictional data. The agent reads through the same API and permissions as the app.
+    </p>
+  </div>
+</section>
+
+<script>
+  import '@scripts/features/search-saved-views';
+</script>
+
+<style>
+  code,
+  .args,
+  pre {
+    font-variant-ligatures: none;
+  }
+  .clause {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+  }
+  kbd,
+  .key-cap {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-surface);
+    font-size: 11px;
+    line-height: 1;
+    color: var(--text-secondary);
+  }
+  .suggest {
+    margin: 0 16px;
+    border: 1px solid var(--border);
+    border-top: 0;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    background: var(--bg-surface);
+    font-size: 13px;
+  }
+  .suggest-head {
+    padding: 8px 12px 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .suggest-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 4px 12px;
+  }
+  .suggest-item.first {
+    background: var(--bg-hover);
+  }
+  .suggest-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 4px;
+    padding: 6px 12px 8px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .view-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+  }
+  .view-tab {
+    position: relative;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    border-right: 1px solid var(--border);
+  }
+  .view-tab.on {
+    background: var(--bg-surface);
+    color: var(--text);
+    font-weight: 500;
+  }
+  .view-tab.on::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+  .n {
+    margin-left: 4px;
+    font-weight: 400;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .dialog {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    font-size: 13.5px;
+  }
+  .dialog-fields {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .dialog-fields dt {
+    color: var(--text-muted);
+    padding-top: 6px;
+  }
+  .input {
+    display: block;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .choices {
+    display: grid;
+    gap: 8px;
+    padding-top: 6px;
+  }
+  .choice {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    gap: 10px;
+    line-height: 19px;
+  }
+  .radio {
+    width: 14px;
+    height: 14px;
+    margin-top: 3px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .choice.on .radio {
+    box-shadow: inset 0 0 0 4px var(--ink);
+  }
+  @media (max-width: 640px) {
+    .dialog-fields {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+    .dialog-fields dd + dt {
+      margin-top: 8px;
+    }
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pill {
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .group-head {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  ul + .group-head {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .bars {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .bars th,
+  .bars td {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+    font-weight: 400;
+  }
+  .bars thead th {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .bars tbody th {
+    width: 90px;
+  }
+  .bars td:nth-child(2) {
+    padding-right: 16px;
+  }
+  .bars .num {
+    width: 56px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .bar-fill {
+    display: block;
+    height: 14px;
+    border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+    background: var(--chart-1);
+  }
+</style>

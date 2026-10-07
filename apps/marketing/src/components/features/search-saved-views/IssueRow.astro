@@ -1,0 +1,117 @@
+---
+import { PEOPLE, type SampleIssue } from '@lib/features/search-saved-views';
+
+interface Props {
+  issue: SampleIssue;
+  hidden?: boolean;
+}
+
+const { issue, hidden = false } = Astro.props;
+const person = issue.assignee ? PEOPLE[issue.assignee] : null;
+const typeClass = { Bug: 'l-bug', Feature: 't-feature', Task: 't-task' }[issue.type];
+const priorityClass = { Critical: 'l-critical', Major: 'l-major', Normal: 'l-normal', Minor: 'p-minor' }[
+  issue.priority
+];
+---
+
+<li class="sv-row" data-issue={issue.key} hidden={hidden}>
+  <span class="key">{issue.key}</span>
+  <span class="title">{issue.title}</span>
+  <span class="badges">
+    <span class:list={['badge', typeClass]} aria-hidden="true">
+      {issue.type.charAt(0)}
+    </span>
+    <span class:list={['badge', priorityClass]} aria-hidden="true">
+      {issue.priority.charAt(0)}
+    </span>
+    <span class="sr-only">
+      {issue.type}, {issue.priority},
+    </span>
+  </span>
+  <span class="meta">
+    <span class:list={['who', { none: !person }]}>
+      {person && <span class="av">{person.initials}</span>}
+      {person ? person.name : 'Unassigned'}
+    </span>
+    <span class="status">
+      <i class:list={['dot', { started: issue.status === 'In Progress', done: issue.status === 'Fixed' }]}></i>
+      {issue.status}
+    </span>
+  </span>
+</li>
+
+<style>
+  .sv-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 42px 112px 96px;
+    gap: 12px;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+  .sv-row:last-child {
+    border-bottom: 0;
+  }
+  .title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .badges {
+    display: flex;
+    gap: 4px;
+  }
+  .who,
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .who.none {
+    color: var(--text-muted);
+  }
+  .meta {
+    display: contents;
+  }
+  .t-feature {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .t-task,
+  .p-minor {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  @media (max-width: 640px) {
+    .sv-row {
+      grid-template-columns: 60px minmax(0, 1fr);
+      row-gap: 5px;
+      column-gap: 10px;
+      align-items: start;
+      padding: 9px 16px;
+    }
+    .key {
+      line-height: 18px;
+    }
+    .title {
+      white-space: normal;
+      line-height: 18px;
+    }
+    .badges {
+      grid-row: 2;
+      grid-column: 1;
+    }
+    .meta {
+      grid-row: 2;
+      grid-column: 2;
+      display: flex;
+      justify-content: space-between;
+      gap: 4px 12px;
+      font-size: 12.5px;
+    }
+  }
+</style>

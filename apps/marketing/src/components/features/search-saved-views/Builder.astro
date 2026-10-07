@@ -1,0 +1,394 @@
+---
+import {
+  ASSIGNEE_CHOICES,
+  ASSIGNEE_VALID_VALUES,
+  DEFAULT_STATE,
+  ISSUES,
+  PRIORITIES,
+  TYPE_CHOICES,
+  countLabel,
+  issuesAddress,
+  perAssignee,
+  reportAddress,
+  runQuery,
+  viewName,
+} from '@lib/features/search-saved-views';
+import IssueRow from './IssueRow.astro';
+import QueryBar from './QueryBar.astro';
+
+const { query, issues } = runQuery(DEFAULT_STATE);
+const name = viewName(DEFAULT_STATE);
+const buckets = perAssignee(issues);
+const most = Math.max(1, ...buckets.map(bucket => bucket.count));
+const typeLabel = (choice: string) => (choice === 'any' ? 'Any type' : choice);
+const assigneeLabel = (choice: string) => (choice === 'anyone' ? 'Anyone' : choice);
+---
+
+<section id="try" class="border-t border-line" aria-labelledby="builder-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="builder-title" class="h2">
+        One query for the list, the report and your agent.
+      </h2>
+      <p class="prose mt-5">
+        Change the filters on a sample project. The query, the matching issues, a name for the saved view, the report
+        scope and the agent’s call all change together, because they are the same query. It runs in this page on
+        fictional data; nothing is sent anywhere.
+      </p>
+    </div>
+    <noscript>
+      <p class="prose mt-8 max-w-[640px]">
+        The filters need JavaScript. Below is the starting query and everything it drives.
+      </p>
+    </noscript>
+
+    <div id="sv-builder" class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <div class="controls lg:col-span-4 space-y-7">
+        <div>
+          <p class="calc-label" id="sv-type-label">
+            Type
+          </p>
+          <div class="seg mt-2" role="radiogroup" aria-labelledby="sv-type-label" data-sv-group="type">
+            {TYPE_CHOICES.map(choice => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={choice === DEFAULT_STATE.type ? 'true' : 'false'}
+                tabindex={choice === DEFAULT_STATE.type ? 0 : -1}
+                data-value={choice}
+              >
+                {typeLabel(choice)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p class="calc-label" id="sv-priority-label">
+            Priority, any of
+          </p>
+          <div class="chips mt-2" role="group" aria-labelledby="sv-priority-label">
+            {PRIORITIES.map(priority => (
+              <button
+                type="button"
+                class="chip"
+                aria-pressed={DEFAULT_STATE.priorities.includes(priority) ? 'true' : 'false'}
+                data-priority={priority}
+              >
+                {priority}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p class="calc-label" id="sv-status-label">
+            Status
+          </p>
+          <div class="chips mt-2" role="group" aria-labelledby="sv-status-label">
+            <button
+              type="button"
+              class="chip"
+              aria-pressed={DEFAULT_STATE.unresolved ? 'true' : 'false'}
+              data-unresolved
+            >
+              <span class="mono">#Unresolved</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <p class="calc-label" id="sv-assignee-label">
+            Assignee
+          </p>
+          <div class="seg mt-2" role="radiogroup" aria-labelledby="sv-assignee-label" data-sv-group="assignee">
+            {ASSIGNEE_CHOICES.map(choice => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={choice === DEFAULT_STATE.assignee ? 'true' : 'false'}
+                tabindex={choice === DEFAULT_STATE.assignee ? 0 : -1}
+                data-value={choice}
+              >
+                {choice === '@jordn' ? (
+                  <>
+                    <span class="mono">@jordn</span> <span class="typo">typo</span>
+                  </>
+                ) : choice.startsWith('@') || choice === 'me' ? (
+                  <span class="mono">{choice}</span>
+                ) : (
+                  assigneeLabel(choice)
+                )}
+              </button>
+            ))}
+          </div>
+          <p class="mt-3 text-xs text-fg-2">
+            Pick <span class="mono">@jordn</span> to see what a misspelt value does.
+          </p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-8 min-w-0">
+        <div class="panel overflow-hidden">
+          <div class="pane-bar">
+            <span class="text-fg">Acme</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="ml-auto">
+              signed in as <span class="mono text-xs text-fg">@alex</span>
+            </span>
+          </div>
+          <QueryBar queryId="sv-query" countId="sv-count" count={countLabel(issues.length)}>
+            <span data-q-head>{query}</span>
+            <mark class="bad" data-q-bad hidden></mark>
+          </QueryBar>
+          <div class="problem" data-problem hidden>
+            <p data-problem-message></p>
+            <p class="fixes">
+              {ASSIGNEE_VALID_VALUES.map(value => (
+                <button type="button" class="fix" data-fix={value}>
+                  {value}
+                </button>
+              ))}
+            </p>
+          </div>
+          <ul class="list-none" aria-label="Matching issues" data-rows>
+            {ISSUES.map(issue => (
+              <IssueRow issue={issue} hidden={!issues.includes(issue)} />
+            ))}
+          </ul>
+          <p class="empty" data-empty hidden>
+            No issues match this query.
+          </p>
+
+          <dl class="outcome">
+            <div>
+              <dt>Address</dt>
+              <dd>
+                <code class="addr" data-address>
+                  {issuesAddress(query)}
+                </code>
+              </dd>
+            </div>
+            <div>
+              <dt>Saved view</dt>
+              <dd>
+                <span data-view-ok>
+                  <span class="text-fg" data-view-name>
+                    {name}
+                  </span>
+                  <span class="text-fg-3">{' · Only you · '}</span>
+                  <code class="ref" data-view-ref>{`#{${name}}`}</code>
+                </span>
+                <span class="text-fg-2" data-view-refused hidden>
+                  Nothing to save until the query is valid.
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>Report</dt>
+              <dd>
+                <span class="block text-fg">Issues per assignee</span>
+                <table class="mini" data-report>
+                  <caption class="sr-only">Issues per assignee for this query</caption>
+                  <tbody>
+                    {buckets.map(bucket => (
+                      <tr data-bucket={bucket.bucket ?? 'none'} hidden={bucket.count === 0}>
+                        <th scope="row">{bucket.label}</th>
+                        <td>
+                          <span class="fill" style={`width:${(bucket.count / most) * 100}%`} />
+                        </td>
+                        <td class="num">{bucket.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <code class="addr mt-2" data-report-address>
+                  {reportAddress(query)}
+                </code>
+                <span class="text-fg-2" data-report-refused hidden>
+                  Refused with the same message and the same suggestions.
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>Agent</dt>
+              <dd>
+                <code class="ref">search_issues</code>
+                <code class="addr mt-2" data-agent>{`query: ${query}`}</code>
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <p class="sr-only" aria-live="polite" data-status></p>
+        <p class="mt-3 text-xs text-fg-3">
+          Sample project ACME with eleven fictional issues. In the app the query runs when you press Enter.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  code,
+  pre {
+    font-variant-ligatures: none;
+  }
+  mark,
+  .mono {
+    font-variant-ligatures: none;
+  }
+  :global(html:not(.js)) .controls {
+    display: none;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--border);
+    background: var(--bg-surface);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .chip:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .chip:active {
+    background: var(--bg-active);
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--ink-fg);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+  .chip:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--ink),
+      var(--focus-ring);
+  }
+  .typo {
+    font-size: 11.5px;
+  }
+  .bad {
+    background: transparent;
+    color: inherit;
+    text-decoration: underline wavy var(--palette-red-solid);
+    text-underline-offset: 3px;
+  }
+  .problem {
+    padding: 10px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--palette-red-fg);
+    background: var(--palette-red-bg);
+  }
+  .fixes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .fix {
+    padding: 2px 8px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    transition: box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .fix:hover {
+    box-shadow: inset 0 0 0 1px var(--text);
+  }
+  .empty {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .outcome {
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .outcome > div {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .outcome > div:first-child {
+    border-top: 0;
+  }
+  .outcome dt {
+    color: var(--text-muted);
+  }
+  .outcome dd {
+    min-width: 0;
+  }
+  .addr,
+  .ref {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+  .addr {
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--text-secondary);
+  }
+  .ref {
+    background: var(--bg-inset);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    overflow-wrap: anywhere;
+  }
+  .mini {
+    width: 100%;
+    max-width: 360px;
+    margin-top: 6px;
+    border-collapse: collapse;
+  }
+  .mini th,
+  .mini td {
+    padding: 3px 0;
+    font-weight: 400;
+    text-align: left;
+    color: var(--text-secondary);
+  }
+  .mini th {
+    width: 96px;
+    white-space: nowrap;
+  }
+  .mini td:nth-child(2) {
+    padding: 0 12px;
+  }
+  .mini .num {
+    width: 24px;
+    text-align: right;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .fill {
+    display: block;
+    height: 10px;
+    border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+    background: var(--chart-1);
+  }
+  @media (max-width: 640px) {
+    .outcome > div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+</style>
