@@ -1,0 +1,233 @@
+---
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<figure class={className} id="demo-figure">
+  <div class="demo" id="demo">
+    <div class="pane-app" aria-label="The issue list in the app">
+      <div class="pane-bar">
+        <span class="text-fg">Acme</span>
+        <span class="sep">/</span>
+        <span class="mono text-xs">ACME</span>
+        <span class="sep">/</span>
+        <span>Issues</span>
+        <span class="av ml-auto" title="Alex Lee">
+          AL
+        </span>
+      </div>
+      <div class="querybar" aria-live="polite">
+        <span class="q" id="demo-query">
+          type: Bug #Unresolved assignee: Unassigned priority: Major, Critical
+        </span>
+        <span class="caret" id="demo-caret" aria-hidden="true" hidden></span>
+        <span class="count" id="demo-count">
+          3 issues
+        </span>
+      </div>
+      <div id="demo-rows">
+        <div class="row sel" data-match data-target>
+          <span class="key">ACME-12</span>
+          <span class="title">Invite link blank after it expires</span>
+          <span class="badge l-major pri" title="Major">
+            M
+          </span>
+          <span class="meta">
+            <span class="who">
+              <span class="field" data-who>
+                <span class="av">AL</span>
+                <span data-who-name>Alex Lee</span>
+              </span>
+            </span>
+            <span class="spent">
+              <span class="field" data-spent>
+                20m
+              </span>
+            </span>
+            <span class="status">
+              <span class="field" data-status-field>
+                <i class="dot started" data-dot></i>
+                <span data-status>In Progress</span>
+              </span>
+            </span>
+          </span>
+        </div>
+        <div class="row dim" aria-hidden="true">
+          <span class="key">ACME-11</span>
+          <span class="title">Swimlane header overlaps count</span>
+          <span class="badge l-normal pri" title="Normal">
+            N
+          </span>
+          <span class="meta">
+            <span class="who">
+              <span class="av">CK</span>Casey Kim
+            </span>
+            <span class="spent">1h 30m</span>
+            <span class="status">
+              <i class="dot started"></i>In Progress
+            </span>
+          </span>
+        </div>
+        <div class="row" data-match>
+          <span class="key">ACME-9</span>
+          <span class="title">Upload stalls at 100% on slow links</span>
+          <span class="badge l-major pri" title="Major">
+            M
+          </span>
+          <span class="meta">
+            <span class="who none">Unassigned</span>
+            <span class="spent">—</span>
+            <span class="status">
+              <i class="dot"></i>Open
+            </span>
+          </span>
+        </div>
+        <div class="row dim" aria-hidden="true">
+          <span class="key">ACME-8</span>
+          <span class="title">Saved view count is stale</span>
+          <span class="badge l-normal pri" title="Normal">
+            N
+          </span>
+          <span class="meta">
+            <span class="who">
+              <span class="av">SO</span>Sam Ortiz
+            </span>
+            <span class="spent">45m</span>
+            <span class="status">
+              <i class="dot"></i>Reopened
+            </span>
+          </span>
+        </div>
+        <div class="row" data-match>
+          <span class="key">ACME-7</span>
+          <span class="title">Burndown ignores late additions</span>
+          <span class="badge l-critical pri" title="Critical">
+            C
+          </span>
+          <span class="meta">
+            <span class="who none">Unassigned</span>
+            <span class="spent">—</span>
+            <span class="status">
+              <i class="dot"></i>Open
+            </span>
+          </span>
+        </div>
+      </div>
+      <div class="activity" id="demo-activity" aria-live="polite">
+        <p class="state on" data-beat="2b">
+          Alex Lee assigned ACME-12 to Alex Lee<span class="t">just now</span>
+        </p>
+        <p class="state on" data-beat="2b">
+          Alex Lee changed Status: Open to In Progress<span class="t">just now</span>
+        </p>
+        <p class="state on" data-beat="3b">
+          Alex Lee logged 20m, Development<span class="t">just now</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="pane-agent" aria-label="The same work, done through an agent">
+      <div class="pane-bar">
+        <span class="text-fg">Your agent</span>
+        <span class="ml-auto">
+          connected as <span class="mono text-xs text-fg">@alex</span>
+        </span>
+      </div>
+      <p class="prompt state on" data-beat="0">
+        <span class="mark">›</span>
+        <span>
+          Find the unassigned high-priority bugs in ACME, take the newest one, and log the 20 minutes I just spent on
+          it.
+        </span>
+      </p>
+      <ol class="plan" aria-label="What the agent did">
+        <li class="state on done" data-beat="1" data-call="1">
+          <span class="pip"></span>
+          <span>
+            Found the bugs
+            <span class="res state on" data-beat="1b">
+              3 unassigned, Major or Critical
+            </span>
+          </span>
+        </li>
+        <li class="state on done" data-beat="2" data-call="2">
+          <span class="pip"></span>
+          <span>
+            Assigned ACME-12 to you
+            <span class="res state on" data-beat="2b">
+              Status set to In Progress
+            </span>
+          </span>
+        </li>
+        <li class="state on done" data-beat="3" data-call="3">
+          <span class="pip"></span>
+          <span>
+            Logged the time
+            <span class="res state on" data-beat="3b">
+              20m of Development on ACME-12
+            </span>
+          </span>
+        </li>
+      </ol>
+      <button type="button" class="toggle" id="calls-toggle" aria-expanded="false" aria-controls="demo-calls">
+        <span class="chev" aria-hidden="true">
+          ›
+        </span>
+        View the tool calls
+      </button>
+      <ol class="calls" id="demo-calls" aria-label="Tool calls" hidden>
+        <li>
+          <span class="tool">search_issues</span>
+          <span class="args">type: Bug #Unresolved assignee: Unassigned priority: Major, Critical</span>
+        </li>
+        <li>
+          <span class="tool">update_issue</span>
+          <span class="args">ACME-12, assignees: me, status: In Progress</span>
+        </li>
+        <li>
+          <span class="tool">log_time</span>
+          <span class="args">ACME-12, 20m, Development</span>
+        </li>
+      </ol>
+      <p class="answer state on" data-beat="4">
+        ACME-12 is yours and In Progress, with 20m logged. ACME-7 and ACME-9 are still unassigned, and ACME-7 is
+        Critical.
+      </p>
+    </div>
+  </div>
+  <div class="steps" id="demo-steps" role="group" aria-label="Demo steps">
+    <button type="button" class="step" data-step="1" aria-pressed="false">
+      <b>Find the issue</b>
+      <span>The agent runs the same query you would type.</span>
+    </button>
+    <button type="button" class="step" data-step="2" aria-pressed="false">
+      <b>Assign it</b>
+      <span>Assignee and status change under your name.</span>
+    </button>
+    <button type="button" class="step" data-step="3" aria-pressed="true">
+      <b>Record the work</b>
+      <span>Time lands on the issue, as in the app.</span>
+    </button>
+    <button type="button" class="replay" id="demo-replay" aria-label="Replay the demo">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9" />
+        <path d="M2.5 2.5v3h3" />
+      </svg>
+      Replay
+    </button>
+  </div>
+  <figcaption class="mt-3 text-xs text-fg-3">
+    A representative session with fictional data. The agent's calls go through the same API and permissions as the app.
+  </figcaption>
+</figure>

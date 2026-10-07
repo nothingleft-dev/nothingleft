@@ -77,6 +77,18 @@ export function faqPage(path: string, entries: FaqEntry[]): JsonLd {
   };
 }
 
+export function breadcrumb(trail: { name: string; path: string }[]): JsonLd {
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((crumb, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: crumb.name,
+      item: `${SITE_URL}${crumb.path}`,
+    })),
+  };
+}
+
 export function graph(nodes: JsonLd[]): string {
   // Escaping "<" keeps a "</script>" inside any string from closing the tag early.
   return JSON.stringify({ '@context': 'https://schema.org', '@graph': nodes }).replace(/</g, '\\u003c');

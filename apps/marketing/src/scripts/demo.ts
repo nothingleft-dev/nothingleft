@@ -160,7 +160,7 @@ export function initDemo(): void {
 
   stepButtons.forEach(button => button.addEventListener('click', () => scrubTo(Number(button.dataset.step))));
   byId('demo-replay').addEventListener('click', () => play('replay'));
-  byId('watch').addEventListener('click', event => {
+  document.getElementById('watch')?.addEventListener('click', event => {
     event.preventDefault();
     byId('demo-figure').scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'start' });
     play('watch_link');

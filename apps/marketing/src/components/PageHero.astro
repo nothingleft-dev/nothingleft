@@ -1,0 +1,25 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  lede: string;
+}
+
+const { eyebrow, title, lede } = Astro.props;
+const heading = title.replace(/\.$/, '');
+---
+
+<section class="wrap pt-12 md:pt-16 pb-12 md:pb-16" aria-labelledby="page-title">
+  <div class="max-w-[820px]">
+    <p class="text-sm md:text-base text-fg-2">{eyebrow}</p>
+    <h1 id="page-title" class="h1-page mt-4 md:mt-5">
+      {heading}
+      <span class="period">.</span>
+    </h1>
+    <p class="prose mt-6 md:mt-8 max-w-[600px] text-[17px] leading-[27px] md:text-[19px] md:leading-[30px]">{lede}</p>
+    <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+      <slot />
+    </div>
+    <slot name="note" />
+  </div>
+</section>

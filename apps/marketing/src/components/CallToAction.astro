@@ -1,0 +1,22 @@
+---
+interface Props {
+  title: string;
+  body: string;
+}
+
+const { title, body } = Astro.props;
+---
+
+<section class="border-t border-line" aria-labelledby="cta-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="cta-title" class="h2">
+        {title}
+      </h2>
+      <p class="prose mt-5">{body}</p>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <slot />
+      </div>
+    </div>
+  </div>
+</section>
