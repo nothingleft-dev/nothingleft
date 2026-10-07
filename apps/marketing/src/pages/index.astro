@@ -1,0 +1,34 @@
+---
+import Agents from '@components/Agents.astro';
+import Beta from '@components/Beta.astro';
+import Faq from '@components/Faq.astro';
+import Fit from '@components/Fit.astro';
+import Hero from '@components/Hero.astro';
+import Problem from '@components/Problem.astro';
+import Product from '@components/Product.astro';
+import Workflow from '@components/Workflow.astro';
+import Base from '@layouts/Base.astro';
+import { HOME_FAQ } from '@lib/faq';
+import { SITE_DESCRIPTION } from '@lib/site';
+import { faqPage, graph, organization, softwareApplication, webPage, website } from '@lib/structured-data';
+
+const title = 'Nothing Left | Project Tracking for People and Agents';
+const jsonLd = graph([
+  organization(),
+  website(),
+  webPage('/', title, SITE_DESCRIPTION),
+  softwareApplication(),
+  faqPage('/', HOME_FAQ),
+]);
+---
+
+<Base title={title} description={SITE_DESCRIPTION} jsonLd={jsonLd}>
+  <Hero />
+  <Problem />
+  <Workflow />
+  <Agents />
+  <Product />
+  <Fit />
+  <Beta />
+  <Faq entries={HOME_FAQ} />
+</Base>

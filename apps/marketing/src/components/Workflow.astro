@@ -1,0 +1,313 @@
+<section id="workflow" class="border-t border-line bg-app" aria-labelledby="workflow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="workflow-title" class="h2">
+        From reported bug to resolved issue.
+      </h2>
+      <p class="prose mt-5">One issue, the whole way through. Pick a step to see what the team sees at that point.</p>
+    </div>
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="Workflow steps">
+        <button type="button" class="wf-step" data-wf="1" aria-pressed="true">
+          <span class="bar" style="width:40px"></span>
+          <span>
+            <b>Capture the problem</b>
+            <span>Casey files the bug with steps, expected and actual.</span>
+          </span>
+        </button>
+        <button type="button" class="wf-step" data-wf="2" aria-pressed="false">
+          <span class="bar" style="width:33px"></span>
+          <span>
+            <b>Give it an owner</b>
+            <span>Alex takes it, with an estimate and a due date.</span>
+          </span>
+        </button>
+        <button type="button" class="wf-step" data-wf="3" aria-pressed="false">
+          <span class="bar" style="width:26px"></span>
+          <span>
+            <b>Plan it into a sprint</b>
+            <span>Three points in Sprint 08, visible on the board.</span>
+          </span>
+        </button>
+        <button type="button" class="wf-step" data-wf="4" aria-pressed="false">
+          <span class="bar" style="width:19px"></span>
+          <span>
+            <b>Read the decision beside it</b>
+            <span>The article on invitation expiry references the issue.</span>
+          </span>
+        </button>
+        <button type="button" class="wf-step" data-wf="5" data-last aria-pressed="false">
+          <span class="bar" style="width:12px"></span>
+          <span>
+            <b>Resolve it, history intact</b>
+            <span>Fixed, verified, time logged, nothing left hanging.</span>
+          </span>
+        </button>
+      </div>
+      <div class="lg:col-span-8 wf-panel" id="wf-panel" aria-live="polite">
+        <div data-view="1" class="on">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug">B</span>Bug<span class="badge l-major ml-2">M</span>Major
+            </div>
+            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <div class="wf-md">
+              <p>
+                <strong class="text-fg font-medium">Steps.</strong> Open an invitation link that is older than seven
+                days.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Expected.</strong> A message that the link has expired and a way to
+                request a new one.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Actual.</strong> A blank page.
+              </p>
+            </div>
+            <dl class="fields">
+              <dt>Reporter</dt>
+              <dd>
+                <span class="av">CK</span>Casey Kim
+              </dd>
+              <dt>Assignee</dt>
+              <dd class="empty">Unassigned</dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot"></i>Open
+              </dd>
+              <dt>Sprint</dt>
+              <dd class="empty">Backlog</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div data-view="2">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug">B</span>Bug<span class="badge l-major ml-2">M</span>Major
+            </div>
+            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <div class="comment">
+              <div class="by">
+                <span class="av">CK</span>Casey Kim<span class="text-fg-3">3 Oct 2026, 10:12am</span>
+              </div>
+              <code class="text-[12.5px] text-fg bg-inset px-1 rounded-[3px]">@alex</code> you touched the invite flow
+              last. Could you take this one?
+            </div>
+            <dl class="fields">
+              <dt>Assignee</dt>
+              <dd>
+                <span class="field flash">
+                  <span class="av">AL</span> Alex Lee
+                </span>
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot"></i>Open
+              </dd>
+              <dt>Estimate</dt>
+              <dd class="mono text-xs">2h</dd>
+              <dt>Due</dt>
+              <dd>9 Oct 2026</dd>
+            </dl>
+            <div class="activity mt-4 -mx-5 -mb-5">
+              <p>
+                Casey Kim assigned ACME-12 to Alex Lee<span class="t">3 Oct 2026</span>
+              </p>
+              <p>
+                Casey Kim set Estimate: 2h, Due: 9 Oct 2026<span class="t">3 Oct 2026</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div data-view="3">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Sprint 08</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Board</span>
+          </div>
+          <div class="px-5 py-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-fg-2 border-b border-line">
+            <span class="text-fg font-medium">Make invitations clearer</span>
+            <span>
+              <span class="mono">21</span> of <span class="mono">34</span> points done
+            </span>
+            <span>Ends 17 Oct 2026</span>
+          </div>
+          <div class="board">
+            <div class="col">
+              <h4>
+                Open<span>3</span>
+              </h4>
+              <div class="card sel">
+                <span class="pts">3</span>
+                <span class="key">ACME-12</span>
+                <br />
+                Invite link blank after it expires
+              </div>
+              <div class="card">
+                <span class="pts">2</span>
+                <span class="key">ACME-14</span>
+                <br />
+                Invite email subject names the org
+              </div>
+              <div class="card">
+                <span class="pts">1</span>
+                <span class="key">ACME-15</span>
+                <br />
+                Resend invite from the members list
+              </div>
+            </div>
+            <div class="col">
+              <h4>
+                In Progress<span>2</span>
+              </h4>
+              <div class="card">
+                <span class="pts">5</span>
+                <span class="key">ACME-11</span>
+                <br />
+                Swimlane header overlaps count
+              </div>
+              <div class="card">
+                <span class="pts">3</span>
+                <span class="key">ACME-10</span>
+                <br />
+                Invite landing shows the inviter
+              </div>
+            </div>
+            <div class="col">
+              <h4>
+                Fixed<span>4</span>
+              </h4>
+              <div class="card">
+                <span class="pts">8</span>
+                <span class="key">ACME-6</span>
+                <br />
+                Project-scoped invite links
+              </div>
+              <div class="card">
+                <span class="pts">5</span>
+                <span class="key">ACME-5</span>
+                <br />
+                Accept invite while signed in
+              </div>
+              <div class="card">
+                <span class="pts">3</span>
+                <span class="key">ACME-4</span>
+                <br />
+                Invite expiry setting per org
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div data-view="4">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Knowledge base</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Invitation links and expiry</span>
+          </div>
+          <div class="wf-body">
+            <p class="text-xs text-fg-3">Decision record, published to project members</p>
+            <h3 class="wf-title">Invitation links and expiry</h3>
+            <div class="wf-md">
+              <p>
+                Invitation links expire after seven days (<code>INVITE_TTL_DAYS</code>). An expired link must explain
+                itself and offer a new one. A blank page or a redirect to sign-in is a bug.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
+                invitation landing page itself, before any sign-in prompt, because the person may not have an account
+                yet. See <code>ACME-12</code> for the first instance.
+              </p>
+            </div>
+            <div class="ref">
+              <p class="lbl">Referenced by</p>
+              <p class="flex items-center gap-2">
+                <span class="key">ACME-12</span>Invite link blank after it expires<i class="dot ml-1"></i>
+                <span class="text-fg-2">Open</span>
+              </p>
+            </div>
+            <p class="mt-5 text-xs text-fg-3">
+              Open ACME-12 and this article is listed on the issue, under the same heading. Your agent can read either.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="5">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug">B</span>Bug<span class="badge l-major ml-2">M</span>Major
+            </div>
+            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <div class="comment">
+              <div class="by">
+                <span class="av">AL</span>Alex Lee<span class="text-fg-3">8 Oct 2026, 4:40pm</span>
+              </div>
+              Expired links now land on an explanation with a <em>Request a new link</em> button, per the decision
+              record. Verified with a ten-day-old invite.
+            </div>
+            <dl class="fields">
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av">AL</span>Alex Lee
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <span class="field flash">
+                  <i class="dot done"></i> Fixed
+                </span>
+              </dd>
+              <dt>Spent</dt>
+              <dd class="mono text-xs">
+                1h 45m <span class="text-fg-3 font-sans">of 2h</span>
+              </dd>
+              <dt>Sprint</dt>
+              <dd>Sprint 08</dd>
+            </dl>
+            <div class="activity mt-4 -mx-5 -mb-5">
+              <p>
+                Alex Lee changed Status: In Progress to Fixed<span class="t">8 Oct 2026</span>
+              </p>
+              <p>
+                Alex Lee logged 1h 25m, Development<span class="t">8 Oct 2026</span>
+              </p>
+              <p>
+                Alex Lee logged 20m, Development<span class="t">6 Oct 2026</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mt-6 text-xs text-fg-3">
+      Hand-drawn product views with fictional data. Nothing here changes code or deploys anything; the agent only reads
+      and updates the tracker.
+    </p>
+  </div>
+</section>

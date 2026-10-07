@@ -1,0 +1,79 @@
+---
+import Brand from '@components/Brand.astro';
+import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@lib/site';
+
+const NAV = [
+  { href: '/#product', label: 'Product' },
+  { href: '/#workflow', label: 'Workflow' },
+  { href: '/#agents', label: 'Agents' },
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/docs', label: 'Docs' },
+];
+---
+
+<header class="border-b border-line bg-surface sticky top-0 z-40">
+  <div class="wrap flex h-16 items-center gap-6">
+    <a href="/" class="flex items-center gap-2" aria-label="Nothing Left home">
+      <Brand wordmark />
+    </a>
+    <nav aria-label="Main" class="hidden lg:flex items-center gap-6 ml-6 whitespace-nowrap">
+      {NAV.map(item => (
+        <a class="nav-link" href={item.href}>
+          {item.label}
+        </a>
+      ))}
+      <a class="nav-link" href={GITHUB_URL}>
+        GitHub
+        <span class="arr ext" aria-hidden="true">
+          ↗
+        </span>
+      </a>
+    </nav>
+    <div class="ml-auto flex items-center gap-3">
+      <a class="nav-link hidden sm:inline whitespace-nowrap" href={SIGN_IN_URL}>
+        Sign in
+      </a>
+      <a class="btn btn-sm" href={SIGN_UP_URL}>
+        Join the beta
+      </a>
+      <button
+        type="button"
+        class="menu-btn lg:hidden"
+        id="menu-btn"
+        aria-expanded="false"
+        aria-controls="menu"
+        aria-label="Menu"
+      >
+        <span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </span>
+      </button>
+    </div>
+  </div>
+  <nav id="menu" class="menu-panel lg:hidden" aria-label="Main">
+    <div class="wrap pb-3">
+      {NAV.map(item => (
+        <a href={item.href}>
+          {item.label}
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      ))}
+      <a href={GITHUB_URL}>
+        GitHub
+        <span class="arr ext" aria-hidden="true">
+          ↗
+        </span>
+      </a>
+      <a href={SIGN_IN_URL}>
+        Sign in
+        <span class="arr" aria-hidden="true">
+          →
+        </span>
+      </a>
+    </div>
+  </nav>
+</header>

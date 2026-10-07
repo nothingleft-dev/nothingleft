@@ -1,0 +1,63 @@
+<section id="agents" class="border-t border-line" aria-labelledby="agents-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-5">
+        <h2 id="agents-title" class="h2">
+          One API. Two kinds of user.
+        </h2>
+        <p class="prose mt-5 max-w-[46ch]">
+          People use the app. Agents use MCP. Both reach the same product API with the same identifiers, the same
+          Markdown and the same permission rules. A compatible MCP client can manage issues, sprints, time and project
+          knowledge through it.
+        </p>
+        <pre
+          class="code mt-8"
+          tabindex="0"
+          aria-label="Connect an agent over HTTP"
+        >claude mcp add --transport http nothingleft \
+  https://api.nothingleft.dev/mcp \
+  --header "Authorization: Bearer nl_pat_…"
+<span class="c"># or locally over stdio: npx -y @nothingleft/mcp</span></pre>
+        <p class="mt-4 text-sm text-fg-2">
+          Works with MCP clients that support HTTP token authentication or a local stdio setup.{' '}
+          <a class="link" href="/docs/manual/mcp">
+            Read the setup guide
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+      <div class="lg:col-span-6 lg:col-start-7 rule-list">
+        <div class="py-7">
+          <h3 class="h3">No side door.</h3>
+          <p class="prose mt-2">
+            The MCP server is a client of the public REST API. If the app can do something, the agent can, credentials
+            aside. If the app cannot, neither can the agent.
+          </p>
+        </div>
+        <div class="py-7">
+          <h3 class="h3">Your token, your role, your name.</h3>
+          <p class="prose mt-2">
+            Agents connect with a personal access token you scope to projects and actions. Every change is recorded
+            under you. A missing scope is refused by name, not silently ignored.
+          </p>
+        </div>
+        <div class="py-7">
+          <h3 class="h3">Readable in, readable out.</h3>
+          <p class="prose mt-2">
+            <code>ACME-12</code>, <code>@alex</code>, <code>In Progress</code>, <code>1h 30m</code>. Markdown is stored
+            and Markdown is returned. There is nothing to parse before a model can reason about the work.
+          </p>
+        </div>
+        <div class="py-7">
+          <h3 class="h3">Prompts for the routine.</h3>
+          <p class="prose mt-2">
+            Triage an issue, find duplicates, write the standup, draft release notes, turn a resolved incident into a
+            runbook. Each one shows its plan and applies it when you agree.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

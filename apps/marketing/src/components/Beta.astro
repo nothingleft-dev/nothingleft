@@ -1,0 +1,52 @@
+---
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<section id="beta" class="border-t border-line bg-app" aria-labelledby="beta-title" tabindex="-1">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-5">
+        <h2 id="beta-title" class="h2">
+          Free during beta, whatever your team size.
+        </h2>
+        <p class="prose mt-5 max-w-[46ch]">
+          Sign up, name your organisation, create a first project and you are on the issue list. Invite people when you
+          are ready, or try it alone first. Then tell us whether it fits.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <a class="btn" href={SIGN_UP_URL}>
+            Join the beta
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <a class="link text-sm" href="/pricing">
+            Pricing in full
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </div>
+      </div>
+      <div class="lg:col-span-6 lg:col-start-7 rule-list">
+        <div class="py-6">
+          <h3 class="h3">No subscription charge during beta.</h3>
+          <p class="prose mt-2 text-base">Invite everyone who does the work. Nothing is withheld past a headcount.</p>
+        </div>
+        <div class="py-6">
+          <h3 class="h3">Your first 20 members stay free forever.</h3>
+          <p class="prose mt-2 text-base">
+            When billing arrives, the first 20 members of every organisation remain free. The promise is stated in the
+            product, not only here.
+          </p>
+        </div>
+        <div class="py-6">
+          <h3 class="h3">We will give notice before charging for additional seats.</h3>
+          <p class="prose mt-2 text-base">
+            No seat is priced today. You will hear about any future charge well before it takes effect.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
