@@ -9,17 +9,12 @@ import inter400 from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
 import inter600 from '@fontsource/inter/files/inter-latin-600-normal.woff2?url';
 import Header from '@components/Header.astro';
 import Footer from '@components/Footer.astro';
+import { pageMeta } from '@lib/page-meta';
 import { SITE_NAME } from '@lib/site';
 
-interface Props {
-  title: string;
-  description: string;
-  jsonLd?: string;
-}
-
-const { title, description, jsonLd } = Astro.props;
-// File-format builds report /index.html and /pricing.html; the served URLs drop both.
-const canonical = new URL(Astro.url.pathname.replace(/(index)?\.html$/, ''), Astro.site).href;
+const { path, schema, jsonLd } = pageMeta(Astro.url.pathname);
+const { title, description, noindex } = schema;
+const canonical = new URL(path, Astro.site).href;
 ---
 
 <!doctype html>
@@ -32,7 +27,7 @@ const canonical = new URL(Astro.url.pathname.replace(/(index)?\.html$/, ''), Ast
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow'} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE_NAME} />
     <meta property="og:locale" content="en" />
@@ -57,7 +52,7 @@ const canonical = new URL(Astro.url.pathname.replace(/(index)?\.html$/, ''), Ast
         true,
       );
     </script>
-    {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
+    <script type="application/ld+json" set:html={jsonLd} />
   </head>
   <body>
     <a class="skip" href="#main">

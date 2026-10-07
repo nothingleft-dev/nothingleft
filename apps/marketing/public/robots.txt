@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+# A page that must stay out of crawling gets a `Disallow: /path` line here, as well as noindex.
 
 Sitemap: https://nothingleft.dev/sitemap-index.xml

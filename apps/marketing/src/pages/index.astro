@@ -9,20 +9,9 @@ import Product from '@components/Product.astro';
 import Workflow from '@components/Workflow.astro';
 import Base from '@layouts/Base.astro';
 import { HOME_FAQ } from '@lib/faq';
-import { SITE_DESCRIPTION } from '@lib/site';
-import { faqPage, graph, organization, softwareApplication, webPage, website } from '@lib/structured-data';
-
-const title = 'Nothing Left | Project Tracking for People and Agents';
-const jsonLd = graph([
-  organization(),
-  website(),
-  webPage('/', title, SITE_DESCRIPTION),
-  softwareApplication(),
-  faqPage('/', HOME_FAQ),
-]);
 ---
 
-<Base title={title} description={SITE_DESCRIPTION} jsonLd={jsonLd}>
+<Base>
   <Hero />
   <Problem />
   <Workflow />

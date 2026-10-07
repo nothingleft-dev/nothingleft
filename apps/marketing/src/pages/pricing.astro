@@ -7,25 +7,9 @@ import Statements from '@components/pricing/Statements.astro';
 import Base from '@layouts/Base.astro';
 import { PRICING_FAQ } from '@lib/pricing';
 import { SIGN_UP_URL } from '@lib/site';
-import { breadcrumb, faqPage, graph, organization, softwareApplication, webPage, website } from '@lib/structured-data';
-
-const title = 'Free Project Management Software | Nothing Left';
-const description =
-  'Try Nothing Left free during beta, whatever your team size. The first 20 members stay free forever. See storage terms and join the beta.';
-const jsonLd = graph([
-  organization(),
-  website(),
-  webPage('/pricing', title, description),
-  softwareApplication(),
-  faqPage('/pricing', PRICING_FAQ),
-  breadcrumb([
-    { name: 'Home', path: '/' },
-    { name: 'Pricing', path: '/pricing' },
-  ]),
-]);
 ---
 
-<Base title={title} description={description} jsonLd={jsonLd}>
+<Base>
   <PageHero
     eyebrow="Pricing"
     title="Free during beta, whatever your team size."

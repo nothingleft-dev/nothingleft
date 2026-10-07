@@ -11,25 +11,9 @@ import PageHero from '@components/PageHero.astro';
 import Base from '@layouts/Base.astro';
 import { SETUP_GUIDE_PATH, TOOL_REFERENCE_PATH } from '@lib/mcp';
 import { SIGN_UP_URL } from '@lib/site';
-import { breadcrumb, graph, organization, softwareApplication, webPage, website } from '@lib/structured-data';
-
-const path = '/features/mcp-ai-agents';
-const title = 'Project Management MCP for AI Agents | Nothing Left';
-const description =
-  "Let AI agents search, create and update issues, sprints, reports and project docs through Nothing Left's MCP tools and shared API.";
-const jsonLd = graph([
-  organization(),
-  website(),
-  webPage(path, title, description),
-  softwareApplication(),
-  breadcrumb([
-    { name: 'Home', path: '/' },
-    { name: 'MCP and AI agents', path },
-  ]),
-]);
 ---
 
-<Base title={title} description={description} jsonLd={jsonLd}>
+<Base>
   <PageHero
     eyebrow="MCP and AI agents"
     title="Give your agent the same project context your team sees."

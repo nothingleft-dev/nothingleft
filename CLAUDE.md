@@ -141,6 +141,13 @@ packages/query  packages/mcp  packages/mcp-stdio  packages/analytics  packages/c
 - Zod schemas in `packages/types` are the single source for validation, TS
   types, OpenAPI authoring and MCP tool inputs.
 
+## Marketing site SEO
+
+Sitemap and JSON-LD are controlled per page in `apps/marketing/src/data/`. A new route gets an
+entry in `schema-config.ts` (title, description, JSON-LD nodes) and, if indexable, in
+`sitemap-config.mjs`; bump its `lastmod` there when the page changes, which also updates the
+page's JSON-LD `dateModified`. The build fails when the two disagree.
+
 ## Layering
 
 ```

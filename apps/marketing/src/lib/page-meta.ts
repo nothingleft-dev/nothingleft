@@ -1,0 +1,40 @@
+import { SCHEMA_PAGES, type PageSchema } from '../data/schema-config';
+import { SITEMAP_PAGES, normalizePath } from '../data/sitemap-config.mjs';
+import {
+  breadcrumb,
+  faqPage,
+  graph,
+  organization,
+  softwareApplication,
+  webPage,
+  website,
+  type JsonLd,
+} from './structured-data';
+
+export interface PageMeta {
+  path: string;
+  schema: PageSchema;
+  jsonLd: string;
+}
+
+export function pageMeta(pathname: string): PageMeta {
+  const path = normalizePath(pathname);
+  const schema = SCHEMA_PAGES[path];
+  if (!schema) throw new Error(`${path} has no entry in src/data/schema-config.ts`);
+  const lastmod = SITEMAP_PAGES[path]?.lastmod;
+
+  const builders: Record<string, () => JsonLd | undefined> = {
+    Organization: organization,
+    WebSite: website,
+    WebPage: () => webPage(path, schema.title, schema.description, lastmod),
+    SoftwareApplication: softwareApplication,
+    FAQPage: () => (schema.faq ? faqPage(path, schema.faq) : undefined),
+    BreadcrumbList: () => (schema.breadcrumb ? breadcrumb(schema.breadcrumb) : undefined),
+  };
+  const nodes = schema.nodes.map(node => {
+    const built = builders[node]?.();
+    if (!built) throw new Error(`${path} lists ${node} in schema-config without the data it needs`);
+    return built;
+  });
+  return { path, schema, jsonLd: graph(nodes) };
+}

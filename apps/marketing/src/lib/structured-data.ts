@@ -1,7 +1,7 @@
 import type { FaqEntry } from './faq';
 import { GITHUB_URL, SIGN_UP_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from './site';
 
-type JsonLd = Record<string, unknown>;
+export type JsonLd = Record<string, unknown>;
 
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 const WEBSITE_ID = `${SITE_URL}/#website`;
@@ -52,7 +52,7 @@ export function softwareApplication(): JsonLd {
   };
 }
 
-export function webPage(path: string, name: string, description: string): JsonLd {
+export function webPage(path: string, name: string, description: string, dateModified?: string): JsonLd {
   return {
     '@type': 'WebPage',
     '@id': `${SITE_URL}${path}#webpage`,
@@ -62,6 +62,7 @@ export function webPage(path: string, name: string, description: string): JsonLd
     inLanguage: 'en',
     isPartOf: { '@id': WEBSITE_ID },
     about: { '@id': SOFTWARE_ID },
+    ...(dateModified && { dateModified }),
   };
 }
 
