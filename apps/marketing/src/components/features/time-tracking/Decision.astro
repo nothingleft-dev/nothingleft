@@ -1,3 +1,16 @@
+---
+import { ENTRIES, day, formatDuration, person } from '@lib/features/time-tracking';
+
+const onBehalf = ENTRIES.find(entry => entry.loggedBy !== undefined);
+if (!onBehalf?.loggedBy) throw new Error('The logged-for example needs an entry logged on someone’s behalf');
+const onBehalfLine = [
+  person(onBehalf.author).name,
+  day(onBehalf.date).long,
+  `${formatDuration(onBehalf.minutes)} ${onBehalf.workType}`,
+  `logged by ${person(onBehalf.loggedBy).name}`,
+].join(' · ');
+---
+
 <section class="border-t border-line bg-app" aria-labelledby="time-decision-title">
   <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
     <div class="lg:col-span-5">
@@ -52,7 +65,7 @@
           Contributors and above log their own time; Observers read it. Project Admins and organisation admins can log
           for any member who could log their own. The record shows who logged it and stays the author’s to edit.
         </p>
-        <p class="quote mt-3">Sam Ortiz · 7 Oct 2026 · 2h Development · logged by Casey Kim</p>
+        <p class="quote mt-3">{onBehalfLine}</p>
       </div>
     </div>
   </div>

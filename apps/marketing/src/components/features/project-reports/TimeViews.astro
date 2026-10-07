@@ -3,19 +3,17 @@ import {
   DRILL_CELL,
   DRILL_ENTRIES,
   DRILL_TOTAL,
-  PEOPLE,
   TIME_PERIOD,
   TIME_ROWS,
   TIME_TOTAL,
   TIMESHEET_DAY_TOTALS,
   TIMESHEET_DAYS,
+  TIMESHEET_PEOPLE,
   TIMESHEET_ROWS,
   TIMESHEET_TOTAL,
 } from '@lib/features/project-reports';
 
 const longest = Math.max(...TIME_ROWS.map(row => row.minutes));
-const drillPerson = PEOPLE[DRILL_CELL.username]?.name ?? '';
-const drillDay = TIMESHEET_DAYS[DRILL_CELL.dayIndex];
 ---
 
 <section id="time" class="border-t border-line bg-app" aria-labelledby="time-title">
@@ -51,7 +49,7 @@ const drillDay = TIMESHEET_DAYS[DRILL_CELL.dayIndex];
         </div>
         <div class="pickers">
           <span>
-            <span class="text-fg-3">Query</span> <code>sprint: {'{Sprint 08}'}</code>
+            <span class="text-fg-3">Query</span> <code>project: ACME</code>
           </span>
           <span>
             <span class="text-fg-3">Period</span> Last week
@@ -126,7 +124,7 @@ const drillDay = TIMESHEET_DAYS[DRILL_CELL.dayIndex];
           </span>
         </div>
         <p class="sentence" id="sheet-caption">
-          {TIMESHEET_TOTAL} by four people, {TIME_PERIOD}: the same total as the time report.
+          {TIMESHEET_TOTAL} by {TIMESHEET_PEOPLE} people, {TIME_PERIOD}: the same total as the time report.
         </p>
         <div class="sheet-scroll" role="region" aria-label="Timesheet, last week" tabindex="0">
           <table class="sheet grid-sheet">
@@ -150,7 +148,7 @@ const drillDay = TIMESHEET_DAYS[DRILL_CELL.dayIndex];
                     <td
                       class:list={{
                         off: !TIMESHEET_DAYS[index]?.working,
-                        picked: row.username === DRILL_CELL.username && index === DRILL_CELL.dayIndex,
+                        picked: row.username === DRILL_CELL.username && TIMESHEET_DAYS[index]?.iso === DRILL_CELL.iso,
                       }}
                     >
                       {cell}
@@ -173,9 +171,9 @@ const drillDay = TIMESHEET_DAYS[DRILL_CELL.dayIndex];
         </div>
         <div class="entries">
           <p class="entries-head">
-            <span class="font-medium text-fg">{drillPerson}</span>
+            <span class="font-medium text-fg">{DRILL_CELL.name}</span>
             <span class="text-fg-2">
-              {drillDay?.label} {DRILL_CELL.date}
+              {DRILL_CELL.weekday} {DRILL_CELL.date}
             </span>
             <span class="mono text-xs text-fg ml-auto">{DRILL_TOTAL}</span>
           </p>

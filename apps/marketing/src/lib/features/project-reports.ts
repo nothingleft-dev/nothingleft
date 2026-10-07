@@ -1,25 +1,22 @@
 import type { FaqEntry } from '@lib/faq';
+import {
+  DAYS,
+  ENTRIES,
+  PEOPLE as TIME_PEOPLE,
+  PERIOD_LABEL,
+  cellEntries,
+  cellTotal,
+  day,
+  dayTotal,
+  formatDuration,
+  issue,
+  person,
+  personTotal,
+  weekTotal,
+  type PersonId,
+} from '@lib/features/time-tracking';
 
 export const REPORTS_MANUAL_PATH = '/docs/manual/reports';
-
-// The organisation's calendar for durations: the default 8-hour day and 5-day week.
-const WORKDAY_MINUTES = 480;
-const WORKWEEK_DAYS = 5;
-
-export function durationText(minutes: number): string {
-  if (minutes === 0) return '0m';
-  const weekMinutes = WORKDAY_MINUTES * WORKWEEK_DAYS;
-  const parts: [number, string][] = [
-    [Math.floor(minutes / weekMinutes), 'w'],
-    [Math.floor((minutes % weekMinutes) / WORKDAY_MINUTES), 'd'],
-    [Math.floor((minutes % WORKDAY_MINUTES) / 60), 'h'],
-    [minutes % 60, 'm'],
-  ];
-  return parts
-    .filter(([value]) => value > 0)
-    .map(([value, unit]) => `${value}${unit}`)
-    .join(' ');
-}
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const shareOf = (part: number, whole: number) => (whole > 0 ? round1((part / whole) * 100) : 0);
@@ -279,67 +276,62 @@ export const EMPTY_STATE = {
   widen: ['Drop sprint: {Sprint 08}', 'Drop priority: Critical', 'Every project'],
 };
 
-export const TIME_PERIOD = '5 Oct – 11 Oct 2026';
+export const TIME_PERIOD = PERIOD_LABEL;
 
-const TIME_BY_WORK_TYPE: { label: string; minutes: number }[] = [
-  { label: 'Development', minutes: 1350 },
-  { label: 'Testing', minutes: 480 },
-  { label: 'Investigation', minutes: 270 },
-  { label: 'Documentation', minutes: 150 },
-];
+const timeTotal = weekTotal();
 
-const timeTotal = TIME_BY_WORK_TYPE.reduce((sum, row) => sum + row.minutes, 0);
+const minutesByWorkType = new Map<string, number>();
+for (const entry of ENTRIES) {
+  minutesByWorkType.set(entry.workType, (minutesByWorkType.get(entry.workType) ?? 0) + entry.minutes);
+}
 
-export const TIME_ROWS = TIME_BY_WORK_TYPE.map(row => ({
-  ...row,
-  spent: durationText(row.minutes),
-  share: shareOf(row.minutes, timeTotal),
+export const TIME_ROWS = [...minutesByWorkType]
+  .map(([label, minutes]) => ({
+    label,
+    minutes,
+    spent: formatDuration(minutes),
+    share: shareOf(minutes, timeTotal),
+  }))
+  .sort((a, b) => b.minutes - a.minutes);
+
+export const TIME_TOTAL = { minutes: timeTotal, spent: formatDuration(timeTotal) };
+
+export const TIMESHEET_DAYS = DAYS.map(d => ({ iso: d.date, label: d.weekday, date: d.short, working: d.working }));
+
+const durationOrBlank = (minutes: number) => (minutes === 0 ? '' : formatDuration(minutes));
+
+export const TIMESHEET_ROWS = TIME_PEOPLE.filter(who => personTotal(who.id) > 0).map(who => ({
+  username: who.id,
+  name: who.name,
+  cells: DAYS.map(d => durationOrBlank(cellTotal(who.id, d.date))),
+  total: formatDuration(personTotal(who.id)),
 }));
 
-export const TIME_TOTAL = { minutes: timeTotal, spent: durationText(timeTotal) };
+const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+export const TIMESHEET_PEOPLE = COUNT_WORDS[TIMESHEET_ROWS.length] ?? String(TIMESHEET_ROWS.length);
 
-export const TIMESHEET_DAYS = [
-  { label: 'Mon', date: '5', working: true },
-  { label: 'Tue', date: '6', working: true },
-  { label: 'Wed', date: '7', working: true },
-  { label: 'Thu', date: '8', working: true },
-  { label: 'Fri', date: '9', working: true },
-  { label: 'Sat', date: '10', working: false },
-  { label: 'Sun', date: '11', working: false },
-];
+export const TIMESHEET_DAY_TOTALS = DAYS.map(d => durationOrBlank(dayTotal(d.date)));
+export const TIMESHEET_TOTAL = formatDuration(timeTotal);
 
-const TIMESHEET_MINUTES: { username: string; minutes: number[] }[] = [
-  { username: 'alex', minutes: [150, 180, 120, 195, 75, 0, 0] },
-  { username: 'casey', minutes: [120, 150, 90, 120, 150, 0, 0] },
-  { username: 'jordan', minutes: [60, 0, 120, 90, 120, 0, 0] },
-  { username: 'sam', minutes: [90, 120, 90, 120, 90, 0, 0] },
-];
+const drillAuthor: PersonId = 'alex';
+const drillDay = day('2026-10-06');
 
-export const TIMESHEET_ROWS = TIMESHEET_MINUTES.map(row => ({
-  username: row.username,
-  name: PEOPLE[row.username]?.name ?? row.username,
-  cells: row.minutes.map(minutes => (minutes === 0 ? '' : durationText(minutes))),
-  total: durationText(row.minutes.reduce((sum, minutes) => sum + minutes, 0)),
+export const DRILL_CELL = {
+  username: drillAuthor,
+  name: person(drillAuthor).name,
+  iso: drillDay.date,
+  weekday: drillDay.weekday,
+  date: drillDay.long,
+};
+
+export const DRILL_ENTRIES = cellEntries(drillAuthor, drillDay.date).map(entry => ({
+  key: entry.issue,
+  title: issue(entry.issue).title,
+  type: entry.workType,
+  spent: formatDuration(entry.minutes),
 }));
 
-const dayMinutes = TIMESHEET_DAYS.map((_, index) =>
-  TIMESHEET_MINUTES.reduce((sum, row) => sum + (row.minutes[index] ?? 0), 0),
-);
-const timesheetTotal = dayMinutes.reduce((sum, minutes) => sum + minutes, 0);
-
-export const TIMESHEET_DAY_TOTALS = dayMinutes.map(minutes => (minutes === 0 ? '' : durationText(minutes)));
-export const TIMESHEET_TOTAL = durationText(timesheetTotal);
-export const TIME_MATCHES_TIMESHEET = timesheetTotal === timeTotal;
-
-export const DRILL_CELL = { username: 'alex', dayIndex: 3, date: '8 Oct 2026' };
-
-export const DRILL_ENTRIES = [
-  { key: 'ACME-12', title: 'Invite link blank after it expires', minutes: 85, type: 'Development' },
-  { key: 'ACME-10', title: 'Invite landing shows the inviter', minutes: 80, type: 'Development' },
-  { key: 'ACME-17', title: 'Invite expiry shown in the members list', minutes: 30, type: 'Testing' },
-].map(entry => ({ ...entry, spent: durationText(entry.minutes) }));
-
-export const DRILL_TOTAL = durationText(DRILL_ENTRIES.reduce((sum, entry) => sum + entry.minutes, 0));
+export const DRILL_TOTAL = formatDuration(cellTotal(drillAuthor, drillDay.date));
 
 export interface ReportFamily {
   name: string;

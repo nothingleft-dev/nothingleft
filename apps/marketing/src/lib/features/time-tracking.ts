@@ -108,7 +108,7 @@ export interface TimeEntry {
   loggedBy?: PersonId;
 }
 
-// Every logged minute on the page. All other figures are sums of these, so they cannot disagree.
+// Every logged minute of the week, for every page that shows it. All other figures are sums of these, so no two can disagree.
 export const ENTRIES: TimeEntry[] = [
   { author: 'alex', date: '2026-10-05', issue: 'ACME-10', minutes: 90, workType: 'Development' },
   { author: 'alex', date: '2026-10-06', issue: 'ACME-10', minutes: 90, workType: 'Development' },
