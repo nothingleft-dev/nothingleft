@@ -10,7 +10,7 @@ export const SITEMAP_PAGES = {
   '/features/sprints-kanban-boards': { lastmod: '2026-10-07T22:30:00+05:30' },
   '/features/search-saved-views': { lastmod: '2026-10-07T22:30:00+05:30' },
   '/features/time-tracking': { lastmod: '2026-10-07T22:30:00+05:30' },
-  '/features/project-reports': { lastmod: '2026-10-07T22:30:00+05:30' },
+  '/features/project-reports': { lastmod: '2026-10-07T23:30:00+05:30' },
   '/features/project-knowledge-base': { lastmod: '2026-10-07T22:30:00+05:30' },
   '/solutions/engineering-teams': { lastmod: '2026-10-07T23:00:00+05:30' },
   '/solutions/product-teams': { lastmod: '2026-10-07T23:00:00+05:30' },

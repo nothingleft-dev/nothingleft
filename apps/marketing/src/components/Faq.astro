@@ -6,12 +6,14 @@ interface Props {
   entries: FaqEntry[];
   title?: string;
   intro?: string;
+  askHref?: string;
 }
 
 const {
   entries,
   title = 'Before you bring your team.',
   intro = 'The questions that decide whether a trial is worth your week. Short answers here, details in the docs.',
+  askHref = '/support',
 } = Astro.props;
 ---
 
@@ -57,7 +59,7 @@ const {
             →
           </span>
         </a>
-        <a class="link text-sm" href="/support">
+        <a class="link text-sm" href={askHref}>
           Ask something else
           <span class="arr" aria-hidden="true">
             →
