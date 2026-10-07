@@ -9,8 +9,7 @@ each app deploys independently to a different host.
 pms/
 ├── apps/
 │   ├── web/          Next.js + TS + Tailwind + shadcn/ui   → Vercel
-│   ├── marketing/    Astro + TS                            → Cloudflare Pages
-│   ├── docs/         Astro (renders openapi.yaml + manual) → Cloudflare Pages
+│   ├── marketing/    Astro + TS, static; serves /docs from 6e → Cloudflare Workers (static assets)
 │   └── api/          Fastify + TS, includes /mcp           → Railway / Fly.io
 ├── packages/
 │   ├── db/           Drizzle schema, migrations, seeds, repositories
@@ -39,7 +38,7 @@ repos that is five PRs and a version-bump dance.
 | App | Host | Build |
 |---|---|---|
 | `apps/web` | Vercel | Root Directory = `apps/web`; Vercel resolves workspace deps natively |
-| `apps/marketing` | Cloudflare Pages | Root Directory = `apps/marketing` |
+| `apps/marketing` | Cloudflare Workers, static assets only | `astro build` to `dist/`; `wrangler.jsonc` has no `main`, so no request runs Worker code and the free plan's 10 ms CPU limit never applies |
 | `apps/api` | Railway / Fly.io | Docker image built from `turbo prune --scope=api --docker` output, so the image contains only the API and its workspace dependencies |
 
 Shared packages are workspace dependencies resolved at build time. Nothing is

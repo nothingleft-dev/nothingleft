@@ -8,7 +8,7 @@ the web app is a Next.js build; objects live in S3-compatible buckets.
 
 | Domain | Serves |
 |---|---|
-| `nothingleft.dev` | Marketing site |
+| `nothingleft.dev` | Marketing site and `/docs` (static assets on Cloudflare Workers) |
 | `work.nothingleft.dev` | Web application |
 | `api.nothingleft.dev` | Fastify API + `/mcp` |
 | `mcp.nothingleft.dev` | CNAME → same service as `api` |

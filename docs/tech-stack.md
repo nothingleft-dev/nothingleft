@@ -73,9 +73,13 @@ case, not an `eslint-disable`.
 
 | Concern | Choice |
 |---|---|
-| Framework | **Astro** + TypeScript |
-| Styling | Tailwind, sharing the app's design tokens |
+| Framework | **Astro** + TypeScript, `output: 'static'`; no UI library, no React, one bundled vanilla script module |
+| Styling | Tailwind v4 through `@tailwindcss/vite`. Light theme only: the site owns a light-only copy of the design tokens in `apps/marketing/src/styles/tokens.css` (owner, 7 Oct 2026) |
+| Fonts | Inter and JetBrains Mono self-hosted through Fontsource, `font-display: swap` |
 | Content | Markdown/MDX in-repo |
+| Hosting | Cloudflare Workers static assets (`wrangler.jsonc`, no Worker script), `nothingleft.dev` |
+| SEO | Canonical, Open Graph, `@astrojs/sitemap`, `robots.txt`, JSON-LD (Organization, WebSite, WebPage, SoftwareApplication, FAQPage) |
+| Analytics | `track()` in `src/lib/analytics.ts` is a no-op until `packages/analytics` is wired; `PUBLIC_GA_MEASUREMENT_ID` and `PUBLIC_CLARITY_PROJECT_ID` are declared in `.env.example` and not loaded yet |
 
 ## MCP
 
