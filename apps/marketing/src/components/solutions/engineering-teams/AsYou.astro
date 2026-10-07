@@ -1,0 +1,58 @@
+---
+import { MCP_FEATURE_PATH, SCOPES, TOOL_REFERENCE_PATH } from '@lib/solutions/engineering-teams';
+---
+
+<section class="border-t border-line" aria-labelledby="et-asyou-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="et-asyou-title" class="h2">
+        The agent works as you, never around you.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        Every write an agent makes happens under the token of the person who connected it, with that person’s
+        permissions. It can never do more than their role allows, the token’s scopes can narrow it further, and each
+        change lands in the activity log under their name.
+      </p>
+      <p class="prose mt-4 max-w-[46ch]">
+        The MCP server calls the same public API as the web app. Deleting something, or changing roles and access, stops
+        and asks the person in their agent app before anything happens.
+      </p>
+      <p class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <a class="link" href={TOOL_REFERENCE_PATH}>
+          Check every tool and what it changes
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link" href={MCP_FEATURE_PATH}>
+          MCP and AI agents
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+
+    <div class="lg:col-span-6 lg:col-start-7 min-w-0">
+      <h3 class="text-sm font-medium">Scopes a developer’s token might hold</h3>
+      <dl class="scopes mt-3">
+        {SCOPES.map(item => (
+          <>
+            <dt>
+              <code>{item.scope}</code>
+            </dt>
+            <dd>{item.lets}</dd>
+          </>
+        ))}
+      </dl>
+      <p class="prose text-base mt-6">
+        A refusal is real. When the role allows an action but the token does not, the answer names the missing scope:
+      </p>
+      <p class="quote mt-3">This access token does not have the time:write scope</p>
+      <p class="prose text-base mt-6">
+        The tool reference marks each tool <em>Reads only</em> or <em>Changes data</em>, so a team can decide which
+        scopes an agent gets before it connects.
+      </p>
+    </div>
+  </div>
+</section>

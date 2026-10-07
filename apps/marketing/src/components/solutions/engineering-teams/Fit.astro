@@ -1,0 +1,61 @@
+---
+import {
+  FITS,
+  ISSUES_FEATURE_PATH,
+  MCP_FEATURE_PATH,
+  NOT_BUILT,
+  PRICING_PATH,
+  SPRINTS_FEATURE_PATH,
+} from '@lib/solutions/engineering-teams';
+
+const LINKS = [
+  { href: ISSUES_FEATURE_PATH, label: 'Issue tracking' },
+  { href: SPRINTS_FEATURE_PATH, label: 'Sprints and boards' },
+  { href: MCP_FEATURE_PATH, label: 'MCP and AI agents' },
+  { href: PRICING_PATH, label: 'Pricing' },
+];
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="et-fit-title">
+  <div class="wrap py-16 md:py-24 grid md:grid-cols-12 gap-10 md:gap-12">
+    <div class="md:col-span-6 lg:col-span-5">
+      <h2 id="et-fit-title" class="h2">
+        It tracks the work. It does not watch your repository.
+      </h2>
+      <p class="prose mt-5">
+        Source-control status and deployment data are not built in today. If your team wants pull-request badges on
+        issues or tickets that close themselves on merge, this is not that tool yet.
+      </p>
+      <ul class="mt-6 space-y-2 text-sm">
+        {LINKS.map(link => (
+          <li>
+            <a class="link" href={link.href}>
+              {link.label}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <div class="md:col-span-6 lg:col-span-6 lg:col-start-7 space-y-10">
+      <div>
+        <h3 class="text-sm font-medium">A good fit for</h3>
+        <ul class="rule-list mt-3">
+          {FITS.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium">Not built today</h3>
+        <ul class="rule-list mt-3">
+          {NOT_BUILT.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>

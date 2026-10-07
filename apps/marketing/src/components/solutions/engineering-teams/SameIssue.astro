@@ -1,0 +1,281 @@
+---
+import { BURNDOWN, BURNDOWN_AXIS_MAX, SPRINT } from '@lib/features/project-reports';
+import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH } from '@lib/solutions/engineering-teams';
+
+const FIX_ISO = '2026-10-08';
+const last = BURNDOWN.length - 1;
+const x = (index: number) => (index / last) * 100;
+const y = (value: number) => 100 - (value / BURNDOWN_AXIS_MAX) * 100;
+
+const recorded = BURNDOWN.map((day, index) => ({ day, index })).filter(({ day }) => day.remaining !== null);
+const remainingLine = recorded.map(({ day, index }) => `${x(index)},${y(day.remaining ?? 0)}`).join(' ');
+const idealLine = BURNDOWN.map((day, index) => `${x(index)},${y(day.ideal)}`).join(' ');
+
+const fixIndex = BURNDOWN.findIndex(day => day.iso === FIX_ISO);
+const fixDay = BURNDOWN[fixIndex];
+const dayBefore = BURNDOWN[fixIndex - 1];
+if (!fixDay || !dayBefore || fixDay.remaining === null || dayBefore.remaining === null) {
+  throw new Error(`The burndown needs figures for ${FIX_ISO} and the day before`);
+}
+const fell = dayBefore.remaining - fixDay.remaining;
+const ticks = [0, 20, 40];
+const labelled = new Set([0, fixIndex, last]);
+---
+
+<section class="border-t border-line" aria-labelledby="et-same-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="et-same-title" class="h2">
+        Fixed once, and it shows everywhere.
+      </h2>
+      <p class="prose mt-5">
+        The sprint chart and the decision record read the same <code>ACME-12</code>. Nobody updates a report or edits a
+        wiki page to say the bug is gone.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-2 gap-8 lg:gap-10">
+      <figure class="min-w-0">
+        <div class="panel overflow-hidden">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Reports</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Burndown</span>
+          </div>
+          <div class="panel-pad">
+            <p class="text-sm font-medium">
+              {SPRINT.name} · Story points · as of {BURNDOWN.find(day => day.live)?.date}
+            </p>
+            <ul class="et-legend mt-2">
+              <li>
+                <span class="et-key" aria-hidden="true"></span>Remaining
+              </li>
+              <li>
+                <span class="et-key et-ideal" aria-hidden="true"></span>Ideal
+              </li>
+            </ul>
+            <div class="et-chart mt-5" role="img" aria-labelledby="et-bd-caption">
+              <div class="et-plot">
+                {ticks.map(tick => (
+                  <span class="et-grid" style={`top:${y(tick)}%`}>
+                    <span class="et-y">{tick}</span>
+                  </span>
+                ))}
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline class="et-l-ideal" points={idealLine} />
+                  <polyline class="et-l-remaining" points={remainingLine} />
+                </svg>
+                <span class="et-dot" style={`left:${x(fixIndex)}%;top:${y(fixDay.remaining)}%`}></span>
+                <span class="et-flag" style={`left:${x(fixIndex)}%;top:${y(fixDay.remaining)}%`}>
+                  ACME-12 Fixed, −{fell}
+                </span>
+              </div>
+              <div class="et-x" aria-hidden="true">
+                {BURNDOWN.map((day, index) =>
+                  labelled.has(index) ? (
+                    <span style={`left:${x(index)}%`} class:list={{ first: index === 0, end: index === last }}>
+                      {day.short}
+                    </span>
+                  ) : null,
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption id="et-bd-caption" class="mt-4 text-sm text-fg-2">
+          {`On ${fixDay.date}, remaining work in ${SPRINT.name} fell from ${dayBefore.remaining} to ${fixDay.remaining} story points: the ${fell} points of ACME-12, resolved when Alex moved it to Fixed.`}
+          <a class="link ml-1 inline-block" href={REPORTS_FEATURE_PATH}>
+            Project reports
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </figcaption>
+      </figure>
+
+      <figure class="min-w-0">
+        <div class="panel overflow-hidden">
+          <div class="pane-bar et-crumbs">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span class="et-mid">Knowledge base</span>
+            <span class="sep et-mid">/</span>
+            <span>Decisions</span>
+            <span class="sep">/</span>
+            <span class="text-fg et-last">Invitation links and expiry</span>
+          </div>
+          <div class="wf-body">
+            <p class="text-xs text-fg-2">Decision record · Published to project members</p>
+            <h3 class="wf-title">Invitation links and expiry</h3>
+            <div class="wf-md">
+              <p>
+                Invitation links expire after seven days (<code>INVITE_TTL_DAYS</code>). An expired link must explain
+                itself and offer a new one. A blank page or a redirect to sign-in is a bug.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
+                invitation landing page itself, before any sign-in prompt. See{' '}
+                <s class="et-struck">
+                  <span class="sr-only">resolved issue </span>ACME-12
+                </s>{' '}
+                for the first instance.
+              </p>
+            </div>
+            <div class="ref">
+              <p class="lbl">On ACME-12, under Referenced by</p>
+              <p class="flex items-center gap-2 min-w-0">
+                <span class="et-ellipsis">Invitation links and expiry</span>
+                <span class="text-xs text-fg-2 flex-none">Decisions · ACME</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <figcaption class="mt-4 text-sm text-fg-2">
+          The key in the article links to the issue and is struck through once it is resolved. The issue lists every
+          runbook or write-up that mentions it, so the next person who opens ACME-12 finds the reasoning.
+          <a class="link ml-1 inline-block" href={KB_FEATURE_PATH}>
+            Knowledge base
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+  .et-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .et-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .et-key {
+    width: 18px;
+    height: 0;
+    border-top: 2px solid var(--text);
+  }
+  .et-key.et-ideal {
+    border-top: 2px dashed var(--chart-ideal);
+  }
+  .et-chart {
+    padding-left: 24px;
+  }
+  .et-plot {
+    position: relative;
+    height: 200px;
+  }
+  .et-plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .et-plot polyline {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .et-l-remaining {
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  .et-l-ideal {
+    stroke: var(--chart-ideal);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+  .et-grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px solid var(--chart-grid);
+  }
+  .et-y {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: -9px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .et-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow:
+      0 0 0 2px var(--bg-surface),
+      0 0 0 3px var(--text);
+  }
+  .et-flag {
+    position: absolute;
+    transform: translate(10px, calc(-100% - 6px));
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg-surface);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .et-x {
+    position: relative;
+    height: 22px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .et-x span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .et-x .first {
+    transform: none;
+  }
+  .et-x .end {
+    transform: translateX(-100%);
+  }
+  .et-crumbs {
+    overflow: hidden;
+  }
+  .et-last,
+  .et-ellipsis {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 480px) {
+    .et-mid {
+      display: none;
+    }
+  }
+  .et-struck {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    text-decoration-color: var(--text-secondary);
+  }
+</style>

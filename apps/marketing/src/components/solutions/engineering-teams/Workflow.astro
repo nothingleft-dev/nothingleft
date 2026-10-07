@@ -1,0 +1,731 @@
+---
+import { STANDUP_PROMPT, WORKFLOW_STEPS } from '@lib/solutions/engineering-teams';
+
+const BAR_WIDTHS = [40, 34, 28, 22, 16, 10];
+const total = WORKFLOW_STEPS.length;
+---
+
+<section id="et-workflow" class="border-t border-line bg-app" aria-labelledby="et-workflow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="et-workflow-title" class="h2">
+        One issue the developer, lead and agent can all follow.
+      </h2>
+      <p class="prose mt-5">
+        <code>ACME-12</code> from the first report to the morning standup. Every step below changes the same issue, and
+        its history records who changed what. Pick a step to see the screen at that point.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="ACME-12, step by step" data-et-steps>
+        {WORKFLOW_STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-et-step={step.id}
+            data-et-title={step.title}
+            data-last={index === total - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="et-panel"
+          >
+            <span class="bar" style={`width:${BAR_WIDTHS[index]}px`} />
+            <span>
+              <b>
+                <span class="sr-only">{`Step ${index + 1}: `}</span>
+                {step.title}
+              </b>
+              <span class="et-who">{step.who}</span>
+              <span>{step.body}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8">
+        <div class="wf-panel" id="et-panel">
+          <div data-view="report" class="on">
+            <p class="et-cap">
+              <span class="et-n">1 / {total}</span>Casey Kim files it · 2 Oct 2026, 9:05am
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">ACME-12</span>
+            </div>
+            <div class="wf-body">
+              <div class="flex items-center gap-2 text-xs text-fg-2">
+                <span class="badge l-bug" aria-hidden="true">
+                  B
+                </span>
+                Bug
+                <span class="badge l-major ml-2" aria-hidden="true">
+                  M
+                </span>
+                Major
+              </div>
+              <h3 class="wf-title">Invite link blank after it expires</h3>
+              <div class="wf-md">
+                <p>
+                  <strong class="text-fg font-medium">Steps.</strong> Open an invitation link that is older than seven
+                  days.
+                </p>
+                <p>
+                  <strong class="text-fg font-medium">Expected.</strong> A message that the link has expired and a way
+                  to request a new one.
+                </p>
+                <p>
+                  <strong class="text-fg font-medium">Actual.</strong> A blank page.
+                </p>
+              </div>
+              <dl class="fields">
+                <dt>Reporter</dt>
+                <dd>
+                  <span class="av" aria-hidden="true">
+                    CK
+                  </span>
+                  Casey Kim
+                </dd>
+                <dt>Assignee</dt>
+                <dd class="empty">Unassigned</dd>
+                <dt>Status</dt>
+                <dd>
+                  <i class="dot"></i>Open
+                </dd>
+                <dt>Sprint</dt>
+                <dd class="empty">Unscheduled</dd>
+                <dt>Story points</dt>
+                <dd class="empty">Not estimated</dd>
+              </dl>
+            </div>
+            <div class="activity">
+              <p>
+                Casey Kim created ACME-12<span class="t">2 Oct 2026</span>
+              </p>
+            </div>
+          </div>
+
+          <div data-view="triage">
+            <p class="et-cap">
+              <span class="et-n">2 / {total}</span>Casey Kim, lead, triages · 3 Oct 2026, 10:05am
+            </p>
+            <div class="pane-bar">
+              <span class="text-fg">Acme</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+            </div>
+            <p class="querybar">
+              <span class="q">type: Bug #Unresolved assignee: Unassigned</span>
+              <span class="count">3 issues</span>
+            </p>
+            <ul aria-label="Unassigned open bugs">
+              <li class="row sel">
+                <span class="key">ACME-12</span>
+                <span class="title">Invite link blank after it expires</span>
+                <span class="badge l-major pri">
+                  <span aria-hidden="true">M</span>
+                  <span class="sr-only">Major</span>
+                </span>
+                <span class="meta">
+                  <span class="who none">Unassigned</span>
+                  <span class="spent">—</span>
+                  <span class="status">
+                    <i class="dot"></i>Open
+                  </span>
+                </span>
+              </li>
+              <li class="row">
+                <span class="key">ACME-9</span>
+                <span class="title">Upload stalls at 100% on slow links</span>
+                <span class="badge l-major pri">
+                  <span aria-hidden="true">M</span>
+                  <span class="sr-only">Major</span>
+                </span>
+                <span class="meta">
+                  <span class="who none">Unassigned</span>
+                  <span class="spent">—</span>
+                  <span class="status">
+                    <i class="dot"></i>Open
+                  </span>
+                </span>
+              </li>
+              <li class="row">
+                <span class="key">ACME-7</span>
+                <span class="title">Burndown ignores late additions</span>
+                <span class="badge l-critical pri">
+                  <span aria-hidden="true">C</span>
+                  <span class="sr-only">Critical</span>
+                </span>
+                <span class="meta">
+                  <span class="who none">Unassigned</span>
+                  <span class="spent">—</span>
+                  <span class="status">
+                    <i class="dot"></i>Open
+                  </span>
+                </span>
+              </li>
+            </ul>
+            <div class="wf-body et-note">
+              <p>
+                <kbd>/</kbd> focuses the bar, <kbd>Tab</kbd> completes the first suggestion and <kbd>↵</kbd> runs it.
+                Save the query as a view and it becomes a tab above the list, with its count.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="plan">
+            <p class="et-cap">
+              <span class="et-n">3 / {total}</span>Casey Kim, lead, plans it · 3 Oct 2026, 10:14am
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Backlog</span>
+            </div>
+            <div class="et-bl">
+              <p class="et-bl-head">
+                <span class="text-fg font-medium">Sprint 08</span>
+                <span class="et-pill">Planned</span>
+                <span class="et-bl-meta">Make invitations clearer · ends 17 Oct 2026</span>
+              </p>
+              <ul aria-label="Sprint 08">
+                <li class="et-bl-row et-dropped">
+                  <span class="et-grip" aria-hidden="true"></span>
+                  <span class="key">ACME-12</span>
+                  <span class="et-bl-title">Invite link blank after it expires</span>
+                  <span class="et-pts">3 points</span>
+                </li>
+                <li class="et-bl-row">
+                  <span class="et-grip" aria-hidden="true"></span>
+                  <span class="key">ACME-14</span>
+                  <span class="et-bl-title">Invite email subject names the org</span>
+                  <span class="et-pts">2 points</span>
+                </li>
+                <li class="et-bl-row">
+                  <span class="et-grip" aria-hidden="true"></span>
+                  <span class="key">ACME-15</span>
+                  <span class="et-bl-title">Resend invite from the members list</span>
+                  <span class="et-pts">1 point</span>
+                </li>
+              </ul>
+            </div>
+            <div class="et-bl">
+              <p class="et-bl-head">
+                <span class="text-fg font-medium">Backlog</span>
+                <span class="et-bl-meta">Issues in no sprint</span>
+              </p>
+              <ul aria-label="Backlog">
+                <li class="et-bl-row">
+                  <span class="et-grip" aria-hidden="true"></span>
+                  <span class="key">ACME-7</span>
+                  <span class="et-bl-title">Burndown ignores late additions</span>
+                  <span class="et-pts et-none">Not estimated</span>
+                </li>
+                <li class="et-bl-row">
+                  <span class="et-grip" aria-hidden="true"></span>
+                  <span class="key">ACME-9</span>
+                  <span class="et-bl-title">Upload stalls at 100% on slow links</span>
+                  <span class="et-pts et-none">Not estimated</span>
+                </li>
+              </ul>
+            </div>
+            <div class="wf-body et-tight">
+              <dl class="fields">
+                <dt>Assignee</dt>
+                <dd>
+                  <span class="field flash">
+                    <span class="av" aria-hidden="true">
+                      AL
+                    </span>{' '}
+                    Alex Lee
+                  </span>
+                </dd>
+                <dt>Estimation</dt>
+                <dd class="mono text-xs">2h</dd>
+                <dt>Due date</dt>
+                <dd>9 Oct 2026</dd>
+              </dl>
+            </div>
+            <div class="activity">
+              <p>
+                Casey Kim moved ACME-12 into Sprint 08, Story points: 3<span class="t">3 Oct 2026</span>
+              </p>
+              <p>
+                Casey Kim set Assignee: Unassigned → Alex Lee, Estimation: 2h, Due date: 9 Oct 2026
+                <span class="t">3 Oct 2026</span>
+              </p>
+            </div>
+          </div>
+
+          <div data-view="develop">
+            <p class="et-cap">
+              <span class="et-n">4 / {total}</span>Alex Lee, developer, picks it up · 5–6 Oct 2026
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">ACME-12</span>
+            </div>
+            <div class="wf-body">
+              <div class="flex items-center gap-2 text-xs text-fg-2">
+                <span class="badge l-bug" aria-hidden="true">
+                  B
+                </span>
+                Bug
+                <span class="badge l-major ml-2" aria-hidden="true">
+                  M
+                </span>
+                Major
+              </div>
+              <h3 class="wf-title">Invite link blank after it expires</h3>
+              <div class="ref">
+                <p class="lbl">
+                  Depends on <span class="mono">1</span>
+                </p>
+                <p class="flex items-center gap-2 min-w-0">
+                  <span class="key">ACME-4</span>
+                  <span class="et-ellipsis">Invite expiry setting per org</span>
+                </p>
+              </div>
+              <div class="comment">
+                <div class="by">
+                  <span class="av" aria-hidden="true">
+                    AL
+                  </span>
+                  Alex Lee<span class="text-fg-3">6 Oct 2026, 2:20pm</span>
+                </div>
+                <code class="et-mention">@casey</code> reproduced with a ten-day-old link: the landing page stays blank.
+                The fix waits on <span class="key">ACME-4</span>.
+              </div>
+              <dl class="fields">
+                <dt>Status</dt>
+                <dd>
+                  <span class="field flash">
+                    <i class="dot started"></i> In Progress
+                  </span>
+                </dd>
+                <dt>Spent time</dt>
+                <dd class="et-spent">
+                  <span class="mono text-xs">
+                    20m <span class="text-fg-2 font-sans">of 2h</span>
+                  </span>
+                  <span class="et-meter" aria-hidden="true">
+                    <span style="width:17%"></span>
+                  </span>
+                </dd>
+              </dl>
+            </div>
+            <div class="activity">
+              <p>
+                Alex Lee linked: depends on ACME-4<span class="t">5 Oct 2026</span>
+              </p>
+              <p>
+                Alex Lee changed Status: Open → In Progress<span class="t">6 Oct 2026</span>
+              </p>
+              <p>
+                Alex Lee logged 20m, Development<span class="t">6 Oct 2026</span>
+              </p>
+            </div>
+          </div>
+
+          <div data-view="board">
+            <p class="et-cap">
+              <span class="et-n">5 / {total}</span>Alex Lee moves the card · 8 Oct 2026, 4:40pm
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Board</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Sprint 08</span>
+            </div>
+            <div class="et-board-head">
+              <h3 class="text-fg font-medium">Make invitations clearer</h3>
+              <span>Ends 17 Oct 2026</span>
+            </div>
+            <div class="board">
+              <div class="col">
+                <h4>
+                  Open<span>2</span>
+                </h4>
+                <div class="card">
+                  <span class="pts">2</span>
+                  <span class="key">ACME-14</span>
+                  <br />
+                  Invite email subject names the org
+                </div>
+                <div class="card">
+                  <span class="pts">1</span>
+                  <span class="key">ACME-15</span>
+                  <br />
+                  Resend invite from the members list
+                </div>
+              </div>
+              <div class="col">
+                <h4>
+                  In Progress<span>2</span>
+                </h4>
+                <div class="card">
+                  <span class="pts">5</span>
+                  <span class="key">ACME-11</span>
+                  <br />
+                  Swimlane header overlaps count
+                </div>
+                <div class="card">
+                  <span class="pts">3</span>
+                  <span class="key">ACME-10</span>
+                  <br />
+                  Invite landing shows the inviter
+                </div>
+              </div>
+              <div class="col">
+                <h4>
+                  Fixed<span>4</span>
+                </h4>
+                <div class="card sel">
+                  <span class="pts">3</span>
+                  <span class="key">ACME-12</span>
+                  <br />
+                  Invite link blank after it expires
+                </div>
+                <div class="card">
+                  <span class="pts">8</span>
+                  <span class="key">ACME-6</span>
+                  <br />
+                  Project-scoped invite links
+                </div>
+                <div class="card">
+                  <span class="pts">5</span>
+                  <span class="key">ACME-5</span>
+                  <br />
+                  Accept invite while signed in
+                </div>
+                <div class="card">
+                  <span class="pts">3</span>
+                  <span class="key">ACME-4</span>
+                  <br />
+                  Invite expiry setting per org
+                </div>
+              </div>
+            </div>
+            <div class="activity">
+              <p>
+                Alex Lee changed Status: In Progress → Fixed<span class="t">8 Oct 2026</span>
+              </p>
+              <p>
+                Alex Lee logged 1h 25m, Development<span class="t">8 Oct 2026</span>
+              </p>
+            </div>
+            <div class="wf-body et-note">
+              <p>
+                Focus the card, <kbd>Space</kbd> to pick it up, the arrow keys to move it, <kbd>Space</kbd> to drop.
+                Fixed is a done status, so ACME-12 is resolved and Casey, who filed it, is told.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="agent">
+            <p class="et-cap">
+              <span class="et-n">6 / {total}</span>Alex’s agent, before standup · 9 Oct 2026, 9:10am
+            </p>
+            <div class="et-agent">
+              <div class="pane-bar">
+                <span class="text-fg">Your agent</span>
+                <span class="ml-auto">
+                  connected as <span class="mono text-xs text-fg">@alex</span>
+                </span>
+              </div>
+              <p class="prompt">
+                <span class="mark" aria-hidden="true">
+                  ›
+                </span>
+                <span>Is anything still open on ACME-12?</span>
+              </p>
+              <ul class="calls" aria-label="Tool calls for the first request">
+                <li>
+                  <span class="tool">get_issue</span>
+                  <span class="args">issue: "ACME-12"</span>
+                </li>
+              </ul>
+              <div class="answer et-answer">
+                <p>
+                  <strong class="font-medium">ACME-12</strong> is Fixed, resolved 8 Oct 2026, 4:40pm, with 1h 45m spent
+                  of 2h. ACME-4, which it depended on, is Fixed too. The decision record{' '}
+                  <em>Invitation links and expiry</em> references it.
+                </p>
+              </div>
+              <p class="prompt et-second">
+                <span class="mark" aria-hidden="true">
+                  ›
+                </span>
+                <span class="mono text-[13px]">{STANDUP_PROMPT}</span>
+              </p>
+              <ul class="calls" aria-label="Tool calls for the standup">
+                <li>
+                  <span class="tool">search_issues</span>
+                  <span class="args">updated by: me updated: Yesterday .. Today sort by: updated desc</span>
+                </li>
+                <li>
+                  <span class="tool">search_issues</span>
+                  <span class="args">assignee: me #Unresolved</span>
+                </li>
+                <li>
+                  <span class="tool">get_issue_activity</span>
+                  <span class="args">issue: "ACME-12"</span>
+                </li>
+                <li>
+                  <span class="tool">list_notifications</span>
+                  <span class="args">unread_only: true</span>
+                </li>
+              </ul>
+              <div class="answer et-answer">
+                <dl class="et-standup">
+                  <dt>Done</dt>
+                  <dd>
+                    <span class="key">ACME-12</span> Invite link blank after it expires, now Fixed
+                  </dd>
+                  <dt>In progress</dt>
+                  <dd>
+                    <span class="key">ACME-10</span> Invite landing shows the inviter
+                  </dd>
+                  <dt>Blocked or waiting</dt>
+                  <dd>Nothing</dd>
+                  <dt>Time logged</dt>
+                  <dd class="mono text-xs">1h 25m</dd>
+                  <dt>Waiting on you</dt>
+                  <dd>Nothing unread</dd>
+                </dl>
+              </div>
+              <p class="et-agent-foot">
+                Every call here reads; nothing changed. Had Alex asked for a change, it would be made as{' '}
+                <span class="mono text-xs text-fg">@alex</span>, within Alex’s role and token.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="sr-only" aria-live="polite" data-et-status></p>
+        <p class="mt-4 text-xs text-fg-3">
+          Hand-drawn product views with fictional data. The issue never leaves the tracker: nothing here reads code,
+          opens a pull request or deploys.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/solutions/engineering-teams';
+</script>
+
+<style>
+  .wf-step .et-who {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+  .wf-step[aria-pressed='true'] .et-who {
+    color: var(--text);
+  }
+  .et-cap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .et-n {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    flex: none;
+  }
+  .et-note {
+    padding-top: 14px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .et-tight {
+    padding-top: 0;
+    padding-bottom: 16px;
+  }
+  .et-tight .fields {
+    margin-top: 0;
+  }
+  kbd {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-xs);
+    padding: 0 5px;
+  }
+  .et-mention {
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  .et-ellipsis {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .et-spent {
+    flex-wrap: wrap;
+  }
+  .et-meter {
+    display: block;
+    width: 96px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--border);
+    overflow: hidden;
+  }
+  .et-meter span {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .et-bl + .et-bl {
+    border-top: 1px solid var(--border);
+  }
+  .et-bl-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .et-pill {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .et-bl-meta {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .et-bl-row {
+    display: grid;
+    grid-template-columns: 10px 60px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 36px;
+    padding: 7px 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .et-dropped {
+    background: var(--bg-selected);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .et-bl-title {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .et-grip {
+    width: 6px;
+    height: 12px;
+    background-image: radial-gradient(var(--border-strong) 1px, transparent 1.2px);
+    background-size: 3px 4px;
+  }
+  .et-pts {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .et-pts.et-none {
+    color: var(--text-muted);
+  }
+  @media (max-width: 640px) {
+    .et-bl-meta {
+      flex-basis: 100%;
+      margin-left: 0;
+    }
+    .et-bl-row {
+      grid-template-columns: 10px 56px minmax(0, 1fr);
+      row-gap: 2px;
+    }
+    .et-bl-title {
+      white-space: normal;
+    }
+    .et-pts {
+      grid-column: 3;
+    }
+  }
+  .et-board-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .et-agent {
+    background: var(--bg-app);
+  }
+  .et-answer {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .et-second {
+    padding-top: 14px;
+  }
+  .et-standup {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    row-gap: 6px;
+    column-gap: 12px;
+    font-size: 13.5px;
+    line-height: 20px;
+  }
+  .et-standup dt {
+    color: var(--text-secondary);
+  }
+  .et-standup dd {
+    min-width: 0;
+  }
+  @media (max-width: 640px) {
+    .et-standup {
+      grid-template-columns: 1fr;
+      row-gap: 0;
+    }
+    .et-standup dd + dt {
+      margin-top: 8px;
+    }
+  }
+  .et-agent-foot {
+    padding: 12px 16px 14px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+</style>

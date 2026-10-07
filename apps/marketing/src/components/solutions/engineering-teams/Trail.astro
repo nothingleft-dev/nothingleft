@@ -1,0 +1,72 @@
+---
+const TRAIL = [
+  { when: '2 Oct', what: 'Reported' },
+  { when: '3 Oct', what: 'Triaged' },
+  { when: '3 Oct', what: 'In Sprint 08' },
+  { when: '6 Oct', what: 'Reproduced' },
+  { when: '8 Oct', what: 'Fixed' },
+  { when: '9 Oct', what: 'In the standup' },
+];
+---
+
+<div class="mt-10 md:mt-12">
+  <p class="text-xs text-fg-2">
+    <span class="mono text-fg">ACME-12</span> · Invite link blank after it expires
+  </p>
+  <ol class="et-trail mt-3" aria-label="ACME-12 from report to standup">
+    {TRAIL.map((stop, index) => (
+      <li class:list={{ last: index === TRAIL.length - 1 }}>
+        <span class="when">{stop.when}</span>
+        <span class="what">{stop.what}</span>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<style>
+  .et-trail {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .et-trail {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+  .et-trail li {
+    position: relative;
+    padding: 10px 12px 0 0;
+  }
+  .et-trail li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -1px;
+    width: 24px;
+    height: 2px;
+    background: var(--text);
+  }
+  .et-trail li.last::before {
+    background: var(--accent);
+  }
+  @media (max-width: 767px) {
+    .et-trail li:nth-child(n + 4) {
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+  }
+  .when {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .what {
+    display: block;
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--text);
+  }
+</style>

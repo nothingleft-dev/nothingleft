@@ -1,0 +1,141 @@
+---
+import {
+  PERMISSIONS_PATH,
+  READABLE_NAMES,
+  ROLES,
+  SHORTCUTS,
+  SHORTCUTS_MANUAL_PATH,
+} from '@lib/solutions/engineering-teams';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="et-setup-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="et-setup-title" class="h2">
+        Less to set up, less to click.
+      </h2>
+      <p class="prose mt-5">
+        Engineers spend the day in the issue, not in the tracker’s settings. The keyboard reaches the common moves, the
+        names are the ones people already say, and permissions come in five fixed roles.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-12">
+      <div class="min-w-0">
+        <h3 class="h3">The keyboard first</h3>
+        <p class="prose text-base mt-2">Single keys work anywhere outside a text field.</p>
+        <dl class="et-keys mt-5">
+          {SHORTCUTS.map(shortcut => (
+            <div>
+              <dt>
+                {shortcut.keys.map((key, index) => (
+                  <>
+                    {index > 0 && shortcut.join !== 'chord' && <span class="et-or">{shortcut.join}</span>}
+                    <kbd>{key}</kbd>
+                  </>
+                ))}
+              </dt>
+              <dd>{shortcut.action}</dd>
+            </div>
+          ))}
+        </dl>
+        <a class="link text-sm mt-5 inline-block" href={SHORTCUTS_MANUAL_PATH}>
+          All keyboard shortcuts
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </div>
+
+      <div class="min-w-0">
+        <h3 class="h3">Names you can say out loud</h3>
+        <p class="prose text-base mt-2">
+          The app, the search bar and the agent’s tools take the same names. No UUID is ever required input.
+        </p>
+        <ul class="rule-list mt-5">
+          {READABLE_NAMES.map(item => (
+            <li class="py-4">
+              <code class="et-name">{item.name}</code>
+              <p class="prose text-base mt-1">{item.detail}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="quote mt-5">
+          assignee: @alex sprint: {'{Sprint 08}'} status: {'{In Progress}'}
+        </p>
+      </div>
+
+      <div class="min-w-0 md:col-span-2 lg:col-span-1">
+        <h3 class="h3">Five roles, already decided</h3>
+        <p class="prose text-base mt-2">
+          No role editor, no permission schemes, no transition rules: any status can follow any status.
+        </p>
+        <dl class="scopes mt-5">
+          {ROLES.map(item => (
+            <>
+              <dt>{item.role}</dt>
+              <dd>{item.can}</dd>
+            </>
+          ))}
+        </dl>
+        <a class="link text-sm mt-5 inline-block" href={PERMISSIONS_PATH}>
+          The permission matrix
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .et-keys > div {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+    padding: 8px 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .et-keys > div:last-child {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .et-keys dt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  .et-keys dd {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-xs);
+  }
+  .et-or {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+  .et-name {
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+  }
+</style>

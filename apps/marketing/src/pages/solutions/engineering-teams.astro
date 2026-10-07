@@ -1,0 +1,63 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import AsYou from '@components/solutions/engineering-teams/AsYou.astro';
+import Fit from '@components/solutions/engineering-teams/Fit.astro';
+import LessSetup from '@components/solutions/engineering-teams/LessSetup.astro';
+import SameIssue from '@components/solutions/engineering-teams/SameIssue.astro';
+import Trail from '@components/solutions/engineering-teams/Trail.astro';
+import Workflow from '@components/solutions/engineering-teams/Workflow.astro';
+import Base from '@layouts/Base.astro';
+import { ENGINEERING_TEAMS_FAQ, ISSUES_FEATURE_PATH } from '@lib/solutions/engineering-teams';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="For engineering teams"
+    title="Keep engineering work clear from report to resolution."
+    lede="A bug gets a key, an owner, a sprint and a history the whole team can read. Developers work from the keyboard, leads plan from the backlog and the board, and an AI agent reads the same issue through documented tools, as the person who connected it."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#et-workflow">
+      Follow one bug through the workflow
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <Trail slot="note" />
+  </PageHero>
+  <Workflow />
+  <SameIssue />
+  <LessSetup />
+  <AsYou />
+  <Fit />
+  <Faq
+    entries={ENGINEERING_TEAMS_FAQ}
+    title="Questions engineering teams ask."
+    intro="About Git, agents, setup and the keyboard. Short answers here, the rest in the manual."
+  />
+  <CallToAction
+    title="Put your next bug through it."
+    body="Join the beta, create a project and file the bug you are working on now. Statuses, priorities, a board and five roles are ready; connect an agent when you want one."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={ISSUES_FEATURE_PATH}>
+      See issue tracking
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>
