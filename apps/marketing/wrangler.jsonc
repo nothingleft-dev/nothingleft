@@ -1,0 +1,10 @@
+// Assets only, no `main`: requests are served from the asset store and never run Worker code,
+// so the free plan's 10ms CPU limit cannot apply.
+{
+  "name": "nothingleft-marketing",
+  "compatibility_date": "2026-10-07",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "drop-trailing-slash",
+  },
+}

@@ -1,0 +1,76 @@
+/* Light-only copy of design/tokens.css, owned by this site: it never themes. */
+
+:root {
+  color-scheme: light;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-features-sans: 'cv05', 'cv11', 'ss01';
+
+  --text-xs: 13px;
+  --leading-xs: 18px;
+  --text-sm: 14px;
+  --leading-sm: 20px;
+
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  --accent-h: 83;
+  --accent-c: 0.16;
+  --accent-l: 0.81;
+  --accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h));
+  --accent-soft: color-mix(in oklch, var(--accent) 15%, var(--bg-surface));
+  --accent-text: oklch(0.39 calc(var(--accent-c) * 0.47) var(--accent-h));
+  --focus: oklch(0.49 calc(var(--accent-c) * 0.625) var(--accent-h));
+  --focus-soft: color-mix(in srgb, var(--focus) 80%, transparent);
+  --focus-ring: 0 0 0 2px var(--focus-soft);
+
+  --bg-app: oklch(0.965 0.002 260);
+  --bg-surface: oklch(1 0 0);
+  --bg-inset: oklch(0.955 0.002 260);
+  --bg-hover: oklch(0.2 0.005 260 / 0.05);
+  --bg-active: oklch(0.2 0.005 260 / 0.09);
+  --bg-selected: var(--accent-soft);
+
+  --border: oklch(0.91 0.003 260);
+  --border-strong: oklch(0.65 0.005 260);
+  --border-subtle: oklch(0.94 0.003 260);
+
+  --text: oklch(0.2 0.005 260);
+  --text-secondary: oklch(0.47 0.008 260);
+  --text-muted: oklch(0.53 0.008 260);
+  --text-disabled: oklch(0.77 0.006 260);
+
+  --ink: oklch(0.2 0.005 260);
+  --ink-hover: oklch(0.28 0.005 260);
+  --ink-fg: oklch(1 0 0);
+
+  --palette-amber-solid: oklch(0.66 0.139 75);
+  --palette-green-solid: oklch(0.55 0.151 150);
+  --palette-gray-solid: oklch(0.58 0.013 260);
+
+  --label-red-2-bg: oklch(0.83 0.094 25);
+  --label-red-2-fg: oklch(0.28 0.06 25);
+  --label-yellow-2-bg: oklch(0.874 0.121 90);
+  --label-yellow-2-fg: oklch(0.357 0.036 77);
+  --label-pink-3-bg: oklch(0.667 0.216 350);
+  --label-pink-3-fg: oklch(0.225 0.073 351);
+  --label-green-1-bg: oklch(0.884 0.076 147);
+  --label-green-1-fg: oklch(0.409 0.053 146);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
