@@ -1,0 +1,52 @@
+---
+import { ROLES } from '@lib/features/issue-tracking';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="safeguards-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="safeguards-title" class="h2">
+        Five roles, and a way back from mistakes.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        There are no permission schemes to design. Each person has a role in each project, an agent can never do more
+        than the person it acts for, and the same rules hold in the app, the API and MCP.
+      </p>
+      <dl class="scopes mt-8">
+        {ROLES.map(item => (
+          <>
+            <dt>{item.role}</dt>
+            <dd>{item.can}</dd>
+          </>
+        ))}
+      </dl>
+    </div>
+
+    <div class="lg:col-span-6 lg:col-start-7 rule-list">
+      <div class="py-6">
+        <h3 class="h3">Deleted, then restorable for 14 days.</h3>
+        <p class="prose mt-2 text-base">
+          A Project Admin confirms the delete and the issue leaves the project at once. For 14 days it comes back from
+          the Undo that follows or from the project’s list of deleted issues, with its comments, time, files and
+          history.
+        </p>
+        <p class="quote mt-3">ACME-12 deleted · Undo</p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">People who leave keep their name.</h3>
+        <p class="prose mt-2 text-base">
+          Everything a former colleague did keeps their real name and picture, with a <em>Former member</em> label,
+          never “Deleted user”. Their work stays searchable.
+        </p>
+        <p class="quote mt-3">created by: @alex</p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Issues leave as CSV whenever you like.</h3>
+        <p class="prose mt-2 text-base">
+          Export any list exactly as searched and sorted, up to 10,000 issues, with the columns you choose, custom
+          fields included. Generic CSV import arrives at launch. There is no native importer from another tracker.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

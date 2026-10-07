@@ -1,0 +1,61 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Connected from '@components/features/issue-tracking/Connected.astro';
+import IssueViews from '@components/features/issue-tracking/IssueViews.astro';
+import Safeguards from '@components/features/issue-tracking/Safeguards.astro';
+import Severity from '@components/features/issue-tracking/Severity.astro';
+import Thread from '@components/features/issue-tracking/Thread.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { ISSUE_TRACKING_FAQ, ISSUES_MANUAL_PATH } from '@lib/features/issue-tracking';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Issue tracking"
+    title="Every issue has an owner, history and next step."
+    lede="Each bug, feature, task or epic is one issue, with a key you can say out loud, the people on it, a status from your project’s own list and every change kept in its history."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={ISSUES_MANUAL_PATH}>
+      Read the issues manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </PageHero>
+  <IssueViews />
+  <Thread />
+  <Severity />
+  <Connected />
+  <Safeguards />
+  <Faq
+    entries={ISSUE_TRACKING_FAQ}
+    title="Questions about issues."
+    intro="What teams ask before they move their bugs across. Short answers here, the rest in the manual."
+  />
+  <CallToAction
+    title="File your first bug in a few minutes."
+    body="Join the beta, create a project, and its statuses, priorities and types are ready. Add a Severity field when you need one."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={ISSUES_MANUAL_PATH}>
+      Read the issues manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

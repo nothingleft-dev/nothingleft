@@ -1,0 +1,396 @@
+---
+import { BUG_LIST, HISTORY } from '@lib/features/issue-tracking';
+import IssueRow from './IssueRow.astro';
+
+const VIEWS = [
+  { id: 'list', label: 'List' },
+  { id: 'detail', label: 'Detail' },
+  { id: 'history', label: 'History' },
+];
+const DEFAULT_VIEW = 'detail';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="views-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+      <div class="max-w-[640px]">
+        <h2 id="views-title" class="h2">
+          Open the issue and the whole story is there.
+        </h2>
+        <p class="prose mt-5">
+          <code>ACME-12</code> is a Major bug in the Acme project, now fixed. Read it in the issue list, on its own
+          page, or as the history of every change made to it.
+        </p>
+      </div>
+      <div class="seg it-switch" role="radiogroup" aria-label="Show ACME-12 as" data-it-views>
+        {VIEWS.map(view => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={view.id === DEFAULT_VIEW ? 'true' : 'false'}
+            tabindex={view.id === DEFAULT_VIEW ? 0 : -1}
+            data-value={view.id}
+          >
+            {view.label}
+          </button>
+        ))}
+      </div>
+    </div>
+    <p class="sr-only" aria-live="polite" data-it-views-status></p>
+
+    <div class="it-views panel mt-8 md:mt-10">
+      <div data-it-view="list" role="group" aria-label="ACME-12 in the issue list">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span>Issues</span>
+        </div>
+        <div class="querybar">
+          <span class="q">type: Bug sort by: updated desc</span>
+          <span class="count">{BUG_LIST.length} issues</span>
+        </div>
+        {BUG_LIST.map((row, index) => (
+          <IssueRow row={row} class={index === 0 ? 'sel' : undefined} />
+        ))}
+      </div>
+
+      <div data-it-view="detail" class="on" role="group" aria-label="ACME-12 on its own page">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span>Issues</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs text-fg">ACME-12</span>
+        </div>
+        <div class="it-detail">
+          <div class="it-main">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug" aria-hidden="true">
+                B
+              </span>
+              Bug
+              <span class="badge l-major ml-2" aria-hidden="true">
+                M
+              </span>
+              Major
+              <span class="it-tag ml-2">area:invites</span>
+            </div>
+            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <div class="wf-md">
+              <p>
+                <strong class="text-fg font-medium">Steps.</strong> Open an invitation link that is older than seven
+                days.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Expected.</strong> A message that the link has expired and a way to
+                request a new one.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Actual.</strong> A blank page.
+              </p>
+            </div>
+
+            <dl class="it-links">
+              <dt>
+                Parent for <span class="mono">1</span>
+              </dt>
+              <dd>
+                <s class="key">ACME-13</s>
+                <span>Show the expiry message before sign-in</span>
+              </dd>
+              <dt>
+                Depends on <span class="mono">1</span>
+              </dt>
+              <dd>
+                <s class="key">ACME-4</s>
+                <span>Invite expiry setting per org</span>
+              </dd>
+              <dt>Referenced by</dt>
+              <dd>
+                <span>Invitation links and expiry</span>
+                <span class="text-fg-3">Knowledge base</span>
+              </dd>
+              <dt>
+                Attachments <span class="mono">1</span>
+              </dt>
+              <dd>
+                <span class="mono text-xs text-fg">invite-expired.log</span>
+                <span class="text-fg-3">18 KB</span>
+              </dd>
+            </dl>
+
+            <div class="comment">
+              <div class="by">
+                <span class="av" aria-hidden="true">
+                  AL
+                </span>
+                Alex Lee<span class="text-fg-3">6 Oct 2026, 2:15pm</span>
+              </div>
+              <span class="it-mention">@casey</span> reproduced with a ten-day-old link. The log shows the token check
+              returning before the page renders. The fix waits on <s class="key">ACME-4</s>.
+            </div>
+          </div>
+
+          <div class="it-side">
+            <dl class="fields it-fields">
+              <dt>Status</dt>
+              <dd>
+                <i class="dot done"></i>Fixed
+              </dd>
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  AL
+                </span>
+                Alex Lee
+              </dd>
+              <dt>Estimation</dt>
+              <dd class="mono text-xs">2h</dd>
+              <dt>Spent time</dt>
+              <dd class="mono text-xs">
+                1h 45m <span class="text-fg-3 font-sans">of 2h</span>
+              </dd>
+              <dt>Sprint</dt>
+              <dd>Sprint 08</dd>
+              <dt>Due date</dt>
+              <dd>9 Oct 2026</dd>
+            </dl>
+            <p class="it-side-label">Fields</p>
+            <dl class="fields it-fields">
+              <dt>Severity</dt>
+              <dd>
+                <span class="it-opt">Critical</span>
+              </dd>
+            </dl>
+            <p class="it-side-note">Created by Casey Kim, 2 Oct 2026. Updated by Alex Lee, 8 Oct 2026, 4:40pm.</p>
+            <p class="it-side-note">
+              <kbd>s</kbd> status · <kbd>a</kbd> assignee · <kbd>e</kbd> description
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div data-it-view="history" role="group" aria-label="The history of ACME-12">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs text-fg">ACME-12</span>
+          <span class="sep">/</span>
+          <span>History</span>
+        </div>
+        <p class="it-activity-tabs" aria-hidden="true">
+          <span>All</span>
+          <span>Comments</span>
+          <span>Spent time</span>
+          <span class="on">History</span>
+        </p>
+        <ol class="it-history">
+          {HISTORY.map(entry => (
+            <li>
+              <span>
+                <span class="text-fg">{entry.who}</span> {entry.what}
+              </span>
+              <span class="t">{entry.when}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+    <p class="mt-6 text-xs text-fg-3">
+      Hand-drawn product views with fictional data. A correction made within five minutes updates the history entry
+      instead of adding a second one.
+    </p>
+  </div>
+</section>
+
+<script>
+  import '@scripts/features/issue-tracking';
+</script>
+
+<style>
+  .it-views {
+    overflow: hidden;
+  }
+  :global(html.js) .it-views [data-it-view] {
+    display: none;
+  }
+  :global(html.js) .it-views [data-it-view].on {
+    display: block;
+    animation: rise var(--dur-slow) var(--ease-out);
+  }
+  :global(html:not(.js)) .it-views [data-it-view] + [data-it-view] {
+    border-top: 1px solid var(--border);
+  }
+  :global(html:not(.js)) .it-switch {
+    display: none;
+  }
+
+  .it-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 900px) {
+    .it-detail {
+      grid-template-columns: minmax(0, 1fr) 280px;
+    }
+    .it-side {
+      border-left: 1px solid var(--border);
+      border-top: 0;
+    }
+  }
+  .it-main {
+    padding: 18px 20px 22px;
+    min-width: 0;
+  }
+  .it-side {
+    padding: 4px 20px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+    min-width: 0;
+  }
+  .it-fields {
+    border-top: 0;
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+  .it-side-label {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .it-side-label + .it-fields {
+    margin-top: 10px;
+    padding-top: 0;
+  }
+  .it-side-note {
+    margin-top: 16px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-muted);
+  }
+  .it-side-note kbd {
+    font-size: 11px;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 0 5px;
+  }
+  .it-tag {
+    font-size: 12px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-full);
+    background: var(--palette-blue-bg);
+    color: var(--palette-blue-fg);
+  }
+  .it-opt {
+    font-size: 12.5px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-xs);
+    background: var(--palette-red-bg);
+    color: var(--palette-red-fg);
+  }
+  .it-mention {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .it-links {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 8px 12px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .it-links dt {
+    color: var(--text-muted);
+  }
+  .it-links dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    min-width: 0;
+  }
+  @media (max-width: 480px) {
+    .it-links {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0;
+    }
+    .it-links dd + dt {
+      margin-top: 8px;
+    }
+  }
+
+  .it-activity-tabs {
+    display: flex;
+    gap: 18px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .it-activity-tabs span {
+    padding: 10px 0 8px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+  }
+  .it-activity-tabs .on {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .it-history {
+    padding: 6px 16px 10px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .it-history li {
+    display: grid;
+    grid-template-columns: 5px minmax(0, 1fr) auto;
+    column-gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .it-history li:last-child {
+    border-bottom: 0;
+  }
+  .it-history li::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    margin-top: 8px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .it-history .t {
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    font-size: 12.5px;
+  }
+  @media (max-width: 640px) {
+    .it-history li {
+      grid-template-columns: 5px minmax(0, 1fr);
+    }
+    .it-history .t {
+      grid-column: 2;
+    }
+  }
+</style>

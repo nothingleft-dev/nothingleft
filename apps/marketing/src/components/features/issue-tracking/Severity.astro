@@ -1,0 +1,202 @@
+---
+import {
+  CUSTOM_FIELDS_MANUAL_PATH,
+  OTHER_CRITICAL_BUGS,
+  SAMPLE_ISSUE,
+  SEVERITY_DEFAULT_VALUE,
+  SEVERITY_FIELD,
+  SEVERITY_OPTIONS,
+} from '@lib/features/issue-tracking';
+import IssueRow from './IssueRow.astro';
+
+const total = OTHER_CRITICAL_BUGS.length + 1;
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="fields-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="fields-title" class="h2">
+        A Severity field, only on the bugs.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        A Project Admin adds it under Project settings → Fields. From then on it sits in each bug’s sidebar, in the
+        issue list, in search and in the CSV export, and an agent reads and sets it by name.
+      </p>
+      <dl class="scopes mt-8">
+        {SEVERITY_FIELD.map(item => (
+          <>
+            <dt>{item.term}</dt>
+            <dd>{item.detail}</dd>
+          </>
+        ))}
+      </dl>
+      <p class="prose mt-6 text-base max-w-[46ch]">
+        A required field must have a value when an issue is created and cannot be cleared afterwards; the default
+        counts. Bugs filed before it became required keep their empty value, shown as <strong>No Severity</strong>.
+        Change an issue to a type the field does not apply to and the field disappears, its value kept for when the type
+        changes back.
+      </p>
+      <p class="prose mt-4 text-base max-w-[46ch]">
+        Group the list or the Issues per field report by Severity, and sort by it in its option order.
+      </p>
+      <a class="link text-sm mt-6 inline-block" href={CUSTOM_FIELDS_MANUAL_PATH}>
+        Read about custom fields
+        <span class="arr" aria-hidden="true">
+          →
+        </span>
+      </a>
+    </div>
+
+    <div class="lg:col-span-7 lg:col-start-6 xl:col-span-6 xl:col-start-7">
+      <div class="panel it-sev">
+        <div class="it-sev-head">
+          <p class="calc-label" id="sev-label">
+            Severity on ACME-12
+          </p>
+          <div class="seg it-sev-switch mt-2" role="radiogroup" aria-labelledby="sev-label" data-it-severity>
+            {SEVERITY_OPTIONS.map(option => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={option === SEVERITY_DEFAULT_VALUE ? 'true' : 'false'}
+                tabindex={option === SEVERITY_DEFAULT_VALUE ? 0 : -1}
+                data-value={option}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <p class="sr-only" aria-live="polite" data-it-severity-status></p>
+        </div>
+
+        <div class="it-sev-block">
+          <p class="it-sev-label">On the issue</p>
+          <dl class="fields it-sev-fields">
+            <dt>Issue</dt>
+            <dd>
+              <span class="key">{SAMPLE_ISSUE.key}</span>
+              <span>{SAMPLE_ISSUE.title}</span>
+            </dd>
+            <dt>Type</dt>
+            <dd>
+              <span class="badge l-bug" aria-hidden="true">
+                B
+              </span>
+              Bug
+            </dd>
+            <dt>Severity</dt>
+            <dd>
+              <span class="it-opt" data-it-severity-value data-sev={SEVERITY_DEFAULT_VALUE}>
+                {SEVERITY_DEFAULT_VALUE}
+              </span>
+            </dd>
+          </dl>
+        </div>
+
+        <div class="it-sev-block it-sev-flush">
+          <p class="it-sev-label">In search</p>
+          <div class="querybar">
+            <span class="q">severity: Critical</span>
+            <span class="count" data-it-severity-count data-others={OTHER_CRITICAL_BUGS.length}>
+              {total} issues
+            </span>
+          </div>
+          <IssueRow row={SAMPLE_ISSUE} data-it-severity-row />
+          {OTHER_CRITICAL_BUGS.map(row => (
+            <IssueRow row={row} />
+          ))}
+        </div>
+
+        <div class="it-sev-block it-sev-flush">
+          <p class="it-sev-label">In the CSV export</p>
+          <pre class="config" tabindex="0" aria-label="CSV export of ACME-12">Key,Title,Type,Priority,Severity
+{SAMPLE_ISSUE.key},{SAMPLE_ISSUE.title},Bug,{SAMPLE_ISSUE.priority.name},<span data-it-severity-value>{SEVERITY_DEFAULT_VALUE}</span></pre>
+        </div>
+      </div>
+      <p class="mt-4 text-xs text-fg-3">
+        Hand-drawn product views with fictional data. Two other bugs in ACME are Critical.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  :global(html:not(.js)) .it-sev-switch {
+    display: none;
+  }
+  .it-sev {
+    overflow: hidden;
+  }
+  .it-sev-head {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .it-sev-block {
+    padding: 14px 20px 18px;
+  }
+  .it-sev-block + .it-sev-block {
+    border-top: 1px solid var(--border);
+  }
+  .it-sev-flush {
+    padding: 0;
+  }
+  .it-sev-fields dd {
+    flex-wrap: wrap;
+  }
+  .it-sev-fields .key {
+    white-space: nowrap;
+  }
+  @media (min-width: 641px) {
+    .it-sev :global(.row) {
+      grid-template-columns: 64px minmax(0, 1fr) 18px 96px 100px;
+    }
+    .it-sev :global(.row .spent) {
+      display: none;
+    }
+  }
+  .it-sev-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .it-sev-flush .it-sev-label {
+    padding: 12px 16px 8px;
+  }
+  .it-sev-flush .querybar {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .it-sev-fields {
+    margin-top: 10px;
+    padding-top: 0;
+    border-top: 0;
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .it-sev .config {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .it-opt {
+    font-size: 12.5px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-xs);
+    background: var(--palette-red-bg);
+    color: var(--palette-red-fg);
+  }
+  .it-opt[data-sev='High'] {
+    background: var(--palette-amber-bg);
+    color: var(--palette-amber-fg);
+  }
+  .it-opt[data-sev='Low'] {
+    background: var(--palette-gray-bg);
+    color: var(--palette-gray-fg);
+  }
+  @media (max-width: 640px) {
+    .it-sev-head,
+    .it-sev-block {
+      padding-inline: 16px;
+    }
+    .it-sev-flush {
+      padding: 0;
+    }
+  }
+</style>

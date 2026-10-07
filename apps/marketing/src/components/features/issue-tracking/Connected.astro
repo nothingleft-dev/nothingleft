@@ -1,0 +1,72 @@
+---
+import { CONNECTIONS } from '@lib/features/issue-tracking';
+import Keyed from './Keyed.astro';
+---
+
+<section class="border-t border-line" aria-labelledby="connected-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="connected-title" class="h2">
+        The same ACME-12, wherever the work goes next.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        One key, one record. The board, the reports, the knowledge base and your agent all read the issue you just saw,
+        not a copy of it.
+      </p>
+
+      <figure class="panel mt-8 it-agent" aria-label="An agent reading ACME-12">
+        <p class="prompt">
+          <span class="mark" aria-hidden="true">
+            ›
+          </span>
+          <span>Where did ACME-12 end up, and is anything still open on it?</span>
+        </p>
+        <ul class="calls">
+          <li>
+            <span class="tool">get_issue</span>
+            <span class="args">issue: "ACME-12"</span>
+          </li>
+        </ul>
+        <div class="answer">
+          <p>
+            <strong class="font-medium">ACME-12</strong> Invite link blank after it expires is{' '}
+            <strong class="font-medium">Fixed</strong>, resolved 8 Oct 2026, 4:40pm, assigned to Alex Lee. Severity
+            Critical, 1h 45m spent of 2h.
+          </p>
+          <p class="mt-2">
+            Nothing is left open: its subtask ACME-13 and ACME-4, which it depends on, are both Fixed. The decision is
+            in the article <em>Invitation links and expiry</em>.
+          </p>
+        </div>
+      </figure>
+    </div>
+
+    <div class="lg:col-span-6 lg:col-start-7 rule-list">
+      {CONNECTIONS.map(item => (
+        <div class="py-6">
+          <h3 class="h3">{item.title}</h3>
+          <p class="prose mt-2 text-base">
+            <Keyed text={item.body} />
+          </p>
+          <p class="quote mt-3">{item.record}</p>
+          <a class="link text-sm mt-4 inline-block" href={item.href}>
+            {item.label}
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .it-agent {
+    background: var(--bg-app);
+    overflow: hidden;
+  }
+  .it-agent .calls {
+    padding-bottom: 12px;
+  }
+</style>

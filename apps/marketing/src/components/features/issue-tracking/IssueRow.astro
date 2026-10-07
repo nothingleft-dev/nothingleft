@@ -1,0 +1,36 @@
+---
+import type { SampleRow } from '@lib/features/issue-tracking';
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'div'> {
+  row: SampleRow;
+}
+
+const { row, class: className, ...rest } = Astro.props;
+---
+
+<div class:list={['row', className]} {...rest}>
+  <span class="key">{row.key}</span>
+  <span class="title">{row.title}</span>
+  <span class:list={['badge pri', row.priority.className]} title={row.priority.name}>
+    <span aria-hidden="true">{row.priority.letter}</span>
+    <span class="sr-only">{row.priority.name}</span>
+  </span>
+  <span class="meta">
+    {row.assignee ? (
+      <span class="who">
+        <span class="av" aria-hidden="true">
+          {row.assignee.initials}
+        </span>
+        {row.assignee.name}
+      </span>
+    ) : (
+      <span class="who none">--</span>
+    )}
+    <span class="spent">{row.spent ?? '--'}</span>
+    <span class="status">
+      <i class:list={['dot', row.status.dot]}></i>
+      {row.status.name}
+    </span>
+  </span>
+</div>

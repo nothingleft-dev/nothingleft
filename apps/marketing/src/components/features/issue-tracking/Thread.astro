@@ -1,0 +1,70 @@
+---
+import { DEFAULT_LISTS, WORKFLOW_STEPS } from '@lib/features/issue-tracking';
+import Keyed from './Keyed.astro';
+---
+
+<section class="border-t border-line" aria-labelledby="thread-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="thread-title" class="h2">
+        From bug report to resolved issue, without losing the thread.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        Six steps on <code>ACME-12</code>, each one recorded where the next person will look: on the issue, in its
+        history, and in the inbox of whoever needs to know.
+      </p>
+
+      <h3 class="h3 mt-10">Your lists, no transition rules.</h3>
+      <p class="prose mt-2 text-base max-w-[46ch]">
+        Statuses, priorities and types are lists each project edits. Any status can follow any status. Each status
+        belongs to a category, and a done or cancelled one marks the issue resolved.
+      </p>
+      <dl class="scopes mt-5">
+        {DEFAULT_LISTS.map(item => (
+          <>
+            <dt>{item.list}</dt>
+            <dd>{item.values}</dd>
+          </>
+        ))}
+      </dl>
+      <p class="mt-3 text-xs text-fg-3">
+        What a new project starts with. A Project Admin adds, recolours and deletes values, and picks each list’s
+        default.
+      </p>
+    </div>
+
+    <ol class="lg:col-span-6 lg:col-start-7 rule-list it-steps">
+      {WORKFLOW_STEPS.map(step => (
+        <li class="py-6">
+          <h3 class="h3">{step.title}</h3>
+          <p class="prose mt-2 text-base">
+            <Keyed text={step.body} />
+          </p>
+          <p class="quote mt-3">{step.record}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .it-steps {
+    counter-reset: it-step;
+  }
+  .it-steps li {
+    counter-increment: it-step;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .it-steps li::before {
+    content: counter(it-step);
+    grid-row: 1 / span 3;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 24px;
+    color: var(--text-muted);
+  }
+  .it-steps li > * {
+    grid-column: 2;
+  }
+</style>
