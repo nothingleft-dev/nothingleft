@@ -1,0 +1,617 @@
+---
+import ChartTip from './ChartTip.astro';
+import {
+  ASSIGNEE_AXIS_MAX,
+  ASSIGNEE_GROUPS,
+  ASSIGNEE_TOTALS,
+  BURNDOWN,
+  BURNDOWN_SUMMARY,
+  EMPTY_STATE,
+  PEOPLE,
+  SCOPE_QUERY,
+  type AssigneeGroup,
+} from '@lib/features/project-reports';
+
+const selected = ASSIGNEE_GROUPS[0];
+const ticks = Array.from({ length: ASSIGNEE_AXIS_MAX + 1 }, (_, index) => index);
+const issuesText = (count: number) => `${count} ${count === 1 ? 'issue' : 'issues'}`;
+const drillId = (group: AssigneeGroup) => `drill-${group.id}`;
+const summary = (group: AssigneeGroup) =>
+  `${issuesText(group.count)} · ${group.share}% of the ${ASSIGNEE_TOTALS.counted} counted`;
+const today = BURNDOWN.find(day => day.live);
+---
+
+<section id="trace" class="border-t border-line" aria-labelledby="trace-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="trace-title" class="h2">
+        Follow every number back to its issues.
+      </h2>
+      <p class="prose mt-5">
+        Sprint 08 has {BURNDOWN_SUMMARY.remaining} points left where the ideal line has {today?.ideal}. The next
+        question is who is holding the rest, and the answer is one click from the issues themselves.
+      </p>
+    </div>
+
+    <ol class="trace-steps mt-10 md:mt-14">
+      <li>
+        <h3 class="h3">Ask the question.</h3>
+        <p>Open the project’s Reports and pick Issues per assignee: who is holding the unresolved work?</p>
+      </li>
+      <li>
+        <h3 class="h3">Scope it the way you search.</h3>
+        <p>
+          A query in the search language, a saved view by name, one or several projects. A query and a view narrow each
+          other.
+        </p>
+      </li>
+      <li>
+        <h3 class="h3">Open what it counted.</h3>
+        <p>Every bar, slice and cell leads to the issue list with exactly the issues it counts, and no others.</p>
+      </li>
+    </ol>
+
+    <div class="mt-8 grid lg:grid-cols-12 gap-6 lg:gap-8 items-start" data-report-chart>
+      <figure class="lg:col-span-7 panel overflow-hidden" aria-labelledby="ipa-caption">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span>Reports</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Issues per assignee</span>
+        </div>
+        <div class="query">
+          <span class="text-fg-3 font-sans">Query</span>
+          <code>{SCOPE_QUERY}</code>
+        </div>
+        <div class="pickers">
+          <span>
+            <span class="text-fg-3">View</span> None
+          </span>
+          <span>
+            <span class="text-fg-3">Projects</span> ACME
+          </span>
+          <span class="text-fg-3">As of 9:20am</span>
+        </div>
+        <p class="sentence" id="ipa-caption">
+          {ASSIGNEE_TOTALS.issues} issues in ACME. {ASSIGNEE_TOTALS.multi} has more than one assignee, so the bars add
+          up to {ASSIGNEE_TOTALS.counted}.
+        </p>
+
+        <div class="chart" data-plot>
+          <div class="bars" role="group" aria-label="Issues per assignee. Choose a bar to open its issues.">
+            <div class="grid-lines" aria-hidden="true">
+              {ticks.map(tick => (
+                <span style={`left:${(tick / ASSIGNEE_AXIS_MAX) * 100}%`} />
+              ))}
+            </div>
+            {ASSIGNEE_GROUPS.map(group => (
+              <button
+                type="button"
+                class="bar"
+                data-mark={group.id}
+                data-tip-at="end"
+                aria-pressed={group === selected ? 'true' : 'false'}
+                aria-controls={drillId(group)}
+                aria-label={`${group.label}: ${issuesText(group.count)}, ${group.share}%`}
+                data-tip-value={`${issuesText(group.count)} · ${group.share}%`}
+                data-tip-label={group.label}
+                data-tip-hint="Click or press Enter: open matching issues"
+                data-text-who={group.label}
+                data-text-figures={summary(group)}
+                data-announce={`Showing the ${issuesText(group.count)} counted for ${group.label}.`}
+              >
+                <span class="bar-label">{group.label}</span>
+                <span class="bar-track">
+                  <span class="bar-fill" style={`width:${(group.count / ASSIGNEE_AXIS_MAX) * 100}%`} data-anchor />
+                </span>
+                <span class="bar-value mono">{group.count}</span>
+              </button>
+            ))}
+            <div class="axis" aria-hidden="true">
+              <span class="axis-track">
+                {ticks.map(tick => (
+                  <span class="mono" style={`left:${(tick / ASSIGNEE_AXIS_MAX) * 100}%`}>
+                    {tick}
+                  </span>
+                ))}
+              </span>
+            </div>
+          </div>
+          <ChartTip />
+        </div>
+
+        <div class="readout">
+          <p>
+            <span class="font-medium text-fg" data-text="Who">
+              {selected?.label}
+            </span>
+            <span class="text-fg-2" data-text="Figures">
+              {selected && summary(selected)}
+            </span>
+          </p>
+          <a class="link text-sm" href={selected ? `#${drillId(selected)}` : '#trace'} data-open>
+            Open matching issues
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <p class="sr-only" data-live aria-live="polite"></p>
+        </div>
+
+        <div class="table-wrap">
+          <table class="figures">
+            <caption class="sr-only">Issues per assignee, the same figures as the chart</caption>
+            <thead>
+              <tr>
+                <th scope="col">Assignee</th>
+                <th scope="col">Issues</th>
+                <th scope="col">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ASSIGNEE_GROUPS.map(group => (
+                <tr data-for={group.id} class:list={{ on: group === selected }}>
+                  <th scope="row">{group.label}</th>
+                  <td>{group.count}</td>
+                  <td>{group.share}%</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                <td>{ASSIGNEE_TOTALS.issues}</td>
+                <td class="text-fg-3">—</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p class="note">
+            The total counts each issue once. Shares are of the {ASSIGNEE_TOTALS.counted} the bars add up to.
+          </p>
+        </div>
+      </figure>
+
+      <div class="lg:col-span-5">
+        {ASSIGNEE_GROUPS.map(group => (
+          <section
+            class="panel overflow-hidden drill"
+            id={drillId(group)}
+            data-panel={group.id}
+            tabindex="-1"
+            aria-label={`Matching issues for ${group.label}`}
+            hidden={group !== selected}
+          >
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Issues</span>
+              <span class="ml-auto text-xs text-fg-3">Matching issues</span>
+            </div>
+            <div class="query">
+              <code>{group.query}</code>
+              <span class="count">{issuesText(group.count)}</span>
+            </div>
+            <div>
+              {group.issues.map(issue => (
+                <div class="issue">
+                  <span class="key">{issue.key}</span>
+                  <span class="title">{issue.title}</span>
+                  <span
+                    class:list={['badge pri', issue.priority === 'Major' ? 'l-major' : 'l-normal']}
+                    title={issue.priority}
+                  >
+                    <span aria-hidden="true">{issue.priority.charAt(0)}</span>
+                    <span class="sr-only">{issue.priority}</span>
+                  </span>
+                  <span class="meta">
+                    <span class:list={['who', { none: issue.assignees.length === 0 }]}>
+                      {issue.assignees.length === 0 && 'Unassigned'}
+                      {issue.assignees.length === 1 && (
+                        <>
+                          <span class="av" aria-hidden="true">
+                            {PEOPLE[issue.assignees[0] ?? '']?.initials}
+                          </span>
+                          {PEOPLE[issue.assignees[0] ?? '']?.name}
+                        </>
+                      )}
+                      {issue.assignees.length > 1 && (
+                        <>
+                          {issue.assignees.map(username => (
+                            <span class="av" title={PEOPLE[username]?.name} aria-hidden="true">
+                              {PEOPLE[username]?.initials}
+                            </span>
+                          ))}
+                          <span class="sr-only">{issue.assignees.map(u => PEOPLE[u]?.name).join(' and ')}</span>
+                        </>
+                      )}
+                    </span>
+                    <span class="spent">
+                      {issue.points} {issue.points === 1 ? 'pt' : 'pts'}
+                    </span>
+                    <span class="status">
+                      <i class:list={['dot', { started: issue.status === 'In Progress' }]} aria-hidden="true" />
+                      {issue.status}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p class="drill-note">
+              {issuesText(group.count)}, the same number as the bar.
+              {group.issues.some(issue => issue.assignees.length > 1) &&
+                ' ACME-17 has two assignees, so it is listed under each of them.'}
+            </p>
+          </section>
+        ))}
+      </div>
+    </div>
+
+    <div class="mt-12 md:mt-16 grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <div class="lg:col-span-5">
+        <h3 class="h3">When nothing matches, it says which filter did it.</h3>
+        <p class="prose mt-2 text-base">
+          An empty report names the filters in your words and offers to drop each one in turn, instead of drawing an
+          empty axis. A period is widened to This month or This year rather than dropped. An agent is told the same.
+        </p>
+      </div>
+      <div class="lg:col-span-7 panel overflow-hidden">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span>Reports</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Issues per assignee</span>
+        </div>
+        <div class="query">
+          <span class="text-fg-3 font-sans">Query</span>
+          <code>{EMPTY_STATE.query}</code>
+        </div>
+        <div class="empty-wrap">
+          <div class="empty">
+            <p class="font-medium text-fg">{EMPTY_STATE.message}</p>
+            <p class="widen">
+              <span class="text-xs text-fg-2">Widen it:</span>
+              {EMPTY_STATE.widen.map(label => (
+                <span class="chip">{label}</span>
+              ))}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mt-6 text-xs text-fg-3">Hand-drawn product views with fictional data.</p>
+  </div>
+</section>
+
+<style>
+  .trace-steps {
+    counter-reset: step;
+    display: grid;
+    border-top: 1px solid var(--border);
+  }
+  .trace-steps li {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+    counter-increment: step;
+  }
+  .trace-steps li::before {
+    content: counter(step);
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .trace-steps p {
+    margin-top: 4px;
+    font-size: 14.5px;
+    line-height: 22px;
+    color: var(--text-secondary);
+  }
+  @media (min-width: 768px) {
+    .trace-steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: 32px;
+    }
+  }
+
+  .query {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .query code {
+    min-width: 0;
+    font-size: 12.5px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .query .count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .pickers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .pickers > :last-child {
+    margin-left: auto;
+  }
+  .sentence {
+    padding: 14px 16px 0;
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+
+  .chart {
+    position: relative;
+    padding: 18px 16px 6px;
+  }
+  .bars {
+    position: relative;
+    --label-w: 92px;
+    --value-w: 24px;
+    --gap: 12px;
+  }
+  @media (min-width: 640px) {
+    .bars {
+      --label-w: 104px;
+    }
+  }
+  .grid-lines {
+    position: absolute;
+    top: 0;
+    bottom: 22px;
+    left: calc(var(--label-w) + var(--gap));
+    right: calc(var(--value-w) + var(--gap));
+    pointer-events: none;
+  }
+  .grid-lines span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--chart-grid);
+  }
+  .bar {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--label-w) minmax(0, 1fr) var(--value-w);
+    gap: var(--gap);
+    align-items: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 4px 0;
+    text-align: left;
+    border-radius: var(--radius-sm);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .bar:hover {
+    background: var(--bg-hover);
+  }
+  .bar-label {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-left: 4px;
+  }
+  .bar-track {
+    position: relative;
+    height: 20px;
+  }
+  .bar-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 0 4px 4px 0;
+    background: var(--palette-gray-solid);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .bar:hover .bar-fill {
+    background: var(--text-secondary);
+  }
+  .bar[aria-pressed='true'] .bar-fill {
+    background: var(--text);
+  }
+  .bar[aria-pressed='true'] .bar-label {
+    font-weight: 600;
+  }
+  .bar-value {
+    font-size: 12.5px;
+    color: var(--text);
+    text-align: right;
+    padding-right: 2px;
+  }
+  .axis {
+    display: grid;
+    grid-template-columns: var(--label-w) minmax(0, 1fr) var(--value-w);
+    gap: var(--gap);
+    height: 22px;
+  }
+  .axis-track {
+    grid-column: 2;
+    position: relative;
+  }
+  .axis-track span {
+    position: absolute;
+    top: 4px;
+    transform: translateX(-50%);
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--chart-axis);
+  }
+
+  .readout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+    margin: 8px 16px 0;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13.5px;
+    line-height: 20px;
+  }
+  .readout p {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+  }
+
+  .table-wrap {
+    border-top: 1px solid var(--border);
+    padding: 4px 0 14px;
+  }
+  .figures {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .figures th,
+  .figures td {
+    padding: 7px 16px;
+    text-align: right;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .figures th:first-child {
+    text-align: left;
+    width: 100%;
+  }
+  .figures thead th {
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom-color: var(--border);
+  }
+  .figures tbody th {
+    font-weight: 400;
+  }
+  .figures td {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .figures tfoot th,
+  .figures tfoot td {
+    font-weight: 600;
+    border-bottom: 0;
+  }
+  .figures tr.on {
+    background: var(--bg-selected);
+  }
+  .figures tr.on th {
+    box-shadow: inset 2px 0 0 var(--text);
+  }
+  .note {
+    padding: 8px 16px 0;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-muted);
+  }
+
+  .drill:focus-visible {
+    border-radius: var(--radius-md);
+  }
+  .drill-note {
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .issue {
+    display: grid;
+    grid-template-columns: 60px minmax(0, 1fr) 18px;
+    column-gap: 10px;
+    row-gap: 5px;
+    align-items: center;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .issue:last-child {
+    border-bottom: 0;
+  }
+  .issue .meta {
+    grid-column: 2 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .issue .who,
+  .issue .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .issue .who.none {
+    color: var(--text-muted);
+  }
+  .issue .who .av + .av {
+    margin-left: -4px;
+  }
+  .issue .spent {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .issue .status {
+    margin-left: auto;
+    color: var(--text);
+  }
+
+  .empty-wrap {
+    padding: 20px 16px;
+  }
+  .empty {
+    display: grid;
+    gap: 12px;
+    padding: 20px 16px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    line-height: 21px;
+  }
+  .widen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 9px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    background: var(--bg-surface);
+    font-size: 12.5px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+</style>

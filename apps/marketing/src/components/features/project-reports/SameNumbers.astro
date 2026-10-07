@@ -1,0 +1,142 @@
+---
+import {
+  ASSIGNEE_CSV,
+  ASSIGNEE_CSV_NAME,
+  ASSIGNEE_TOTALS,
+  RUN_REPORT_ANSWER,
+  RUN_REPORT_CALL,
+  REPORTS_MANUAL_PATH,
+} from '@lib/features/project-reports';
+
+const ACCESS = [
+  {
+    title: 'Only issues you could open.',
+    body: 'A report is scoped to the projects you can read before anything is counted. Projects you are not a member of and deleted issues never reach a bar, a total or a CSV.',
+  },
+  {
+    title: 'Every role can view and export.',
+    body: 'Observers included. Anyone who can see a report can download its CSV, with the same numbers on screen.',
+  },
+  {
+    title: 'An agent sees no more than its token.',
+    body: 'Through MCP, a report is limited further to the projects the access token allows, and needs the issues:read scope.',
+  },
+  {
+    title: 'Worked out when you open it.',
+    body: 'A report shows the time it was computed and does not refresh itself. A result is kept for at most five minutes, and any change in the organisation starts a fresh one.',
+  },
+];
+---
+
+<section id="same-numbers" class="border-t border-line bg-app" aria-labelledby="same-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="same-title" class="h2">
+        One table for the chart, the CSV and your agent.
+      </h2>
+      <p class="prose mt-5">
+        Report definitions live on the server, and the web app, the CSV export and the <code>run_report</code> tool all
+        call the same one. These are the Sprint 08 figures from the chart above, as a download and as an agent reads
+        them.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+      <div class="lg:col-span-5 panel overflow-hidden">
+        <div class="bar-head">
+          <span class="text-sm font-medium text-fg">Export CSV</span>
+          <span class="mono text-xs text-fg-2 truncate">{ASSIGNEE_CSV_NAME}</span>
+        </div>
+        <pre class="block-pre" tabindex="0" aria-label={`Contents of ${ASSIGNEE_CSV_NAME}`}>{ASSIGNEE_CSV}</pre>
+        <p class="foot">
+          Shares are of the {ASSIGNEE_TOTALS.counted} the bars add up to. The Total row counts each issue once, so it
+          reads {ASSIGNEE_TOTALS.issues}.
+        </p>
+      </div>
+      <div class="lg:col-span-7 panel overflow-hidden">
+        <div class="bar-head">
+          <span class="text-sm font-medium text-fg">Your agent asks</span>
+          <span class="mono text-xs text-fg-2">run_report</span>
+        </div>
+        <pre class="block-pre" tabindex="0" aria-label="The run_report call">{RUN_REPORT_CALL}</pre>
+        <div class="bar-head border-t border-line">
+          <span class="text-sm font-medium text-fg">and reads</span>
+        </div>
+        <pre class="block-pre" tabindex="0" aria-label="The run_report answer">{RUN_REPORT_ANSWER}</pre>
+      </div>
+    </div>
+    <p class="mt-6 text-sm text-fg-2 max-w-[70ch]">
+      An agent names the report and its choices the way you do, and when a report is empty it is told which filter to
+      drop.{' '}
+      <a class="link" href="/features/mcp-ai-agents">
+        MCP and AI agents
+        <span class="arr" aria-hidden="true">
+          →
+        </span>
+      </a>
+    </p>
+
+    <div class="mt-14 md:mt-20 grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-4">
+        <h3 class="h2 text-[24px] md:text-[28px]">Reports follow project permissions.</h3>
+        <p class="prose mt-4 max-w-[40ch]">
+          A report never reveals an issue you could not open directly.{' '}
+          <a class="link" href={REPORTS_MANUAL_PATH}>
+            Reports manual
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+      <div class="lg:col-span-7 lg:col-start-6 grid md:grid-cols-2 border-t border-line">
+        {ACCESS.map(item => (
+          <div class="module border-b border-line">
+            <h4 class="h3">{item.title}</h4>
+            <p class="prose mt-2 text-base">{item.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .bar-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .bar-head > :last-child {
+    margin-left: auto;
+    min-width: 0;
+  }
+  .bar-head > :only-child {
+    margin-left: 0;
+  }
+  .block-pre {
+    margin: 0;
+    padding: 14px 16px;
+    background: var(--bg-app);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 20px;
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .block-pre:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .foot {
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+</style>

@@ -1,0 +1,64 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Burndown from '@components/features/project-reports/Burndown.astro';
+import Families from '@components/features/project-reports/Families.astro';
+import SameNumbers from '@components/features/project-reports/SameNumbers.astro';
+import TimeViews from '@components/features/project-reports/TimeViews.astro';
+import Trace from '@components/features/project-reports/Trace.astro';
+import Base from '@layouts/Base.astro';
+import { PROJECT_REPORTS_FAQ, REPORTS_MANUAL_PATH } from '@lib/features/project-reports';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Reports"
+    title="A chart should lead back to the work."
+    lede="Nine reports over your issues and logged time. Every bar, cell and point opens the issues it counted, a table with the same numbers sits under every chart, and every report exports to CSV."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={REPORTS_MANUAL_PATH}>
+      Read the reports manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      Reports follow project permissions: a report never counts an issue you could not open yourself.
+    </p>
+  </PageHero>
+  <Burndown />
+  <Trace />
+  <TimeViews />
+  <Families />
+  <SameNumbers />
+  <Faq
+    entries={PROJECT_REPORTS_FAQ}
+    title="Questions about reports."
+    intro="What the numbers count, who can see them and how fresh they are. Definitions for each report are in the manual."
+  />
+  <CallToAction
+    title="Open your own sprint’s numbers."
+    body="Join the beta, create a project and plan a sprint. Its burndown starts the day the sprint does, and every chart leads back to the issues it counted."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={REPORTS_MANUAL_PATH}>
+      Read the reports manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

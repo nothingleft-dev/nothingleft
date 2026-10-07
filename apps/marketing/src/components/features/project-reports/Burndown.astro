@@ -1,0 +1,593 @@
+---
+import ChartTip from './ChartTip.astro';
+import {
+  BURNDOWN,
+  BURNDOWN_AXIS_MAX,
+  BURNDOWN_CSV,
+  BURNDOWN_SUMMARY,
+  SPRINT,
+  scopeAdded,
+  type BurndownDay,
+} from '@lib/features/project-reports';
+
+const last = BURNDOWN.length - 1;
+const W = 100 * last;
+const H = 400;
+const x = (index: number) => index * 100;
+const y = (value: number) => H - (value / BURNDOWN_AXIS_MAX) * H;
+const left = (index: number) => `${(index / last) * 100}%`;
+const top = (value: number) => `${(1 - value / BURNDOWN_AXIS_MAX) * 100}%`;
+
+const withData = BURNDOWN.map((day, index) => ({ day, index })).filter(
+  (point): point is { day: BurndownDay & { remaining: number; scope: number }; index: number } =>
+    point.day.remaining !== null && point.day.scope !== null,
+);
+const todayIndex = BURNDOWN.findIndex(day => day.live);
+
+const remainingPoints = withData.map(({ day, index }) => `${x(index)},${y(day.remaining)}`).join(' ');
+const idealPoints = BURNDOWN.map((day, index) => `${x(index)},${y(day.ideal)}`).join(' ');
+const scopePath = withData
+  .map(({ day, index }, n) => (n === 0 ? `M ${x(index)} ${y(day.scope)}` : `H ${x(index)} V ${y(day.scope)}`))
+  .join(' ');
+const nonWorking = BURNDOWN.map((day, index) => ({ day, index })).filter(({ day }) => !day.working);
+const ticks = [0, 10, 20, 30, 40];
+const dayLabels = BURNDOWN.map((day, index) => ({ day, index })).filter(({ index }) => index % 3 === 0);
+
+const signed = (value: number | null) => (value === null ? '—' : value > 0 ? `+${value}` : String(value));
+const shown = (value: number | null) => (value === null ? '—' : String(value));
+const csvName = 'acme-burndown-acme-sprint-08.csv';
+---
+
+<section id="burndown" class="border-t border-line bg-app" aria-labelledby="burndown-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="burndown-title" class="h2">
+        A burndown that shows its working.
+      </h2>
+      <p class="prose mt-5">
+        Every point on the line is a row in the table beside it. Pick a day to read its figures; the same rows come out
+        of the CSV.
+      </p>
+    </div>
+
+    <figure class="panel mt-10 md:mt-14 overflow-hidden" data-report-chart aria-labelledby="bd-caption">
+      <div class="pane-bar">
+        <span class="mono text-xs">ACME</span>
+        <span class="sep">/</span>
+        <span>Reports</span>
+        <span class="sep">/</span>
+        <span class="text-fg">Burndown</span>
+      </div>
+      <div class="scope-bar">
+        <span>
+          <span class="text-fg-3">Sprint</span> {SPRINT.name}
+        </span>
+        <span>
+          <span class="text-fg-3">Measure</span> Story points
+        </span>
+        <span class="text-fg-3">As of 9:20am</span>
+      </div>
+      <dl class="stats">
+        <div>
+          <dt>Committed at start</dt>
+          <dd class="mono">{BURNDOWN_SUMMARY.committed}</dd>
+        </div>
+        <div>
+          <dt>Scope added since</dt>
+          <dd class:list={['mono', { added: BURNDOWN_SUMMARY.added !== 0 }]}>{signed(BURNDOWN_SUMMARY.added)}</dd>
+        </div>
+        <div>
+          <dt>Completed</dt>
+          <dd class="mono">{BURNDOWN_SUMMARY.completed}</dd>
+        </div>
+        <div>
+          <dt>Remaining</dt>
+          <dd class="mono">{BURNDOWN_SUMMARY.remaining}</dd>
+        </div>
+        <div>
+          <dt>Ends</dt>
+          <dd>{SPRINT.end}</dd>
+        </div>
+      </dl>
+
+      <div class="body grid lg:grid-cols-12">
+        <div class="lg:col-span-6 xl:col-span-7 chart-col">
+          <ul class="legend" aria-label="Legend">
+            <li>
+              <span class="key-line remaining" aria-hidden="true"></span>Remaining
+            </li>
+            <li>
+              <span class="key-line scope" aria-hidden="true"></span>Scope
+            </li>
+            <li>
+              <span class="key-line ideal" aria-hidden="true"></span>Ideal
+            </li>
+            <li>
+              <span class="key-box" aria-hidden="true"></span>Non-working day
+            </li>
+          </ul>
+          <div class="plot-wrap">
+            <div class="plot" data-plot>
+              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                {nonWorking.map(({ index }) => {
+                  const from = Math.max(0, x(index) - 50);
+                  const to = Math.min(W, x(index) + 50);
+                  return <rect class="off" x={from} y="0" width={to - from} height={H} />;
+                })}
+                {ticks.map(tick => (
+                  <line class="grid-line" x1="0" x2={W} y1={y(tick)} y2={y(tick)} />
+                ))}
+                <line class="today" x1={x(todayIndex)} x2={x(todayIndex)} y1="0" y2={H} />
+                <polyline class="s-ideal" points={idealPoints} />
+                <path class="s-scope" d={scopePath} />
+                <polyline class="s-remaining" points={remainingPoints} />
+              </svg>
+              {ticks.map(tick => (
+                <span class="y-label mono" style={`top:${top(tick)}`} aria-hidden="true">
+                  {tick}
+                </span>
+              ))}
+              {dayLabels.map(({ day, index }) => (
+                <span class="x-label" style={`left:${left(index)}`} aria-hidden="true">
+                  {day.date.replace(' 2026', '')}
+                </span>
+              ))}
+              <span class="today-label" style={`left:${left(todayIndex)}`} aria-hidden="true">
+                Today
+              </span>
+              <div
+                role="group"
+                aria-label="Remaining points by day. Choose a day to highlight its row in Daily figures."
+              >
+                {withData.map(({ day, index }) => (
+                  <button
+                    type="button"
+                    class:list={['point', { live: day.live }]}
+                    style={`left:${left(index)};top:${top(day.remaining)}`}
+                    data-mark={day.iso}
+                    aria-pressed={day.live ? 'true' : 'false'}
+                    aria-label={`${day.date}${day.live ? ', today' : ''}: ${day.remaining} points remaining, ideal ${day.ideal}`}
+                    data-tip-value={`${day.remaining} remaining`}
+                    data-tip-label={`${day.date}${day.live ? ' · now' : ''}`}
+                    data-tip-hint={`Ideal ${day.ideal} · Scope ${day.scope} · Completed ${day.completed}`}
+                    data-announce={`${day.date}: ${day.remaining} remaining, ideal ${day.ideal}, scope ${day.scope}, completed ${day.completed}. Highlighted in Daily figures.`}
+                  >
+                    <span class="pt" />
+                  </button>
+                ))}
+              </div>
+              <ChartTip />
+            </div>
+          </div>
+          <figcaption id="bd-caption" class="caption">
+            <strong>
+              Sprint 08 burndown, {SPRINT.start} to {SPRINT.end}.
+            </strong>{' '}
+            Scope is its own line: it steps from {BURNDOWN_SUMMARY.committed} to {BURNDOWN_SUMMARY.scope} on 5 Oct, when{' '}
+            {BURNDOWN_SUMMARY.added} points were added after the start. The remaining line rises with it, and you can
+            see why instead of reading it as a day of lost progress.
+          </figcaption>
+          <p class="sr-only" data-live aria-live="polite"></p>
+        </div>
+
+        <div class="lg:col-span-6 xl:col-span-5 table-col">
+          <h3 class="table-title" id="bd-daily">
+            Daily figures
+          </h3>
+          <div class="table-scroll" role="region" aria-labelledby="bd-daily" tabindex="0">
+            <table class="figures">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Remaining</th>
+                  <th scope="col">Ideal</th>
+                  <th scope="col">Scope</th>
+                  <th scope="col">Added</th>
+                  <th scope="col">Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {BURNDOWN.map(day => (
+                  <tr data-for={day.iso} class:list={{ on: day.live }}>
+                    <th scope="row" class:list={{ off: !day.working }}>
+                      {day.date}
+                      {!day.working && <span class="sr-only"> (non-working day)</span>}
+                      {day.live && <span class="now">now</span>}
+                    </th>
+                    <td>{shown(day.remaining)}</td>
+                    <td>{day.ideal}</td>
+                    <td>{shown(day.scope)}</td>
+                    <td>{signed(scopeAdded(day))}</td>
+                    <td>{shown(day.completed)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="note">Past days are the figures recorded that night; today is read when you open the report.</p>
+        </div>
+      </div>
+
+      <details class="csv">
+        <summary>
+          <span>Export CSV</span>
+          <span class="mono text-xs text-fg-3">{csvName}</span>
+        </summary>
+        <pre class="code csv-pre" tabindex="0" aria-label={`Contents of ${csvName}`}>{BURNDOWN_CSV}</pre>
+      </details>
+    </figure>
+    <p class="mt-6 text-xs text-fg-3">Hand-drawn product views with fictional data.</p>
+  </div>
+</section>
+
+<script>
+  import '@scripts/features/project-reports';
+</script>
+
+<style>
+  .scope-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .scope-bar > :last-child {
+    margin-left: auto;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: 1px solid var(--border);
+  }
+  .stats > div {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .stats > div:nth-child(-n + 2) {
+    border-top: 0;
+  }
+  .stats > div:nth-child(2n) {
+    border-left: 1px solid var(--border-subtle);
+  }
+  .stats > div:last-child {
+    grid-column: 1 / -1;
+    border-left: 0;
+  }
+  @media (min-width: 768px) {
+    .stats {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .stats > div {
+      border-top: 0;
+      border-left: 1px solid var(--border-subtle);
+    }
+    .stats > div:first-child,
+    .stats > div:last-child {
+      grid-column: auto;
+    }
+    .stats > div:first-child {
+      border-left: 0;
+    }
+    .stats > div:last-child {
+      border-left: 1px solid var(--border-subtle);
+    }
+  }
+  .stats dt {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .stats dd {
+    margin-top: 2px;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .stats dd:not(.mono) {
+    font-size: 15px;
+  }
+  .stats .added {
+    color: var(--palette-amber-fg);
+  }
+
+  .chart-col {
+    padding: 16px 16px 20px;
+  }
+  @media (min-width: 640px) {
+    .chart-col {
+      padding: 20px 24px 24px;
+    }
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .key-line {
+    width: 18px;
+    height: 0;
+    border-top: 2px solid var(--chart-1);
+  }
+  .key-line.scope {
+    border-top-color: var(--chart-2);
+  }
+  .key-line.ideal {
+    border-top: 2px dashed var(--chart-ideal);
+  }
+  .key-box {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--bg-inset);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  .plot-wrap {
+    margin-top: 18px;
+    padding: 4px 10px 26px 30px;
+  }
+  .plot {
+    position: relative;
+    height: 240px;
+  }
+  @media (max-width: 640px) {
+    .plot {
+      height: 200px;
+    }
+  }
+  .plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .off {
+    fill: var(--bg-inset);
+  }
+  .grid-line {
+    stroke: var(--chart-grid);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .today {
+    stroke: var(--text-muted);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .s-ideal,
+  .s-scope,
+  .s-remaining {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .s-ideal {
+    stroke: var(--chart-ideal);
+    stroke-dasharray: 5 4;
+  }
+  .s-scope {
+    stroke: var(--chart-2);
+  }
+  .s-remaining {
+    stroke: var(--chart-1);
+  }
+  .y-label {
+    position: absolute;
+    left: -30px;
+    width: 22px;
+    transform: translateY(-50%);
+    text-align: right;
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--chart-axis);
+  }
+  .x-label {
+    position: absolute;
+    top: calc(100% + 8px);
+    transform: translateX(-50%);
+    font-size: 11.5px;
+    line-height: 14px;
+    color: var(--chart-axis);
+    white-space: nowrap;
+  }
+  .today-label {
+    position: absolute;
+    top: -2px;
+    transform: translate(4px, -100%);
+    font-size: 11px;
+    line-height: 14px;
+    color: var(--text-secondary);
+  }
+
+  .point {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    z-index: 2;
+  }
+  .point:focus-visible {
+    border-radius: 50%;
+  }
+  .pt {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--chart-1);
+    box-shadow: 0 0 0 2px var(--bg-surface);
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .point.live .pt {
+    background: var(--bg-surface);
+    box-shadow:
+      inset 0 0 0 2px var(--chart-1),
+      0 0 0 2px var(--bg-surface);
+  }
+  .point:hover .pt {
+    transform: scale(1.3);
+  }
+  .point[aria-pressed='true'] .pt {
+    transform: scale(1.3);
+    box-shadow:
+      0 0 0 2px var(--bg-surface),
+      0 0 0 3.5px var(--text);
+  }
+  .point.live[aria-pressed='true'] .pt {
+    box-shadow:
+      inset 0 0 0 2px var(--chart-1),
+      0 0 0 2px var(--bg-surface),
+      0 0 0 3.5px var(--text);
+  }
+
+  .caption {
+    margin-top: 14px;
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--text-secondary);
+    max-width: 62ch;
+  }
+  .caption strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .table-col {
+    border-top: 1px solid var(--border);
+    padding: 16px 0 12px;
+    min-width: 0;
+  }
+  @media (min-width: 1024px) {
+    .table-col {
+      border-top: 0;
+      border-left: 1px solid var(--border);
+      padding-top: 20px;
+    }
+  }
+  .table-title {
+    padding: 0 16px 8px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .table-scroll {
+    overflow-x: auto;
+  }
+  .table-scroll:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .figures {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .figures th,
+  .figures td {
+    padding: 5px 8px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .figures th:first-child {
+    padding-left: 16px;
+    text-align: left;
+  }
+  .figures tr > :last-child {
+    padding-right: 16px;
+  }
+  .figures thead th {
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom-color: var(--border);
+  }
+  .figures tbody th {
+    font-weight: 400;
+    color: var(--text);
+  }
+  .figures tbody th.off {
+    color: var(--text-muted);
+  }
+  .figures td {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+  .figures tr.on {
+    background: var(--bg-selected);
+  }
+  .figures tr.on th {
+    box-shadow: inset 2px 0 0 var(--text);
+  }
+  .now {
+    margin-left: 6px;
+    padding: 0 5px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .note {
+    padding: 10px 16px 0;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-muted);
+  }
+
+  .csv {
+    border-top: 1px solid var(--border);
+  }
+  .csv summary {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .csv summary::-webkit-details-marker {
+    display: none;
+  }
+  .csv summary::before {
+    content: '›';
+    display: inline-block;
+    width: 10px;
+    color: var(--text-muted);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .csv[open] summary::before {
+    transform: rotate(90deg);
+  }
+  .csv summary:hover {
+    background: var(--bg-hover);
+  }
+  .csv summary:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .csv-pre {
+    margin: 0 16px 16px;
+    max-width: calc(100% - 32px);
+  }
+</style>

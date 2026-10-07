@@ -1,0 +1,393 @@
+---
+import {
+  DRILL_CELL,
+  DRILL_ENTRIES,
+  DRILL_TOTAL,
+  PEOPLE,
+  TIME_PERIOD,
+  TIME_ROWS,
+  TIME_TOTAL,
+  TIMESHEET_DAY_TOTALS,
+  TIMESHEET_DAYS,
+  TIMESHEET_ROWS,
+  TIMESHEET_TOTAL,
+} from '@lib/features/project-reports';
+
+const longest = Math.max(...TIME_ROWS.map(row => row.minutes));
+const drillPerson = PEOPLE[DRILL_CELL.username]?.name ?? '';
+const drillDay = TIMESHEET_DAYS[DRILL_CELL.dayIndex];
+---
+
+<section id="time" class="border-t border-line bg-app" aria-labelledby="time-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-6 lg:gap-12 items-end">
+      <div class="lg:col-span-7">
+        <h2 id="time-title" class="h2">
+          Then see where last week went.
+        </h2>
+        <p class="prose mt-5 max-w-[60ch]">
+          A time report adds up the time entries themselves, so a subtask’s time is never counted twice through its
+          parent. The timesheet opens any cell to the entries behind it, on any issue you can open, whoever logged them.
+        </p>
+      </div>
+      <p class="lg:col-span-5 lg:text-right text-sm">
+        <a class="link" href="/features/time-tracking">
+          Time tracking
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid xl:grid-cols-12 gap-6 xl:gap-8 items-start">
+      <figure class="xl:col-span-5 panel overflow-hidden" aria-labelledby="time-caption">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span>Reports</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Time report</span>
+        </div>
+        <div class="pickers">
+          <span>
+            <span class="text-fg-3">Query</span> <code>sprint: {'{Sprint 08}'}</code>
+          </span>
+          <span>
+            <span class="text-fg-3">Period</span> Last week
+          </span>
+          <span>
+            <span class="text-fg-3">Group by</span> Work type
+          </span>
+        </div>
+        <p class="sentence" id="time-caption">
+          {TIME_TOTAL.spent} logged in ACME, {TIME_PERIOD}.
+        </p>
+        <div class="hbars" aria-hidden="true">
+          {TIME_ROWS.map(row => (
+            <div class="hbar">
+              <span class="hbar-label">{row.label}</span>
+              <span class="hbar-track">
+                <span class="hbar-fill" style={`width:${(row.minutes / longest) * 100}%`} />
+              </span>
+              <span class="hbar-value mono">{row.spent}</span>
+            </div>
+          ))}
+        </div>
+        <div class="sheet-scroll compact" role="region" aria-label="Time by work type" tabindex="0">
+          <table class="sheet">
+            <caption class="sr-only">Time by work type, the same figures as the bars</caption>
+            <thead>
+              <tr>
+                <th scope="col">Work type</th>
+                <th scope="col">Spent</th>
+                <th scope="col">Estimate</th>
+                <th scope="col">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TIME_ROWS.map(row => (
+                <tr>
+                  <th scope="row">{row.label}</th>
+                  <td>{row.spent}</td>
+                  <td class="text-fg-3">--</td>
+                  <td>{row.share}%</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                <td>{TIME_TOTAL.spent}</td>
+                <td class="text-fg-3">--</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p class="note">
+          An estimate belongs to a whole issue, so a report by work type shows none. Group by issue or project to see
+          spent against estimate.
+        </p>
+      </figure>
+
+      <figure class="xl:col-span-7 panel overflow-hidden" aria-labelledby="sheet-caption">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Timesheets</span>
+        </div>
+        <div class="pickers">
+          <span>
+            <span class="text-fg-3">Period</span> Last week
+          </span>
+          <span>
+            <span class="text-fg-3">People</span> Everyone
+          </span>
+        </div>
+        <p class="sentence" id="sheet-caption">
+          {TIMESHEET_TOTAL} by four people, {TIME_PERIOD}: the same total as the time report.
+        </p>
+        <div class="sheet-scroll" role="region" aria-label="Timesheet, last week" tabindex="0">
+          <table class="sheet grid-sheet">
+            <thead>
+              <tr>
+                <th scope="col">Person</th>
+                {TIMESHEET_DAYS.map(day => (
+                  <th scope="col" class:list={{ off: !day.working }}>
+                    <span class="block">{day.label}</span>
+                    <span class="block text-fg-3 font-normal">{day.date}</span>
+                  </th>
+                ))}
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TIMESHEET_ROWS.map(row => (
+                <tr>
+                  <th scope="row">{row.name}</th>
+                  {row.cells.map((cell, index) => (
+                    <td
+                      class:list={{
+                        off: !TIMESHEET_DAYS[index]?.working,
+                        picked: row.username === DRILL_CELL.username && index === DRILL_CELL.dayIndex,
+                      }}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                  <td class="total">{row.total}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                {TIMESHEET_DAY_TOTALS.map((cell, index) => (
+                  <td class:list={{ off: !TIMESHEET_DAYS[index]?.working }}>{cell}</td>
+                ))}
+                <td class="total">{TIMESHEET_TOTAL}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="entries">
+          <p class="entries-head">
+            <span class="font-medium text-fg">{drillPerson}</span>
+            <span class="text-fg-2">
+              {drillDay?.label} {DRILL_CELL.date}
+            </span>
+            <span class="mono text-xs text-fg ml-auto">{DRILL_TOTAL}</span>
+          </p>
+          <ul>
+            {DRILL_ENTRIES.map(entry => (
+              <li>
+                <span class="key">{entry.key}</span>
+                <span class="entry-title">{entry.title}</span>
+                <span class="text-fg-2 text-xs">{entry.type}</span>
+                <span class="mono text-xs text-fg">{entry.spent}</span>
+              </li>
+            ))}
+          </ul>
+          <p class="note entries-note">
+            The highlighted cell, opened: its entries add up to the {DRILL_TOTAL} in the grid.
+          </p>
+        </div>
+      </figure>
+    </div>
+    <p class="mt-6 text-xs text-fg-3">
+      Durations read 1w 1d 1h 1m with the organisation’s working day, here eight hours. Hand-drawn product views with
+      fictional data.
+    </p>
+  </div>
+</section>
+
+<style>
+  .pickers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 20px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .pickers code {
+    font-size: 12.5px;
+  }
+  .sentence {
+    padding: 14px 16px 0;
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  .hbars {
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 8px;
+  }
+  .hbar {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr) 76px;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .hbar-track {
+    position: relative;
+    height: 16px;
+  }
+  .hbar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 0 4px 4px 0;
+    background: var(--palette-gray-solid);
+  }
+  .hbar-value {
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .sheet {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .sheet th,
+  .sheet td {
+    padding: 7px 10px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .sheet th:first-child {
+    padding-left: 16px;
+    text-align: left;
+  }
+  .sheet tr > :last-child {
+    padding-right: 16px;
+  }
+  .sheet thead th {
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom-color: var(--border);
+  }
+  .sheet tbody th {
+    font-weight: 400;
+  }
+  .sheet td {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .sheet tfoot th,
+  .sheet tfoot td {
+    font-weight: 600;
+    border-bottom: 0;
+  }
+  .compact {
+    margin-top: 0;
+  }
+  .compact th:first-child {
+    width: 100%;
+  }
+  @media (max-width: 400px) {
+    .compact th,
+    .compact td {
+      padding-inline: 6px;
+    }
+  }
+
+  .sheet-scroll {
+    margin-top: 10px;
+    overflow-x: auto;
+    border-top: 1px solid var(--border);
+  }
+  .sheet-scroll:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .grid-sheet th:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--bg-surface);
+    box-shadow: inset -1px 0 0 var(--border-subtle);
+  }
+  .grid-sheet thead th {
+    vertical-align: bottom;
+    line-height: 16px;
+  }
+  .grid-sheet .off {
+    background: var(--bg-app);
+  }
+  .grid-sheet .total {
+    font-weight: 600;
+    box-shadow: inset 1px 0 0 var(--border-subtle);
+  }
+  .grid-sheet td.picked {
+    background: var(--bg-selected);
+    box-shadow: inset 0 0 0 1.5px var(--text);
+  }
+
+  .entries {
+    margin: 14px 16px 16px;
+    padding: 4px 14px 12px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-popover);
+    background: var(--bg-raised);
+  }
+  .entries-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .entries li {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto 56px;
+    gap: 10px;
+    align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .entries li > :last-child {
+    text-align: right;
+  }
+  .entry-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .entries li {
+      grid-template-columns: 64px minmax(0, 1fr) 56px;
+    }
+    .entries li > :nth-child(3) {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .entries li > :last-child {
+      grid-column: 3;
+      grid-row: 1;
+    }
+    .entry-title {
+      white-space: normal;
+    }
+  }
+  .note {
+    padding: 10px 16px 14px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-muted);
+  }
+  .entries-note {
+    padding: 10px 0 0;
+  }
+</style>
