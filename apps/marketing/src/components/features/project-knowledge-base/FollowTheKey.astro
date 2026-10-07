@@ -1,0 +1,240 @@
+<section class="border-t border-line bg-app" aria-labelledby="kb-follow-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-4">
+      <h2 id="kb-follow-title" class="h2">
+        Follow the key both ways.
+      </h2>
+      <p class="prose mt-5 max-w-[40ch]">
+        The decision record names <code>ACME-12</code>, so the key in its text links to the issue. Open the issue and
+        the article is waiting under <strong>Referenced by</strong>.
+      </p>
+      <ol class="steps-list mt-6 prose text-base">
+        <li>
+          Select <strong>ACME-12</strong> in the article.
+        </li>
+        <li>The issue opens with the article under Referenced by.</li>
+        <li>Select the article there to come back.</li>
+      </ol>
+    </div>
+
+    <div class="lg:col-span-8" data-kb-follow-root>
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Article and issue">
+          <button
+            type="button"
+            role="tab"
+            id="kb-tab-article"
+            aria-controls="kb-panel-article"
+            aria-selected="true"
+            tabindex="0"
+            data-kb-tab="article"
+          >
+            Decision record
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="kb-tab-issue"
+            aria-controls="kb-panel-issue"
+            aria-selected="false"
+            tabindex="-1"
+            data-kb-tab="issue"
+          >
+            ACME-12
+          </button>
+        </div>
+
+        <div class="tabpanel on" role="tabpanel" id="kb-panel-article" aria-labelledby="kb-tab-article">
+          <p class="tab-title tabpanel-bar text-sm font-medium text-fg">The decision record</p>
+          <div class="pane-bar kb-crumbs">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span class="kb-mid">Knowledge base</span>
+            <span class="sep kb-mid">/</span>
+            <span>Decisions</span>
+            <span class="sep">/</span>
+            <span class="text-fg kb-last">Invitation links and expiry</span>
+          </div>
+          <div class="wf-body">
+            <p class="text-xs text-fg-2">Decision record · Published to project members · Last updated by Alex Lee</p>
+            <h3 class="wf-title">Invitation links and expiry</h3>
+            <p class="kb-tags" aria-label="Tags">
+              <span class="kb-tag kb-amber">invitations</span>
+              <span class="kb-tag kb-blue">decision</span>
+            </p>
+            <div class="wf-md">
+              <p>
+                Invitation links expire after seven days (<code>INVITE_TTL_DAYS</code>). An expired link must explain
+                itself and offer a new one. A blank page or a redirect to sign-in is a bug.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
+                invitation landing page itself, before any sign-in prompt, because the person may not have an account
+                yet. See{' '}
+                <a class="kb-key" href="#kb-panel-issue" data-kb-follow="issue" data-kb-landing="article">
+                  ACME-12
+                </a>{' '}
+                for the first instance.
+              </p>
+            </div>
+            <dl class="fields">
+              <dt>Page</dt>
+              <dd class="mono text-xs kb-wrap">/projects/ACME/articles/invitation-links-and-expiry</dd>
+              <dt>For agents</dt>
+              <dd class="mono text-xs kb-wrap">article://ACME/invitation-links-and-expiry</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="kb-panel-issue" aria-labelledby="kb-tab-issue">
+          <p class="tab-title tabpanel-bar text-sm font-medium text-fg">The issue it names</p>
+          <div class="pane-bar kb-crumbs">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug" aria-hidden="true">
+                B
+              </span>
+              Bug
+              <span class="badge l-major ml-2" aria-hidden="true">
+                M
+              </span>
+              Major
+            </div>
+            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <div class="wf-md">
+              <p>
+                <strong class="text-fg font-medium">Actual.</strong> Opening an invitation link older than seven days
+                shows a blank page.
+              </p>
+            </div>
+            <dl class="fields">
+              <dt>Reporter</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  CK
+                </span>
+                Casey Kim
+              </dd>
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  AL
+                </span>
+                Alex Lee
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot"></i>Open
+              </dd>
+              <dt>Sprint</dt>
+              <dd>Sprint 08</dd>
+            </dl>
+            <div class="ref kb-ref" data-kb-ref>
+              <p class="lbl">Referenced by</p>
+              <p>
+                <a class="kb-ref-link" href="#kb-panel-article" data-kb-follow="article" data-kb-landing="issue">
+                  Invitation links and expiry
+                </a>
+              </p>
+              <p class="mt-1 text-xs text-fg-2">Decisions · ACME · updated 2 Oct 2026</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="sr-only" aria-live="polite" data-kb-status></p>
+      <p class="mt-4 text-xs text-fg-3">Hand-drawn product views with fictional data.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/features/project-knowledge-base';
+</script>
+
+<style>
+  .kb-crumbs {
+    overflow: hidden;
+  }
+  .kb-last {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 480px) {
+    .kb-mid {
+      display: none;
+    }
+  }
+  .kb-wrap {
+    overflow-wrap: anywhere;
+  }
+  .kb-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .kb-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    background: var(--c-bg);
+    color: var(--c-fg);
+  }
+  .kb-amber {
+    --c-bg: var(--palette-amber-bg);
+    --c-fg: var(--palette-amber-fg);
+  }
+  .kb-blue {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .kb-key {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--dur-fast) var(--ease-out);
+  }
+  .kb-key:hover {
+    text-decoration-color: var(--text);
+  }
+  .kb-ref-link {
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--dur-fast) var(--ease-out);
+  }
+  .kb-ref-link:hover {
+    text-decoration-color: var(--text);
+  }
+  .kb-ref {
+    border-radius: var(--radius-xs);
+  }
+  .kb-ref:global(.kb-arrive) {
+    animation: kb-arrive 1.4s var(--ease-out) 1;
+  }
+  @keyframes kb-arrive {
+    0% {
+      background: var(--accent);
+      box-shadow: 0 0 0 8px var(--accent);
+    }
+    100% {
+      background: transparent;
+      box-shadow: 0 0 0 8px transparent;
+    }
+  }
+</style>

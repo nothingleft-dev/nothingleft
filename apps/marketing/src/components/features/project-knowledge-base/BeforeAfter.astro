@@ -1,0 +1,135 @@
+<section class="border-t border-line" aria-labelledby="kb-before-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="kb-before-title" class="h2">
+        The next person sees the runbook beside the issue.
+      </h2>
+      <p class="prose mt-5">
+        Without a reference, <code>ACME-12</code> says what broke and nothing about why it matters. Once an article
+        names it, the issue lists that article, so whoever opens it next finds the reasoning without asking around.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-6 lg:gap-8">
+      <figure>
+        <figcaption class="text-sm text-fg-2">
+          <strong class="font-medium text-fg">Before.</strong> No article names the issue.
+        </figcaption>
+        <div class="panel mt-3 overflow-hidden">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <h3 class="wf-title mt-0">Invite link blank after it expires</h3>
+            <dl class="fields">
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  AL
+                </span>
+                Alex Lee
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot"></i>Open
+              </dd>
+              <dt>Links</dt>
+              <dd class="empty">None</dd>
+            </dl>
+            <p class="kb-absent">
+              Why seven days? Should an expired link go to sign-in? The answer is in a thread somewhere, or in someone's
+              head.
+            </p>
+          </div>
+        </div>
+      </figure>
+
+      <figure>
+        <figcaption class="text-sm text-fg-2">
+          <strong class="font-medium text-fg">After.</strong> The decision record names it.
+        </figcaption>
+        <div class="panel mt-3 overflow-hidden">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <h3 class="wf-title mt-0">Invite link blank after it expires</h3>
+            <dl class="fields">
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  AL
+                </span>
+                Alex Lee
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot"></i>Open
+              </dd>
+              <dt>Links</dt>
+              <dd class="empty">None</dd>
+            </dl>
+            <div class="ref">
+              <p class="lbl">Referenced by</p>
+              <p class="font-medium">Invitation links and expiry</p>
+              <p class="mt-1 text-xs text-fg-2">Decisions · ACME · updated 2 Oct 2026</p>
+            </div>
+          </div>
+        </div>
+      </figure>
+    </div>
+
+    <ul class="mt-10 md:mt-14 grid md:grid-cols-3 gap-x-8 kb-facts">
+      <li>
+        <h3 class="h3">Written first still counts.</h3>
+        <p class="prose mt-2 text-base">
+          An article that mentions a key before the issue exists is listed as soon as the issue does.
+        </p>
+      </li>
+      <li>
+        <h3 class="h3">Resolved keys are struck through.</h3>
+        <p class="prose mt-2 text-base">
+          Once the issue is resolved, its key in the article reads as done, so the text stays honest.
+        </p>
+      </li>
+      <li>
+        <h3 class="h3">Code is not a reference.</h3>
+        <p class="prose mt-2 text-base">
+          A key inside a code block stays plain text, so a pasted log does not link every issue it prints.
+        </p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<style>
+  .kb-absent {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .kb-facts {
+    border-top: 1px solid var(--border);
+  }
+  .kb-facts li {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .kb-facts li {
+      border-bottom: 0;
+    }
+  }
+</style>

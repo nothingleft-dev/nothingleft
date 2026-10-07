@@ -1,0 +1,66 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Access from '@components/features/project-knowledge-base/Access.astro';
+import Agent from '@components/features/project-knowledge-base/Agent.astro';
+import BeforeAfter from '@components/features/project-knowledge-base/BeforeAfter.astro';
+import FollowTheKey from '@components/features/project-knowledge-base/FollowTheKey.astro';
+import RunbookFlow from '@components/features/project-knowledge-base/RunbookFlow.astro';
+import Structure from '@components/features/project-knowledge-base/Structure.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { KB_MANUAL_PATH, KNOWLEDGE_BASE_FAQ } from '@lib/features/project-knowledge-base';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Knowledge base"
+    title="Keep the fix and the reason it worked together."
+    lede="Every project has a private knowledge base for runbooks, decision records and onboarding notes. Name an issue in an article and the issue lists the article under Referenced by, so whoever opens it next finds the reasoning too."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={KB_MANUAL_PATH}>
+      Read the knowledge base manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      Readable only by the project's members. No public pages, no anonymous access.
+    </p>
+  </PageHero>
+  <FollowTheKey />
+  <BeforeAfter />
+  <RunbookFlow />
+  <Structure />
+  <Access />
+  <Agent />
+  <Faq
+    entries={KNOWLEDGE_BASE_FAQ}
+    title="Questions about the knowledge base."
+    intro="Who reads what, how articles and issues find each other, and what is deliberately left out."
+  />
+  <CallToAction
+    title="Write the next runbook where the next person will look."
+    body="Join the beta, create a project and start its first article from a starter. Name an issue key in it, and the issue points back."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={KB_MANUAL_PATH}>
+      Read the knowledge base manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

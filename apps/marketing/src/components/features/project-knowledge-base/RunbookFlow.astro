@@ -1,0 +1,433 @@
+---
+const STEPS = [
+  { title: 'Start from the resolved incident', detail: 'ACME-18 is fixed, and the fix lives in a comment.' },
+  {
+    title: 'Draft a runbook from a starter',
+    detail: 'Title first, then the Runbook starter. Only you and admins see it.',
+  },
+  { title: 'Publish it to the project', detail: 'Every member can read it now, Observers included.' },
+  { title: 'Tag both with one tag', detail: 'Articles and issues share the organisation’s tags.' },
+  { title: 'Find both in one search', detail: 'Issues and articles come back in two groups.' },
+];
+const STARTERS = ['Runbook', 'Decision record', 'Onboarding guide', 'Blank'];
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="kb-flow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="kb-flow-title" class="h2">
+        From a resolved incident to a runbook anyone on the project can find.
+      </h2>
+      <p class="prose mt-5">
+        Sam Ortiz fixed a failed partner sync on 29 Sep 2026. Pick a step to see how the fix becomes a runbook the next
+        person on call will actually find.
+      </p>
+    </div>
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="Runbook steps">
+        {STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-kb-step={index + 1}
+            data-last={index === STEPS.length - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+          >
+            <span class="bar" style={`width:${40 - index * 7}px`} />
+            <span>
+              <b>{step.title}</b>
+              <span>{step.detail}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8 wf-panel" id="kb-flow-panel" aria-live="polite">
+        <div data-view="1" class="on">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-18</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug" aria-hidden="true">
+                B
+              </span>
+              Bug
+              <span class="badge l-critical ml-2" aria-hidden="true">
+                C
+              </span>
+              Critical
+            </div>
+            <h3 class="wf-title">Partner sync stops after a key rotation</h3>
+            <div class="comment">
+              <div class="by">
+                <span class="av" aria-hidden="true">
+                  SO
+                </span>
+                Sam Ortiz<span class="text-fg-3">29 Sep 2026, 4:10pm</span>
+              </div>
+              Sync is running again. The rotated key had not reached the sync service, so every batch was rejected.
+              Updated the key, replayed the failed batch, and the next run succeeded.
+            </div>
+            <dl class="fields">
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  SO
+                </span>
+                Sam Ortiz
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot done"></i>Fixed
+              </dd>
+              <dt>Reporter</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  CK
+                </span>
+                Casey Kim
+              </dd>
+            </dl>
+          </div>
+        </div>
+
+        <div data-view="2">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Knowledge base</span>
+            <span class="sep">/</span>
+            <span class="text-fg">New article</span>
+          </div>
+          <div class="wf-body">
+            <dl class="fields mt-0 pt-0 border-t-0">
+              <dt>Title</dt>
+              <dd>Restoring a failed sync</dd>
+              <dt>Address</dt>
+              <dd class="mono text-xs kb-wrap">restoring-a-failed-sync</dd>
+              <dt>Start from</dt>
+              <dd class="flex-wrap">
+                {STARTERS.map(starter => (
+                  <span class:list={['kb-opt', { 'kb-opt-on': starter === 'Runbook' }]}>{starter}</span>
+                ))}
+              </dd>
+              <dt>Under</dt>
+              <dd>Billing sync / Runbooks</dd>
+            </dl>
+            <p class="kb-notice">
+              <span class="kb-draft">Draft</span>
+              Only you and the project's admins can see this article.
+            </p>
+            <div class="wf-md kb-outline">
+              <p class="text-fg font-medium">When to use this</p>
+              <p>Describe the alert, symptom or request that sends someone here.</p>
+              <p class="text-fg font-medium">Before you start</p>
+              <p class="text-fg font-medium">Steps</p>
+              <p class="text-fg font-medium">If it does not work</p>
+            </div>
+          </div>
+        </div>
+
+        <div data-view="3">
+          <div class="pane-bar kb-crumbs">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span class="kb-mid">Knowledge base</span>
+            <span class="sep kb-mid">/</span>
+            <span>Runbooks</span>
+            <span class="sep">/</span>
+            <span class="text-fg kb-last">Restoring a failed sync</span>
+          </div>
+          <div class="wf-body">
+            <p class="text-xs text-fg-2">Runbook · Published to project members · Last updated by Sam Ortiz</p>
+            <h3 class="wf-title">Restoring a failed sync</h3>
+            <div class="wf-md">
+              <p class="text-fg font-medium">When to use this</p>
+              <p>
+                The partner sync shows <em>Failed</em> on every batch after a key rotation, as in{' '}
+                <s class="kb-done">ACME-18</s>.
+              </p>
+              <p class="text-fg font-medium">Steps</p>
+              <ol class="kb-ol">
+                <li>Copy the new key into the sync service's settings.</li>
+                <li>Replay the failed batches from the sync log, oldest first.</li>
+                <li>Confirm the next scheduled run succeeds.</li>
+              </ol>
+            </div>
+            <div class="kb-published">
+              <span class="kb-check" aria-hidden="true"></span>
+              <span>
+                Published 30 Sep 2026. Every member of ACME can read it, Observers included. It can return to draft at
+                any time.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div data-view="4">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span class="text-fg">One tag on both</span>
+          </div>
+          <div class="wf-body">
+            <div class="kb-tagged">
+              <p class="text-xs text-fg-3">Article</p>
+              <p class="mt-1 font-medium">Restoring a failed sync</p>
+              <p class="kb-chips">
+                <span class="kb-chip kb-chip-new">sync-outage</span>
+                <span class="kb-chip">runbook</span>
+              </p>
+            </div>
+            <div class="kb-tagged">
+              <p class="text-xs text-fg-3">Issue</p>
+              <p class="mt-1">
+                <span class="key">ACME-18</span> Partner sync stops after a key rotation
+              </p>
+              <p class="kb-chips">
+                <span class="kb-chip kb-chip-new">sync-outage</span>
+              </p>
+            </div>
+            <p class="mt-5 text-xs text-fg-2">
+              One list of tags for the whole organisation. When you tag an article, tags already used on articles are
+              offered first, but any tag can be used.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="5">
+          <div class="querybar">
+            <span class="q">tag: sync-outage</span>
+          </div>
+          <div class="kb-group">
+            <p class="kb-group-head">
+              Issues <span>2</span>
+            </p>
+            <p class="kb-hit">
+              <span class="key">ACME-18</span>
+              <span class="kb-hit-title">Partner sync stops after a key rotation</span>
+              <span class="kb-hit-meta">
+                <i class="dot done"></i>Fixed
+              </span>
+            </p>
+            <p class="kb-hit">
+              <span class="key">ACME-16</span>
+              <span class="kb-hit-title">Sync log hides the rejected key error</span>
+              <span class="kb-hit-meta">
+                <i class="dot done"></i>Fixed
+              </span>
+            </p>
+          </div>
+          <div class="kb-group">
+            <p class="kb-group-head">
+              Articles <span>1</span>
+            </p>
+            <div class="kb-article-hit">
+              <p class="font-medium">Restoring a failed sync</p>
+              <p class="text-xs text-fg-2 mt-0.5">Runbooks · Sam Ortiz · 30 Sep 2026</p>
+              <p class="mt-1.5 text-fg-2">
+                The partner sync shows Failed on every batch after a key rotation. Copy the new key into the sync
+                service…
+              </p>
+            </div>
+          </div>
+          <p class="px-5 pb-5 pt-1 text-xs text-fg-2">
+            A query that only makes sense for one kind, such as <code class="kb-code">status: draft</code>, is answered
+            by that group; the other says so instead of guessing.
+          </p>
+        </div>
+      </div>
+    </div>
+    <p class="mt-6 text-sm">
+      <a class="link" href="/features/search-saved-views">
+        More on search and saved views
+        <span class="arr" aria-hidden="true">
+          →
+        </span>
+      </a>
+    </p>
+  </div>
+</section>
+
+<style>
+  .kb-crumbs {
+    overflow: hidden;
+  }
+  .kb-last {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 480px) {
+    .kb-mid {
+      display: none;
+    }
+  }
+  .kb-wrap {
+    overflow-wrap: anywhere;
+  }
+  .kb-opt {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .kb-opt-on {
+    background: var(--ink);
+    color: var(--ink-fg);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+  .kb-notice {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-inset);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .kb-draft {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-xs);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+  .kb-outline p + p {
+    margin-top: 6px;
+  }
+  .kb-ol {
+    list-style: decimal;
+    padding-left: 20px;
+    margin-top: 6px;
+  }
+  .kb-ol li + li {
+    margin-top: 2px;
+  }
+  .kb-done {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .kb-published {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .kb-check {
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--palette-green-solid);
+    flex: none;
+  }
+  .kb-tagged {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 14px;
+  }
+  .kb-tagged:first-child {
+    padding-top: 0;
+  }
+  .kb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .kb-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .kb-chip-new {
+    background: var(--palette-teal-bg);
+    color: var(--palette-teal-fg);
+  }
+  .kb-group {
+    padding: 4px 0 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .kb-group-head {
+    display: flex;
+    gap: 8px;
+    padding: 10px 20px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .kb-group-head span {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .kb-hit {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 7px 20px;
+    font-size: 13px;
+  }
+  .kb-hit-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .kb-hit-meta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .kb-article-hit {
+    padding: 6px 20px 8px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .kb-code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  @media (max-width: 640px) {
+    .kb-hit {
+      grid-template-columns: 60px minmax(0, 1fr);
+      row-gap: 2px;
+    }
+    .kb-hit-title {
+      white-space: normal;
+    }
+    .kb-hit-meta {
+      grid-column: 2;
+    }
+  }
+</style>

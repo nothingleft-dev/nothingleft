@@ -1,0 +1,217 @@
+---
+import { TAGS_IN_USE, TREE } from '@lib/features/project-knowledge-base';
+---
+
+<section class="border-t border-line" aria-labelledby="kb-structure-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-6">
+      <h2 id="kb-structure-title" class="h2">
+        A tree three levels deep, and nothing else to learn.
+      </h2>
+      <p class="prose mt-5 max-w-[50ch]">
+        There are no separate categories. An article with articles under it is the category, and it can carry its own
+        overview. Drag an article to reorder it or move it under another; from the keyboard, <code>Alt</code> with the
+        arrow keys does the same. Moving it never changes its address.
+      </p>
+      <div class="rule-list mt-8">
+        <div class="py-5">
+          <h3 class="h3">Comments</h3>
+          <p class="prose mt-2 text-base">
+            The same editing and deleting rules as comments on issues, and <code>@username</code> mentions work the same
+            way.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Files</h3>
+          <p class="prose mt-2 text-base">
+            Drop or paste them into the editor, or attach them to a comment. Up to 50 per article, counted toward the
+            organisation's storage like any other attachment.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Addresses that last</h3>
+          <p class="prose mt-2 text-base">
+            <em>Restoring a failed sync</em> becomes <code>restoring-a-failed-sync</code>. Renaming keeps the address,
+            so links and agent references keep working.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Restore for 14 days</h3>
+          <p class="prose mt-2 text-base">
+            A deleted article comes back from <strong>Deleted articles</strong>, with anything deleted along with it.
+            There is no version history: each article shows who changed it last, and when.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-5 lg:col-start-8">
+      <figure class="kb-rail panel" aria-labelledby="kb-rail-caption">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Knowledge base</span>
+        </div>
+        <div class="kb-rail-body">
+          <p class="kb-rail-head">Starred</p>
+          <p class="kb-node kb-l1">
+            <span class="kb-star" aria-hidden="true">
+              ★
+            </span>
+            Restoring a failed sync
+          </p>
+
+          <p class="kb-rail-head mt-4">Articles</p>
+          <ul>
+            {TREE.map((article, index) => (
+              <li
+                class:list={[
+                  'kb-node',
+                  `kb-l${article.level}`,
+                  { 'kb-open': article.open, 'kb-is-draft': article.draft },
+                ]}
+              >
+                <span class:list={['kb-chev', { 'kb-chev-open': !article.folded }]} aria-hidden="true">
+                  {article.folded || (TREE[index + 1]?.level ?? 0) > article.level ? '›' : ''}
+                </span>
+                <span class="kb-node-title">{article.title}</span>
+                {article.draft && <span class="kb-draft">Draft</span>}
+              </li>
+            ))}
+          </ul>
+
+          <p class="kb-rail-head mt-4">Tags</p>
+          <ul class="kb-cloud">
+            {TAGS_IN_USE.map(item => (
+              <li>
+                {item.tag}
+                <span>{item.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <figcaption id="kb-rail-caption" class="kb-rail-foot">
+          The side panel beside every knowledge base page: starred articles, the tree, and the tags in use with how many
+          articles carry each. Click a tag to filter by it.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+  .kb-rail {
+    max-width: 380px;
+    overflow: hidden;
+  }
+  @media (max-width: 1023px) {
+    .kb-rail {
+      max-width: none;
+    }
+  }
+  .kb-rail-body {
+    padding: 14px 12px 16px;
+    background: var(--bg-app);
+  }
+  .kb-rail-head {
+    padding: 0 8px 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .kb-node {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding-right: 8px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .kb-l1 {
+    padding-left: 8px;
+  }
+  .kb-l2 {
+    padding-left: 22px;
+  }
+  .kb-l3 {
+    padding-left: 36px;
+  }
+  .kb-node-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kb-chev {
+    width: 8px;
+    flex: none;
+    color: var(--text-muted);
+  }
+  .kb-chev-open {
+    transform: rotate(90deg);
+  }
+  .kb-star {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .kb-open {
+    background: var(--bg-active);
+    font-weight: 500;
+  }
+  .kb-open::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .kb-is-draft {
+    color: var(--text-secondary);
+  }
+  .kb-draft {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 5px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-xs);
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex: none;
+  }
+  .kb-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 2px 8px 0;
+  }
+  .kb-cloud li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: 12px;
+    color: var(--text);
+  }
+  .kb-cloud span {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .kb-rail-foot {
+    padding: 12px 16px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--text-secondary);
+  }
+</style>
