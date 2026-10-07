@@ -1,0 +1,94 @@
+---
+import { LIMITS_PATH } from '@lib/solutions/startups';
+import { GITHUB_URL, LICENSE_URL, SIGN_UP_URL } from '@lib/site';
+---
+
+<section class="border-t border-line" aria-labelledby="close-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="close-title" class="h2">
+        Try it on real work, then decide.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        Nothing Left is in beta. Sign up and you are in: no sales call, no card, no trial clock. The point is to run
+        real work through it and find out whether it fits.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <a class="btn" href={SIGN_UP_URL}>
+          Join the beta
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link text-sm" href="/pricing">
+          Pricing in full
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </div>
+      <p class="mt-6 text-sm text-fg-2">
+        Setting it up for the team?{' '}
+        <a class="link font-normal" href="/docs">
+          Read the docs
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>{' '}
+        or{' '}
+        <a class="link font-normal" href="/support">
+          ask support
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7 rule-list">
+      <div class="py-6">
+        <h3 class="h3">No subscription charge during beta.</h3>
+        <p class="prose mt-2 text-base">Any team size, every feature. Invite everyone who does the work.</p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Your first 20 members stay free forever.</h3>
+        <p class="prose mt-2 text-base">
+          When billing arrives, the first 20 members of every organisation remain free, including organisations that
+          joined during beta. We will give notice before charging for additional seats.
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">5 GB of storage, or your own bucket.</h3>
+        <p class="prose mt-2 text-base">
+          Each organisation has 5 GB of platform storage for attachments. Connect your own Cloudflare R2 or AWS S3
+          bucket and the limit lifts as soon as the bucket is verified.{' '}
+          <a class="link" href={LIMITS_PATH}>
+            Limits and storage
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+      <div class="py-6">
+        <h3 class="h3">Open source under AGPL-3.0.</h3>
+        <p class="prose mt-2 text-base">
+          The hosted service runs the same build as the public repository, so you can read the code you are trusting
+          with your work.{' '}
+          <a class="link" href={GITHUB_URL}>
+            Source on GitHub
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+          {' · '}
+          <a class="link" href={LICENSE_URL}>
+            Licence
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

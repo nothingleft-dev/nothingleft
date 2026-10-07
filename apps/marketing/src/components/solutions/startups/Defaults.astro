@@ -1,0 +1,393 @@
+---
+import {
+  DEFAULT_BOARD_COLUMNS,
+  DEFAULT_PRIORITIES,
+  DEFAULT_STATUSES,
+  DEFAULT_TYPES,
+  DEFAULT_WORK_TYPES,
+  isResolved,
+  statusDot,
+  statusesIn,
+} from '@lib/solutions/startups';
+
+const VIEWS = [
+  { id: 'statuses', label: 'Statuses' },
+  { id: 'priorities', label: 'Priorities' },
+  { id: 'types', label: 'Types' },
+  { id: 'board', label: 'Board' },
+  { id: 'work-types', label: 'Work types' },
+];
+const DEFAULT_VIEW = 'statuses';
+---
+
+<section id="defaults" class="border-t border-line" aria-labelledby="defaults-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+      <div class="max-w-[640px]">
+        <h2 id="defaults-title" class="h2">
+          What the new project already has.
+        </h2>
+        <p class="prose mt-5">
+          Nothing was configured during onboarding, and nothing needed to be. Every new project starts with these lists
+          and a board. A Project Admin can rename, recolour, add or delete values later; there are no transition rules
+          to design, so any status can follow any status.
+        </p>
+      </div>
+      <div class="seg su-switch" role="radiogroup" aria-label="Inspect the defaults" data-su-defaults>
+        {VIEWS.map(view => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={view.id === DEFAULT_VIEW ? 'true' : 'false'}
+            tabindex={view.id === DEFAULT_VIEW ? 0 : -1}
+            data-value={view.id}
+          >
+            {view.label}
+          </button>
+        ))}
+      </div>
+    </div>
+    <p class="sr-only" aria-live="polite" data-su-defaults-status></p>
+
+    <div class="su-defaults panel mt-8 md:mt-10">
+      <div data-su-default="statuses" class="on" role="group" aria-label="Default statuses">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span>Settings</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Statuses</span>
+        </div>
+        <div class="su-scroll" tabindex="0" role="region" aria-label="Default statuses table">
+          <table class="su-table">
+            <thead>
+              <tr>
+                <th scope="col">Status</th>
+                <th scope="col">Category</th>
+                <th scope="col">Resolves the issue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DEFAULT_STATUSES.map(status => (
+                <tr>
+                  <th scope="row">
+                    <span class="su-name">
+                      <i class:list={['dot', statusDot(status.category)]} />
+                      {status.name}
+                      {status.isDefault && <span class="su-default">Default</span>}
+                    </span>
+                  </th>
+                  <td class="mono">{status.category}</td>
+                  <td class:list={{ muted: !isResolved(status.category) }}>
+                    {isResolved(status.category) ? 'Yes' : 'No'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="su-note">
+          New issues start at Open. Moving one into a done or cancelled status records when it was resolved; moving it
+          back out clears that.
+        </p>
+      </div>
+
+      <div data-su-default="priorities" role="group" aria-label="Default priorities">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span>Settings</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Priorities</span>
+        </div>
+        <ul class="su-values">
+          {DEFAULT_PRIORITIES.map(priority => (
+            <li>
+              <span class:list={['badge', `su-p-${priority.tone}`]} aria-hidden="true">
+                {priority.letter}
+              </span>
+              <span>{priority.name}</span>
+              {priority.isDefault && <span class="su-default">Default</span>}
+            </li>
+          ))}
+        </ul>
+        <p class="su-note">
+          Each value has a one-letter badge and a colour. The issue list shows the letter; click it to change the
+          priority in place.
+        </p>
+      </div>
+
+      <div data-su-default="types" role="group" aria-label="Default issue types">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span>Settings</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Types</span>
+        </div>
+        <ul class="su-values">
+          {DEFAULT_TYPES.map(type => (
+            <li>
+              <span class:list={['badge', `su-p-${type.tone}`]} aria-hidden="true">
+                {type.letter}
+              </span>
+              <span>{type.name}</span>
+              {type.isDefault && <span class="su-default">Default</span>}
+            </li>
+          ))}
+        </ul>
+        <p class="su-note">
+          An issue with subtasks shows their story points added up, so an Epic carries its whole scope.
+        </p>
+      </div>
+
+      <div data-su-default="board" role="group" aria-label="The default board">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span>Settings</span>
+          <span class="sep">/</span>
+          <span>Boards</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Acme</span>
+        </div>
+        <dl class="su-board-meta">
+          <dt>Columns identified by</dt>
+          <dd>Status</dd>
+          <dt>Swimlanes</dt>
+          <dd>One row per Epic, then Uncategorized</dd>
+        </dl>
+        <ol class="su-columns">
+          {DEFAULT_BOARD_COLUMNS.map(column => (
+            <li>
+              <span class="su-col-name">{column.name}</span>
+              <span class="su-col-values">
+                {statusesIn(column.categories).map(name => (
+                  <span class="su-chip">{name}</span>
+                ))}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p class="su-note">
+          The board shows one sprint at a time. Moving a card to another column gives the issue that column’s first
+          status. Columns can be switched to priorities or types, and more boards added.
+        </p>
+      </div>
+
+      <div data-su-default="work-types" role="group" aria-label="Default work types">
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span>Settings</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Work types</span>
+        </div>
+        <ul class="su-values">
+          {DEFAULT_WORK_TYPES.map((type, index) => (
+            <li>
+              <span>{type}</span>
+              {index === 0 && <span class="su-default">Default</span>}
+            </li>
+          ))}
+        </ul>
+        <p class="su-note">
+          Time tracking is on in a new project. Each logged entry takes a work type, starting at Development.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .su-defaults {
+    overflow: hidden;
+  }
+  :global(html.js) .su-defaults [data-su-default] {
+    display: none;
+  }
+  :global(html.js) .su-defaults [data-su-default].on {
+    display: block;
+    animation: rise var(--dur-slow) var(--ease-out);
+  }
+  :global(html:not(.js)) .su-defaults [data-su-default] + [data-su-default] {
+    border-top: 1px solid var(--border);
+  }
+  :global(html:not(.js)) .su-switch {
+    display: none;
+  }
+
+  .su-scroll {
+    overflow-x: auto;
+  }
+  .su-scroll:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .su-table {
+    width: 100%;
+    min-width: 400px;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .su-table th,
+  .su-table td {
+    padding: 8px 20px 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .su-table th:first-child {
+    padding-left: 20px;
+  }
+  .su-table thead th {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    border-bottom-color: var(--border);
+  }
+  .su-table td.mono {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .su-table .muted {
+    color: var(--text-muted);
+  }
+  .su-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .su-default {
+    font-size: 11.5px;
+    line-height: 16px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-weight: 500;
+  }
+
+  .su-values {
+    display: grid;
+    padding: 6px 20px;
+  }
+  @media (min-width: 640px) {
+    .su-values {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 32px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .su-values {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .su-values li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13.5px;
+  }
+
+  .su-note {
+    padding: 14px 20px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+
+  .su-board-meta {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 8px 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+  .su-board-meta dt {
+    color: var(--text-muted);
+  }
+  @media (max-width: 480px) {
+    .su-board-meta {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0;
+    }
+    .su-board-meta dd + dt {
+      margin-top: 8px;
+    }
+  }
+  .su-columns li {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+  .su-columns li:last-child {
+    border-bottom: 0;
+  }
+  .su-col-name {
+    font-weight: 500;
+    line-height: 24px;
+  }
+  .su-col-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .su-chip {
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: 12.5px;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+  @media (max-width: 480px) {
+    .su-columns li {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+  }
+
+  .su-p-red {
+    --c-bg: var(--palette-red-bg);
+    --c-fg: var(--palette-red-fg);
+  }
+  .su-p-critical {
+    --c-bg: var(--label-pink-3-bg);
+    --c-fg: var(--label-pink-3-fg);
+  }
+  .su-p-major {
+    --c-bg: var(--label-yellow-2-bg);
+    --c-fg: var(--label-yellow-2-fg);
+  }
+  .su-p-normal {
+    --c-bg: var(--label-green-1-bg);
+    --c-fg: var(--label-green-1-fg);
+  }
+  .su-p-gray {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  .su-p-bug {
+    --c-bg: var(--label-red-2-bg);
+    --c-fg: var(--label-red-2-fg);
+  }
+  .su-p-blue {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .su-p-pink {
+    --c-bg: var(--palette-pink-bg);
+    --c-fg: var(--palette-pink-fg);
+  }
+</style>

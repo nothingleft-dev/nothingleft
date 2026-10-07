@@ -1,0 +1,46 @@
+---
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<div class:list={['su-terms', className]}>
+  <p class="sr-only">Beta terms</p>
+  <ul>
+    <li>No subscription charge during beta</li>
+    <li>Your first 20 members stay free forever</li>
+    <li>5 GB of storage per organisation, or your own R2 or S3 bucket</li>
+  </ul>
+</div>
+
+<style>
+  .su-terms ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .su-terms li {
+    display: grid;
+    grid-template-columns: 8px 1fr;
+    gap: 8px;
+    align-items: start;
+  }
+  .su-terms li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 2px;
+    background: var(--text);
+  }
+  @media (max-width: 640px) {
+    .su-terms ul {
+      flex-direction: column;
+    }
+  }
+</style>

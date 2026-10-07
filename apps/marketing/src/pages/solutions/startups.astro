@@ -1,0 +1,61 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Close from '@components/solutions/startups/Close.astro';
+import Defaults from '@components/solutions/startups/Defaults.astro';
+import FirstRun from '@components/solutions/startups/FirstRun.astro';
+import Growth from '@components/solutions/startups/Growth.astro';
+import HeroTerms from '@components/solutions/startups/HeroTerms.astro';
+import Base from '@layouts/Base.astro';
+import { STARTUPS_FAQ } from '@lib/solutions/startups';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="For startups and growing teams"
+    title="Start with work, not settings."
+    lede="Sign up, name your organisation and create a first project, and you are looking at its issue list. Statuses, priorities, types and a board are already in place, so the team files real work today and adds sprints, time and reports when it needs them."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#first-run">
+      Click through the first run
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <HeroTerms slot="note" class="mt-6" />
+  </PageHero>
+  <FirstRun />
+  <Defaults />
+  <Growth />
+  <Close />
+  <Faq
+    entries={STARTUPS_FAQ}
+    title="Questions before the first project."
+    intro="Setup, team size, bringing work across and what the beta costs. Short answers here, details in the docs."
+  />
+  <CallToAction
+    title="Create the first project and see what is there."
+    body="Join the beta and sign up with Google, GitHub or an email address. Name your organisation, create a first project, and skip the invitations if you are trying it alone. You land on the project’s issue list, with a first issue and an agent connection one click away."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="/pricing">
+      Pricing in full
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

@@ -1,0 +1,636 @@
+---
+import WelcomeFrame from './WelcomeFrame.astro';
+import { FIRST_ISSUES, FIRST_RUN_STEPS } from '@lib/solutions/startups';
+
+const total = FIRST_RUN_STEPS.length;
+const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:write'];
+---
+
+<section id="first-run" class="border-t border-line bg-app" aria-labelledby="first-run-title" tabindex="-1">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[700px]">
+      <h2 id="first-run-title" class="h2">
+        A tracker you can start using before you have a process to configure.
+      </h2>
+      <p class="prose mt-5">
+        Onboarding asks for two names: your organisation and a first project. The project is the one step you cannot
+        skip, because an organisation with nothing in it is a dead end. Inviting people can wait. The first screen after
+        that is the project’s issue list, with an agent connection offered right beside the first issue.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4 su-steps" role="group" aria-label="First-run steps">
+        {FIRST_RUN_STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-su-step={String(index + 1)}
+            data-last={index === total - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="su-panel"
+          >
+            <span class="bar" style={`width:${40 - index * 6}px`} />
+            <span>
+              <b>{step.title}</b>
+              <span>{step.detail}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8 min-w-0 su-panel-col">
+        <p class="sr-only" aria-live="polite" data-su-status></p>
+        <div class="wf-panel su-panel" id="su-panel">
+          <div data-view="1" class="on">
+            <p class="su-view-title">1. {FIRST_RUN_STEPS[0]?.title}</p>
+            <div class="pane-bar">
+              <span>work.nothingleft.dev</span>
+              <span class="sep">/</span>
+              <span class="text-fg">sign-up</span>
+            </div>
+            <div class="su-auth">
+              <p class="su-auth-title">Create your account</p>
+              <p class="su-auth-lede">Free for twenty people per organisation, forever. No card.</p>
+              <div class="su-providers">
+                <span class="su-btn">Google</span>
+                <span class="su-btn">GitHub</span>
+              </div>
+              <p class="su-or">
+                <span>or sign up with email</span>
+              </p>
+              <div class="su-field">
+                <span class="su-label">Full name</span>
+                <span class="su-input">Alex Lee</span>
+              </div>
+              <div class="su-field">
+                <span class="su-label">Work email</span>
+                <span class="su-input">alex@acme.example</span>
+              </div>
+              <div class="su-field">
+                <span class="su-label">Password</span>
+                <span class="su-input su-dots">
+                  <span aria-hidden="true">••••••••••••••</span>
+                  <span class="sr-only">Hidden</span>
+                </span>
+              </div>
+              <span class="su-btn primary wide">Create account</span>
+            </div>
+            <p class="su-foot-note">
+              Next comes a short profile check: name, avatar and time zone, pre-filled. An email sign-up verifies its
+              address here; Google and GitHub continue straight on.
+            </p>
+            <button type="button" class="su-next" data-su-next="2">
+              Next: {FIRST_RUN_STEPS[1]?.title}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </button>
+          </div>
+
+          <div data-view="2">
+            <p class="su-view-title">2. {FIRST_RUN_STEPS[1]?.title}</p>
+            <WelcomeFrame
+              current={1}
+              title="Create your organisation"
+              lede="Give your team’s workspace a name. Your projects and teammates will live here."
+            >
+              <div class="su-field">
+                <span class="su-label">Organisation name</span>
+                <span class="su-input">Acme</span>
+              </div>
+              <div class="su-field">
+                <span class="su-label">Organisation ID</span>
+                <span class="su-input mono">acme</span>
+                <span class="su-hint">A unique ID for your workspace. Use lowercase letters, numbers and hyphens.</span>
+              </div>
+              <Fragment slot="foot">
+                <span class="su-btn">Back</span>
+                <span class="su-btn primary">Save and continue</span>
+              </Fragment>
+            </WelcomeFrame>
+            <p class="su-foot-note">
+              The ID is derived from the name as you type, and you can change it before saving. Nothing is created on
+              your behalf.
+            </p>
+            <button type="button" class="su-next" data-su-next="3">
+              Next: {FIRST_RUN_STEPS[2]?.title}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </button>
+          </div>
+
+          <div data-view="3">
+            <p class="su-view-title">3. {FIRST_RUN_STEPS[2]?.title}</p>
+            <WelcomeFrame
+              current={2}
+              title="Create your first project"
+              lede="Name your first project. This is where your team will track work."
+            >
+              <div class="su-field">
+                <span class="su-label">Project name</span>
+                <span class="su-input">Acme</span>
+              </div>
+              <div class="su-field">
+                <span class="su-label">Project key</span>
+                <span class="su-input mono">ACME</span>
+                <span class="su-hint">
+                  Used in issue IDs, such as ACME-1. Use 2–10 letters or digits; you can change it until the first issue
+                  is created.
+                </span>
+              </div>
+              <Fragment slot="foot">
+                <span class="su-btn">Back</span>
+                <span class="su-btn primary">Save and continue</span>
+              </Fragment>
+            </WelcomeFrame>
+            <p class="su-foot-note">
+              The key is derived from the name: initials for several words (Partner Portal becomes <code>PP</code>), the
+              first three letters for one. Acme would give <code>ACM</code>; Alex typed <code>ACME</code> instead.
+            </p>
+            <button type="button" class="su-next" data-su-next="4">
+              Next: {FIRST_RUN_STEPS[3]?.title}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </button>
+          </div>
+
+          <div data-view="4">
+            <p class="su-view-title">4. {FIRST_RUN_STEPS[3]?.title}</p>
+            <WelcomeFrame
+              current={3}
+              title="Invite your teammates"
+              lede="Anyone you add joins Acme and ACME in one step. You can also invite people later."
+            >
+              <div class="su-field">
+                <span class="su-label">Email addresses</span>
+                <span class="su-input su-placeholder">name@acme.example</span>
+              </div>
+              <span class="su-btn justify-self-start">Send invitations</span>
+              <div class="su-share">
+                <p class="text-[13px] font-medium">Or share a link</p>
+                <p class="su-hint">Anyone with the link can join. You can revoke it at any time.</p>
+              </div>
+              <Fragment slot="foot">
+                <span class="su-btn">Back</span>
+                <span class="su-btn primary">Finish</span>
+                <span class="su-btn ghost picked ml-auto">Skip for now</span>
+              </Fragment>
+            </WelcomeFrame>
+            <p class="su-foot-note">
+              Alex skips. A solo trial is a normal way in, and the product does not act broken without a team.
+            </p>
+            <button type="button" class="su-next" data-su-next="5">
+              Next: {FIRST_RUN_STEPS[4]?.title}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </button>
+          </div>
+
+          <div data-view="5">
+            <p class="su-view-title">5. {FIRST_RUN_STEPS[4]?.title}</p>
+            <div class="pane-bar">
+              <span class="text-fg">Acme</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+            </div>
+            <div class="su-empty">
+              <p class="su-empty-title">Acme has no issues yet.</p>
+              <p class="su-empty-lede">Three ways to put the first one in. No demo data: what you see is yours.</p>
+              <div class="su-cards">
+                <div class="su-card">
+                  <b>Create your first issue</b>
+                  <span>A title is enough. Status, priority and type start at the project’s defaults.</span>
+                  <span class="su-btn primary self-start">
+                    Create issue <kbd>c</kbd>
+                  </span>
+                </div>
+                <div class="su-card picked">
+                  <b>Connect an LLM</b>
+                  <span>
+                    Create a token and paste one command into your agent. The agent files, triages and comments on
+                    issues as you.
+                  </span>
+                  <span class="su-btn self-start">Connect an agent</span>
+                </div>
+                <div class="su-card soon">
+                  <b>Import from CSV</b>
+                  <span>Bring existing work across with a column-mapping preview before anything is written.</span>
+                  <span class="su-btn muted self-start">Coming soon</span>
+                </div>
+              </div>
+            </div>
+            <div class="su-connect">
+              <p class="su-connect-head">What Connect an agent does</p>
+              <ol>
+                <li>
+                  Creates a personal access token with{' '}
+                  {AGENT_SCOPES.map((scope, index) => (
+                    <>
+                      {index > 0 && ' '}
+                      <code>{scope}</code>
+                    </>
+                  ))}
+                  . Admin scopes are yours to add.
+                </li>
+                <li>Shows the config for the agent you pick, token filled in, with one Copy button.</li>
+                <li>
+                  Watches for the first call and flips from <em>Waiting for the first call</em> to <em>Connected</em>.
+                </li>
+              </ol>
+            </div>
+            <button type="button" class="su-next" data-su-next="6">
+              Next: {FIRST_RUN_STEPS[5]?.title}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </button>
+          </div>
+
+          <div data-view="6">
+            <p class="su-view-title">6. {FIRST_RUN_STEPS[5]?.title}</p>
+            <div class="pane-bar">
+              <span class="text-fg">Acme</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+            </div>
+            <div class="querybar">
+              <span class="q">#Unresolved</span>
+              <span class="count">{FIRST_ISSUES.length} issues</span>
+            </div>
+            <ul class="su-issues" aria-label="Acme issues">
+              {FIRST_ISSUES.map(issue => (
+                <li>
+                  <span class="key">{issue.key}</span>
+                  <span class:list={['badge', `su-t-${issue.typeTone}`]} title={issue.type}>
+                    <span aria-hidden="true">{issue.typeLetter}</span>
+                    <span class="sr-only">{issue.type}</span>
+                  </span>
+                  <span class="su-issue-title">{issue.title}</span>
+                  <span class="badge l-normal" title="Normal">
+                    <span aria-hidden="true">N</span>
+                    <span class="sr-only">Normal</span>
+                  </span>
+                  <span class="su-issue-status">
+                    <i class="dot" />
+                    Open
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div class="activity">
+              {[...FIRST_ISSUES].reverse().map(issue => (
+                <p>
+                  Alex Lee created {issue.key}
+                  <span class="t">{issue.created}</span>
+                </p>
+              ))}
+            </div>
+            <p class="su-foot-note">
+              Only a title was typed for <code>ACME-1</code> and <code>ACME-2</code>; they took Open, Normal and Bug.{' '}
+              <code>ACME-3</code> was switched to Epic, so it becomes a swimlane on the board. The key is now fixed.
+            </p>
+          </div>
+        </div>
+        <p class="mt-6 text-xs text-fg-3">
+          Hand-drawn product views with fictional data. Acme, its people and its issues are invented.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/solutions/startups';
+</script>
+
+<style>
+  :global(html:not(.js)) .su-steps,
+  :global(html:not(.js)) .su-next {
+    display: none;
+  }
+  :global(html:not(.js)) .su-panel-col {
+    grid-column: 1 / -1;
+  }
+  :global(html.js) .su-view-title {
+    display: none;
+  }
+  .su-view-title {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .su-panel {
+    min-height: 480px;
+  }
+
+  .su-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    white-space: nowrap;
+  }
+  .su-btn.primary {
+    background: var(--ink);
+    color: var(--ink-fg);
+    box-shadow: none;
+  }
+  .su-btn.ghost {
+    box-shadow: none;
+    color: var(--text-secondary);
+  }
+  .su-btn.muted {
+    color: var(--text-muted);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .su-btn.wide {
+    width: 100%;
+  }
+  .su-btn kbd {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+    background: color-mix(in oklch, var(--ink-fg) 15%, transparent);
+  }
+  .su-btn.picked {
+    box-shadow:
+      inset 0 0 0 1px var(--text),
+      0 0 0 3px var(--accent);
+  }
+  .su-btn.ghost.picked {
+    color: var(--text);
+  }
+
+  .su-field {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+  .su-label {
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .su-input {
+    display: flex;
+    align-items: center;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    background: var(--bg-surface);
+    font-size: 13px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .su-input.mono {
+    font-size: 12.5px;
+  }
+  .su-placeholder {
+    color: var(--text-muted);
+  }
+  .su-dots {
+    letter-spacing: 0.1em;
+  }
+  .su-hint {
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--text-muted);
+  }
+  .su-share {
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .su-auth {
+    width: min(360px, 100%);
+    margin: 0 auto;
+    padding: 24px 20px 4px;
+    display: grid;
+    gap: 12px;
+  }
+  .su-auth-title {
+    font-size: 19px;
+    line-height: 25px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  .su-auth-lede {
+    margin-top: -8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .su-providers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .su-or {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .su-or::before,
+  .su-or::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .su-foot-note {
+    margin: 16px 20px 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--text-secondary);
+  }
+  .su-foot-note code,
+  .su-connect code {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .su-next {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 20px 18px;
+    padding: 4px 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .su-next:hover .arr {
+    transform: translateX(3px);
+  }
+
+  .su-empty {
+    padding: 22px 20px 4px;
+  }
+  .su-empty-title {
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+  .su-empty-lede {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .su-cards {
+    margin-top: 16px;
+    display: grid;
+    gap: 10px;
+  }
+  @media (min-width: 768px) {
+    .su-cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .su-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px var(--border);
+    background: var(--bg-surface);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+    min-width: 0;
+  }
+  .su-card b {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .su-card .su-btn {
+    margin-top: auto;
+  }
+  .su-card > span:not(.su-btn) {
+    margin-bottom: 6px;
+  }
+  .su-card.soon {
+    box-shadow: none;
+    outline: 1px dashed var(--border-strong);
+    outline-offset: -1px;
+  }
+  .su-card.picked {
+    box-shadow:
+      inset 0 0 0 1px var(--text),
+      0 0 0 3px var(--accent);
+  }
+
+  .su-connect {
+    margin: 16px 20px 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    line-height: 19px;
+    color: var(--text-secondary);
+  }
+  .su-connect-head {
+    font-weight: 500;
+    color: var(--text);
+  }
+  .su-connect ol {
+    margin-top: 6px;
+    display: grid;
+    gap: 4px;
+    counter-reset: c;
+  }
+  .su-connect li {
+    counter-increment: c;
+    position: relative;
+    padding-left: 16px;
+  }
+  .su-connect li::before {
+    content: counter(c);
+    position: absolute;
+    left: 0;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+
+  .su-issues li {
+    display: grid;
+    grid-template-columns: 56px 18px minmax(0, 1fr) 18px 76px;
+    gap: 10px;
+    align-items: center;
+    height: 38px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+  .su-issue-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .su-issue-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .su-issues li {
+      grid-template-columns: 56px 18px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      row-gap: 4px;
+      height: auto;
+      padding: 9px 16px;
+    }
+    .su-issue-title {
+      white-space: normal;
+      line-height: 18px;
+    }
+    .su-issues li > .l-normal {
+      grid-row: 2;
+      grid-column: 2;
+    }
+    .su-issue-status {
+      grid-row: 2;
+      grid-column: 3;
+      font-size: 12.5px;
+    }
+  }
+  .su-t-bug {
+    --c-bg: var(--label-red-2-bg);
+    --c-fg: var(--label-red-2-fg);
+  }
+  .su-t-pink {
+    --c-bg: var(--palette-pink-bg);
+    --c-fg: var(--palette-pink-fg);
+  }
+</style>
