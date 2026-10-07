@@ -1,0 +1,83 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Architecture from '@components/solutions/self-hosting/Architecture.astro';
+import Configuration from '@components/solutions/self-hosting/Configuration.astro';
+import Health from '@components/solutions/self-hosting/Health.astro';
+import Limits from '@components/solutions/self-hosting/Limits.astro';
+import OwnBucket from '@components/solutions/self-hosting/OwnBucket.astro';
+import Responsibilities from '@components/solutions/self-hosting/Responsibilities.astro';
+import Base from '@layouts/Base.astro';
+import { SELF_HOSTING_FAQ } from '@lib/solutions/self-hosting';
+import { GITHUB_URL, LICENSE_URL, SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Self-hosting"
+    title="Run the tracker and its agent interface on your infrastructure."
+    lede="Nothing Left is open source under AGPL-3.0. A self-hosted install runs the same build as the hosted service: the web app, one API process that also serves MCP, PostgreSQL, Redis and S3-compatible storage."
+  >
+    <a class="btn" href={GITHUB_URL}>
+      View the source on GitHub
+      <span class="arr" aria-hidden="true">
+        ↗
+      </span>
+    </a>
+    <a class="link text-sm" href={LICENSE_URL}>
+      AGPL-3.0 licence
+      <span class="arr ext" aria-hidden="true">
+        ↗
+      </span>
+    </a>
+    <span class="sh-pending text-sm">Install guide coming with launch</span>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      No reduced community edition: plans are limit presets, not feature gates.
+    </p>
+  </PageHero>
+  <Architecture />
+  <Configuration />
+  <Limits />
+  <OwnBucket />
+  <Health />
+  <Responsibilities />
+  <Faq
+    entries={SELF_HOSTING_FAQ}
+    title="Questions before you run it yourself."
+    intro="Licence, data location and what the repository gives you today. The install guide fills in the rest at launch."
+  />
+  <CallToAction
+    title="Read the code before you run it."
+    body="The source, the licence and the compose file are public. The install guide ships with launch; until then, the hosted beta runs the same build."
+  >
+    <a class="btn" href={GITHUB_URL}>
+      View the source on GitHub
+      <span class="arr" aria-hidden="true">
+        ↗
+      </span>
+    </a>
+    <a class="link text-sm" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>
+
+<style>
+  .sh-pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+  }
+  .sh-pending::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    border: 1.5px solid var(--border-strong);
+  }
+</style>

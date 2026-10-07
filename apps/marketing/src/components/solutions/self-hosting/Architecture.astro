@@ -1,0 +1,300 @@
+---
+import { CLIENTS, TIERS } from '@lib/solutions/self-hosting';
+---
+
+<section class="border-t border-line" aria-labelledby="sh-arch-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-6">
+        <h2 id="sh-arch-title" class="h2">
+          Same codebase. Your infrastructure. Agent access included.
+        </h2>
+      </div>
+      <div class="lg:col-span-5 lg:col-start-8">
+        <p class="prose">
+          Two processes you run and three services you provide. MCP is not a separate server: it is mounted on the API,
+          so an install that serves people also serves their agents, through the same permissions.
+        </p>
+      </div>
+    </div>
+
+    <figure class="sh-arch mt-12" aria-labelledby="sh-arch-caption">
+      <div class="sh-col">
+        <p class="sh-col-label">Clients</p>
+        <ul class="sh-nodes">
+          {CLIENTS.map(client => (
+            <li class="sh-client">
+              <span class="sh-name">{client.name}</span>
+              <span class="sh-tech">{client.detail}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {TIERS.map(tier => (
+        <>
+          <div class="sh-link" aria-hidden="true">
+            <span class="sh-arrow" />
+          </div>
+          <div class="sh-col">
+            <p class="sh-col-label">{tier.label}</p>
+            <ul class="sh-nodes">
+              {tier.nodes.map(node => (
+                <li>
+                  <details class="sh-node" id={`sh-node-${node.id}`}>
+                    <summary>
+                      <span class="sh-head">
+                        <span class="sh-name">{node.name}</span>
+                        <span class="sh-tech">{node.tech}</span>
+                      </span>
+                      <span class="sh-chev" aria-hidden="true" />
+                      {node.routes && (
+                        <span class="sh-routes">
+                          {node.routes.map(route => (
+                            <code>{route}</code>
+                          ))}
+                        </span>
+                      )}
+                    </summary>
+                    <div class="sh-body">
+                      {node.body.map(paragraph => (
+                        <p>{paragraph}</p>
+                      ))}
+                      <p class="sh-source">Source: {node.source}</p>
+                    </div>
+                  </details>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      ))}
+
+      <figcaption id="sh-arch-caption" class="sh-caption">
+        <span>
+          People reach the web app and the API; agents reach <code>/mcp</code> on the same API. Only the API talks to
+          PostgreSQL and Redis. Browsers move file bytes straight to and from the buckets with presigned URLs, so the
+          API only authorises. Open a service to see what it does.
+        </span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .sh-arch {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-app);
+  }
+  @media (min-width: 1024px) {
+    .sh-arch {
+      grid-template-columns: minmax(0, 0.8fr) 44px minmax(0, 1.1fr) 44px minmax(0, 1.1fr);
+      padding: 28px;
+    }
+  }
+  @media (max-width: 640px) {
+    .sh-arch {
+      padding: 16px 12px;
+    }
+  }
+
+  .sh-col-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+  }
+  .sh-nodes {
+    display: grid;
+    gap: 10px;
+  }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .sh-nodes {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      align-items: start;
+    }
+  }
+
+  .sh-client {
+    display: grid;
+    gap: 2px;
+    padding: 12px 14px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+  }
+  .sh-name {
+    font-size: 14.5px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .sh-tech {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+
+  .sh-node {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .sh-node:hover,
+  .sh-node[open] {
+    border-color: var(--border-strong);
+  }
+  .sh-node summary {
+    list-style: none;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16px;
+    column-gap: 12px;
+    padding: 12px 14px;
+  }
+  .sh-node summary::-webkit-details-marker {
+    display: none;
+  }
+  .sh-node summary:focus-visible {
+    border-radius: var(--radius-md);
+  }
+  .sh-head {
+    display: grid;
+    gap: 2px;
+  }
+  .sh-chev {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    position: relative;
+  }
+  .sh-chev::before,
+  .sh-chev::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: var(--text-muted);
+    transition:
+      transform var(--dur-base) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+  .sh-chev::before {
+    width: 12px;
+    height: 1.5px;
+    transform: translate(-50%, -50%);
+  }
+  .sh-chev::after {
+    width: 1.5px;
+    height: 12px;
+    transform: translate(-50%, -50%);
+  }
+  .sh-node summary:hover .sh-chev::before,
+  .sh-node summary:hover .sh-chev::after {
+    background: var(--text);
+  }
+  .sh-node[open] .sh-chev::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  .sh-routes {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .sh-routes code {
+    display: block;
+    font-size: 12px;
+    line-height: 18px;
+    padding: 3px 8px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .sh-body {
+    padding: 0 14px 14px;
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .sh-body p + p {
+    margin-top: 8px;
+  }
+  .sh-body .sh-source {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--text-secondary);
+  }
+
+  .sh-link {
+    display: grid;
+    place-items: center;
+    height: 36px;
+  }
+  .sh-arrow {
+    position: relative;
+    width: 1.5px;
+    height: 22px;
+    background: var(--border-strong);
+  }
+  .sh-arrow::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -1px;
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid var(--border-strong);
+    border-bottom: 1.5px solid var(--border-strong);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  @media (min-width: 1024px) {
+    .sh-link {
+      height: auto;
+      align-self: center;
+    }
+    .sh-arrow {
+      width: 24px;
+      height: 1.5px;
+    }
+    .sh-arrow::after {
+      left: auto;
+      right: -1px;
+      bottom: auto;
+      top: 50%;
+      transform: translateY(-50%) rotate(-45deg);
+    }
+  }
+
+  .sh-caption {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  .sh-caption span {
+    display: block;
+    max-width: 82ch;
+  }
+  .sh-caption code {
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+  }
+</style>

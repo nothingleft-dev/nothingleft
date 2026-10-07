@@ -1,0 +1,59 @@
+---
+import { LIMITS } from '@lib/solutions/self-hosting';
+---
+
+<section class="border-t border-line" aria-labelledby="sh-limits-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="sh-limits-title" class="h2">
+        The free plan’s limits are two environment settings.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        A plan is a limit preset and nothing more: no billing code, no feature gating. On your own install, these two
+        variables replace the free plan’s numbers without touching the code. Each takes a positive whole number.
+      </p>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7">
+      <ul class="panel sh-limits">
+        {LIMITS.map(limit => (
+          <li class="panel-pad">
+            <p class="sh-var">
+              <code>{limit.name}</code>
+              <span class="sh-default">Default: {limit.fallback}</span>
+            </p>
+            <p class="prose mt-3 text-base">{limit.effect}</p>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-4 text-sm text-fg-2">
+        Per-file and rate limits stay as they are: 100 MB a file, 50 attachments an issue, and API rate limits returned
+        in response headers.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .sh-limits > li + li {
+    border-top: 1px solid var(--border);
+  }
+  .sh-var {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+  }
+  .sh-var code {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 2px 8px;
+    border-radius: var(--radius-xs);
+    overflow-wrap: anywhere;
+  }
+  .sh-default {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+</style>

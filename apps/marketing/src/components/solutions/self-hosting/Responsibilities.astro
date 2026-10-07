@@ -1,0 +1,133 @@
+---
+import { RESPONSIBILITIES } from '@lib/solutions/self-hosting';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="sh-resp-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-6">
+        <h2 id="sh-resp-title" class="h2">
+          Managed or self-hosted: who does what.
+        </h2>
+      </div>
+      <div class="lg:col-span-5 lg:col-start-8">
+        <p class="prose">
+          The software is the same either way. What changes is who keeps it running. Self-host when you need the data on
+          your own infrastructure and have someone to operate it; otherwise the hosted beta is the shorter path.
+        </p>
+      </div>
+    </div>
+
+    <table class="sh-table mt-12">
+      <caption class="sr-only">Responsibilities on the hosted service and on a self-hosted install</caption>
+      <thead>
+        <tr>
+          <td class="sh-corner" />
+          <th scope="col">Hosted service</th>
+          <th scope="col">Self-hosted</th>
+        </tr>
+      </thead>
+      <tbody>
+        {RESPONSIBILITIES.map(row => (
+          <tr>
+            <th scope="row">{row.area}</th>
+            <td>{row.hosted}</td>
+            <td>{row.self}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<style>
+  .sh-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    line-height: 21px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    table-layout: fixed;
+  }
+  .sh-table .sh-corner {
+    width: 22%;
+  }
+  .sh-table th,
+  .sh-table td {
+    padding: 14px 20px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .sh-table tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  .sh-table thead th {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom-color: var(--border);
+  }
+  .sh-table thead > tr > * {
+    border-bottom: 1px solid var(--border);
+  }
+  .sh-table tbody th {
+    font-weight: 500;
+    color: var(--text);
+  }
+  .sh-table td {
+    color: var(--text-secondary);
+  }
+  .sh-table td + td,
+  .sh-table th + th {
+    border-left: 1px solid var(--border-subtle);
+  }
+  @media (max-width: 767px) {
+    .sh-table tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .sh-table .sh-corner {
+      display: none;
+    }
+    .sh-table tbody th {
+      grid-column: 1 / -1;
+      padding-bottom: 4px;
+      border-bottom: 0;
+    }
+    .sh-table td {
+      font-size: 13.5px;
+      line-height: 20px;
+    }
+    .sh-table th,
+    .sh-table td {
+      padding-inline: 14px;
+    }
+    .sh-table tbody td {
+      padding-top: 4px;
+    }
+    .sh-table tbody tr:last-child > th {
+      border-bottom: 0;
+    }
+    .sh-table tbody tr {
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sh-table tbody tr:last-child {
+      border-bottom: 0;
+    }
+    .sh-table tbody td {
+      border-bottom: 0;
+    }
+    .sh-table thead th:first-of-type {
+      border-left: 0;
+    }
+  }
+  @media (max-width: 400px) {
+    .sh-table th,
+    .sh-table td {
+      padding-inline: 10px;
+      overflow-wrap: anywhere;
+    }
+  }
+</style>

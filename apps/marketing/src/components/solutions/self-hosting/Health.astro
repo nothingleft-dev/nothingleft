@@ -1,0 +1,69 @@
+---
+import { HEALTH_EXCERPT } from '@lib/solutions/self-hosting';
+---
+
+<section class="border-t border-line" aria-labelledby="sh-health-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="sh-health-title" class="h2">
+        Check it the way the hosted service is checked.
+      </h2>
+      <ol class="steps-list mt-6 prose">
+        <li>
+          Apply the migrations once, before the first start: <code>bun run db:migrate</code> in <code>packages/db</code>
+          .
+        </li>
+        <li>
+          <strong>Liveness.</strong> <code>/health</code> answers as soon as the process is up. It checks no dependency
+          and is never rate limited.
+        </li>
+        <li>
+          <strong>Readiness.</strong> <code>/health/deep</code> checks the database, Redis and the private bucket. Any
+          failure answers <code>503</code> with <code>degraded</code>; a bucket not yet configured reads{' '}
+          <code>not_configured</code> and does not fail it.
+        </li>
+      </ol>
+      <p class="mt-6 text-sm text-fg-2">
+        The readiness check is anonymous, so it is bounded: ten requests a minute per address, one probe at a time, and
+        one answer shared for five seconds. Poll it every ten seconds or slower.
+      </p>
+    </div>
+
+    <div class="lg:col-span-7">
+      <div class="panel sh-term">
+        <div class="tabpanel-bar">
+          <span class="text-sm font-medium text-fg shrink-0 whitespace-nowrap">Health checks</span>
+          <span class="text-xs text-fg-2">Responses use the API’s one envelope.</span>
+        </div>
+        <pre class="config" tabindex="0" aria-label="Health check requests and responses" set:text={HEALTH_EXCERPT} />
+      </div>
+
+      <div class="rule-list mt-10">
+        <div class="py-5">
+          <h3 class="h3">Upgrades</h3>
+          <p class="prose mt-2 text-base">
+            The hosted service applies migrations before a new API version takes traffic, and CI checks that every
+            schema change ships with its migration and that they apply to an empty database. A self-hosted upgrade
+            procedure ships with the install guide.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Backups</h3>
+          <p class="prose mt-2 text-base">
+            Durable state lives in PostgreSQL and the two buckets; Redis holds caches and counters. Backup and restore
+            guidance ships with the install guide. We will not describe a procedure we have not tested.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .sh-term {
+    overflow: hidden;
+  }
+  .sh-term .config {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+  }
+</style>

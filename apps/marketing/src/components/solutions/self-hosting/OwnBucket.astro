@@ -1,0 +1,105 @@
+---
+import { STORAGE_MANUAL_PATH } from '@lib/solutions/self-hosting';
+
+const options = [
+  {
+    id: 'byo',
+    title: 'Your own bucket, on the hosted service',
+    kind: 'A storage option',
+    rows: [
+      ['Runs the app', 'Nothing Left'],
+      ['Issues, comments, accounts', 'The hosted database'],
+      ['Attachments, exports, imports', 'Your Cloudflare R2 or AWS S3 bucket'],
+      ['Avatars', 'Nothing Left’s public bucket'],
+      ['Storage limit', 'Lifted as soon as the bucket is verified'],
+    ],
+  },
+  {
+    id: 'self',
+    title: 'Self-hosting the whole app',
+    kind: 'A deployment',
+    rows: [
+      ['Runs the app', 'You'],
+      ['Issues, comments, accounts', 'Your PostgreSQL'],
+      ['Attachments, exports, imports', 'Your private bucket'],
+      ['Avatars', 'Your public bucket'],
+      ['Storage limit', 'Whatever you set in FREE_STORAGE_BYTES'],
+    ],
+  },
+];
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="sh-bucket-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-6">
+        <h2 id="sh-bucket-title" class="h2">
+          Bringing your own bucket is not self-hosting.
+        </h2>
+      </div>
+      <div class="lg:col-span-5 lg:col-start-8">
+        <p class="prose">
+          On the hosted service, Org Admins and the Owner can connect their own bucket under{' '}
+          <strong>Organisation → Storage</strong>. Files then live in your account, on your bill. The app, the database
+          and avatars stay with us. Self-hosting moves all of it.
+        </p>
+        <p class="mt-4 text-sm">
+          <a class="link" href={STORAGE_MANUAL_PATH}>
+            Connecting your own bucket
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mt-12">
+      {options.map(option => (
+        <div class="panel" role="group" aria-labelledby={`sh-${option.id}-title`}>
+          <div class="panel-head">
+            <p class="text-xs text-fg-2">{option.kind}</p>
+            <h3 id={`sh-${option.id}-title`} class="h3 mt-1">
+              {option.title}
+            </h3>
+          </div>
+          <dl class="sh-where">
+            {option.rows.map(([label, value]) => (
+              <div>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .sh-where > div {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 16px;
+    padding: 12px 24px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .sh-where > div + div {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .sh-where dt {
+    color: var(--text-secondary);
+  }
+  .sh-where dd {
+    color: var(--text);
+  }
+  @media (max-width: 640px) {
+    .sh-where > div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+      padding: 10px 16px;
+    }
+  }
+</style>

@@ -1,0 +1,117 @@
+---
+import { COMPOSE_URL, CONFIG_TABS, INFRASTRUCTURE_DOC_URL } from '@lib/solutions/self-hosting';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="sh-config-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="sh-config-title" class="h2">
+        What the repository gives you today.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        <a class="link" href={COMPOSE_URL}>
+          docker-compose.yml
+        </a>{' '}
+        starts the data tier: PostgreSQL 16, Redis 7 and RustFS as the S3-compatible store, with development
+        credentials. It does not run the web app or the API, and it is not a production install.
+      </p>
+      <p class="mt-4 text-sm">
+        <a class="link" href={INFRASTRUCTURE_DOC_URL}>
+          Every variable and what it does
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+      </p>
+
+      <div class="rule-list mt-8">
+        <div class="py-5">
+          <h3 class="h3">A long-running API.</h3>
+          <p class="prose mt-2 text-base">
+            Not serverless. The job queue holds a Postgres connection and runs scheduled work inside the API process.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Web and API on one domain.</h3>
+          <p class="prose mt-2 text-base">
+            Sharing a registrable domain is what lets the session cookie stay <code>SameSite=Lax</code>. Set{' '}
+            <code>SESSION_COOKIE_DOMAIN</code> to cover both.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">A separate application role.</h3>
+          <p class="prose mt-2 text-base">
+            Create <code>nothingleft_app</code> before the first migration. The owner migrates; the application role
+            runs queries and cannot rewrite the audit log.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Checked at boot.</h3>
+          <p class="prose mt-2 text-base">
+            Every variable is validated when the API starts. A bad configuration stops it starting, rather than failing
+            on the first request.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-7">
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Configuration file">
+          {CONFIG_TABS.map((tab, index) => (
+            <button
+              type="button"
+              role="tab"
+              id={`sh-tab-${tab.id}`}
+              aria-controls={`sh-panel-${tab.id}`}
+              aria-selected={index === 0 ? 'true' : 'false'}
+              tabindex={index === 0 ? 0 : -1}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </div>
+        {CONFIG_TABS.map((tab, index) => (
+          <div
+            class:list={['tabpanel', { on: index === 0 }]}
+            role="tabpanel"
+            id={`sh-panel-${tab.id}`}
+            aria-labelledby={`sh-tab-${tab.id}`}
+          >
+            <div class="tabpanel-bar">
+              <span class="tab-title text-sm font-medium text-fg mono">{tab.name}</span>
+              <span class="text-xs text-fg-2">{tab.where}</span>
+              <button type="button" class="copy" data-copy={`sh-config-${tab.id}`}>
+                Copy
+              </button>
+            </div>
+            <pre
+              id={`sh-config-${tab.id}`}
+              class="config sh-config"
+              tabindex="0"
+              aria-label={`${tab.name}, ${tab.where}`}
+              set:html={tab.html}
+            />
+          </div>
+        ))}
+      </div>
+      <p class="mt-4 text-sm text-fg-2">
+        Placeholders in capitals and <code class="mono">example.com</code> addresses stand in for yours. Never commit
+        real values.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .sh-config {
+    max-height: 760px;
+    overflow: auto;
+  }
+  .sh-config :global(.c) {
+    color: var(--text-secondary);
+  }
+  .sh-config :global(.k) {
+    font-weight: 500;
+  }
+</style>
