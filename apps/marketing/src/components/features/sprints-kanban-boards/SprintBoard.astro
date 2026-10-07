@@ -1,0 +1,138 @@
+---
+import Card from './Card.astro';
+import {
+  cardPositions,
+  COLUMNS,
+  isCardShown,
+  isOverLimit,
+  plural,
+  SPRINT_ISSUES,
+  tallyBoard,
+  type DemoState,
+} from '@lib/features/sprints-kanban-boards';
+
+interface Props {
+  state: DemoState;
+  interactive?: boolean;
+  emptyNote?: string;
+}
+
+const { state, interactive = false, emptyNote = 'No cards' } = Astro.props;
+const tally = tallyBoard(state);
+---
+
+<div class="board sk-board">
+  {COLUMNS.map(column => {
+    const columnTally = tally.columns[column.id];
+    const over = isOverLimit(column, columnTally);
+    return (
+      <div class="col" data-col-id={interactive ? column.id : undefined}>
+        <div class="col-head">
+          <p class="name">
+            {column.name}
+            {column.resolved && <span class="tag">resolved</span>}
+            <span class="count mono" data-count={interactive ? column.id : undefined}>
+              {columnTally.count}
+            </span>
+          </p>
+          <p class="sub">
+            <span data-points={interactive ? column.id : undefined}>{plural(columnTally.points, 'point')}</span>
+            {column.wipMax !== undefined && (
+              <span class:list={['wip', { over }]} data-wip={interactive ? column.id : undefined}>
+                max {column.wipMax}
+              </span>
+            )}
+          </p>
+        </div>
+        <div class="cards">
+          {SPRINT_ISSUES.flatMap(issue =>
+            cardPositions(issue)
+              .filter(position => position === column.id)
+              .filter(() => interactive || isCardShown(issue, column.id, state))
+              .map(() =>
+                interactive ? (
+                  <Card
+                    issue={issue}
+                    hidden={!isCardShown(issue, column.id, state)}
+                    data-card={issue.key}
+                    data-col={column.id}
+                  />
+                ) : (
+                  <Card issue={issue} />
+                ),
+              ),
+          )}
+          {interactive && (
+            <p class="empty" data-empty={column.id} hidden={columnTally.count > 0}>
+              {emptyNote}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  })}
+</div>
+
+<style>
+  .sk-board .col {
+    min-height: 0;
+    padding: 12px 10px;
+  }
+  .col-head {
+    padding: 0 2px 10px;
+  }
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .tag {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    background: var(--bg-inset);
+    border-radius: var(--radius-xs);
+    padding: 0 5px;
+  }
+  .count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .sub {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--text-secondary);
+  }
+  .wip {
+    margin-left: auto;
+    border-radius: var(--radius-xs);
+  }
+  .wip.over {
+    color: var(--palette-red-fg);
+    font-weight: 500;
+  }
+  .cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cards > :global(.card) {
+    margin-top: 0;
+  }
+  .empty {
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 12.5px;
+    line-height: 17px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+</style>

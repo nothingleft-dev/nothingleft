@@ -1,0 +1,247 @@
+---
+import {
+  BACKLOG_ROWS,
+  BACKLOG_TOTAL,
+  INITIAL_STATE,
+  PLANNED_SPRINT_ROWS,
+  plural,
+  SPRINT,
+  tallyBoard,
+  TOTAL_POINTS,
+  type BacklogRow,
+} from '@lib/features/sprints-kanban-boards';
+
+const resolved = tallyBoard(INITIAL_STATE).resolvedPoints;
+const plannedPoints = PLANNED_SPRINT_ROWS.reduce((sum, row) => sum + (row.points ?? 0), 0);
+const hiddenBacklog = BACKLOG_TOTAL.issues - BACKLOG_ROWS.length;
+const typeClass = (row: BacklogRow) => ({ Bug: 'l-bug', Feature: 'l-feature', Task: 'l-task' })[row.type];
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="plan-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="plan-title" class="h2">
+        From an ordered backlog to a running sprint.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        The backlog is every issue in no sprint. You decide what moves into the next one; nothing is planned for you.
+      </p>
+      <ol class="steps-list mt-8 prose text-base">
+        <li>
+          <strong>Order the backlog.</strong> Drag a row by its grip, or focus the grip and use <kbd>Space</kbd>, the
+          arrow keys and <kbd>Space</kbd> again. The board shows cards in the same order.
+        </li>
+        <li>
+          <strong>Move work into a planned sprint.</strong> Drop rows into it, or bring over every unresolved issue of
+          the running sprint when you create the next one.
+        </li>
+        <li>
+          <strong>Set a goal and points.</strong> The goal is Markdown. Story points are whole numbers from 0 to 999; an
+          issue without them reads <em>Not estimated</em>.
+        </li>
+        <li>
+          <strong>Start it.</strong> It starts on the day you start it and keeps its planned end date, which drives the
+          days-left countdown. One sprint runs at a time in each project.
+        </li>
+      </ol>
+    </div>
+    <figure class="lg:col-span-7">
+      <div class="panel overflow-hidden">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Backlog</span>
+        </div>
+
+        <div class="bl-section">
+          <p class="bl-head">
+            <span class="chev" aria-hidden="true">
+              ›
+            </span>
+            <span class="text-fg font-medium">{SPRINT.name}</span>
+            <span class="pill">Active</span>
+            <span class="bl-meta">
+              {`${SPRINT.dates} · ${SPRINT.daysLeft} days left · ${resolved} of ${TOTAL_POINTS} points resolved`}
+            </span>
+          </p>
+        </div>
+
+        <div class="bl-section">
+          <p class="bl-head">
+            <span class="chev open" aria-hidden="true">
+              ›
+            </span>
+            <span class="text-fg font-medium">Sprint 09</span>
+            <span class="pill">Planned</span>
+            <span class="bl-meta">
+              {`19 Oct – 30 Oct 2026 · ${plural(PLANNED_SPRINT_ROWS.length, 'issue')} · ${plannedPoints} points`}
+            </span>
+          </p>
+          <p class="bl-goal">Goal: members can manage invitations without asking an admin.</p>
+          <ul>
+            {PLANNED_SPRINT_ROWS.map(row => (
+              <li class="bl-row">
+                <span class="grip" aria-hidden="true" />
+                <span class="key">{row.key}</span>
+                <span class="title">{row.title}</span>
+                <span class:list={['badge', typeClass(row)]} title={row.type}>
+                  <span aria-hidden="true">{row.type.charAt(0)}</span>
+                  <span class="sr-only">{row.type}</span>
+                </span>
+                <span class="pts">{row.points === null ? 'Not estimated' : plural(row.points, 'point')}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div class="bl-section">
+          <p class="bl-head">
+            <span class="chev open" aria-hidden="true">
+              ›
+            </span>
+            <span class="text-fg font-medium">Backlog</span>
+            <span class="bl-meta">{`${plural(BACKLOG_TOTAL.issues, 'issue')} · ${BACKLOG_TOTAL.points} points`}</span>
+          </p>
+          <p class="querybar bl-query">
+            <span class="q">#Unresolved</span>
+            <span class="count">{plural(BACKLOG_TOTAL.issues, 'issue')}</span>
+          </p>
+          <ul>
+            {BACKLOG_ROWS.map(row => (
+              <li class="bl-row">
+                <span class="grip" aria-hidden="true" />
+                <span class="key">{row.key}</span>
+                <span class="title">{row.title}</span>
+                <span class:list={['badge', typeClass(row)]} title={row.type}>
+                  <span aria-hidden="true">{row.type.charAt(0)}</span>
+                  <span class="sr-only">{row.type}</span>
+                </span>
+                <span class:list={['pts', { none: row.points === null }]}>
+                  {row.points === null ? 'Not estimated' : plural(row.points, 'point')}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p class="bl-more">{plural(hiddenBacklog, 'more issue')}</p>
+        </div>
+      </div>
+      <figcaption class="mt-4 text-xs text-fg-3">
+        The running sprint comes first, then each planned sprint, then the backlog. The query above the backlog narrows
+        only the backlog. Hand-drawn product view with fictional data.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  kbd {
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 0 5px;
+  }
+  .bl-section + .bl-section {
+    border-top: 1px solid var(--border);
+  }
+  .bl-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .chev {
+    display: inline-block;
+    width: 10px;
+    color: var(--text-muted);
+  }
+  .chev.open {
+    transform: rotate(90deg);
+  }
+  .pill {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .bl-meta {
+    flex-basis: 100%;
+    padding-left: 18px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  @media (min-width: 768px) {
+    .bl-meta {
+      flex-basis: auto;
+      margin-left: auto;
+      padding-left: 0;
+    }
+  }
+  .bl-goal {
+    padding: 0 16px 10px 34px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .bl-query {
+    border-top: 1px solid var(--border-subtle);
+    height: 36px;
+  }
+  .bl-row {
+    display: grid;
+    grid-template-columns: 10px 60px minmax(0, 1fr) 18px auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 36px;
+    padding: 7px 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .grip {
+    width: 6px;
+    height: 12px;
+    background-image: radial-gradient(var(--border-strong) 1px, transparent 1.2px);
+    background-size: 3px 4px;
+  }
+  .pts {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .pts.none {
+    color: var(--text-muted);
+  }
+  @media (max-width: 640px) {
+    .bl-row {
+      grid-template-columns: 10px 56px minmax(0, 1fr) 18px;
+      row-gap: 2px;
+    }
+    .bl-row .pts {
+      grid-column: 3 / 5;
+      grid-row: 2;
+      text-align: left;
+    }
+  }
+  .bl-more {
+    padding: 9px 16px 12px 36px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .l-feature {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .l-task {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+</style>

@@ -1,0 +1,72 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Boards from '@components/features/sprints-kanban-boards/Boards.astro';
+import Burndown from '@components/features/sprints-kanban-boards/Burndown.astro';
+import Fit from '@components/features/sprints-kanban-boards/Fit.astro';
+import MoveDemo from '@components/features/sprints-kanban-boards/MoveDemo.astro';
+import Plan from '@components/features/sprints-kanban-boards/Plan.astro';
+import SprintOverview from '@components/features/sprints-kanban-boards/SprintOverview.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { AGILE_MANUAL_PATH, SPRINTS_BOARDS_FAQ } from '@lib/features/sprints-kanban-boards';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Sprints and boards"
+    title="Plan a sprint. See exactly what moved."
+    lede="Order the backlog, plan a sprint with a goal and story points, and follow it on a board. When it ends, you decide where the unfinished work goes, and the burndown keeps an honest record."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={AGILE_MANUAL_PATH}>
+      Read the sprints manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      Rather try it here?{' '}
+      <a class="link font-normal" href="#try-the-board">
+        Move cards on a demo board
+        <span class="arr" aria-hidden="true">
+          ↓
+        </span>
+      </a>
+    </p>
+  </PageHero>
+  <SprintOverview />
+  <Plan />
+  <Boards />
+  <MoveDemo />
+  <Burndown />
+  <Fit />
+  <Faq
+    entries={SPRINTS_BOARDS_FAQ}
+    title="Questions about sprints and boards."
+    intro="What happens at the end of a sprint, what WIP limits do and who can change what. Details are in the manual."
+  />
+  <CallToAction
+    title="Plan your next sprint here."
+    body="Join the beta, create a project, order the backlog and start a sprint. Invite the team when the board looks right."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={AGILE_MANUAL_PATH}>
+      Read the sprints manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

@@ -1,0 +1,96 @@
+---
+import type { SprintIssue } from '@lib/features/sprints-kanban-boards';
+
+interface Props {
+  issue: SprintIssue;
+  compact?: boolean;
+  hidden?: boolean;
+  [key: `data-${string}`]: string | undefined;
+}
+
+const { issue, compact = false, hidden = false, ...data } = Astro.props;
+const typeClass = { Bug: 'l-bug', Feature: 'l-feature', Task: 'l-task' }[issue.type];
+const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-normal' }[issue.priority];
+---
+
+<div class:list={['card', 'sk-card', priorityClass, { compact }]} hidden={hidden} {...data}>
+  <div class="top">
+    <span class="key">{issue.key}</span>
+    <span class="sk-pts">
+      {issue.points}
+      <span class="sr-only">points</span>
+    </span>
+  </div>
+  {!compact && <p class="t">{issue.title}</p>}
+  {!compact && (
+    <div class="meta">
+      <span class:list={['badge', typeClass]} title={issue.type}>
+        <span aria-hidden="true">{issue.type.charAt(0)}</span>
+        <span class="sr-only">{issue.type}</span>
+      </span>
+      <span class:list={['badge', `l-${issue.priority.toLowerCase()}`]} title={issue.priority}>
+        <span aria-hidden="true">{issue.priority.charAt(0)}</span>
+        <span class="sr-only">{issue.priority}</span>
+      </span>
+      <span class="av" title={issue.assignee.name}>
+        <span aria-hidden="true">{issue.assignee.initials}</span>
+        <span class="sr-only">{issue.assignee.name}</span>
+      </span>
+    </div>
+  )}
+</div>
+
+<style>
+  .sk-card {
+    border-left-width: 3px;
+    border-left-color: var(--edge);
+    padding: 8px 10px 8px 9px;
+  }
+  .p-critical {
+    --edge: var(--label-pink-3-bg);
+  }
+  .p-major {
+    --edge: var(--label-yellow-2-bg);
+  }
+  .p-normal {
+    --edge: var(--label-green-1-bg);
+  }
+  .top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .sk-pts {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .t {
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text);
+  }
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .meta .av {
+    margin-left: auto;
+  }
+  .compact {
+    padding: 6px 8px 6px 7px;
+  }
+  .l-feature {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .l-task {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+</style>

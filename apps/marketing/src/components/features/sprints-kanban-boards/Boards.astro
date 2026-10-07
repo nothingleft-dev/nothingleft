@@ -1,0 +1,222 @@
+---
+import Card from './Card.astro';
+import {
+  COLUMNS,
+  PEOPLE,
+  PRIORITIES,
+  SPRINT_ISSUES,
+  TYPES,
+  type SprintIssue,
+} from '@lib/features/sprints-kanban-boards';
+
+interface MiniColumn {
+  name: string;
+  issues: SprintIssue[];
+}
+
+interface View {
+  id: string;
+  label: string;
+  note: string;
+  columns: MiniColumn[];
+  lanes?: { name: string; columns: MiniColumn[] }[];
+}
+
+const byStatus = (issues: SprintIssue[]) =>
+  COLUMNS.map(column => ({ name: column.name, issues: issues.filter(issue => issue.column === column.id) }));
+
+const VIEWS: View[] = [
+  {
+    id: 'status',
+    label: 'Status',
+    note: 'Moving a card changes its status.',
+    columns: byStatus(SPRINT_ISSUES),
+  },
+  {
+    id: 'priority',
+    label: 'Priority',
+    note: 'Moving a card changes its priority.',
+    columns: PRIORITIES.map(priority => ({
+      name: priority,
+      issues: SPRINT_ISSUES.filter(issue => issue.priority === priority),
+    })),
+  },
+  {
+    id: 'type',
+    label: 'Type',
+    note: 'Moving a card changes its type.',
+    columns: TYPES.map(type => ({ name: type, issues: SPRINT_ISSUES.filter(issue => issue.type === type) })),
+  },
+  {
+    id: 'lanes',
+    label: 'Lanes',
+    note: 'Status columns, one row per assignee. Cards move within their own row.',
+    columns: byStatus(SPRINT_ISSUES),
+    lanes: PEOPLE.map(person => ({
+      name: person.name,
+      columns: byStatus(SPRINT_ISSUES.filter(issue => issue.assignee === person)),
+    })),
+  },
+];
+---
+
+<section class="border-t border-line" aria-labelledby="boards-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="boards-title" class="h2">
+        One sprint, read the way the team works.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        A board shows one sprint as columns of cards. A Project Admin chooses what the columns and rows mean, per board.
+      </p>
+      <div class="rule-list mt-8">
+        <div class="py-5">
+          <h3 class="h3">Columns by status, priority or type.</h3>
+          <p class="prose mt-1 text-base">
+            A column can hold several values, such as <em>Open</em> and <em>Reopened</em>. Moving a card gives the issue
+            that column’s first value.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Swimlanes for people or epics.</h3>
+          <p class="prose mt-1 text-base">
+            One row per assignee, priority or type, or one row per epic with its issues inside. Cards without an epic
+            sit in <em>Uncategorized</em>, always last.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">WIP limits warn, they never block.</h3>
+          <p class="prose mt-1 text-base">
+            Set a minimum and a maximum per column. Over the maximum the limit turns red, under the minimum amber, and
+            the card still moves.
+          </p>
+        </div>
+        <div class="py-5">
+          <h3 class="h3">Counts follow the filter.</h3>
+          <p class="prose mt-1 text-base">
+            Type a query above the board and each column reads <em>3 of 8</em>. WIP limits still count all eight.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-7">
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Board columns">
+          {VIEWS.map((view, index) => (
+            <button
+              type="button"
+              role="tab"
+              id={`sk-tab-${view.id}`}
+              aria-controls={`sk-panel-${view.id}`}
+              aria-selected={index === 0 ? 'true' : 'false'}
+              tabindex={index === 0 ? 0 : -1}
+            >
+              {view.label}
+            </button>
+          ))}
+        </div>
+        {VIEWS.map((view, index) => (
+          <div
+            class:list={['tabpanel', { on: index === 0 }]}
+            role="tabpanel"
+            id={`sk-panel-${view.id}`}
+            aria-labelledby={`sk-tab-${view.id}`}
+          >
+            <div class="tabpanel-bar">
+              <span class="tab-title text-sm font-medium text-fg">{view.label}</span>
+              <span class="text-xs text-fg-2">{view.note}</span>
+            </div>
+            <div class="mini">
+              {view.columns.map(column => (
+                <p class="mini-head">
+                  {column.name}
+                  <span class="mono">{column.issues.length}</span>
+                </p>
+              ))}
+            </div>
+            {(view.lanes ?? [{ name: '', columns: view.columns }]).map(lane => (
+              <>
+                {lane.name && (
+                  <p class="lane">
+                    <span class="text-fg font-medium">{lane.name}</span>
+                    <span class="mono">{lane.columns.reduce((sum, column) => sum + column.issues.length, 0)}</span>
+                  </p>
+                )}
+                <div class="mini cells">
+                  {lane.columns.map(column => (
+                    <div class="cell">
+                      {column.issues.map(issue => (
+                        <Card issue={issue} compact />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ))}
+          </div>
+        ))}
+      </div>
+      <p class="mt-4 text-xs text-fg-3">
+        The same ten cards of Sprint 08, keys and points only. Every project starts with one board: <em>To do</em>,{' '}
+        <em>In progress</em> and <em>Done</em>, with a row per epic.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .mini {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+  .mini-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--bg-surface);
+    font-size: 12.5px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+  .mini-head .mono,
+  .lane .mono {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+  .cells {
+    border-top: 1px solid var(--border);
+  }
+  .cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 52px;
+    padding: 8px;
+    background: var(--bg-app);
+  }
+  .cell > :global(.card) {
+    margin-top: 0;
+  }
+  .lane {
+    display: flex;
+    gap: 8px;
+    padding: 7px 10px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    font-size: 12.5px;
+    line-height: 18px;
+  }
+  @media (max-width: 640px) {
+    .mini-head,
+    .lane {
+      padding-inline: 8px;
+    }
+    .cell {
+      padding: 6px;
+    }
+  }
+</style>

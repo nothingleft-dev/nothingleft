@@ -1,0 +1,293 @@
+---
+import { BURNDOWN, BURNDOWN_MAX, REPORTS_FEATURE_PATH, REPORTS_MANUAL_PATH } from '@lib/features/sprints-kanban-boards';
+
+const last = BURNDOWN.length - 1;
+const x = (index: number) => (index / last) * 100;
+const y = (value: number) => 100 - (value / BURNDOWN_MAX) * 100;
+const line = (values: number[]) => values.map((value, index) => `${x(index)},${y(value)}`).join(' ');
+
+const remaining = line(BURNDOWN.map(day => day.remaining));
+const ideal = line(BURNDOWN.map(day => day.ideal));
+const scopeAdded = line(BURNDOWN.map(day => day.scopeAdded));
+
+const addedIndex = BURNDOWN.findIndex(day => day.scopeAdded > 0);
+const added = BURNDOWN[addedIndex];
+const weekend = { from: x(4.5), to: x(6.5) };
+const ticks = [0, 10, 20, 30];
+const labelled = new Set([0, 7, last]);
+const final = BURNDOWN[last];
+---
+
+<section class="border-t border-line" aria-labelledby="burndown-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="burndown-title" class="h2">
+        A burndown that shows when the scope moved.
+      </h2>
+      <p class="prose mt-5">
+        The figures are recorded every night and when the sprint starts and finishes, so the chart shows how the sprint
+        really went even after issues are edited. Scope added after the start is its own line, so{' '}
+        <em>we finished nothing</em> and <em>they added 6 points on Tuesday</em> look different. Measure it in story
+        points, issue count or remaining estimate.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <figure class="lg:col-span-7">
+        <div class="panel panel-pad">
+          <p class="text-sm font-medium">Burndown · Sprint 07 · Story points</p>
+          <ul class="legend mt-3">
+            <li>
+              <span class="key-line remaining" aria-hidden="true"></span>Remaining
+            </li>
+            <li>
+              <span class="key-line ideal" aria-hidden="true"></span>Ideal
+            </li>
+            <li>
+              <span class="key-line added" aria-hidden="true"></span>Scope added after the start
+            </li>
+          </ul>
+          <div class="chart mt-5" role="img" aria-labelledby="burndown-caption">
+            <div class="plot">
+              <span class="weekend" style={`left:${weekend.from}%;width:${weekend.to - weekend.from}%`}></span>
+              {ticks.map(tick => (
+                <span class="grid-line" style={`top:${y(tick)}%`}>
+                  <span class="y-label">{tick}</span>
+                </span>
+              ))}
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline class="l-ideal" points={ideal} />
+                <polyline class="l-added" points={scopeAdded} />
+                <polyline class="l-remaining" points={remaining} />
+              </svg>
+              {added && (
+                <span class="note" style={`left:${x(addedIndex)}%;top:${y(added.remaining)}%`}>
+                  +{added.scopeAdded} added {added.date}
+                </span>
+              )}
+            </div>
+            <div class="x-axis" aria-hidden="true">
+              {BURNDOWN.map((day, index) =>
+                labelled.has(index) ? (
+                  <span style={`left:${x(index)}%`} class:list={{ first: index === 0, end: index === last }}>
+                    {day.date}
+                  </span>
+                ) : null,
+              )}
+            </div>
+          </div>
+        </div>
+        <figcaption id="burndown-caption" class="mt-4 text-sm text-fg-2 max-w-[60ch]">
+          On {added?.date}, {added?.scopeAdded} points joined Sprint 07 after it started. Remaining work rose that day
+          because of new work, not lost progress; the orange line counts what was added. The ideal line stays flat over
+          the weekend. Sprint 07 finished with {final?.completed} of {(final?.completed ?? 0) + (final?.remaining ?? 0)}{' '}
+          points resolved.
+        </figcaption>
+      </figure>
+
+      <div class="lg:col-span-5">
+        <table class="figures">
+          <caption>Daily figures</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Remaining</th>
+              <th scope="col">Ideal</th>
+              <th scope="col">Added</th>
+              <th scope="col">Done</th>
+            </tr>
+          </thead>
+          <tbody>
+            {BURNDOWN.map((day, index) => (
+              <tr class:list={{ jump: index === addedIndex }}>
+                <th scope="row">{day.date}</th>
+                <td>{day.remaining}</td>
+                <td>{day.ideal}</td>
+                <td>{day.scopeAdded}</td>
+                <td>{day.completed}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p class="mt-4 text-xs text-fg-3">Added is scope added since the start. Done is points resolved.</p>
+        <p class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <a class="link" href={REPORTS_FEATURE_PATH}>
+            Burndown and the other reports
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <a class="link" href={`${REPORTS_MANUAL_PATH}#burndown`}>
+            Burndown in the manual
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .key-line {
+    width: 18px;
+    height: 0;
+    border-top: 2px solid var(--text);
+  }
+  .key-line.ideal {
+    border-top: 2px dashed var(--chart-ideal);
+  }
+  .key-line.added {
+    border-top-color: var(--chart-2);
+  }
+  .chart {
+    padding-left: 26px;
+  }
+  .plot {
+    position: relative;
+    height: 220px;
+  }
+  @media (min-width: 768px) {
+    .plot {
+      height: 260px;
+    }
+  }
+  .plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .plot polyline {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .l-remaining {
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  .l-ideal {
+    stroke: var(--chart-ideal);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+  .l-added {
+    stroke: var(--chart-2);
+    stroke-width: 2;
+  }
+  .weekend {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--bg-inset);
+  }
+  .grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px solid var(--chart-grid);
+  }
+  .y-label {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: -9px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .note {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 10px));
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--palette-orange-fg);
+    background: var(--bg-surface);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .x-axis {
+    position: relative;
+    height: 26px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .x-axis span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .x-axis .first {
+    transform: none;
+  }
+  .x-axis .end {
+    transform: translateX(-100%);
+  }
+  .figures {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .figures caption {
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    padding-bottom: 8px;
+  }
+  .figures th,
+  .figures td {
+    padding: 6px 0;
+    border-top: 1px solid var(--border-subtle);
+    text-align: right;
+    font-weight: 400;
+  }
+  .figures th:first-child {
+    text-align: left;
+  }
+  .figures thead th {
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .figures td {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    padding-left: 8px;
+  }
+  .figures td:nth-child(2) {
+    color: var(--text);
+  }
+  .figures tr.jump > * {
+    background: var(--accent-soft);
+  }
+  .figures tbody tr:last-child > * {
+    border-bottom: 1px solid var(--border);
+  }
+</style>

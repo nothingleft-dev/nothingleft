@@ -1,0 +1,196 @@
+---
+import SprintBoard from './SprintBoard.astro';
+import {
+  COLUMNS,
+  INITIAL_STATE,
+  LIFECYCLE,
+  SPRINT,
+  tallyBoard,
+  TOTAL_POINTS,
+} from '@lib/features/sprints-kanban-boards';
+
+const tally = tallyBoard(INITIAL_STATE);
+const strip = COLUMNS.map(column => ({ ...column, count: tally.columns[column.id].count }));
+const cardCount = strip.reduce((sum, column) => sum + column.count, 0);
+---
+
+<section class="wrap pb-16 md:pb-24" aria-label="Sprint 08 on the board">
+  <figure>
+    <div class="sk-pane">
+      <div class="pane-bar">
+        <span class="text-fg">Acme</span>
+        <span class="sep">/</span>
+        <span class="mono text-xs">ACME</span>
+        <span class="sep">/</span>
+        <span>Board</span>
+        <span class="sep">/</span>
+        <span class="text-fg">{SPRINT.name}</span>
+      </div>
+      <div class="sk-head">
+        <div class="min-w-0">
+          <p class="goal">{SPRINT.goal}</p>
+          <p class="facts">
+            <span>{SPRINT.dates}</span>
+            <span>{SPRINT.daysLeft} days left</span>
+            <span>
+              <span class="mono">{tally.resolvedPoints}</span> of <span class="mono">{TOTAL_POINTS}</span> points
+              resolved
+            </span>
+          </p>
+        </div>
+        <div class="strip-wrap">
+          <p class="sr-only">Cards by status:</p>
+          <div class="strip" aria-hidden="true">
+            {strip.map(column => (
+              <span class:list={['seg-bar', `s-${column.id}`]} style={`flex-grow:${column.count}`} />
+            ))}
+          </div>
+          <ul class="legend">
+            {strip.map(column => (
+              <li>
+                <i class:list={['dot', { started: column.id === 'in-progress', done: column.resolved }]} />
+                {column.name} <span class="mono">{column.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <SprintBoard state={INITIAL_STATE} />
+    </div>
+    <ol class="lifecycle" aria-label="Sprint states">
+      {LIFECYCLE.map(stage => (
+        <li class:list={{ now: stage.state === 'Active' }} aria-current={stage.state === 'Active' ? 'step' : undefined}>
+          <p class="stage">
+            {stage.state}
+            <span class="text-fg-2 font-normal">{` · ${stage.sprint}`}</span>
+          </p>
+          <p class="when">{stage.dates}</p>
+          <p class="note">{stage.note}</p>
+        </li>
+      ))}
+    </ol>
+    <figcaption class="mt-4 text-xs text-fg-3">
+      {SPRINT.name} on {SPRINT.today}: {cardCount} cards, in backlog order, with priority on the left edge. Hand-drawn
+      product view with fictional data.
+    </figcaption>
+  </figure>
+</section>
+
+<style>
+  .sk-pane {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    background: var(--bg-surface);
+    overflow: hidden;
+  }
+  .sk-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 32px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .goal {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 16px;
+    margin-top: 2px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .strip-wrap {
+    width: min(100%, 320px);
+  }
+  .strip {
+    display: flex;
+    gap: 2px;
+    height: 6px;
+  }
+  .seg-bar {
+    flex-basis: 0;
+    border-radius: 1px;
+    background: var(--palette-gray-solid);
+  }
+  .s-in-progress {
+    background: var(--palette-amber-solid);
+  }
+  .s-fixed {
+    background: var(--palette-green-solid);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .lifecycle {
+    display: grid;
+    border: 1px solid var(--border);
+    border-top: 0;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    overflow: hidden;
+  }
+  @media (min-width: 768px) {
+    .lifecycle {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .lifecycle li {
+    position: relative;
+    padding: 12px 16px 14px;
+    background: var(--bg-surface);
+  }
+  .lifecycle li + li {
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .lifecycle li + li {
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+  .lifecycle li::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: var(--border);
+  }
+  .lifecycle li.now::after {
+    background: var(--accent);
+  }
+  .stage {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .when {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .note {
+    margin-top: 4px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+</style>

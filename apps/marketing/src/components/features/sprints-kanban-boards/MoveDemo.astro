@@ -1,0 +1,377 @@
+---
+import SprintBoard from './SprintBoard.astro';
+import {
+  columnName,
+  COLUMNS,
+  DEMO_MOVES,
+  DESTINATIONS,
+  destinationAfter,
+  FINISHED_STATE,
+  formatTally,
+  INITIAL_STATE,
+  plural,
+  SPRINT,
+  SPRINT_ISSUES,
+  tallyBoard,
+  TOTAL_POINTS,
+} from '@lib/features/sprints-kanban-boards';
+
+const state = FINISHED_STATE;
+const before = tallyBoard(INITIAL_STATE);
+const now = tallyBoard(state);
+const chosen = DESTINATIONS.find(destination => destination.id === state.destination);
+const fromColumn = (key: string) => columnName(SPRINT_ISSUES.find(issue => issue.key === key)?.column ?? 'open');
+---
+
+<section id="try-the-board" class="border-t border-line bg-app" aria-labelledby="try-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="try-title" class="h2">
+        A sprint ends with a decision, not a pile of forgotten work.
+      </h2>
+      <p class="prose mt-5">
+        Move two cards on {SPRINT.name} and watch the counts. Then finish the sprint: you choose where the unfinished
+        issues go, the backlog or a planned sprint. Nothing is chosen for you.
+      </p>
+    </div>
+
+    <div class="sk-demo mt-10 md:mt-14" data-sk-demo>
+      <div class="area-moves">
+        <p class="label" id="sk-moves-label">
+          Move a card
+        </p>
+        <div class="moves js-only mt-2" role="group" aria-labelledby="sk-moves-label">
+          {DEMO_MOVES.map(move => (
+            <button type="button" class="btn btn-ghost btn-sm" data-move={move.id}>
+              Move {move.key} back to {fromColumn(move.key)}
+            </button>
+          ))}
+        </div>
+        <p class="status mt-3" data-status aria-live="polite">
+          Both cards moved, then {SPRINT.name} finished with its unfinished issues sent to {chosen?.name}.{' '}
+          <span class="nojs">With JavaScript on, you can make these moves yourself.</span>
+        </p>
+      </div>
+
+      <figure class="area-board">
+        <div class="panel overflow-hidden">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Board</span>
+            <span class="sep">/</span>
+            <span class="text-fg">{SPRINT.name}</span>
+            <span class="state-pill ml-auto" data-sprint-state>
+              {state.finished ? 'Completed' : 'Active'}
+            </span>
+          </div>
+          <div class="head">
+            <span class="text-fg font-medium">{SPRINT.goal}</span>
+            <span>
+              <span class="mono" data-resolved>
+                {now.resolvedPoints}
+              </span>{' '}
+              of <span class="mono">{TOTAL_POINTS}</span> points resolved
+            </span>
+          </div>
+          <SprintBoard state={state} interactive emptyNote={`Moved to ${chosen?.name}`} />
+        </div>
+        <figcaption class="mt-3 text-xs text-fg-3">
+          In Progress has a maximum of 2 cards. Hand-drawn product view with fictional data.
+        </figcaption>
+      </figure>
+
+      <div class="area-table">
+        <table class="tally">
+          <caption>Before and now</caption>
+          <thead>
+            <tr>
+              <th scope="col">Column</th>
+              <th scope="col">Before</th>
+              <th scope="col">Now</th>
+            </tr>
+          </thead>
+          <tbody>
+            {COLUMNS.map(column => (
+              <tr>
+                <th scope="row">{column.name}</th>
+                <td>
+                  {before.columns[column.id].count} · {plural(before.columns[column.id].points, 'pt')}
+                </td>
+                <td data-now={column.id}>
+                  {now.columns[column.id].count} · {plural(now.columns[column.id].points, 'pt')}
+                </td>
+              </tr>
+            ))}
+            <tr class="total">
+              <th scope="row">Unfinished</th>
+              <td>
+                {before.unfinished.count} · {plural(before.unfinished.points, 'pt')}
+              </td>
+              <td data-now="unfinished">
+                {state.finished ? 'Moved out' : `${now.unfinished.count} · ${plural(now.unfinished.points, 'pt')}`}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="area-finish panel">
+        <div class="finish-head">
+          <h3 class="h3">Finish {SPRINT.name}</h3>
+          <p class="mt-1 text-sm text-fg-2" data-unfinished>
+            {formatTally(now.unfinished)} unfinished. Where do they go?
+          </p>
+        </div>
+        <div class="finish-body js-only">
+          <p class="label" id="sk-dest-label">
+            Move unfinished issues to
+          </p>
+          <div class="seg mt-2" role="radiogroup" aria-labelledby="sk-dest-label" data-destinations>
+            {DESTINATIONS.map((destination, index) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked="false"
+                tabindex={index === 0 ? 0 : -1}
+                data-value={destination.id}
+              >
+                {destination.name}
+              </button>
+            ))}
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button type="button" class="btn btn-sm" data-finish aria-disabled="true" aria-describedby="sk-finish-hint">
+              Finish sprint
+            </button>
+            <button type="button" class="link text-sm" data-reset>
+              Start over
+            </button>
+          </div>
+          <p class="mt-3 text-xs text-fg-2" id="sk-finish-hint" data-hint>
+            Pick a destination first.
+          </p>
+        </div>
+        <dl class="outcome">
+          {DESTINATIONS.map(destination => {
+            const after = destinationAfter(destination, state);
+            return (
+              <div>
+                <dt>
+                  {destination.name}
+                  <span class="text-fg-3"> · {destination.detail}</span>
+                </dt>
+                <dd data-destination={destination.id}>
+                  {after.count === destination.issues
+                    ? formatTally(after)
+                    : `${destination.issues} → ${after.count} issues, ${destination.points} → ${after.points} points`}
+                </dd>
+              </div>
+            );
+          })}
+          <div>
+            <dt>{SPRINT.name}</dt>
+            <dd data-kept>
+              {state.finished
+                ? `Completed. Keeps ${formatTally(now.columns.fixed)} it resolved.`
+                : 'Running. Resolved issues stay with it when it finishes.'}
+            </dd>
+          </div>
+          <div data-history hidden={!state.finished}>
+            <dt>History of each moved issue</dt>
+            <dd>
+              <code data-history-line>
+                Sprint: {SPRINT.name} → {chosen?.name}
+              </code>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/features/sprints-kanban-boards';
+</script>
+
+<style>
+  .sk-demo {
+    display: grid;
+    gap: 24px;
+    grid-template-areas: 'moves' 'board' 'table' 'finish';
+  }
+  @media (min-width: 1024px) {
+    .sk-demo {
+      grid-template-columns: minmax(0, 1fr) 340px;
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas: 'board moves' 'board table' 'board finish';
+      column-gap: 40px;
+      align-items: start;
+    }
+  }
+  :global(html.js) .sk-demo:not(.ready) {
+    visibility: hidden;
+  }
+  :global(html:not(.js)) .js-only {
+    display: none;
+  }
+  :global(html.js) .nojs {
+    display: none;
+  }
+  .area-moves {
+    grid-area: moves;
+  }
+  .area-board {
+    grid-area: board;
+  }
+  .area-table {
+    grid-area: table;
+  }
+  .area-finish {
+    grid-area: finish;
+  }
+  @media (max-width: 1023px) {
+    .area-table,
+    .area-finish {
+      max-width: 560px;
+    }
+  }
+  .label {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+  .moves {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .moves .btn {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+    height: auto;
+    min-height: 32px;
+    padding-block: 6px;
+  }
+  .moves [aria-disabled='true'],
+  [data-finish][aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+  [data-finish][aria-disabled='true'] {
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transform: none;
+  }
+  .moves [aria-disabled='true'] {
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transform: none;
+  }
+  .status {
+    font-size: 13.5px;
+    line-height: 21px;
+    color: var(--text-secondary);
+    min-height: 42px;
+  }
+  .state-pill {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .tally {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally caption {
+    text-align: left;
+    font-weight: 500;
+    padding-bottom: 6px;
+  }
+  .tally th,
+  .tally td {
+    padding: 7px 0;
+    border-top: 1px solid var(--border);
+    text-align: left;
+    font-weight: 400;
+  }
+  .tally thead th {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+  .tally td {
+    color: var(--text-secondary);
+    padding-left: 12px;
+  }
+  .tally td:last-child {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .tally tr:last-child > * {
+    border-bottom: 1px solid var(--border);
+  }
+  .finish-head {
+    padding: 16px 18px 12px;
+  }
+  .finish-body {
+    padding: 0 18px 16px;
+  }
+  .outcome {
+    border-top: 1px solid var(--border);
+    padding: 4px 18px 6px;
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .outcome > div {
+    padding: 9px 0;
+  }
+  .outcome > div + div {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .outcome dt {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .outcome dd {
+    margin-top: 1px;
+    color: var(--text-secondary);
+  }
+  .outcome code {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+  }
+  .sk-demo :global(.sk-card.moved) {
+    animation: sk-moved 1.2s var(--ease-out) 1;
+  }
+  @keyframes sk-moved {
+    from {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    to {
+      box-shadow: 0 0 0 2px transparent;
+    }
+  }
+</style>
