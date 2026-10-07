@@ -31,7 +31,9 @@ export function pageMeta(pathname: string): PageMeta {
     FAQPage: () => (schema.faq ? faqPage(path, schema.faq) : undefined),
     BreadcrumbList: () => (schema.breadcrumb ? breadcrumb(schema.breadcrumb) : undefined),
   };
-  const nodes = schema.nodes.map(node => {
+  // A page may list FAQPage before its questions are written; it emits once they exist.
+  const wanted = schema.nodes.filter(node => node !== 'FAQPage' || (schema.faq?.length ?? 0) > 0);
+  const nodes = wanted.map(node => {
     const built = builders[node]?.();
     if (!built) throw new Error(`${path} lists ${node} in schema-config without the data it needs`);
     return built;

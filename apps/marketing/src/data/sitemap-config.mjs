@@ -6,6 +6,12 @@ export const SITEMAP_PAGES = {
   '/': { lastmod: '2026-10-07T16:30:00+05:30' },
   '/pricing': { lastmod: '2026-10-07T21:45:00+05:30' },
   '/features/mcp-ai-agents': { lastmod: '2026-10-07T21:45:00+05:30' },
+  '/features/issue-tracking': { lastmod: '2026-10-08T00:00:00+05:30' },
+  '/features/sprints-kanban-boards': { lastmod: '2026-10-08T00:00:00+05:30' },
+  '/features/search-saved-views': { lastmod: '2026-10-08T00:00:00+05:30' },
+  '/features/time-tracking': { lastmod: '2026-10-08T00:00:00+05:30' },
+  '/features/project-reports': { lastmod: '2026-10-08T00:00:00+05:30' },
+  '/features/project-knowledge-base': { lastmod: '2026-10-08T00:00:00+05:30' },
 };
 
 export function normalizePath(pathname) {
