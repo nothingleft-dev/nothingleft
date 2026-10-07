@@ -1,0 +1,515 @@
+---
+import { SUPPORT_EMAIL } from '@lib/site';
+import { REQUEST_HELP, SECURITY_REPORT_URL, SUPPORT_MAILTO } from '@lib/support';
+import { LIMITS, PRODUCT_AREAS, REQUEST_TYPES } from '@lib/support-contract';
+---
+
+<section id="contact" class="border-t border-line bg-app" aria-labelledby="contact-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="contact-title" class="h2">
+        Send a request.
+      </h2>
+      <p class="prose mt-5">
+        One form for problems, beta feedback, account help and questions about fit. Choose what it is about, and we
+        suggest what to include.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="support-aside lg:col-span-5 lg:order-last space-y-8">
+        <div class="panel panel-pad" aria-live="polite">
+          <div data-help-default>
+            <p class="calc-label">What to include</p>
+            <p class="mt-2 text-sm text-fg-2">
+              Choose what the request is about and the questions that help most appear here, with the guides that may
+              already answer it.
+            </p>
+          </div>
+          {REQUEST_TYPES.map(type => {
+            const help = REQUEST_HELP[type.id];
+            return (
+              <div data-help={type.id} hidden>
+                <p class="calc-label">{help.heading}</p>
+                <ul class="help-list mt-3">
+                  {help.prompts.map(prompt => (
+                    <li>{prompt}</li>
+                  ))}
+                </ul>
+                <p class="mt-5 text-xs text-fg-2">Guides that may already answer it</p>
+                <ul class="help-links mt-1">
+                  {help.links.map(link => (
+                    <li>
+                      <a class="link" href={link.href}>
+                        {link.label}
+                        <span class="arr" aria-hidden="true">
+                          →
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+
+        <div class="privacy text-sm text-fg-2">
+          <h3 class="text-sm font-medium text-fg">What happens to what you send</h3>
+          <p class="mt-2">
+            We store the request type, name, email, subject, description and product area in our database, with the time
+            it arrived. We do not record your IP address.
+          </p>
+          <p>We use it only to answer your request. It is never added to a mailing or marketing list.</p>
+          <p class="font-medium text-fg">Do not include passwords, recovery codes or access tokens.</p>
+        </div>
+
+        <p class="text-sm text-fg-2">
+          Found a security vulnerability? Do not send it here.{' '}
+          <a class="link font-normal" href={SECURITY_REPORT_URL} rel="noopener">
+            Report it privately on GitHub
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </p>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="contact-fallback panel panel-pad">
+          <h3 class="h3">Email us instead.</h3>
+          <p class="prose mt-2 text-base">
+            The form needs JavaScript. Write to{' '}
+            <a class="link" href={SUPPORT_MAILTO}>
+              {SUPPORT_EMAIL}
+            </a>{' '}
+            with a subject, say whether it is a problem, beta feedback, account help or a question about fit, and
+            describe what you need. Do not include passwords, recovery codes or access tokens.
+          </p>
+        </div>
+
+        <form class="support-form panel" method="post" novalidate aria-labelledby="contact-title" data-support-form>
+          <div class="panel-pad space-y-7">
+            <div class="notice" tabindex="-1" aria-labelledby="error-summary-title" data-error-summary hidden>
+              <p id="error-summary-title" class="notice-title" data-error-title>
+                Check these before sending:
+              </p>
+              <ul data-error-list></ul>
+            </div>
+
+            <div class="notice" tabindex="-1" aria-labelledby="send-failure-title" data-send-failure hidden>
+              <p id="send-failure-title" class="notice-title">
+                Your request was not sent.
+              </p>
+              <p class="mt-1">
+                <span data-failure-reason>The form could not reach us just now.</span> What you wrote is still here. Try
+                again in a minute, or{' '}
+                <a class="link" href={SUPPORT_MAILTO} data-failure-mailto>
+                  email it to {SUPPORT_EMAIL}
+                </a>
+                .
+              </p>
+            </div>
+
+            <p class="text-xs text-fg-2">Everything is required unless marked optional.</p>
+
+            <div>
+              <p class="calc-label" id="support-type-label">
+                What is it about?
+              </p>
+              <div
+                id="support-type"
+                class="seg mt-2"
+                role="radiogroup"
+                aria-labelledby="support-type-label"
+                aria-required="true"
+                data-field="type"
+              >
+                {REQUEST_TYPES.map((type, index) => (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked="false"
+                    tabindex={index === 0 ? 0 : -1}
+                    data-value={type.id}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+              <p id="support-type-error" class="field-error" data-error-for="type" hidden></p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-7">
+              <div>
+                <label class="calc-label" for="support-name">
+                  Name <span class="optional">(optional)</span>
+                </label>
+                <div class="input-box mt-2">
+                  <input
+                    id="support-name"
+                    name="name"
+                    type="text"
+                    autocomplete="name"
+                    maxlength={LIMITS.name}
+                    data-field="name"
+                  />
+                </div>
+                <p id="support-name-error" class="field-error" data-error-for="name" hidden></p>
+              </div>
+              <div>
+                <label class="calc-label" for="support-email">
+                  Reply email
+                </label>
+                <div class="input-box mt-2">
+                  <input
+                    id="support-email"
+                    name="email"
+                    type="email"
+                    inputmode="email"
+                    autocomplete="email"
+                    spellcheck="false"
+                    maxlength={LIMITS.email}
+                    aria-required="true"
+                    aria-describedby="support-email-hint"
+                    data-field="email"
+                  />
+                </div>
+                <p id="support-email-hint" class="hint">
+                  Where we answer. It is not added to any list.
+                </p>
+                <p id="support-email-error" class="field-error" data-error-for="email" hidden></p>
+              </div>
+            </div>
+
+            <div>
+              <label class="calc-label" for="support-subject">
+                Subject
+              </label>
+              <div class="input-box mt-2">
+                <input
+                  id="support-subject"
+                  name="subject"
+                  type="text"
+                  autocomplete="off"
+                  maxlength={LIMITS.subject}
+                  aria-required="true"
+                  data-field="subject"
+                />
+              </div>
+              <p id="support-subject-error" class="field-error" data-error-for="subject" hidden></p>
+            </div>
+
+            <div>
+              <label class="calc-label" for="support-message">
+                Description
+              </label>
+              <textarea
+                id="support-message"
+                name="message"
+                class="text-box mt-2"
+                rows="7"
+                maxlength={LIMITS.message}
+                aria-required="true"
+                aria-describedby="support-message-hint"
+                data-field="message"
+              ></textarea>
+              <p id="support-message-hint" class="hint">
+                Plain text, up to {LIMITS.message.toLocaleString('en')} characters. Leave out passwords, recovery codes
+                and access tokens.
+              </p>
+              <p id="support-message-error" class="field-error" data-error-for="message" hidden></p>
+            </div>
+
+            <div>
+              <p class="calc-label" id="support-area-label">
+                Product area <span class="optional">(optional)</span>
+              </p>
+              <div
+                id="support-area"
+                class="chips mt-2"
+                role="group"
+                aria-labelledby="support-area-label"
+                aria-describedby="support-area-hint"
+                data-field="area"
+              >
+                {PRODUCT_AREAS.map(area => (
+                  <button type="button" class="chip" aria-pressed="false" data-value={area.id}>
+                    {area.label}
+                  </button>
+                ))}
+              </div>
+              <p id="support-area-hint" class="hint">
+                Pick one if the request is about a particular part. Press it again to clear.
+              </p>
+              <p id="support-area-error" class="field-error" data-error-for="area" hidden></p>
+            </div>
+
+            <div class="honeypot" aria-hidden="true">
+              <label for="support-website">Website</label>
+              <input id="support-website" name="website" type="text" tabindex="-1" autocomplete="off" data-honeypot />
+            </div>
+
+            <div class="form-foot">
+              <button class="btn" type="submit" data-submit>
+                <span data-submit-label>Send request</span>
+                <span class="arr" aria-hidden="true">
+                  →
+                </span>
+              </button>
+              <p class="text-sm text-fg-2">
+                Prefer email?{' '}
+                <a class="link font-normal" href={SUPPORT_MAILTO}>
+                  {SUPPORT_EMAIL}
+                </a>
+              </p>
+            </div>
+            <p class="sr-only" aria-live="polite" data-send-status></p>
+          </div>
+        </form>
+
+        <div
+          class="confirmation panel panel-pad"
+          tabindex="-1"
+          aria-labelledby="confirm-title"
+          data-confirmation
+          hidden
+        >
+          <span class="confirm-mark" aria-hidden="true">
+            ✓
+          </span>
+          <h3 id="confirm-title" class="h3 mt-4">
+            Request sent.
+          </h3>
+          <p class="prose mt-2 text-base">
+            Thank you. We have it, and any reply goes to <strong data-confirm-email></strong>. If you think of something
+            to add, send another request with the same subject, or email{' '}
+            <a class="link" href={SUPPORT_MAILTO}>
+              {SUPPORT_EMAIL}
+            </a>
+            .
+          </p>
+          <div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <button class="btn btn-ghost" type="button" data-send-another>
+              Send another request
+            </button>
+            <a class="link text-sm" href="/docs">
+              Browse the docs
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/support';
+</script>
+
+<style>
+  :global(html:not(.js)) .support-form,
+  :global(html:not(.js)) .support-aside {
+    display: none !important;
+  }
+  :global(html.js) .contact-fallback {
+    display: none;
+  }
+
+  .optional {
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .hint {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+
+  .text-box {
+    display: block;
+    width: 100%;
+    min-height: 176px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text);
+    resize: vertical;
+    transition: box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .text-box:hover {
+    box-shadow: inset 0 0 0 1px var(--text);
+  }
+  .text-box:focus-visible {
+    border-radius: var(--radius-sm);
+    box-shadow:
+      inset 0 0 0 1px var(--text),
+      var(--focus-ring);
+  }
+  .text-box::placeholder {
+    color: var(--text-disabled);
+  }
+
+  .input-box:has([aria-invalid='true']),
+  .text-box[aria-invalid='true'] {
+    box-shadow: inset 0 0 0 1.5px var(--palette-red-solid);
+  }
+  .input-box:has([aria-invalid='true']):focus-within,
+  .text-box[aria-invalid='true']:focus-visible {
+    box-shadow:
+      inset 0 0 0 1.5px var(--palette-red-solid),
+      var(--focus-ring);
+  }
+  .seg[aria-invalid='true'] [role='radio'] {
+    box-shadow: inset 0 0 0 1px var(--palette-red-solid);
+  }
+  .field-error {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--palette-red-fg);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .chip:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--ink-fg);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+  .chip:focus-visible {
+    border-radius: var(--radius-full);
+    box-shadow:
+      inset 0 0 0 1px var(--ink),
+      var(--focus-ring);
+  }
+
+  .honeypot {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .notice {
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid var(--palette-red-solid);
+    background: var(--palette-red-bg);
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text);
+  }
+  .notice:focus-visible {
+    border-radius: var(--radius-sm);
+  }
+  .notice-title {
+    font-weight: 600;
+  }
+  .notice ul {
+    margin-top: 6px;
+    display: grid;
+    gap: 4px;
+  }
+  .notice :global(li) {
+    display: grid;
+    grid-template-columns: 12px 1fr;
+    gap: 8px;
+  }
+  .notice :global(li)::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    margin-top: 8px;
+    border-radius: 50%;
+    background: var(--palette-red-solid);
+  }
+
+  .form-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+  }
+  .btn[disabled] {
+    cursor: progress;
+    background: var(--ink-hover);
+    transform: none;
+  }
+
+  .confirmation:focus-visible {
+    border-radius: var(--radius-md);
+  }
+  .confirm-mark {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .help-list {
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  .help-list li {
+    display: grid;
+    grid-template-columns: 12px 1fr;
+    gap: 10px;
+  }
+  .help-list li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 2px;
+    background: var(--text);
+  }
+  .help-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    font-size: 14px;
+    line-height: 21px;
+  }
+  .privacy p + p {
+    margin-top: 8px;
+  }
+</style>

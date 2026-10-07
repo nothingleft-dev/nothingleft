@@ -1,0 +1,95 @@
+---
+import { SUPPORT_ROUTES } from '@lib/support';
+---
+
+<section class="wrap pt-12 md:pt-16 pb-12 md:pb-16" aria-labelledby="page-title">
+  <div class="max-w-[820px]">
+    <p class="text-sm md:text-base text-fg-2">Support</p>
+    <h1 id="page-title" class="h1-page mt-4 md:mt-5">
+      What can we help with
+      <span class="period">?</span>
+    </h1>
+    <p class="prose mt-6 md:mt-8 max-w-[600px] text-[17px] leading-[27px] md:text-[19px] md:leading-[30px]">
+      Look it up in the docs, report a problem, or ask whether Nothing Left fits your team. You do not need an account
+      for any of it.
+    </p>
+  </div>
+  <ul class="routes mt-10 md:mt-12" aria-label="Ways to get help">
+    {SUPPORT_ROUTES.map(route => (
+      <li>
+        <a class="route" href={route.href} data-request-type={route.type}>
+          <span class="route-label">
+            {route.label}
+            <span class="arr" aria-hidden="true">
+              {route.type ? '↓' : '→'}
+            </span>
+          </span>
+          <span class="route-detail">{route.detail}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<style>
+  .routes {
+    display: grid;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  @media (min-width: 768px) {
+    .routes {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .routes li + li {
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .routes li + li {
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+  .route {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100%;
+    padding: 20px 24px 22px;
+    background: var(--bg-surface);
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .route:hover {
+    background: var(--bg-hover);
+  }
+  .route:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .route-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    color: var(--text);
+  }
+  .route:hover .arr {
+    transform: translateX(3px);
+  }
+  .route-detail {
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  @media (max-width: 640px) {
+    .route {
+      padding: 16px;
+    }
+  }
+</style>

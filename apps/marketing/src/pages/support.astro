@@ -1,0 +1,42 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Beta from '@components/support/Beta.astro';
+import Contact from '@components/support/Contact.astro';
+import Guides from '@components/support/Guides.astro';
+import Hero from '@components/support/Hero.astro';
+import Kinds from '@components/support/Kinds.astro';
+import Base from '@layouts/Base.astro';
+import { SIGN_UP_URL } from '@lib/site';
+import { SUPPORT_FAQ } from '@lib/support';
+---
+
+<Base>
+  <Hero />
+  <Guides />
+  <Kinds />
+  <Contact />
+  <Beta />
+  <Faq
+    entries={SUPPORT_FAQ}
+    title="Questions about getting help."
+    intro="What we can and cannot do for you, and where each kind of request goes."
+  />
+  <CallToAction
+    title="Still stuck? Write to us."
+    body="Send a request with what you did and what you need, or join the beta and try it on one project first."
+  >
+    <a class="btn" href="#contact">
+      Send a request
+      <span class="arr" aria-hidden="true">
+        ↑
+      </span>
+    </a>
+    <a class="link text-sm" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

@@ -1,0 +1,131 @@
+---
+import { SUPPORT_GUIDES } from '@lib/support';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="guides-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-4">
+      <h2 id="guides-title" class="h2">
+        Most answers are already written down.
+      </h2>
+      <p class="prose mt-5 max-w-[40ch]">
+        The manual covers what the app does, step by step, with the same names you see on screen. Start with the guide
+        closest to your question.
+      </p>
+      <p class="mt-6 text-sm">
+        <a class="link" href="/docs">
+          All docs
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+    <div class="lg:col-span-7 lg:col-start-6" data-guides>
+      <div class="guide-filter mb-8">
+        <label class="calc-label" for="guide-filter">
+          Filter the guides
+        </label>
+        <div class="input-box mt-2">
+          <input
+            id="guide-filter"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Try “token”, “storage” or “two-factor”"
+            aria-describedby="guide-count"
+          />
+        </div>
+        <p id="guide-count" class="mt-2 text-xs text-fg-2" aria-live="polite" data-guide-count>
+          {SUPPORT_GUIDES.length} guides
+        </p>
+      </div>
+      <ul class="guides">
+        {SUPPORT_GUIDES.map(guide => (
+          <li data-guide data-terms={`${guide.label} ${guide.detail} ${guide.keywords}`.toLowerCase()}>
+            <a class="guide" href={guide.href}>
+              <span class="guide-label">{guide.label}</span>
+              <span class="arr text-fg-2" aria-hidden="true">
+                →
+              </span>
+              <span class="guide-detail">{guide.detail}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p class="prose mt-6 text-base" data-guide-empty hidden>
+        No guide matches that.{' '}
+        <a class="link" href="#contact">
+          Ask us instead
+        </a>
+        , and say what you were looking for.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .guides {
+    display: grid;
+    border-top: 1px solid var(--border);
+  }
+  @media (min-width: 640px) {
+    .guides {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 32px;
+    }
+  }
+  .guides li {
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+  }
+  .guide {
+    display: block;
+    padding: 16px 0 18px;
+  }
+  .guide:focus-visible {
+    box-shadow: none;
+  }
+  .guide:focus-visible .guide-label {
+    border-radius: var(--radius-xs);
+    box-shadow: var(--focus-ring);
+  }
+  .guide-label {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 500;
+    color: var(--text);
+    background-image:
+      linear-gradient(var(--text), var(--text)), linear-gradient(var(--border-strong), var(--border-strong));
+    background-size:
+      0% 1px,
+      100% 1px;
+    background-position:
+      0 100%,
+      0 100%;
+    background-repeat: no-repeat;
+    padding-bottom: 2px;
+    transition: background-size var(--dur-base) var(--ease-out);
+  }
+  .guide:hover .guide-label {
+    background-size:
+      100% 1px,
+      100% 1px;
+  }
+  .guide:hover .arr {
+    transform: translateX(3px);
+  }
+  .guide-detail {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  .guide-filter {
+    max-width: 360px;
+  }
+  :global(html:not(.js)) .guide-filter {
+    display: none;
+  }
+</style>
