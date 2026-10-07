@@ -1,0 +1,90 @@
+---
+import { WORKFLOW } from '@lib/solutions/product-teams';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="pt-flow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="pt-flow-title" class="h2">
+        From filed feedback to a decision you can find again.
+      </h2>
+      <p class="prose mt-5">
+        Six steps in one project, all on the issue level. Each one links to the page that covers it in depth.
+      </p>
+    </div>
+    <ol class="pt-flow mt-10 md:mt-14">
+      {WORKFLOW.map((step, index) => (
+        <li class:list={{ 'pt-last': index === WORKFLOW.length - 1 }}>
+          <span class="pt-flow-head">
+            <span class="pt-flow-n">{String(index + 1).padStart(2, '0')}</span>
+            <span class="pt-flow-bar" style={`--w:${40 - index * 5}px`} aria-hidden="true" />
+          </span>
+          <h3 class="h3 mt-4">{step.title}</h3>
+          <p class="prose mt-2 text-base">{step.body}</p>
+          <p class="pt-flow-detail">{step.detail}</p>
+          <a class="link text-sm mt-4 inline-block" href={step.link.href}>
+            {step.link.label}
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .pt-flow {
+    display: grid;
+    border-top: 1px solid var(--border);
+  }
+  .pt-flow li {
+    min-width: 0;
+    padding: 24px 0 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .pt-flow {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 40px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .pt-flow {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: 48px;
+    }
+  }
+  .pt-flow-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .pt-flow-n {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .pt-flow-bar {
+    width: var(--w);
+    height: 4px;
+    background: var(--text);
+    transform: skewX(-32deg);
+  }
+  .pt-last .pt-flow-bar {
+    background: var(--accent);
+  }
+  .pt-flow-detail {
+    margin-top: 14px;
+    padding: 6px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
+  }
+</style>

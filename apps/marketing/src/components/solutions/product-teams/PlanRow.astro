@@ -1,0 +1,214 @@
+---
+import { impactLabel, plural, SPRINT, type Candidate } from '@lib/solutions/product-teams';
+
+interface Props {
+  issue: Candidate;
+}
+
+const { issue } = Astro.props;
+const typeClass = { Bug: 'l-bug', Feature: 'pt-feature', Task: 'pt-grey' }[issue.type];
+const priorityClass = { Major: 'l-major', Normal: 'l-normal', Minor: 'pt-grey' }[issue.priority];
+const impact = impactLabel(issue.impact);
+---
+
+<li class:list={['pt-row', { 'pt-on': issue.picked }]} data-pt-row={issue.key}>
+  <span class="key">
+    {issue.key === 'ACME-12' ? (
+      <a class="pt-key-link" href="#pt-panel-issue" data-pt-follow="issue">
+        {issue.key}
+      </a>
+    ) : (
+      issue.key
+    )}
+  </span>
+  <span class="pt-title">{issue.title}</span>
+  <span class="pt-meta">
+    <span class="pt-badges">
+      <span class:list={['badge', typeClass]} aria-hidden="true">
+        {issue.type.charAt(0)}
+      </span>
+      <span class:list={['badge', priorityClass]} aria-hidden="true">
+        {issue.priority.charAt(0)}
+      </span>
+      <span class="sr-only">
+        {issue.type}, {issue.priority} priority,
+      </span>
+    </span>
+    <span class="pt-impact" data-impact={issue.impact ?? 'none'}>
+      <span class="sr-only">Impact:</span>
+      {impact}
+    </span>
+    <span class="pt-pts">{plural(issue.points, 'pt')}</span>
+    <button
+      type="button"
+      class="pt-move"
+      aria-pressed={issue.picked ? 'true' : 'false'}
+      aria-label={`Plan ${issue.key} into ${SPRINT.name}`}
+      data-pt-move={issue.key}
+    >
+      <span class="pt-move-mark" aria-hidden="true"></span>
+      {SPRINT.name}
+    </button>
+    <span class="pt-static">{issue.picked ? SPRINT.name : 'Backlog'}</span>
+  </span>
+</li>
+
+<style>
+  .pt-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 42px 96px 40px 112px;
+    gap: 12px;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+    transition: background var(--dur-base) var(--ease-out);
+  }
+  .pt-row.pt-on {
+    background: color-mix(in oklab, var(--accent) 16%, var(--bg-surface));
+  }
+  .pt-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .pt-meta {
+    display: contents;
+  }
+  .pt-badges {
+    display: flex;
+    gap: 4px;
+  }
+  .pt-feature {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .pt-grey {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  .pt-impact {
+    justify-self: start;
+    font-size: 12px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-xs);
+    white-space: nowrap;
+    background: var(--palette-gray-bg);
+    color: var(--palette-gray-fg);
+  }
+  .pt-impact[data-impact='High'] {
+    background: var(--palette-amber-bg);
+    color: var(--palette-amber-fg);
+  }
+  .pt-impact[data-impact='Medium'] {
+    background: var(--palette-blue-bg);
+    color: var(--palette-blue-fg);
+  }
+  .pt-impact[data-impact='none'] {
+    padding: 0;
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .pt-pts {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .pt-key-link {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--dur-fast) var(--ease-out);
+  }
+  .pt-key-link:hover {
+    text-decoration-color: var(--text);
+  }
+  .pt-move {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .pt-move:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .pt-move:active {
+    background: var(--bg-active);
+  }
+  .pt-move[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--ink-fg);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+  .pt-move[aria-pressed='true']:hover {
+    background: var(--ink-hover);
+  }
+  .pt-move:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--border-strong),
+      var(--focus-ring);
+  }
+  .pt-move-mark::before {
+    content: '+';
+    display: inline-block;
+    width: 10px;
+    text-align: center;
+  }
+  .pt-move[aria-pressed='true'] .pt-move-mark::before {
+    content: '✓';
+  }
+  .pt-static {
+    justify-self: end;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  :global(html.js) .pt-static,
+  :global(html:not(.js)) .pt-move {
+    display: none;
+  }
+  @container pt-view (max-width: 620px) {
+    .pt-row {
+      grid-template-columns: 60px minmax(0, 1fr);
+      row-gap: 6px;
+      column-gap: 10px;
+      align-items: start;
+      padding: 10px 16px;
+    }
+    .pt-title {
+      white-space: normal;
+      overflow: visible;
+    }
+    .pt-meta {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 12px;
+    }
+    .pt-move,
+    .pt-static {
+      margin-left: auto;
+    }
+  }
+</style>

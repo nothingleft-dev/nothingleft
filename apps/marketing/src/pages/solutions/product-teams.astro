@@ -1,0 +1,59 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Fit from '@components/solutions/product-teams/Fit.astro';
+import HowTo from '@components/solutions/product-teams/HowTo.astro';
+import Plan from '@components/solutions/product-teams/Plan.astro';
+import Workflow from '@components/solutions/product-teams/Workflow.astro';
+import Base from '@layouts/Base.astro';
+import { PRODUCT_TEAMS_FAQ } from '@lib/solutions/product-teams';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="For product teams"
+    title="Keep the decision beside the issue."
+    lede="Group the backlog by priority or a field your team defines, save the view for the planning meeting, move the picks into a sprint and write down why. This is issue-level planning for product and engineering together, not a portfolio roadmap."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#pt-plan">
+      Plan a sprint on sample data
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+  </PageHero>
+  <Workflow />
+  <Plan />
+  <HowTo />
+  <Fit />
+  <Faq
+    entries={PRODUCT_TEAMS_FAQ}
+    title="Questions about planning with it."
+    intro="What it does for a product backlog, and where the roadmap stops. The docs have the detail."
+  />
+  <CallToAction
+    title="Bring it to your next planning meeting."
+    body="Join the beta, create a project and add an Impact field if your team needs one. Save the view you plan from, and write the first decision record beside the issues it explains."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="/docs">
+      Read the docs
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

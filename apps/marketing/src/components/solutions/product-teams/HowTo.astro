@@ -1,0 +1,183 @@
+---
+import { KB_FEATURE_PATH, REPORTS_FEATURE_PATH, SEARCH_FEATURE_PATH } from '@lib/solutions/product-teams';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="pt-howto-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-4">
+      <div class="pt-howto-intro">
+        <h2 id="pt-howto-title" class="h2">
+          How to prioritize a product backlog.
+        </h2>
+        <p class="prose mt-5 max-w-[40ch]">
+          A backlog stays useful when anyone can explain its order. This routine suits a product team planning two-week
+          sprints with engineering. The worked example follows Acme’s planning meeting on 2 Oct 2026.
+        </p>
+        <p class="prose mt-4 text-base max-w-[40ch]">
+          Nothing here is automatic. The fields, the order and the reasons belong to the team; the tracker keeps them
+          findable.
+        </p>
+      </div>
+    </div>
+
+    <div class="lg:col-span-7 lg:col-start-6 pt-howto">
+      <div class="pt-howto-step">
+        <h3 class="h3">
+          <span class="pt-howto-n">1</span>Capture every candidate as an issue.
+        </h3>
+        <p class="prose text-base">
+          Customer reports, support threads and ideas from the team become issues before anyone ranks them, each with a
+          type and a tag for the area it touches. Comparing one list is easier than comparing five sources.
+        </p>
+        <p class="pt-example">
+          <span class="pt-example-label">Acme</span>
+          Casey files ACME-12, <em>Invite link blank after it expires</em>, from two support emails and tags it
+          invitations, next to five older requests.
+        </p>
+      </div>
+
+      <div class="pt-howto-step">
+        <h3 class="h3">
+          <span class="pt-howto-n">2</span>Group by impact and urgency.
+        </h3>
+        <p class="prose text-base">
+          Priority answers how urgent something is. A second field answers how much it matters to the people using the
+          product. Add a select field such as Impact, agree what its options mean, then group the list by each in turn.
+          Where the two disagree is where the conversation is.
+        </p>
+        <p class="pt-example">
+          <span class="pt-example-label">Acme</span>
+          ACME-15, <em>Resend invite from the members list</em>, is Normal priority but High impact: admins ask for it
+          every week. ACME-19 has no Impact yet, so it reads Not triaged instead of being guessed.
+        </p>
+      </div>
+
+      <div class="pt-howto-step">
+        <h3 class="h3">
+          <span class="pt-howto-n">3</span>Record the reason for the priority.
+        </h3>
+        <p class="prose text-base">
+          A priority without a reason gets argued again every sprint. Write one sentence in the issue. When the decision
+          will outlive the issue, write a decision record in the project’s knowledge base that names the issue keys.
+        </p>
+        <p class="pt-example">
+          <span class="pt-example-label">Acme</span>
+          Alex writes <em>Invitation links and expiry</em>: an expired link must explain itself before any sign-in
+          prompt. It names ACME-12, so the issue lists the article under Referenced by.
+        </p>
+      </div>
+
+      <div class="pt-howto-step">
+        <h3 class="h3">
+          <span class="pt-howto-n">4</span>Pick the next sprint.
+        </h3>
+        <p class="prose text-base">
+          Take from the top of the grouped list until you reach the points the team usually finishes, and leave the rest
+          in the backlog with their reasons intact. Saved as a view, the same list opens the next meeting.
+        </p>
+        <p class="pt-example">
+          <span class="pt-example-label">Acme</span>
+          ACME-12, ACME-15 and ACME-14 go into Sprint 08, six points towards the goal <em>Make invitations clearer</em>.
+          ACME-18 is five points on its own and waits for Sprint 09.
+        </p>
+      </div>
+
+      <div class="pt-howto-step">
+        <h3 class="h3">
+          <span class="pt-howto-n">5</span>Revisit the decision after delivery.
+        </h3>
+        <p class="prose text-base">
+          When the sprint ends, check the burndown for scope that arrived late and the issue-age report for what keeps
+          waiting. Then reread the decision records the sprint touched, and confirm or correct them while the reasoning
+          is fresh.
+        </p>
+        <p class="pt-example">
+          <span class="pt-example-label">Acme</span>
+          ACME-12 is fixed on 8 Oct, and its key is struck through in the article. The burndown shows three points added
+          after the start, which goes into the next planning conversation.
+        </p>
+      </div>
+
+      <p class="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+        <a class="link" href={SEARCH_FEATURE_PATH}>
+          Saved views
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link" href={KB_FEATURE_PATH}>
+          Decision records
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link" href={REPORTS_FEATURE_PATH}>
+          Burndown and issue age
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  @media (min-width: 1024px) {
+    .pt-howto-intro {
+      position: sticky;
+      top: 96px;
+    }
+  }
+  .pt-howto-step {
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+  }
+  .pt-howto-step:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+  .pt-howto-step .h3 {
+    display: flex;
+    gap: 12px;
+  }
+  .pt-howto-n {
+    flex: none;
+    width: 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .pt-howto-step .prose,
+  .pt-example {
+    margin-top: 8px;
+    margin-left: 28px;
+  }
+  .pt-example {
+    margin-top: 14px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  }
+  .pt-example em {
+    font-style: normal;
+    color: var(--text);
+  }
+  .pt-example-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  @media (max-width: 640px) {
+    .pt-howto-step .prose,
+    .pt-example {
+      margin-left: 0;
+    }
+  }
+</style>

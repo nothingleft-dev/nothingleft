@@ -1,0 +1,465 @@
+---
+import {
+  CANDIDATES,
+  groupCandidates,
+  PICKED,
+  PICKED_POINTS,
+  plural,
+  SPRINT,
+  VIEW,
+  type GroupBy,
+} from '@lib/solutions/product-teams';
+import PlanRow from './PlanRow.astro';
+
+const groupings: { by: GroupBy; label: string }[] = [
+  { by: 'impact', label: 'Impact' },
+  { by: 'priority', label: 'Priority' },
+];
+---
+
+<section id="pt-plan" class="border-t border-line" aria-labelledby="pt-plan-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-4">
+      <h2 id="pt-plan-title" class="h2">
+        Priorities change. The reasoning should stay findable.
+      </h2>
+      <p class="prose mt-5 max-w-[40ch]">
+        It is 2 Oct 2026, and Acme is planning <strong>{SPRINT.name}</strong> from a saved view of invitation feedback.
+        Run the meeting yourself.
+      </p>
+      <ol class="steps-list mt-6 prose text-base">
+        <li>
+          <strong>Group the view</strong> by Impact, then by priority, and notice where the two disagree.
+        </li>
+        <li>
+          <strong>Plan issues into {SPRINT.name}.</strong> The sprint under the list keeps the count.
+        </li>
+        <li>
+          <strong>Open ACME-12</strong> and follow Referenced by to the decision record, then back.
+        </li>
+      </ol>
+    </div>
+
+    <div class="lg:col-span-8" data-pt-plan>
+      <div class="panel pt-view">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Issues</span>
+        </div>
+        <div class="pt-view-tabs">
+          <span class="pt-view-tab">
+            {VIEW.name}
+            <span class="pt-n">{CANDIDATES.length}</span>
+          </span>
+          <span class="pt-view-share">Shared with ACME</span>
+        </div>
+        <p class="querybar pt-query">
+          <span class="q">{VIEW.query}</span>
+          <span class="count">{plural(CANDIDATES.length, 'issue')}</span>
+        </p>
+        <div class="pt-tools">
+          <span class="calc-label pt-js" id="pt-group-label">
+            Group by
+          </span>
+          <div class="seg pt-js" role="radiogroup" aria-labelledby="pt-group-label" data-pt-group>
+            {groupings.map(({ by, label }, index) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={index === 0 ? 'true' : 'false'}
+                tabindex={index === 0 ? 0 : -1}
+                data-value={by}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <span class="calc-label pt-nojs">Grouped by Impact</span>
+          <p class="pt-field-note">
+            <strong>Impact</strong> is a select field this team added in Project settings → Fields, with High, Medium
+            and Low. It is not built in, and nothing scores it.
+          </p>
+        </div>
+
+        {groupings.map(({ by, label }) => (
+          <div data-pt-grouping={by} hidden={by !== 'impact'}>
+            {groupCandidates(by).map(group => (
+              <div class="pt-group">
+                <p class="pt-group-head">
+                  <span class="sr-only">{label}:</span>
+                  <span>{group.label}</span>
+                  <span class="pt-n">{group.issues.length}</span>
+                </p>
+                <ul class="list-none">
+                  {group.issues.map(issue => (
+                    <PlanRow issue={issue} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        <div class="pt-sprint">
+          <p class="pt-sprint-head">
+            <span class="text-fg font-medium">{SPRINT.name}</span>
+            <span class="pt-pill">Planned</span>
+            <span class="pt-sprint-meta">
+              Goal: {SPRINT.goal} · ends {SPRINT.ends}
+            </span>
+          </p>
+          <p class="pt-sprint-sum" data-pt-summary>
+            From this view: {plural(PICKED.length, 'issue')}, {plural(PICKED_POINTS, 'point')}
+          </p>
+          <ul class="pt-sprint-keys list-none" aria-label={`Issues from this view in ${SPRINT.name}`}>
+            {CANDIDATES.map(issue => (
+              <li data-pt-in={issue.key} hidden={!issue.picked}>
+                <span class="key">{issue.key}</span>
+                <span class="pt-chip-pts">{issue.points}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div class="tabs mt-6" data-tabs>
+        <div class="tablist" role="tablist" aria-label="Issue and decision record">
+          <button
+            type="button"
+            role="tab"
+            id="pt-tab-issue"
+            aria-controls="pt-panel-issue"
+            aria-selected="true"
+            tabindex="0"
+            data-pt-tab="issue"
+          >
+            ACME-12
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="pt-tab-article"
+            aria-controls="pt-panel-article"
+            aria-selected="false"
+            tabindex="-1"
+            data-pt-tab="article"
+          >
+            Decision record
+          </button>
+        </div>
+
+        <div class="tabpanel on" role="tabpanel" id="pt-panel-issue" aria-labelledby="pt-tab-issue">
+          <p class="tab-title tabpanel-bar text-sm font-medium text-fg">The issue</p>
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">ACME-12</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug" aria-hidden="true">
+                B
+              </span>
+              Bug
+              <span class="badge l-major ml-2" aria-hidden="true">
+                M
+              </span>
+              Major
+            </div>
+            <h3 class="wf-title">Invite link blank after it expires</h3>
+            <div class="wf-md">
+              <p>
+                <strong class="text-fg font-medium">Actual.</strong> Opening an invitation link older than seven days
+                shows a blank page.
+              </p>
+            </div>
+            <dl class="fields">
+              <dt>Reporter</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  CK
+                </span>
+                Casey Kim
+              </dd>
+              <dt>Status</dt>
+              <dd>
+                <i class="dot"></i>Open
+              </dd>
+              <dt>Impact</dt>
+              <dd>
+                <span class="pt-impact-high">High</span>
+              </dd>
+              <dt>Sprint</dt>
+              <dd data-pt-sprint="ACME-12">{SPRINT.name}</dd>
+            </dl>
+            <div class="ref pt-ref" data-pt-ref>
+              <p class="lbl">Referenced by</p>
+              <p>
+                <a class="pt-ref-link" href="#pt-panel-article" data-pt-follow="article" data-pt-landing="issue">
+                  Invitation links and expiry
+                </a>
+              </p>
+              <p class="mt-1 text-xs text-fg-2">Decisions · ACME · updated 2 Oct 2026</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="pt-panel-article" aria-labelledby="pt-tab-article">
+          <p class="tab-title tabpanel-bar text-sm font-medium text-fg">The decision record</p>
+          <div class="pane-bar pt-crumbs">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span class="pt-mid">Knowledge base</span>
+            <span class="sep pt-mid">/</span>
+            <span>Decisions</span>
+            <span class="sep">/</span>
+            <span class="text-fg pt-last">Invitation links and expiry</span>
+          </div>
+          <div class="wf-body">
+            <p class="text-xs text-fg-2">Decision record · Published to project members · Last updated by Alex Lee</p>
+            <h3 class="wf-title">Invitation links and expiry</h3>
+            <div class="wf-md">
+              <p>
+                Invitation links expire after seven days (<code>INVITE_TTL_DAYS</code>). An expired link must explain
+                itself and offer a new one. A blank page or a redirect to sign-in is a bug.
+              </p>
+              <p>
+                <strong class="text-fg font-medium">Decided 2 Oct 2026.</strong> The expiry message is shown on the
+                invitation landing page itself, before any sign-in prompt, because the person may not have an account
+                yet. See{' '}
+                <a class="pt-key-link" href="#pt-panel-issue" data-pt-follow="issue" data-pt-landing="article">
+                  ACME-12
+                </a>{' '}
+                for the first instance.
+              </p>
+            </div>
+            <dl class="fields">
+              <dt>Page</dt>
+              <dd class="mono text-xs pt-wrap">/projects/ACME/articles/invitation-links-and-expiry</dd>
+              <dt>For agents</dt>
+              <dd class="mono text-xs pt-wrap">article://ACME/invitation-links-and-expiry</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <p class="sr-only" aria-live="polite" data-pt-status></p>
+      <p class="mt-4 text-xs text-fg-3">
+        Hand-drawn product views with fictional data. In the product you move an issue into a sprint by dragging it on
+        the Backlog page, or from the Sprint field on the issue; the buttons stand in for that.
+      </p>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/solutions/product-teams';
+</script>
+
+<style>
+  .pt-view {
+    overflow: hidden;
+    container: pt-view / inline-size;
+  }
+  .pt-view-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+  }
+  .pt-view-tab {
+    position: relative;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+  }
+  .pt-view-tab::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+  .pt-view-share {
+    padding: 0 16px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .pt-n {
+    margin-left: 6px;
+    font-weight: 400;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .pt-query {
+    background: var(--bg-surface);
+  }
+  .pt-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pt-field-note {
+    flex-basis: 100%;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .pt-field-note strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+  :global(html:not(.js)) .pt-js,
+  :global(html.js) .pt-nojs {
+    display: none;
+  }
+  .pt-group + .pt-group {
+    border-top: 1px solid var(--border);
+  }
+  .pt-group-head {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-app);
+  }
+  .pt-sprint {
+    padding: 14px 16px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+  }
+  .pt-sprint-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .pt-pill {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .pt-sprint-meta {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  @container pt-view (min-width: 621px) {
+    .pt-sprint-meta {
+      margin-left: auto;
+    }
+  }
+  .pt-sprint-sum {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .pt-sprint-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .pt-sprint-keys:not(:has(li:not([hidden]))) {
+    display: none;
+  }
+  .pt-sprint-keys li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--border);
+    animation: rise var(--dur-slow) var(--ease-out);
+  }
+  .pt-sprint-keys .key {
+    color: var(--text);
+  }
+  .pt-chip-pts {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .pt-impact-high {
+    font-size: 12px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-xs);
+    background: var(--palette-amber-bg);
+    color: var(--palette-amber-fg);
+  }
+  .pt-crumbs {
+    overflow: hidden;
+  }
+  .pt-last {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 480px) {
+    .pt-mid {
+      display: none;
+    }
+  }
+  .pt-wrap {
+    overflow-wrap: anywhere;
+  }
+  .pt-key-link {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--dur-fast) var(--ease-out);
+  }
+  .pt-key-link:hover,
+  .pt-ref-link:hover {
+    text-decoration-color: var(--text);
+  }
+  .pt-ref-link {
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--dur-fast) var(--ease-out);
+  }
+  .pt-ref {
+    border-radius: var(--radius-xs);
+  }
+  .pt-ref:global(.pt-arrive) {
+    animation: pt-arrive 1.4s var(--ease-out) 1;
+  }
+  @keyframes pt-arrive {
+    0% {
+      background: var(--accent);
+      box-shadow: 0 0 0 8px var(--accent);
+    }
+    100% {
+      background: transparent;
+      box-shadow: 0 0 0 8px transparent;
+    }
+  }
+</style>
