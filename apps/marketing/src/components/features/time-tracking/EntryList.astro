@@ -1,0 +1,76 @@
+---
+import { day, formatDuration, issue, person, type TimeEntry } from '@lib/features/time-tracking';
+
+interface Props {
+  entries: TimeEntry[];
+  showTitle?: boolean;
+  showDate?: boolean;
+  showAuthor?: boolean;
+}
+
+const { entries, showTitle = true, showDate = false, showAuthor = false } = Astro.props;
+---
+
+<ul class="entries">
+  {entries.map(entry => {
+    const meta = [
+      showDate ? day(entry.date).long : undefined,
+      showAuthor ? person(entry.author).name : undefined,
+      entry.workType,
+      entry.loggedBy ? `logged by ${person(entry.loggedBy).name}` : undefined,
+    ].filter(Boolean);
+    return (
+      <li>
+        <span class="key">{entry.issue}</span>
+        <span class="what">
+          {showTitle && <span class="title">{issue(entry.issue).title}</span>}
+          <span class="meta">{meta.join(' · ')}</span>
+        </span>
+        <span class="dur mono">{formatDuration(entry.minutes)}</span>
+      </li>
+    );
+  })}
+</ul>
+
+<style>
+  .entries li {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 9px 0;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .entries li:first-child {
+    border-top: 0;
+  }
+  .what {
+    display: grid;
+    min-width: 0;
+  }
+  .title {
+    color: var(--text);
+  }
+  .meta {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .dur {
+    font-size: 12.5px;
+    color: var(--text);
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 400px) {
+    .entries li {
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: 2px;
+    }
+    .entries .key {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

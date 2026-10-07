@@ -1,0 +1,374 @@
+---
+import EntryList from './EntryList.astro';
+import {
+  DAYS,
+  ENTRIES,
+  EPIC_KEY,
+  PEOPLE,
+  PERIOD_LABEL,
+  TIMESHEET_MANUAL_PATH,
+  cellEntries,
+  cellId,
+  cellTotal,
+  dayTotal,
+  formatDuration,
+  issueEntries,
+  issueSpent,
+  personEntries,
+  personTotal,
+  subtaskKeys,
+  weekTotal,
+  type PersonId,
+} from '@lib/features/time-tracking';
+
+const OPEN = { author: 'alex' as PersonId, date: '2026-10-06' };
+
+const cells = PEOPLE.flatMap(who =>
+  DAYS.filter(candidate => cellTotal(who.id, candidate.date) > 0).map(candidate => ({
+    id: `${cellId(who.id, candidate.date)}-entries`,
+    heading: `${who.name} · ${candidate.weekday} ${candidate.long}`,
+    total: cellTotal(who.id, candidate.date),
+    entries: cellEntries(who.id, candidate.date),
+    showDate: false,
+    open: who.id === OPEN.author && candidate.date === OPEN.date,
+  })),
+);
+const personPanels = PEOPLE.map(who => ({
+  id: `ts-${who.id}-period-entries`,
+  heading: `${who.name} · ${PERIOD_LABEL}`,
+  total: personTotal(who.id),
+  entries: personEntries(who.id),
+  showDate: true,
+  open: false,
+}));
+
+const sumLine = (parts: number[]) => parts.map(formatDuration).join(' + ');
+const bugParts = issueEntries('ACME-12').map(entry => entry.minutes);
+const epicParts = subtaskKeys(EPIC_KEY)
+  .map(issueSpent)
+  .sort((a, b) => b - a);
+const personParts = PEOPLE.map(who => personTotal(who.id));
+
+const CHECKS = [
+  {
+    label: 'ACME-12',
+    sum: `${sumLine(bugParts)} = ${formatDuration(issueSpent('ACME-12'))}`,
+    where:
+      'Its two entries sit in Alex’s cells for 6 and 8 Oct. The same total shows in the issue’s sidebar, the epic’s subtask list and the time report’s row.',
+  },
+  {
+    label: EPIC_KEY,
+    sum: `${sumLine(epicParts)} = ${formatDuration(issueSpent(EPIC_KEY))}`,
+    where: 'The epic’s spent time is its subtasks’ entries. The time report gives it no row, so nothing counts twice.',
+  },
+  {
+    label: 'The week',
+    sum: `${sumLine(personParts)} = ${formatDuration(weekTotal())}`,
+    where: 'The timesheet’s corner and the time report’s total. Acme’s working day is 8h, so 1d 6h is 14h.',
+  },
+];
+---
+
+<section id="timesheet" class="border-t border-line" aria-labelledby="timesheet-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="timesheet-title" class="h2">
+        See where the week went, down to the issue.
+      </h2>
+      <p class="prose mt-5">
+        People as rows, days as columns, totals both ways, non-working days marked. Open a cell, or a person’s total, to
+        see the entries behind it. Each one names the issue it was logged on.
+      </p>
+    </div>
+
+    <div class="panel mt-10 md:mt-14 overflow-hidden">
+      <div class="pane-bar">
+        <span>Reports</span>
+        <span class="sep">/</span>
+        <span class="text-fg">Timesheet</span>
+        <span class="ml-auto text-xs text-fg-3">
+          {PERIOD_LABEL}
+          <span class="hidden sm:inline"> · Everyone</span>
+        </span>
+      </div>
+      <div class="ts-scroll" tabindex="0" role="region" aria-label={`Timesheet, ${PERIOD_LABEL}`}>
+        <table class="ts">
+          <thead>
+            <tr>
+              <th scope="col" class="who">
+                Person
+              </th>
+              {DAYS.map(candidate => (
+                <th scope="col" class:list={{ off: !candidate.working }}>
+                  <span class="wd">{candidate.weekday}</span> {candidate.short}
+                  {!candidate.working && <span class="sr-only">, non-working day</span>}
+                </th>
+              ))}
+              <th scope="col" class="tot">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {PEOPLE.map(who => (
+              <tr>
+                <th scope="row" class="who">
+                  <span class="who-in">
+                    <span class="av">{who.initials}</span>
+                    {who.name}
+                  </span>
+                </th>
+                {DAYS.map(candidate => {
+                  const total = cellTotal(who.id, candidate.date);
+                  const open = who.id === OPEN.author && candidate.date === OPEN.date;
+                  return (
+                    <td class:list={{ off: !candidate.working }}>
+                      {total > 0 && (
+                        <button
+                          type="button"
+                          class="cell"
+                          data-ts-cell
+                          aria-expanded={open ? 'true' : 'false'}
+                          aria-controls={`${cellId(who.id, candidate.date)}-entries`}
+                          aria-label={`${who.name}, ${candidate.weekday} ${candidate.long}: ${formatDuration(total)}`}
+                        >
+                          {formatDuration(total)}
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+                <td class="tot">
+                  <button
+                    type="button"
+                    class="cell"
+                    data-ts-cell
+                    aria-expanded="false"
+                    aria-controls={`ts-${who.id}-period-entries`}
+                    aria-label={`${who.name}, ${PERIOD_LABEL}: ${formatDuration(personTotal(who.id))}`}
+                  >
+                    {formatDuration(personTotal(who.id))}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" class="who">
+                Total
+              </th>
+              {DAYS.map(candidate => (
+                <td class:list={{ off: !candidate.working }}>
+                  {dayTotal(candidate.date) > 0 ? formatDuration(dayTotal(candidate.date)) : ''}
+                </td>
+              ))}
+              <td class="tot grand">{formatDuration(weekTotal())}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="ts-detail" aria-live="polite">
+        <p class="ts-empty" data-ts-empty hidden>
+          Open a cell or a person’s total to see the entries behind it.
+        </p>
+        {[...cells, ...personPanels].map(panel => (
+          <div class="ts-entries" id={panel.id} data-ts-entries hidden={!panel.open}>
+            <p class="ts-entries-head">
+              <span>{panel.heading}</span>
+              <span class="mono text-fg">{formatDuration(panel.total)}</span>
+            </p>
+            <EntryList entries={panel.entries} showDate={panel.showDate} />
+          </div>
+        ))}
+      </div>
+    </div>
+    <p class="mt-5 text-xs text-fg-3">
+      Fictional data. You see time logged on any issue you can open, whoever logged it.{' '}
+      <a class="link font-normal" href={TIMESHEET_MANUAL_PATH}>
+        How timesheets work
+        <span class="arr" aria-hidden="true">
+          →
+        </span>
+      </a>
+    </p>
+
+    <div class="mt-12 md:mt-16 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4">
+        <h3 class="h3">Where the totals meet.</h3>
+        <p class="prose mt-2 text-base">
+          Every figure on this page is a sum of the same {ENTRIES.length} entries. Here is the arithmetic.
+        </p>
+      </div>
+      <dl class="lg:col-span-8 rule-list checks">
+        {CHECKS.map(check => (
+          <div class="check">
+            <dt class="text-sm font-medium">{check.label}</dt>
+            <dd>
+              <p class="sum mono">{check.sum}</p>
+              <p class="mt-1 text-sm text-fg-2">{check.where}</p>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/features/time-tracking';
+</script>
+
+<style>
+  .ts-scroll {
+    position: relative;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+  }
+  .ts-scroll:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .ts {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 19px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ts th,
+  .ts td {
+    height: 44px;
+    padding: 0 4px;
+    border-bottom: 1px solid var(--border-subtle);
+    border-left: 1px solid var(--border-subtle);
+    text-align: center;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .ts thead th {
+    height: 36px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    border-bottom-color: var(--border);
+  }
+  .ts thead .wd {
+    color: var(--text-muted);
+  }
+  .ts .who {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    padding: 0 16px;
+    border-left: 0;
+    background: var(--bg-surface);
+    text-align: left;
+  }
+  .who-in {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+  }
+  .ts .off {
+    background: repeating-linear-gradient(135deg, var(--bg-app) 0 6px, var(--bg-surface) 6px 12px);
+  }
+  .ts .tot {
+    border-left: 1px solid var(--border);
+    padding-right: 12px;
+  }
+  .ts tfoot th,
+  .ts tfoot td {
+    border-bottom: 0;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .ts tfoot th {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .ts tfoot .grand {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .cell {
+    width: 100%;
+    min-width: 64px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .cell:hover {
+    background: var(--bg-hover);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .cell[aria-expanded='true'] {
+    background: var(--bg-selected);
+    box-shadow: inset 0 0 0 1px var(--text);
+  }
+  .cell:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--text),
+      var(--focus-ring);
+  }
+  .ts .tot .cell {
+    font-weight: 500;
+  }
+  .ts-detail {
+    padding: 4px 20px 12px;
+    min-height: 120px;
+  }
+  .ts-empty {
+    padding: 14px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .ts-entries-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .ts-entries-head .mono {
+    font-size: 12.5px;
+  }
+  @media (max-width: 640px) {
+    .ts-detail {
+      padding-inline: 16px;
+    }
+  }
+  .check {
+    display: grid;
+    gap: 4px 24px;
+    padding: 16px 0;
+  }
+  @media (min-width: 640px) {
+    .check {
+      grid-template-columns: 96px minmax(0, 1fr);
+    }
+  }
+  .check dt {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 22px;
+  }
+  .sum {
+    font-size: 13px;
+    line-height: 22px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+</style>

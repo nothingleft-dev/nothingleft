@@ -1,0 +1,166 @@
+---
+import EntryList from './EntryList.astro';
+import LogForm from './LogForm.astro';
+import MiniSheet from './MiniSheet.astro';
+import SpentMeter from './SpentMeter.astro';
+import { day, formatDuration, issue, issueEntries, issueSpent, person } from '@lib/features/time-tracking';
+
+const bug = issue('ACME-12');
+const alex = person('alex');
+const logged = [...issueEntries(bug.key)].sort((a, b) => b.date.localeCompare(a.date));
+const latest = logged[0];
+if (!latest) throw new Error('ACME-12 needs a time entry');
+const openDay = day(latest.date);
+---
+
+<section class="wrap pb-16 md:pb-24" aria-label="One time entry, from the issue to the timesheet">
+  <figure>
+    <div class="glance">
+      <div class="panel glance-pane">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs text-fg">{bug.key}</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Add spent time</span>
+        </div>
+        <LogForm
+          date={openDay.long}
+          duration={formatDuration(latest.minutes)}
+          workType={latest.workType}
+          note="Expired links land on an explanation with a Request a new link button."
+        />
+        <p class="step-label">
+          <span class="n">1</span>Logged on the issue it explains
+        </p>
+      </div>
+
+      <div class="panel glance-pane">
+        <div class="pane-bar">
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs text-fg">{bug.key}</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Spent time</span>
+        </div>
+        <div class="pane-body">
+          <p class="issue-title">{bug.title}</p>
+          <dl class="fields">
+            <dt>Type</dt>
+            <dd>
+              <span class="badge l-bug">B</span>Bug
+            </dd>
+            <dt>Assignee</dt>
+            <dd>
+              <span class="av">{alex.initials}</span>
+              {alex.name}
+            </dd>
+            <dt>Estimation</dt>
+            <dd class="mono text-xs">{formatDuration(bug.estimate)}</dd>
+            <dt>Spent time</dt>
+            <dd>
+              <SpentMeter spent={issueSpent(bug.key)} estimate={bug.estimate} />
+            </dd>
+          </dl>
+          <div class="tab-head">
+            <span>{logged.length} records</span>
+            <span class="mono text-fg">{formatDuration(issueSpent(bug.key))}</span>
+          </div>
+          <EntryList entries={logged} showTitle={false} showDate showAuthor />
+        </div>
+        <p class="step-label">
+          <span class="n">2</span>Added to the issue’s spent time
+        </p>
+      </div>
+
+      <div class="panel glance-pane">
+        <div class="pane-bar">
+          <span>Reports</span>
+          <span class="sep">/</span>
+          <span class="text-fg">Timesheet</span>
+          <span class="ml-auto text-xs text-fg-3">This week</span>
+        </div>
+        <div class="pane-body">
+          <MiniSheet author={alex.id} date={openDay.date} />
+        </div>
+        <p class="step-label">
+          <span class="n">3</span>Behind the timesheet cell for that day
+        </p>
+      </div>
+    </div>
+    <figcaption class="mt-5 text-xs text-fg-3">
+      One entry, three places: Alex logs {formatDuration(latest.minutes)} of {latest.workType} on {bug.key} for{' '}
+      {openDay.long}. Hand-drawn product views with fictional data.
+    </figcaption>
+  </figure>
+</section>
+
+<style>
+  .glance {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 768px) {
+    .glance {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .glance-pane:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (min-width: 1024px) {
+    .glance {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .glance-pane:last-child {
+      grid-column: auto;
+    }
+  }
+  .glance-pane {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .pane-body {
+    padding: 14px 16px 12px;
+  }
+  .issue-title {
+    font-size: 15px;
+    line-height: 21px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .pane-body .fields {
+    margin-top: 12px;
+    padding-top: 12px;
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+  .tab-head {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .tab-head .mono {
+    font-size: 12.5px;
+  }
+  .step-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .step-label .n {
+    font-family: var(--font-mono);
+    color: var(--text);
+  }
+</style>

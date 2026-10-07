@@ -1,0 +1,505 @@
+---
+import LogForm from './LogForm.astro';
+import MiniSheet from './MiniSheet.astro';
+import SpentMeter from './SpentMeter.astro';
+import {
+  ENTRIES,
+  EPIC_KEY,
+  day,
+  formatDuration,
+  issue,
+  issueSpent,
+  subtaskKeys,
+  timeReportByIssue,
+  weekTotal,
+} from '@lib/features/time-tracking';
+
+const range = ENTRIES.filter(
+  entry => entry.author === 'alex' && entry.issue === 'ACME-10' && entry.workType === 'Development',
+);
+const rangeFirst = range[0];
+const rangeLast = range[range.length - 1];
+if (!rangeFirst || !rangeLast) throw new Error('The range example needs entries');
+
+const epic = issue(EPIC_KEY);
+const subtasks = subtaskKeys(EPIC_KEY)
+  .map(key => ({ issue: issue(key), spent: issueSpent(key) }))
+  .sort((a, b) => b.spent - a.spent);
+const epicSpent = issueSpent(EPIC_KEY);
+
+const WORK_TYPES = [
+  'Development',
+  'Documentation',
+  'Implementation',
+  'Investigation',
+  'Maintenance',
+  'Observation',
+  'Testing',
+];
+
+const report = timeReportByIssue();
+const estimateTotal = report.reduce((total, row) => total + row.issue.estimate, 0);
+const differenceTotal = report.reduce((total, row) => total + row.difference, 0);
+
+const STEPS = [
+  {
+    title: 'Log it on the issue',
+    detail: `Alex logs ${formatDuration(rangeFirst.minutes)} on Monday and Tuesday with one date range.`,
+  },
+  { title: 'Let the parent add it up', detail: 'The epic shows the time of everything beneath it.' },
+  { title: 'Decide what an entry records', detail: 'A Project Admin picks work types and optional attributes.' },
+  { title: 'Open a timesheet cell', detail: 'Casey sees the entry behind Sam’s Wednesday.' },
+  { title: 'Compare, then export', detail: 'Estimate against spent per issue, and the same numbers as CSV.' },
+];
+---
+
+<section id="time-workflow" class="border-t border-line bg-app" aria-labelledby="time-workflow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="time-workflow-title" class="h2">
+        From a logged hour to the time report.
+      </h2>
+      <p class="prose mt-5">
+        One set of entries, read five ways. Pick a step to see what the person at that point sees.
+      </p>
+    </div>
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="Time tracking steps" data-tt-steps>
+        {STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-tt-step={String(index + 1)}
+            data-last={index === STEPS.length - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+          >
+            <span class="bar" style={`width:${40 - index * 7}px`} />
+            <span>
+              <b>{step.title}</b>
+              <span>{step.detail}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <div class="lg:col-span-8 wf-panel" id="tt-panel" aria-live="polite">
+        <div data-view="1" class="on">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">{rangeFirst.issue}</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Add spent time</span>
+          </div>
+          <div class="view-split">
+            <LogForm
+              range={{ from: day(rangeFirst.date).long, to: day(rangeLast.date).long }}
+              duration={formatDuration(rangeFirst.minutes)}
+              workType={rangeFirst.workType}
+              result={`Writes ${range.length} records of ${formatDuration(rangeFirst.minutes)}, one per working day. Weekends are skipped, and each record can be changed or deleted on its own.`}
+            />
+            <div class="aside">
+              <p class="aside-head">Written as you would say it</p>
+              <p class="aside-text">
+                <code>2h</code>, <code>1h 30m</code>, <code>1d</code>. A day and a week follow the organisation’s
+                working calendar. The type starts at the project’s default, and the note is markdown.
+              </p>
+              <p class="aside-head mt-4">Three ways in</p>
+              <p class="aside-text">
+                Below the comment box, the + beside Spent time in the sidebar, or the issue’s Spent time tab.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div data-view="2">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">{epic.key}</span>
+          </div>
+          <div class="wf-body">
+            <div class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge t-epic">E</span>Epic
+            </div>
+            <h3 class="wf-title">{epic.title}</h3>
+            <dl class="fields">
+              <dt>Estimation</dt>
+              <dd class="mono text-xs">{formatDuration(epic.estimate)}</dd>
+              <dt>Spent time</dt>
+              <dd>
+                <SpentMeter spent={epicSpent} estimate={epic.estimate} />
+              </dd>
+            </dl>
+            <p class="list-head">
+              <span>Subtasks</span>
+              <span>Spent time</span>
+            </p>
+            <ul class="subtasks">
+              {subtasks.map(row => (
+                <li>
+                  <span class="key">{row.issue.key}</span>
+                  <span class="title">{row.issue.title}</span>
+                  <span class="mono">{formatDuration(row.spent)}</span>
+                </li>
+              ))}
+              <li class="sum">
+                <span class="key">{epic.key}</span>
+                <span class="title">Everything beneath the epic</span>
+                <span class="mono">{formatDuration(epicSpent)}</span>
+              </li>
+            </ul>
+            <p class="mt-4 text-xs text-fg-3">
+              Acme’s working day is 8h, so {formatDuration(epicSpent)} is {Math.floor(epicSpent / 60)}h {epicSpent % 60}
+              m. Delete a subtask and its time comes off the epic; restore it and the time comes back.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="3">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Settings</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Time tracking</span>
+          </div>
+          <div class="wf-body">
+            <dl class="settings">
+              <dt>Time tracking</dt>
+              <dd>
+                <span class="switch" aria-hidden="true">
+                  <span></span>
+                </span>
+                On for this project
+              </dd>
+              <dt>Estimation field</dt>
+              <dd>
+                Estimation <span class="text-fg-3">built in</span>
+              </dd>
+              <dt>Spent time field</dt>
+              <dd>
+                Spent time <span class="text-fg-3">built in</span>
+              </dd>
+            </dl>
+            <p class="list-head mt-5">
+              <span>Work item attributes</span>
+            </p>
+            <ul class="attrs">
+              <li>
+                <span>Work type</span>
+                <span class="text-fg-3">Built in, cannot be removed</span>
+              </li>
+              <li class="add">
+                <span>+ Add attribute</span>
+                <span class="text-fg-3">Billable with Yes and No, say. Picked beside Type when logging.</span>
+              </li>
+            </ul>
+            <p class="list-head mt-5">
+              <span>Work types</span>
+            </p>
+            <ul class="chips">
+              {WORK_TYPES.map((type, index) => (
+                <li class:list={{ default: index === 0 }}>
+                  {type}
+                  {index === 0 && <span class="text-fg-3"> default</span>}
+                </li>
+              ))}
+            </ul>
+            <p class="mt-4 text-xs text-fg-3">
+              Choose a duration field of your own as the Estimation and the sidebar, the sprint’s remaining work and the
+              time report read it instead.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="4">
+          <div class="pane-bar">
+            <span>Reports</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Timesheet</span>
+            <span class="ml-auto text-xs text-fg-3">Opened by Casey Kim</span>
+          </div>
+          <div class="wf-body">
+            <MiniSheet author="sam" date="2026-10-07" />
+            <p class="mt-4 text-xs text-fg-3">
+              Casey logged this on Sam’s behalf as a Project Admin. It still belongs to Sam, who can edit or delete it.
+            </p>
+          </div>
+        </div>
+
+        <div data-view="5">
+          <div class="pane-bar">
+            <span>Reports</span>
+            <span class="sep">/</span>
+            <span class="text-fg">Time</span>
+            <span class="ml-auto fake-btn">Export CSV</span>
+          </div>
+          <div class="px-5 py-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-fg-2 border-b border-line">
+            <span class="mono text-fg">project: ACME</span>
+            <span>By issue</span>
+            <span>This week</span>
+          </div>
+          <div class="report-scroll" tabindex="0" role="region" aria-label="Time report by issue">
+            <table class="report">
+              <thead>
+                <tr>
+                  <th scope="col">Issue</th>
+                  <th scope="col" class="num">
+                    Spent
+                  </th>
+                  <th scope="col" class="num">
+                    Estimate
+                  </th>
+                  <th scope="col" class="num">
+                    Difference
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.map(row => (
+                  <tr>
+                    <th scope="row">
+                      <span class="key">{row.issue.key}</span>
+                      <span class="title">{row.issue.title}</span>
+                    </th>
+                    <td class="num">{formatDuration(row.spent)}</td>
+                    <td class="num muted">{formatDuration(row.issue.estimate)}</td>
+                    <td class:list={['num', { neg: row.difference < 0 }]}>{formatDuration(row.difference)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td class="num">{formatDuration(weekTotal())}</td>
+                  <td class="num muted">{formatDuration(estimateTotal)}</td>
+                  <td class="num">{formatDuration(differenceTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p class="px-5 py-4 text-xs text-fg-3">
+            {epic.key} has no row of its own: the report adds up entries by the issue they were logged on, so a
+            subtask’s time is counted once. A negative difference is time over the estimate.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .view-split {
+    display: grid;
+  }
+  @media (min-width: 768px) {
+    .view-split {
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+    .aside {
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+  .aside {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+  }
+  .aside-head {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .aside-text {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .aside-text code {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .t-epic {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  .list-head {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .subtasks li,
+  .attrs li {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .subtasks .title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .subtasks .mono {
+    font-size: 12.5px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .subtasks .sum {
+    border-bottom: 0;
+    font-weight: 500;
+  }
+  .subtasks .sum .title {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+  .attrs li {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+  .attrs .add {
+    color: var(--text-secondary);
+  }
+  @media (max-width: 480px) {
+    .attrs li {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+  .settings {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    row-gap: 10px;
+    column-gap: 12px;
+    font-size: 13px;
+  }
+  .settings dt {
+    color: var(--text-muted);
+  }
+  .settings dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+  }
+  .switch {
+    position: relative;
+    width: 26px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    background: var(--ink);
+    flex: none;
+  }
+  .switch span {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ink-fg);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .chips li {
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+  .chips .default {
+    box-shadow: inset 0 0 0 1px var(--text);
+  }
+  .fake-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    color: var(--text);
+    font-size: 12.5px;
+  }
+  .report-scroll {
+    overflow-x: auto;
+  }
+  .report-scroll:focus-visible {
+    border-radius: 0;
+    box-shadow: inset var(--focus-ring);
+  }
+  .report {
+    width: 100%;
+    min-width: 440px;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .report th,
+  .report td {
+    padding: 8px 20px 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .report th:first-child {
+    padding-left: 20px;
+  }
+  .report thead th {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    border-bottom-color: var(--border);
+  }
+  .report tbody th {
+    max-width: 0;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .report .key {
+    display: inline-block;
+    min-width: 64px;
+    margin-right: 6px;
+  }
+  .report .num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .report thead .num {
+    font-family: var(--font-sans);
+  }
+  .report .muted {
+    color: var(--text-secondary);
+  }
+  .report .neg {
+    color: var(--palette-red-fg);
+  }
+  .report tfoot th,
+  .report tfoot td {
+    border-bottom: 0;
+    border-top: 1px solid var(--border);
+    font-weight: 500;
+  }
+</style>

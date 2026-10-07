@@ -1,0 +1,100 @@
+---
+import EntryList from './EntryList.astro';
+import { DAYS, cellEntries, cellTotal, day, formatDuration, person, type PersonId } from '@lib/features/time-tracking';
+
+interface Props {
+  author: PersonId;
+  date: string;
+}
+
+const { author, date } = Astro.props;
+const who = person(author);
+const openDay = day(date);
+const workDays = DAYS.filter(candidate => candidate.working);
+---
+
+<div class="mini-sheet">
+  <span class="who">
+    <span class="av">{who.initials}</span>
+    {who.name}
+  </span>
+  {workDays.map(candidate => {
+    const total = cellTotal(who.id, candidate.date);
+    return (
+      <span class:list={['mini-cell', { sel: candidate.date === openDay.date }]}>
+        <span class="d">
+          {candidate.weekday} {candidate.short}
+        </span>
+        <span class="mono">{total > 0 ? formatDuration(total) : ''}</span>
+      </span>
+    );
+  })}
+</div>
+<div class="drill">
+  <p class="drill-head">
+    <span>
+      {who.name} · {openDay.weekday} {openDay.long}
+    </span>
+    <span class="mono text-fg">{formatDuration(cellTotal(who.id, openDay.date))}</span>
+  </p>
+  <EntryList entries={cellEntries(who.id, openDay.date)} />
+</div>
+
+<style>
+  .mini-sheet {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .who {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 8px;
+    background: var(--bg-app);
+    font-size: 12.5px;
+  }
+  .mini-cell {
+    display: grid;
+    gap: 2px;
+    padding: 6px 4px 7px;
+    background: var(--bg-surface);
+    font-size: 12px;
+    line-height: 16px;
+    text-align: center;
+    min-width: 0;
+  }
+  .d {
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+  .mini-cell .mono {
+    min-height: 16px;
+    font-size: 11.5px;
+    color: var(--text);
+  }
+  .mini-cell.sel {
+    background: var(--bg-selected);
+    box-shadow: inset 0 0 0 1px var(--text);
+  }
+  .drill {
+    margin-top: 14px;
+  }
+  .drill-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .drill-head .mono {
+    font-size: 12.5px;
+  }
+</style>

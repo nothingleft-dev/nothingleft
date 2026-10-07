@@ -1,0 +1,61 @@
+---
+import { formatDuration } from '@lib/features/time-tracking';
+
+interface Props {
+  spent: number;
+  estimate: number;
+}
+
+const { spent, estimate } = Astro.props;
+const over = spent > estimate;
+const fill = Math.min(100, Math.round((spent / estimate) * 1000) / 10);
+---
+
+<span class:list={['meter', { over }]}>
+  <span class="figure mono">
+    {formatDuration(spent)} <span class="of">of {formatDuration(estimate)}</span>
+    {over && <span class="over-by">{formatDuration(spent - estimate)} over</span>}
+  </span>
+  <span class="track" aria-hidden="true">
+    <span class="fill" style={`width:${fill}%`}></span>
+  </span>
+</span>
+
+<style>
+  .meter {
+    display: grid;
+    gap: 5px;
+    width: 100%;
+    max-width: 220px;
+  }
+  .figure {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .of {
+    font-family: var(--font-sans);
+    color: var(--text-muted);
+  }
+  .over-by {
+    margin-left: 6px;
+    font-family: var(--font-sans);
+    color: var(--palette-red-fg);
+  }
+  .track {
+    display: block;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--border);
+    overflow: hidden;
+  }
+  .fill {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .over .fill {
+    background: var(--palette-red-solid);
+  }
+</style>

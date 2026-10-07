@@ -1,0 +1,67 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Decision from '@components/features/time-tracking/Decision.astro';
+import Glance from '@components/features/time-tracking/Glance.astro';
+import Steps from '@components/features/time-tracking/Steps.astro';
+import Timesheet from '@components/features/time-tracking/Timesheet.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { TIME_MANUAL_PATH, TIME_TRACKING_FAQ } from '@lib/features/time-tracking';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Time tracking"
+    title="Time belongs to the work it explains."
+    lede="Log time on the issue it was spent on, by date or across a date range. The issue, its parent, the timesheet and the time report all add up the same entries, so every total leads back to an issue."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={TIME_MANUAL_PATH}>
+      Read the time tracking manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      <a class="link font-normal" href="#time-workflow">
+        See the time workflow
+        <span class="arr" aria-hidden="true">
+          ↓
+        </span>
+      </a>
+    </p>
+  </PageHero>
+  <Glance />
+  <Steps />
+  <Timesheet />
+  <Decision />
+  <Faq
+    entries={TIME_TRACKING_FAQ}
+    title="Questions about logged time."
+    intro="Timers, totals, permissions and the working calendar. Short answers here, the rules in the manual."
+  />
+  <CallToAction
+    title="Log the first hour against a real issue."
+    body="Join the beta, open a project and add spent time from any issue. The timesheet and the time report fill in from there."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={TIME_MANUAL_PATH}>
+      Read the time tracking manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>
