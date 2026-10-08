@@ -61,7 +61,7 @@ see the draft find the article one level up, under the nearest article they can 
 
 ## Who can do what
 
-| | Observer | Contributor | Project Admin and up |
+| Capability | Observer | Contributor | Project Admin and up |
 | --- | :-: | :-: | :-: |
 | Read published articles | ✅ | ✅ | ✅ |
 | Read drafts | ❌ | their own | ✅ |

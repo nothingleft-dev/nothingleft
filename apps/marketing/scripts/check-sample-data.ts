@@ -168,6 +168,8 @@ const durationMinutes = (text: string) => {
 
 for (const file of htmlFiles(distDir)) {
   const page = file.slice(distDir.length + 1);
+  // Manual articles are rendered from docs/manual, whose examples are their own rather than the sample set.
+  if (page.startsWith('docs/')) continue;
   const root = parse(readFileSync(file, 'utf8'));
   const body = [...walk(root)].find(node => node.tag === 'body') ?? root;
   const nodes = textNodes(body);

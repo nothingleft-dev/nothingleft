@@ -127,7 +127,7 @@ function argumentTable(input: z.ZodObject): string {
     ([name, s]) =>
       `| \`${name}\` | ${cell(typeOf(s))} | ${required.has(name) ? 'yes' : ''} | ${cell(s.description ?? '')} |`,
   );
-  return ['| Argument | Type | Required | |', '|---|---|---|---|', ...rows].join('\n');
+  return ['| Argument | Type | Required | Description |', '|---|---|---|---|', ...rows].join('\n');
 }
 
 const KIND: Record<ToolKind, string> = {
@@ -159,7 +159,7 @@ export function toolReference(): string {
     ...sections,
     '## Resources',
     'A client can attach these as context. Any of them may end in `?org=acme`.',
-    ['| URI | |', '|---|---|', ...resources].join('\n'),
+    ['| URI | Description |', '|---|---|', ...resources].join('\n'),
     '## Prompts',
     ...prompts,
   ].join('\n\n')}\n`;

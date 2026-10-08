@@ -28,7 +28,7 @@ One organisation: plan, owner, your role and username, seats, storage used, and 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
@@ -38,7 +38,7 @@ Projects you can see, with key, name, lead and your role. Without `org`, every o
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `archived` | boolean |  | true for archived projects only, false for active only. Default: both. |
@@ -51,7 +51,7 @@ One project: lead, your role, time tracking, archived state, the active sprint w
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -62,7 +62,7 @@ The map of one project, in one call: statuses with their category (and which res
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -75,7 +75,7 @@ Issues and knowledge base articles in two groups for one query — the app's sea
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `query` | string | yes | Words, a tag, or either query language. |
 | `project` | string |  | Only this project. Default: every project you can read. |
@@ -88,7 +88,7 @@ Finds issues with the query language the search bar uses, e.g. `project: PP #Unr
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `query` | string | yes | The query, e.g. `project: PP #Unresolved assignee: me`. Empty lists everything you can read. |
 | `project` | string |  | Limit to one project key, e.g. "PP". |
@@ -105,7 +105,7 @@ Autocomplete for the search query language, as the search bar offers it: the att
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `query` | string | yes | The query typed so far. Empty lists the attributes. |
 | `caret` | number |  | Character position to complete at. Default: the end. |
@@ -120,7 +120,7 @@ One issue by key: every field, tags, links and subtasks, the knowledge base arti
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `comments` | number |  | How many of the latest comments to show, 0–20. Default 5. |
@@ -133,7 +133,7 @@ Pages through an issue description too long for get_issue, from a character offs
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `offset` | number | yes | Character to start from, as the truncation marker says. |
@@ -146,7 +146,7 @@ Creates an issue with everything in one call: title, markdown description, type,
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `title` | string | yes | One line, what is wrong or wanted. |
@@ -172,7 +172,7 @@ Changes one issue: only the arguments you pass change, and null clears a field. 
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `title` | string |  | One line, what is wrong or wanted. |
@@ -203,7 +203,7 @@ Applies the same field changes to a list of issue keys, or to every issue a quer
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issues` | list of string |  | Issue keys. Give this or `query`. |
 | `query` | string |  | Every issue it matches, as in search_issues. |
@@ -216,7 +216,7 @@ Soft-deletes an issue: it disappears from every list and can be restored with re
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -227,7 +227,7 @@ Brings back a soft-deleted issue within its 14-day window, with its comments, ti
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -238,7 +238,7 @@ What happened to an issue, newest first: field changes, comments, links, tags, f
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `kinds` | list of `created` · `field_changed` · `commented` · `comment_edited` · `comment_deleted` · `linked` · `unlinked` · `attached` · `detached` · `time_logged` · `tagged` · `untagged` · `sprint_changed` · `parent_changed` · `deleted` · `restored` |  | Only these kinds. |
@@ -254,7 +254,7 @@ A project's custom fields: name, slug (the search attribute), type, whether requ
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `field` | string |  | The field by name or slug, e.g. "Severity" or "severity". |
@@ -267,7 +267,7 @@ Adds a custom field to a project: name, type, options for a select, the issue ty
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `name` | string | yes |  |
@@ -290,7 +290,7 @@ Changes a custom field: rename it (the slug stays), required, default, empty lab
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `field` | string | yes | The field by name or slug, e.g. "Severity" or "severity". |
@@ -315,7 +315,7 @@ Deletes a custom field and every value it holds; history keeps what was recorded
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `field` | string | yes | The field by name or slug, e.g. "Severity" or "severity". |
@@ -327,7 +327,7 @@ Sets custom field values on one issue or on many at once (the same values on eac
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issues` | string or list of string | yes | One issue key, or a list, e.g. ["PP-12", "PP-14"]. |
 | `values` | object | yes | Custom field values by field name or slug, e.g. {"Severity": "High", "platforms": ["Web", "iOS"], "Reviewer": "@casey", "Launch": "2026-10-01", "Budget": 12.5, "Blocking": true, "Review time": "1h 30m"}. Options by name, people as @username, me or a full name, dates YYYY-MM-DD, datetimes ISO, durations "1h 30m". null clears one. describe_project_schema and list_custom_fields list the fields. |
@@ -341,7 +341,7 @@ Links an issue to others: relates to, depends on / is required for, duplicates /
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `link` | `relates to` · `is required for` · `depends on` · `is duplicated by` · `duplicates` · `parent for` · `subtask of` | yes | Read from `issue`: "PP-5 depends on PP-4" is issue PP-5, link "depends on", targets ["PP-4"]. |
@@ -354,7 +354,7 @@ Removes one link between two issues. Returns the issue's remaining links.
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `link` | `relates to` · `is required for` · `depends on` · `is duplicated by` · `duplicates` · `parent for` · `subtask of` | yes | Read from `issue`: "PP-5 depends on PP-4" is issue PP-5, link "depends on", targets ["PP-4"]. |
@@ -369,7 +369,7 @@ An issue's comments — or a knowledge base article's, with project and article 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -384,7 +384,7 @@ Adds a markdown comment to an issue, or to a knowledge base article (project and
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -398,7 +398,7 @@ Replaces the text of a comment on an issue or an article. Contributors may edit 
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -413,7 +413,7 @@ Deletes a comment on an issue or an article, and the files attached to it. Contr
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -429,7 +429,7 @@ The organisation's tags, shared by every project and by issues and knowledge bas
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `query` | string |  | Filter by name. |
 | `for` | `issues` · `articles` |  | Rank tags used on issues, or on articles, first. |
@@ -447,7 +447,7 @@ Logs spent time on an issue: a duration on one date (default today in your timez
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `duration` | number or string | yes | "1w 2d 3h 30m" (the organisation's working day and week) or whole minutes. |
@@ -466,7 +466,7 @@ The time logged on an issue, newest first; with `subtasks` also on everything be
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `subtasks` | boolean |  | Include time logged on its subtasks. |
@@ -480,7 +480,7 @@ Changes one work item: duration, date, work type, work item attributes, note, or
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `work_item` | number | yes | The work item number shown as "#7" by list_work_items. |
@@ -498,7 +498,7 @@ Deletes one work item; the issue's spent time drops by it. Contributors may dele
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `work_item` | number | yes | The work item number shown as "#7" by list_work_items. |
@@ -512,7 +512,7 @@ Files on an issue, its comments and its work items — or on a knowledge base ar
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -527,7 +527,7 @@ A download link for one file, valid for five minutes, after the same permission 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -541,7 +541,7 @@ Attaches a file to an issue, a comment or a work item — or to a knowledge base
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -561,7 +561,7 @@ Finishes an upload_attachment after the curl PUT: the file is checked and attach
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `upload` | string | yes | The upload id upload_attachment gave. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -572,7 +572,7 @@ Deletes a file from an issue or an article for good; an image the text shows sto
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string |  | Issue key, e.g. "PP-12". |
 | `project` | string |  | With article: its project key, e.g. "PP". |
@@ -586,7 +586,7 @@ The organisation's files, largest first, with what each is attached to and where
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `project` | string |  | Only files in this project, by key. |
@@ -603,7 +603,7 @@ The saved views you can see — your private ones, your projects' and the organi
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
@@ -613,7 +613,7 @@ A saved view's definition and its current results, as the app's tab shows them.
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `view` | string | yes | The saved view's name, e.g. "My open bugs". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -626,7 +626,7 @@ Saves a query under a name, for you alone or shared with a project or the organi
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes |  |
 | `query` | string | yes |  |
@@ -641,7 +641,7 @@ Renames a saved view or changes its query, sort or who it is shared with. Only i
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `view` | string | yes | The saved view's name, e.g. "My open bugs". |
 | `name` | string |  | New name. |
@@ -657,7 +657,7 @@ Deletes a saved view; a shared one disappears for everyone it was shared with. A
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `view` | string | yes | The saved view's name, e.g. "My open bugs". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -670,7 +670,7 @@ A project's sprints — planned, active and completed — with dates, days left 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string |  | Project key, e.g. "PP". |
 | `state` | list of `planned` · `active` · `completed` |  | Only these states, e.g. ["planned", "active"]. |
@@ -682,7 +682,7 @@ One sprint: dates, days left, goal, progress in issues and story points, the sta
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string | yes | Sprint by name or slug, e.g. "September 2026". |
@@ -694,7 +694,7 @@ Plans a sprint in a project. Dates are optional (Unscheduled until set); `add_un
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `name` | string | yes | e.g. "September 2026". |
@@ -710,7 +710,7 @@ Renames a sprint or changes its goal or dates; null clears. A running sprint kee
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string | yes | Sprint by name or slug, e.g. "September 2026". |
@@ -726,7 +726,7 @@ Starts a planned sprint: one active sprint per project. It starts today unless s
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string | yes | Sprint by name or slug, e.g. "September 2026". |
@@ -740,7 +740,7 @@ Finishes the active sprint. Every unresolved issue moves to `move_unfinished_to`
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string | yes | Sprint by name or slug, e.g. "September 2026". |
@@ -753,7 +753,7 @@ Deletes a planned sprint; its issues go back to the backlog. A sprint that has s
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string | yes | Sprint by name or slug, e.g. "September 2026". |
@@ -765,7 +765,7 @@ The planning view: the project's planned and active sprints with their progress,
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string |  | List this sprint instead of the backlog. |
@@ -780,7 +780,7 @@ Puts issues into a sprint, or back into the backlog with sprint: "backlog", at t
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issues` | list of string | yes | Issue keys, in the order they should land. |
 | `sprint` | string | yes | Sprint by name or slug, or "backlog". |
@@ -794,7 +794,7 @@ Changes the order of issues within the backlog or their sprint: places them, in 
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issues` | list of string | yes | Issue keys, in the order they should end up. |
 | `before` | string |  | Place them just above this issue. |
@@ -807,7 +807,7 @@ A board on a sprint (default the active one): each column's statuses (or priorit
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string |  | Project key, e.g. "PP". |
 | `board` | string |  | Board by name or slug, e.g. "pp". |
@@ -823,7 +823,7 @@ Creates a board: columns mapped to statuses, priorities or types (a value sits i
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `name` | string | yes |  |
@@ -840,7 +840,7 @@ Renames a board, changes what its columns are (status, priority or type), replac
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `board` | string | yes | Board by name or slug, e.g. "pp". |
@@ -858,7 +858,7 @@ Deletes a board. Issues and sprints are untouched. Asks you to confirm before ac
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `board` | string | yes | Board by name or slug, e.g. "pp". |
@@ -872,7 +872,7 @@ A project's knowledge base as a tree: titles and slugs, drafts marked. An articl
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `deleted` | boolean |  | List the deleted articles you could restore, with their deadlines. |
@@ -884,7 +884,7 @@ One knowledge base article as markdown: status, path, tags, the latest comments 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `article` | string | yes | An article of the project by slug or exact title, e.g. "restoring-a-failed-sync"; list_articles shows them. |
@@ -899,7 +899,7 @@ Full-text search over knowledge base titles and bodies, with filters: `tag: rca,
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `query` | string | yes | The article query, e.g. `tag: rca payment timeout`. Empty lists everything. |
 | `project` | string |  | Only this project, e.g. "PP". Default: every project you can read. |
@@ -914,7 +914,7 @@ Writes a knowledge base article in one call: title, markdown body, parent (up to
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `title` | string | yes |  |
@@ -932,7 +932,7 @@ Changes one article: only what you pass changes. Title, body (replaced whole), s
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `article` | string | yes | An article of the project by slug or exact title, e.g. "restoring-a-failed-sync"; list_articles shows them. |
@@ -955,7 +955,7 @@ Deletes an article, restorable for 14 days (restore_article). One with sub-artic
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `article` | string | yes | An article of the project by slug or exact title, e.g. "restoring-a-failed-sync"; list_articles shows them. |
@@ -968,7 +968,7 @@ Brings back a deleted article within 14 days, with any sub-articles deleted alon
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `article` | string | yes | The deleted article by slug or title; list_articles with deleted: true shows them. |
@@ -982,7 +982,7 @@ Runs one of the nine reports and returns its table with the series the chart is 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `report` | `issues-per-assignee` · `issues-per-project` · `issues-per-field` · `matrix` · `burndown` · `average-age` · `time` · `gantt` · `timesheet` | yes | issues-per-assignee, issues-per-project, issues-per-field (`field`), matrix (`row_field`, `column_field`), burndown (`project`, `sprint`, `measure`), average-age (`group_by`), time (`group_by`, period), gantt (`project`, `group_by`), timesheet (`users`, period; `user` with a one-day period lists that cell’s work items). |
 | `query` | string |  | Scope, in the search query language, e.g. `type: Bug #Unresolved`; `sprint: {Sprint 14}` scopes to a sprint. |
@@ -1015,7 +1015,7 @@ Your inbox across every organisation you belong to: one row per issue or article
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `unread_only` | boolean |  | Only entries with something unread. |
 | `kind` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Only these kinds, e.g. ["mentioned", "assigned"]. |
@@ -1032,7 +1032,7 @@ Marks notifications read: every one on the issues or articles named, or with all
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issues` | list of string |  | Issue keys, e.g. ["PP-12"]. |
 | `project` | string |  | With article, the article's project; with all, only this project. |
@@ -1055,7 +1055,7 @@ Chooses how each kind reaches you by email, by listing kinds under the option th
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `instant` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Kinds to email at once. |
 | `daily_digest` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Kinds for the daily digest, 9am your time. |
@@ -1072,7 +1072,7 @@ Creates a project with the default statuses, priorities, types and work types. T
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes |  |
 | `key` | string |  | 2–10 letters or digits, e.g. "PP". |
@@ -1085,7 +1085,7 @@ Changes a project: name, key (only before its first issue), description, lead, t
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `name` | string |  |  |
@@ -1104,7 +1104,7 @@ Adds, changes or deletes one status, priority, type or work type in a project �
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `list` | `status` · `priority` · `type` · `work type` · `work item attribute` · `work item attribute value` | yes | Which value list. |
@@ -1127,7 +1127,7 @@ Creates an organisation with you as its Owner. The slug is derived from the name
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes |  |
 | `slug` | string |  |  |
@@ -1138,7 +1138,7 @@ Renames the organisation or changes its slug, working day, working week or first
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `name` | string |  |  |
@@ -1153,7 +1153,7 @@ The organisation's audit log, newest first: invitations, joins, removals, role c
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `actor` | string |  | Only what this member did. |
@@ -1169,7 +1169,7 @@ Changes your own name or timezone (an IANA name such as "Europe/London"), which 
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `name` | string |  |  |
 | `timezone` | string |  |  |
@@ -1182,7 +1182,7 @@ Members of an organisation with their org role, or — with `project` — a proj
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `project` | string |  | Project key, e.g. "PP". Lists that project's members instead. |
@@ -1196,7 +1196,7 @@ One organisation member: name, email (visible to org admins and to the member), 
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `user` | string | yes | A member: "@casey", "casey", "me", or their full name when only one member has it. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -1207,7 +1207,7 @@ Emails an invitation to join an organisation, or a project within it. Up to 50 a
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `emails` | list of string | yes | Email addresses to invite. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -1221,7 +1221,7 @@ Creates a share link that lets anyone who opens it join the organisation, or a p
 
 *Changes data.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `project` | string |  | Project key, e.g. "PP". Invites into that project as well as its organisation. |
@@ -1237,7 +1237,7 @@ Changes one member's organisation role, or their role in one project — adding 
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `user` | string | yes | A member: "@casey", "casey", "me", or their full name when only one member has it. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -1251,7 +1251,7 @@ Removes someone from the organisation: their open issues go to `reassign_to` or 
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `user` | string | yes | A member: "@casey", "casey", "me", or their full name when only one member has it. |
 | `reassign_to` | string |  | Who takes over their open issues. Default: the issues become unassigned. |
@@ -1264,7 +1264,7 @@ The organisation's invitations — or one project's — with status, the role ea
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string |  | For an invitation into a project, its key. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
@@ -1275,7 +1275,7 @@ One invitation by email or link, with everyone who joined through it.
 
 *Reads only.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `invitation` | string | yes | The invited email address, or the share link (the whole URL or its last part). |
 | `project` | string |  | For an invitation into a project, its key. |
@@ -1287,7 +1287,7 @@ Stops an invitation or share link from working. People who already joined stay. 
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `invitation` | string | yes | The invited email address, or the share link (the whole URL or its last part). |
 | `project` | string |  | For an invitation into a project, its key. |
@@ -1299,7 +1299,7 @@ Replaces a share link with a new URL carrying the same role and limits; the old 
 
 *Changes data; asks you to confirm in your MCP client first.*
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `link` | string | yes | The share link to replace. |
 | `project` | string |  | For an invitation into a project, its key. |
@@ -1309,7 +1309,7 @@ Replaces a share link with a new URL carrying the same role and limits; the old 
 
 A client can attach these as context. Any of them may end in `?org=acme`.
 
-| URI | |
+| URI | Description |
 |---|---|
 | `issue://{key}` | An issue as markdown: every field, links, the articles that reference it, the whole description and the latest comments. issue://PP-12, or issue://PP-12?org=acme when two of your organisations have PP. |
 | `project://{key}` | A project's overview, figures, active sprint and its value lists: statuses, priorities, types, work types, custom fields, sprints, boards, people and tags. project://PP |
@@ -1324,7 +1324,7 @@ A client can attach these as context. Any of them may end in `?org=acme`.
 
 Reads an issue and its project, then proposes type, priority, tags and assignee with a reason for each.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `org` | string |  | Organisation slug, when you belong to more than one. |
@@ -1333,7 +1333,7 @@ Reads an issue and its project, then proposes type, priority, tags and assignee 
 
 Searches for issues like one you are about to file, before you file it.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `title` | string | yes | The title you would give the new issue. |
@@ -1344,7 +1344,7 @@ Searches for issues like one you are about to file, before you file it.
 
 What a person (default you) or a project changed since a date: done, in progress, blocked, and time logged — and, for you, what is waiting on you.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `user` | string |  | "me", "@casey" or a full name. Default me. |
 | `since` | string |  | A date or a period the query language takes, e.g. "Yesterday" or "2026-09-21". Default Yesterday. |
@@ -1355,7 +1355,7 @@ What a person (default you) or a project changed since a date: done, in progress
 
 Turns the issues resolved in a project over a date range (or matching a query) into user-facing release notes.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `since` | string |  | First day, YYYY-MM-DD or a period such as "Last month". |
@@ -1367,7 +1367,7 @@ Turns the issues resolved in a project over a date range (or matching a query) i
 
 Suggests an Estimation and story points for unestimated issues from the time and points similar resolved issues actually took.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `query` | string |  | Which issues to estimate. Default: unresolved ones with no estimation. |
@@ -1377,7 +1377,7 @@ Suggests an Estimation and story points for unestimated issues from the time and
 
 A narrative of a sprint's progress and risks: goal, days left, committed against done, scope added after the start, the burndown trend and the issues at risk.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `project` | string | yes | Project key, e.g. "PP". |
 | `sprint` | string |  | Sprint name or slug. Default the active sprint. |
@@ -1387,7 +1387,7 @@ A narrative of a sprint's progress and risks: goal, days left, committed against
 
 Turns a resolved issue, or a cluster of them, into a draft knowledge base article: a runbook, a root-cause write-up or a how-to.
 
-| Argument | Type | Required | |
+| Argument | Type | Required | Description |
 |---|---|---|---|
 | `issues` | string | yes | One or more issue keys, comma-separated, e.g. "PP-12, PP-15". |
 | `project` | string |  | Project key for the article. Default: the first issue’s project. |
