@@ -1681,3 +1681,15 @@
     }
   }
 }
+
+@layer components {
+  .nav-link[aria-current] {
+    color: var(--text);
+    background-size: 100% 1px;
+  }
+  .menu-panel a[aria-current] {
+    font-weight: 500;
+    box-shadow: inset 2px 0 0 var(--accent);
+    padding-left: 10px;
+  }
+}

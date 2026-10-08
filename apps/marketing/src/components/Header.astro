@@ -1,14 +1,19 @@
 ---
 import Brand from '@components/Brand.astro';
+import { normalizePath } from '@data/sitemap-config.mjs';
 import { GITHUB_URL, SIGN_IN_URL, SIGN_UP_URL } from '@lib/site';
 
+const AGENTS_PATH = '/features/mcp-ai-agents';
+const path = normalizePath(Astro.url.pathname);
 const NAV = [
-  { href: '/#product', label: 'Product' },
-  { href: '/#workflow', label: 'Workflow' },
-  { href: '/features/mcp-ai-agents', label: 'Agents' },
-  { href: '/pricing', label: 'Pricing' },
-  { href: '/docs', label: 'Docs' },
+  { href: '/#product', label: 'Product', active: path.startsWith('/features/') && path !== AGENTS_PATH },
+  { href: '/#workflow', label: 'Workflow', active: false },
+  { href: AGENTS_PATH, label: 'Agents', active: path === AGENTS_PATH },
+  { href: '/pricing', label: 'Pricing', active: path === '/pricing' },
+  { href: '/docs', label: 'Docs', active: path === '/docs' || path.startsWith('/docs/') },
 ];
+// The current page gets "page"; a section such as Docs gets "true" on its other pages.
+const current = (item: (typeof NAV)[number]) => (item.active ? (path === item.href ? 'page' : 'true') : undefined);
 ---
 
 <header class="border-b border-line bg-surface sticky top-0 z-40">
@@ -18,7 +23,7 @@ const NAV = [
     </a>
     <nav aria-label="Main" class="hidden lg:flex items-center gap-6 ml-6 whitespace-nowrap">
       {NAV.map(item => (
-        <a class="nav-link" href={item.href}>
+        <a class="nav-link" href={item.href} aria-current={current(item)}>
           {item.label}
         </a>
       ))}
@@ -55,7 +60,7 @@ const NAV = [
   <nav id="menu" class="menu-panel lg:hidden" aria-label="Main">
     <div class="wrap pb-3">
       {NAV.map(item => (
-        <a href={item.href}>
+        <a href={item.href} aria-current={current(item)}>
           {item.label}
           <span class="arr" aria-hidden="true">
             →

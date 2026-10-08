@@ -148,9 +148,11 @@ since those exist for upload reliability rather than cost.
 | Max custom fields per project | 50 | UI legibility |
 | Max projects per org | unlimited | No reason to cap |
 | Max tags per org | unlimited | Slug uniqueness already prevents sprawl |
-| API rate limit (session) | 300 req/min | |
-| API rate limit (PAT) | 1000 req/min | Agents burst; humans do not |
-| Search results per page | 100 | |
+| API rate limit (signed out) | 60 req/min | `RATE_LIMIT_MAX_ANONYMOUS` |
+| API rate limit (session) | 300 req/min | `RATE_LIMIT_MAX_PER_SESSION` |
+| API rate limit (PAT) | 600 req/min | `RATE_LIMIT_MAX_PER_PAT`; agents burst, humans do not |
+| Global search results per request | 5 by default, 50 at most | `GLOBAL_SEARCH_DEFAULT_LIMIT`, `GLOBAL_SEARCH_MAX_LIMIT` |
+| Items per page in paginated lists | 200 at most | `PAGINATION_MAX_LIMIT` |
 
 Rate limits are returned in response headers so well-behaved clients can pace
 themselves rather than discovering the limit by hitting it.
@@ -164,6 +166,7 @@ FREE_SEAT_LIMIT=20
 FREE_STORAGE_BYTES=5368709120
 ```
 
-A self-hoster sets both to whatever they like, or disables the checks
-entirely. The AGPL licence means the self-hosted build is the same build —
+A self-hoster sets both to any positive whole number (`apps/api/src/config/env.ts`
+rejects zero, negatives and non-numbers at boot); there is no switch that turns the
+checks off, so a very large value is the way to lift them. The AGPL licence means the self-hosted build is the same build —
 there is no crippled community edition.

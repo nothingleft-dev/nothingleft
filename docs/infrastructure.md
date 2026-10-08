@@ -63,8 +63,10 @@ runnable on a laptop with `docker compose up`.
 | Resend | SMTP-equivalent send API behind a one-file adapter | Resend-specific templating or audiences |
 | PostHog | Standard SDK behind a one-file adapter | — |
 
-A self-hoster substitutes: any Postgres, any S3-compatible store, any Redis,
-any SMTP server. The `docker-compose.yml` shipped in the repo does exactly
+A self-hoster substitutes: any Postgres, any S3-compatible store, any Redis.
+Mail is the exception today: the adapter sends only through Resend's HTTP API
+(`RESEND_API_KEY`), and without a key mail is logged instead of sent. SMTP support
+is planned, not built. The `docker-compose.yml` shipped in the repo does exactly
 this with Postgres + Redis + an S3-compatible store. That store is **RustFS**
 (`rustfs/rustfs`, Apache-2.0) since 25 Sep 2026: MinIO stopped publishing its images,
 and RustFS speaks the same S3 API, presigned URLs and SHA-256 checksums included.
