@@ -9,6 +9,7 @@ interface Props {
 }
 
 const { comparison, title, intro, id = 'matrix' } = Astro.props;
+const isExternal = (href: string) => /^https?:\/\//.test(href);
 const groups = GROUP_ORDER.map(group => ({
   group,
   rows: comparison.rows.filter(row => row.group === group),
@@ -49,7 +50,7 @@ const groups = GROUP_ORDER.map(group => ({
     <div class="matrix-wrap mt-6">
       <table class="matrix" data-matrix={id}>
         <caption class="sr-only">
-          {title}Nothing Left compared with{comparison.competitor}, by capability.
+          {`${title} Nothing Left compared with ${comparison.competitor}, by capability.`}
         </caption>
         <thead>
           <tr>
@@ -79,10 +80,14 @@ const groups = GROUP_ORDER.map(group => ({
                     </span>
                     <span class="matrix-note">{cell.note}</span>
                     {cell.source && (
-                      <a class="link font-normal matrix-source" href={cell.source.href} rel="noopener">
+                      <a
+                        class="link font-normal matrix-source"
+                        href={cell.source.href}
+                        rel={isExternal(cell.source.href) ? 'noopener' : undefined}
+                      >
                         {cell.source.label}
-                        <span class="arr ext" aria-hidden="true">
-                          ↗
+                        <span class:list={['arr', { ext: isExternal(cell.source.href) }]} aria-hidden="true">
+                          {isExternal(cell.source.href) ? '↗' : '→'}
                         </span>
                       </a>
                     )}
