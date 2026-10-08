@@ -1,0 +1,514 @@
+---
+import { MONDAY_STEPS, MONDAY_STORY as S } from '@lib/compare/clickup-alternative';
+
+const BAR_WIDTHS = [40, 30, 20, 10];
+const total = MONDAY_STEPS.length;
+const dotClass = (status: string) => (status === 'In Progress' ? 'started' : status === 'Fixed' ? 'done' : '');
+const typeLetter = S.log.type.charAt(0);
+const first = S.developer.name.split(' ')[0];
+const pointsText = (points: number | null) =>
+  points === null ? 'Not estimated' : `${points} ${points === 1 ? 'pt' : 'pts'}`;
+const added = `${S.ask.added} points were added after the start (${S.ask.addedKeys.join(' and ')})`;
+const statusLine = S.ask.statusCounts.map(entry => `${entry.count} ${entry.status}`).join(', ');
+const inProgressLine = S.ask.inProgress
+  .map(row => `${row.key} (${row.assignees.map(who => who.name).join(', ')})`)
+  .join(', ');
+---
+
+<section id="cu-monday" class="border-t border-line bg-app" aria-labelledby="cu-monday-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="cu-monday-title" class="h2">
+        A developer’s Monday, in four steps.
+      </h2>
+      <p class="prose mt-5">
+        {S.day} at Acme, the first working day of {S.ask.sprint}. Filter the bugs, plan the next sprint, log the work,
+        then ask an agent where things stand. Every screen is drawn from the same fictional project. Pick a step to see
+        it.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="A developer’s Monday, step by step" data-cu-steps>
+        {MONDAY_STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-cu-step={step.id}
+            data-cu-title={step.title}
+            data-last={index === total - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="cu-panel"
+          >
+            <span class="bar" style={`width:${BAR_WIDTHS[index]}px`} />
+            <span>
+              <b>
+                <span class="sr-only">{`Step ${index + 1}: `}</span>
+                {step.title}
+              </b>
+              <span class="cu-who">{step.who}</span>
+              <span>{step.body}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8">
+        <div id="cu-panel" class="wf-panel">
+          <div data-view="filter" class="on">
+            <p class="cu-cap">
+              <span class="cu-n">1 / {total}</span>
+              {S.developer.name} filters the bugs · {S.filter.when}
+            </p>
+            <div class="pane-bar">
+              <span class="text-fg">Acme</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+            </div>
+            <p class="querybar">
+              <span class="q">{S.filter.query}</span>
+              <span class="count">{S.filter.rows.length} issues</span>
+            </p>
+            <ul aria-label="Unresolved bugs">
+              {S.filter.rows.map(row => (
+                <li class="row">
+                  <span class="key">{row.key}</span>
+                  <span class="title">{row.title}</span>
+                  <span class:list={['badge pri', `l-${row.priority.toLowerCase()}`]}>
+                    <span aria-hidden="true">{row.priority.charAt(0)}</span>
+                    <span class="sr-only">{row.priority}</span>
+                  </span>
+                  <span class="meta">
+                    {row.assignees.length > 0 ? (
+                      <span class="who">{row.assignees.map(who => who.name).join(', ')}</span>
+                    ) : (
+                      <span class="who none">Unassigned</span>
+                    )}
+                    <span class="spent" aria-hidden="true" />
+                    <span class="status">
+                      <i class:list={['dot', dotClass(row.status)]} />
+                      {row.status}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div class="wf-body cu-note">
+              <p>
+                The same query works in the board filter, a report’s scope and the agent’s <code>search_issues</code>{' '}
+                tool. Save it as a view and the whole team can open it by name.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="plan">
+            <p class="cu-cap">
+              <span class="cu-n">2 / {total}</span>
+              The team plans {S.plan.planned.name} · {S.plan.when}
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Backlog</span>
+            </div>
+            <div class="cu-bl">
+              <p class="cu-bl-head">
+                <span class="text-fg font-medium">{S.plan.running.name}</span>
+                <span class="cu-pill">Running</span>
+                <span class="cu-bl-meta">
+                  {S.plan.running.issues} issues, {S.plan.running.points} points · ends {S.plan.running.ends}
+                </span>
+              </p>
+            </div>
+            <div class="cu-bl">
+              <p class="cu-bl-head">
+                <span class="text-fg font-medium">{S.plan.planned.name}</span>
+                <span class="cu-pill">Planned</span>
+                <span class="cu-bl-meta">
+                  {S.plan.planned.dates} · {S.plan.planned.rows.length} issues, {S.plan.planned.points} points
+                </span>
+              </p>
+              <p class="cu-goal">{S.plan.planned.goal}</p>
+              <ul aria-label={S.plan.planned.name}>
+                {S.plan.planned.rows.map(row => (
+                  <li class="cu-bl-row cu-dropped">
+                    <span class="cu-grip" aria-hidden="true" />
+                    <span class="key">{row.key}</span>
+                    <span class="cu-bl-title">{row.title}</span>
+                    <span class="cu-pts">{pointsText(row.points)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div class="cu-bl">
+              <p class="cu-bl-head">
+                <span class="text-fg font-medium">Backlog</span>
+                <span class="cu-bl-meta">Issues in no sprint</span>
+              </p>
+              <ul aria-label="Backlog">
+                {S.plan.backlog.map(row => (
+                  <li class="cu-bl-row">
+                    <span class="cu-grip" aria-hidden="true" />
+                    <span class="key">{row.key}</span>
+                    <span class="cu-bl-title">{row.title}</span>
+                    <span class:list={['cu-pts', { 'cu-none': row.points === null }]}>{pointsText(row.points)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p class="cu-bl-more">{S.plan.backlogMore} more issues</p>
+            </div>
+            <div class="wf-body cu-note">
+              <p>
+                A Project Admin creates the sprint with its goal and dates; anyone who can edit issues drags them in and
+                orders them. The board shows cards in the same order.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="log">
+            <p class="cu-cap">
+              <span class="cu-n">3 / {total}</span>
+              {S.developer.name} logs the work · {S.log.when}
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">{S.log.key}</span>
+            </div>
+            <div class="wf-body">
+              <div class="flex items-center gap-2 text-xs text-fg-2">
+                <span class="badge cu-type" aria-hidden="true">
+                  {typeLetter}
+                </span>
+                {S.log.type}
+                <span class:list={['badge ml-2', `l-${S.log.priority.toLowerCase()}`]} aria-hidden="true">
+                  {S.log.priority.charAt(0)}
+                </span>
+                {S.log.priority}
+              </div>
+              <h3 class="wf-title">{S.log.title}</h3>
+              <div class="cu-entry">
+                <p class="cu-entry-head">Add spent time</p>
+                <dl class="cu-entry-grid">
+                  <dt>Date</dt>
+                  <dd>{S.day}</dd>
+                  <dt>Time spent</dt>
+                  <dd class="mono text-xs">{S.log.logged}</dd>
+                  <dt>Type</dt>
+                  <dd>{S.log.workType}</dd>
+                </dl>
+              </div>
+              <dl class="fields">
+                <dt>Assignee</dt>
+                <dd>
+                  <span class="av" aria-hidden="true">
+                    {S.developer.initials}
+                  </span>
+                  {S.developer.name}
+                </dd>
+                <dt>Status</dt>
+                <dd>
+                  <i class:list={['dot', dotClass(S.log.status)]} />
+                  {S.log.status}
+                </dd>
+                <dt>Sprint</dt>
+                <dd>{S.log.sprint}</dd>
+                <dt>Spent time</dt>
+                <dd class="cu-spent">
+                  <span class="field flash">
+                    <span class="mono text-xs">
+                      {S.log.spent} <span class="text-fg-2 font-sans">of {S.log.estimate}</span>
+                    </span>
+                  </span>
+                  <span class="cu-meter" aria-hidden="true">
+                    <span style={`width:${S.log.spentShare}%`} />
+                  </span>
+                </dd>
+              </dl>
+            </div>
+            <div class="activity">
+              <p>
+                {S.developer.name} logged {S.log.logged}, {S.log.workType}
+                <span class="t">{S.log.clock}</span>
+              </p>
+            </div>
+          </div>
+
+          <div data-view="ask">
+            <p class="cu-cap">
+              <span class="cu-n">4 / {total}</span>
+              {first}’s agent reads the sprint · {S.ask.when}
+            </p>
+            <div class="cu-agent">
+              <div class="pane-bar">
+                <span class="text-fg">Your agent</span>
+                <span class="ml-auto">
+                  connected as <span class="mono text-xs text-fg">@{S.developer.handle}</span>
+                </span>
+              </div>
+              <p class="prompt">
+                <span class="mark" aria-hidden="true">
+                  ›
+                </span>
+                <span>How is {S.ask.sprint} going, and is anything outside it that should worry us?</span>
+              </p>
+              <ul class="calls" aria-label="Tool calls the agent makes">
+                <li>
+                  <span class="tool">get_sprint</span>
+                  <span class="args">project: "ACME", sprint: "{S.ask.sprint}"</span>
+                </li>
+                <li>
+                  <span class="tool">search_issues</span>
+                  <span class="args">type: Bug #Unresolved sprint: {'{No sprint}'} severity: Critical, High</span>
+                </li>
+              </ul>
+              <div class="answer cu-answer">
+                <p>
+                  <strong class="font-medium">{S.ask.sprint}</strong>, “{S.ask.goal}”, ends {S.ask.ends}. It started
+                  yesterday evening with {S.ask.committed} points; {added}, so {S.ask.completed} of {S.ask.scope} points
+                  are resolved so far.
+                </p>
+                <p class="mt-2">{`${statusLine}. In progress: ${inProgressLine}.`}</p>
+                <p class="mt-2">Outside the sprint, in the backlog:</p>
+                <ul class="cu-risk">
+                  {S.ask.outsideSprint.map(row => (
+                    <li>
+                      <span>
+                        <span class="key">{row.key}</span> {row.title}, {row.priority}, {row.status},{' '}
+                        {row.assignees.length > 0 ? row.assignees.map(who => who.name).join(', ') : 'unassigned'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <p class="cu-agent-foot">
+                Both calls only read. Had {first} asked for a change, it would be made as{' '}
+                <span class="mono text-xs text-fg">@{S.developer.handle}</span>, within {first}’s role and token.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="sr-only" aria-live="polite" data-cu-status></p>
+        <p class="mt-4 text-xs text-fg-3">Hand-drawn product views with fictional data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/compare/clickup-alternative';
+</script>
+
+<style>
+  .wf-step .cu-who {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+  .wf-step[aria-pressed='true'] .cu-who {
+    color: var(--text);
+  }
+  .cu-cap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .cu-n {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    flex: none;
+  }
+  .cu-note {
+    padding-top: 14px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .cu-note code {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .l-minor {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  .cu-type {
+    --c-bg: var(--palette-blue-bg);
+    --c-fg: var(--palette-blue-fg);
+  }
+  .cu-bl + .cu-bl {
+    border-top: 1px solid var(--border);
+  }
+  .cu-bl-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .cu-pill {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .cu-bl-meta {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .cu-goal {
+    padding: 0 16px 10px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .cu-bl-row {
+    display: grid;
+    grid-template-columns: 10px 60px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 36px;
+    padding: 7px 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .cu-dropped {
+    background: var(--bg-selected);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .cu-bl-title {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .cu-grip {
+    width: 6px;
+    height: 12px;
+    background-image: radial-gradient(var(--border-strong) 1px, transparent 1.2px);
+    background-size: 3px 4px;
+  }
+  .cu-pts {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .cu-pts.cu-none {
+    color: var(--text-muted);
+  }
+  .cu-bl-more {
+    padding: 7px 16px 7px 36px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .cu-entry {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .cu-entry-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-weight: 500;
+  }
+  .cu-entry-grid {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    row-gap: 6px;
+    column-gap: 12px;
+    padding: 10px 12px;
+  }
+  .cu-entry-grid dt {
+    color: var(--text-muted);
+  }
+  .cu-spent {
+    flex-wrap: wrap;
+  }
+  .cu-meter {
+    display: block;
+    width: 96px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--border);
+    overflow: hidden;
+  }
+  .cu-meter span {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .cu-agent {
+    background: var(--bg-app);
+  }
+  .cu-answer {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cu-risk {
+    margin-top: 6px;
+    display: grid;
+    gap: 4px;
+  }
+  .cu-risk li {
+    display: grid;
+    grid-template-columns: 12px 1fr;
+    gap: 6px;
+  }
+  .cu-risk li::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    margin-top: 9px;
+  }
+  .cu-agent-foot {
+    padding: 12px 16px 14px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  @media (max-width: 640px) {
+    .cu-bl-meta {
+      flex-basis: 100%;
+      margin-left: 0;
+    }
+    .cu-bl-row {
+      grid-template-columns: 10px 56px minmax(0, 1fr);
+      row-gap: 2px;
+    }
+    .cu-bl-title {
+      white-space: normal;
+    }
+    .cu-pts {
+      grid-column: 3;
+    }
+  }
+</style>

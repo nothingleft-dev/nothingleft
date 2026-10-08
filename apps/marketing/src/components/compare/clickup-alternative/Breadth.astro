@@ -1,0 +1,132 @@
+---
+import { CLICKUP, CLICKUP_STRENGTHS } from '@lib/compare/clickup-alternative';
+---
+
+<section id="cu-breadth" class="border-t border-line" aria-labelledby="cu-breadth-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-6">
+        <h2 id="cu-breadth-title" class="h2">
+          Where ClickUp covers more ground.
+        </h2>
+      </div>
+      <div class="lg:col-span-5 lg:col-start-8">
+        <p class="prose">
+          ClickUp is built as one workspace for many kinds of work, and its range is real. Nothing Left is narrower on
+          purpose. If your team uses the pieces below every day, a focused tracker will not replace them.
+        </p>
+        <ul class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <li>
+            <a class="link" href={CLICKUP.features} rel="noopener">
+              ClickUp’s feature index
+              <span class="arr ext" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="link" href={CLICKUP.compare} rel="noopener">
+              ClickUp’s own comparisons
+              <span class="arr ext" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <ul class="cu-grid mt-10 md:mt-14">
+      {CLICKUP_STRENGTHS.map(item => (
+        <li class="cu-item">
+          <h3 class="h3">{item.name}</h3>
+          <dl class="cu-pair">
+            <dt>ClickUp</dt>
+            <dd>{item.theirs}</dd>
+            <dt>Nothing Left</dt>
+            <dd>{item.ours}</dd>
+          </dl>
+          <a class="link font-normal cu-src" href={item.source.href} rel="noopener">
+            ClickUp: {item.source.label}
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .cu-grid {
+    display: grid;
+    border-top: 1px solid var(--border);
+  }
+  .cu-item {
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+  }
+  .cu-pair {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px 16px;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 21px;
+  }
+  .cu-pair dt {
+    color: var(--text-muted);
+  }
+  .cu-pair dd {
+    color: var(--text-secondary);
+  }
+  .cu-pair dd:first-of-type {
+    color: var(--text);
+  }
+  .cu-src {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12.5px;
+  }
+  @media (min-width: 768px) {
+    .cu-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .cu-item {
+      padding: 28px 32px 28px 0;
+    }
+    .cu-item:nth-child(2n) {
+      padding-left: 32px;
+      padding-right: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+  @media (min-width: 1024px) {
+    .cu-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .cu-item,
+    .cu-item:nth-child(2n) {
+      padding: 28px 28px;
+      border-left: 1px solid var(--border);
+    }
+    .cu-item:nth-child(3n + 1) {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .cu-item:nth-child(3n) {
+      padding-right: 0;
+    }
+  }
+  @media (max-width: 640px) {
+    .cu-pair {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+    .cu-pair dd + dt {
+      margin-top: 8px;
+    }
+  }
+</style>

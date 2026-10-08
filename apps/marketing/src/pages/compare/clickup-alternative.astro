@@ -1,0 +1,106 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import ComparisonMatrix from '@components/compare/ComparisonMatrix.astro';
+import Breadth from '@components/compare/clickup-alternative/Breadth.astro';
+import Choose from '@components/compare/clickup-alternative/Choose.astro';
+import Hosting from '@components/compare/clickup-alternative/Hosting.astro';
+import Monday from '@components/compare/clickup-alternative/Monday.astro';
+import Switching from '@components/compare/clickup-alternative/Switching.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Base from '@layouts/Base.astro';
+import {
+  CLICKUP_COMPARISON,
+  CLICKUP_FAQ,
+  ENGINEERING_PATH,
+  PRICING_PATH,
+  TOUR_PATH,
+} from '@lib/compare/clickup-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+
+const SECTIONS = [
+  { href: '#matrix', label: 'Compare by job' },
+  { href: '#cu-monday', label: 'A developer’s Monday' },
+  { href: '#cu-hosting', label: 'Self-hosting' },
+  { href: '#cu-switch', label: 'Switching' },
+];
+---
+
+<Base>
+  <PageHero
+    eyebrow="Compare"
+    title="For teams that need a tracker, not a workspace for everything."
+    lede="Nothing Left is for software teams that run on issues, sprints, time on the issue and AI agents. ClickUp is one workspace for many kinds of work. Here is where each one fits, with sources for every claim."
+  >
+    <a class="btn" href={TOUR_PATH}>
+      Take the product tour
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#matrix">
+      Compare by job
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <div slot="note" class="mt-8">
+      <p class="text-sm text-fg">An issue tracker with the pieces product and engineering teams use every day.</p>
+      <nav class="mt-4" aria-label="On this page">
+        <ul class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+          {SECTIONS.map(section => (
+            <li>
+              <a class="link font-normal" href={section.href}>
+                {section.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </PageHero>
+  <ComparisonMatrix
+    comparison={CLICKUP_COMPARISON}
+    title="The jobs a software team hires a tracker for."
+    intro="Rows follow the work rather than a feature count: triage, planning, knowledge, the wider workspace, time, reports, automation, agents, hosting and plan. Every ClickUp cell links to ClickUp’s own page, and Nothing Left’s cells link to its manual or terms."
+  />
+  <Monday />
+  <Breadth />
+  <Choose />
+  <Hosting />
+  <Switching />
+  <Calculator
+    preselect="clickup"
+    title="What your ClickUp bill becomes during beta."
+    intro="ClickUp is selected. Enter what you pay now and see what the beta takes off it. Check ClickUp’s current prices on its own page; nothing you type leaves this page."
+  />
+  <Faq
+    entries={CLICKUP_FAQ}
+    title="Questions from teams leaving ClickUp."
+    intro="Docs, time, agents and what a focused tracker leaves out. Short answers here, the rest in the manual."
+  />
+  <CallToAction
+    title="Put one sprint through it."
+    body="Join the beta, create a project and run your next sprint in it. If it fits, bring the rest of the work across; if your team needs the whole workspace, you will know quickly."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={PRICING_PATH}>
+      Pricing
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={ENGINEERING_PATH}>
+      For engineering teams
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

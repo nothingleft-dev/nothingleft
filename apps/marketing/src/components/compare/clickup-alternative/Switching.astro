@@ -1,0 +1,71 @@
+---
+import { CLICKUP, MCP_MANUAL_PATH } from '@lib/compare/clickup-alternative';
+
+const PROMPT =
+  'Read the unresolved tasks in our ClickUp list “Web app”. Propose how each one maps to an issue in the ACME project: type, status, priority, assignee and tags. List likely duplicates. Create nothing until I approve the mapping.';
+---
+
+<section id="cu-switch" class="border-t border-line bg-app" aria-labelledby="cu-switch-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="cu-switch-title" class="h2">
+        Moving your work across.
+      </h2>
+      <p class="prose mt-5">
+        There is no ClickUp importer. At launch there are two routes: a generic CSV import that works for any source,
+        and an agent-assisted path for teams whose agent can reach both products. Both end with you reviewing the
+        result.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-6">
+      <article class="panel panel-pad" aria-labelledby="cu-csv-title">
+        <p class="text-xs text-fg-2">Bulk, at launch</p>
+        <h3 id="cu-csv-title" class="h3 mt-1">
+          CSV import
+        </h3>
+        <ol class="steps-list mt-5 prose text-base">
+          <li>Start from a CSV of the tasks you are moving.</li>
+          <li>Map its columns to issue fields in the project you import into.</li>
+          <li>Read the rows that could not be imported, with the reason for each, and fix them.</li>
+          <li>Import. The result is ordinary issues you can search, plan and export again.</li>
+        </ol>
+      </article>
+
+      <article class="panel panel-pad" aria-labelledby="cu-agent-title">
+        <p class="text-xs text-fg-2">When your agent reaches both</p>
+        <h3 id="cu-agent-title" class="h3 mt-1">
+          Agent-assisted, with review
+        </h3>
+        <ol class="steps-list mt-5 prose text-base">
+          <li>Connect one agent to ClickUp’s MCP server and to Nothing Left’s.</li>
+          <li>Ask it to read the unresolved tasks and propose a mapping before it creates anything.</li>
+          <li>Check the mapping, duplicates, attachments, history and who each person becomes.</li>
+          <li>
+            Approve. It creates projects, tags and issues and invites members through the MCP tools, as you, within your
+            token’s scopes.
+          </li>
+        </ol>
+        <p class="quote mt-5">{PROMPT}</p>
+        <ul class="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs">
+          <li>
+            <a class="link font-normal" href={CLICKUP.mcpConnect} rel="noopener">
+              ClickUp: connect to its MCP server
+              <span class="arr ext" aria-hidden="true">
+                ↗
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="link font-normal" href={MCP_MANUAL_PATH}>
+              Connect an agent to Nothing Left
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>

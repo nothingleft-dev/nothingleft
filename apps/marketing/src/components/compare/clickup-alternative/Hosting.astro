@@ -1,0 +1,113 @@
+---
+import { CLICKUP, GITHUB_URL, SELF_HOSTING_PATH } from '@lib/compare/clickup-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+
+const SELF_HOSTED_WORK = [
+  'Run the web app and the API, which also serves /mcp, as long-running processes.',
+  'Provide PostgreSQL, Redis and two buckets on an S3-compatible store.',
+  'Pull each release, run its migrations and restart.',
+  'Back up the database and both buckets.',
+  'Supply a mail provider key, and register your own OAuth apps for Google and GitHub sign-in.',
+];
+---
+
+<section id="cu-hosting" class="border-t border-line bg-app" aria-labelledby="cu-hosting-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[720px]">
+      <h2 id="cu-hosting-title" class="h2">
+        Looking for a self-hosted ClickUp alternative?
+      </h2>
+      <p class="prose mt-5">
+        ClickUp runs as a cloud service on AWS, and Enterprise plans can choose the region their data is stored in.
+        Nothing Left gives you two separate routes: the hosted beta, or the same open-source build on infrastructure you
+        run.
+      </p>
+      <p class="mt-4 text-xs text-fg-2">
+        <a class="link font-normal" href={CLICKUP.hosting} rel="noopener">
+          ClickUp: data hosting
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-6">
+      <article class="panel cu-route" aria-labelledby="cu-hosted-title">
+        <div class="panel-head">
+          <p class="text-xs text-fg-2">We run it</p>
+          <h3 id="cu-hosted-title" class="h3 mt-1">
+            Hosted beta
+          </h3>
+        </div>
+        <div class="panel-pad cu-route-body">
+          <p class="prose text-base">
+            Sign up and file the first issue; nothing to install. Upgrades, backups and email are ours.
+          </p>
+          <p class="prose text-base mt-4">
+            You can keep attachments in your own Cloudflare R2 or AWS S3 bucket. That is not self-hosting: issues,
+            comments and accounts stay in our database.
+          </p>
+        </div>
+        <div class="panel-foot">
+          <a class="btn" href={SIGN_UP_URL}>
+            Join the beta
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </div>
+      </article>
+
+      <article class="panel cu-route" aria-labelledby="cu-self-title">
+        <div class="panel-head">
+          <p class="text-xs text-fg-2">You run it</p>
+          <h3 id="cu-self-title" class="h3 mt-1">
+            Self-hosted, AGPL-3.0
+          </h3>
+        </div>
+        <div class="panel-pad cu-route-body">
+          <p class="prose text-base">
+            The same codebase and build as the hosted service, with no reduced edition. The seat and storage limits
+            become settings you choose. The work that comes with it is yours:
+          </p>
+          <ul class="included cu-work">
+            {SELF_HOSTED_WORK.map(item => (
+              <li>{item}</li>
+            ))}
+          </ul>
+          <p class="mt-4 text-xs text-fg-2">The install guide ships with launch.</p>
+        </div>
+        <div class="panel-foot flex flex-wrap items-center gap-x-6 gap-y-3">
+          <a class="link text-sm" href={SELF_HOSTING_PATH}>
+            What self-hosting involves
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <a class="link text-sm" href={GITHUB_URL}>
+            Source on GitHub
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cu-route {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .cu-route-body {
+    flex: 1;
+  }
+  .cu-work {
+    grid-template-columns: 1fr;
+    margin-top: 16px;
+  }
+</style>

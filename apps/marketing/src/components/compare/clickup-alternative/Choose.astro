@@ -1,0 +1,43 @@
+---
+import { CHOOSE_CLICKUP, CHOOSE_NOTHING_LEFT, ENGINEERING_PATH } from '@lib/compare/clickup-alternative';
+---
+
+<section id="cu-choose" class="border-t border-line" aria-labelledby="cu-choose-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="cu-choose-title" class="h2">
+        Which one fits your team.
+      </h2>
+      <p class="prose mt-5">
+        Breadth suits some teams and gets in the way of others. The question is how much of the workspace your team
+        would actually use.
+      </p>
+    </div>
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-10 md:gap-12">
+      <div>
+        <h3 class="h3">Choose ClickUp if</h3>
+        <ul class="rule-list mt-3">
+          {CHOOSE_CLICKUP.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 class="h3">Choose Nothing Left if</h3>
+        <ul class="rule-list mt-3">
+          {CHOOSE_NOTHING_LEFT.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+        <p class="mt-6 text-sm">
+          <a class="link" href={ENGINEERING_PATH}>
+            Nothing Left for engineering teams
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
