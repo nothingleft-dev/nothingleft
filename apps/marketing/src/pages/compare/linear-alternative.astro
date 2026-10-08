@@ -1,0 +1,71 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import ComparisonMatrix from '@components/compare/ComparisonMatrix.astro';
+import Choose from '@components/compare/linear-alternative/Choose.astro';
+import Contents from '@components/compare/linear-alternative/Contents.astro';
+import Switching from '@components/compare/linear-alternative/Switching.astro';
+import Workflow from '@components/compare/linear-alternative/Workflow.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Base from '@layouts/Base.astro';
+import { ISSUES_FEATURE_PATH, LINEAR_COMPARISON, LINEAR_FAQ, PRICING_PATH } from '@lib/compare/linear-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Compare"
+    title="A focused Linear alternative for teams that want an open tracker and time in the issue."
+    lede="For teams that want their tracker, time logs and agents in one open codebase. Linear is the broader product for planning across projects and for code workflows; Nothing Left is smaller, open source, and keeps logged time and agent access on the issue itself."
+  >
+    <a class="btn" href={ISSUES_FEATURE_PATH}>
+      Explore Nothing Left
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#matrix">
+      Jump to the comparison
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <Contents slot="note" />
+  </PageHero>
+  <ComparisonMatrix
+    comparison={LINEAR_COMPARISON}
+    title="Where each one stands, row by row."
+    intro="The capabilities a small engineering team weighs when it looks past Linear. Every Linear cell links to the Linear page that supports it, and every Nothing Left cell to its manual or product page. Filter by area, or read the whole table."
+  />
+  <Workflow />
+  <Switching />
+  <Choose />
+  <Calculator
+    preselect="linear"
+    title="Compare your Linear bill."
+    intro="Enter what your team pays Linear today and see what the beta takes off it. Linear's plans are on its own pricing page, linked below; no list price is filled in for you, and nothing you type leaves this page."
+  />
+  <Faq
+    entries={LINEAR_FAQ}
+    title="Questions teams ask before leaving Linear."
+    intro="Importing, Git, agents, time and cost. Short answers here, details in the docs."
+  />
+  <CallToAction
+    title="Try it on one project first."
+    body="Join the beta, create a project and file the bug you are working on now. Log time on it, connect an agent when you want one, and keep Linear running until you have decided."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={PRICING_PATH}>
+      See pricing
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

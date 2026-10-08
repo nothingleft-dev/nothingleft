@@ -1,0 +1,77 @@
+---
+import { AGENT_STEPS, CSV_STEPS, LINEAR, MCP_MANUAL } from '@lib/compare/linear-alternative';
+
+const PATHS = [
+  {
+    id: 'la-csv',
+    title: 'CSV import',
+    when: 'At launch, for any amount of history',
+    steps: CSV_STEPS,
+    link: { href: LINEAR.exporting.href, label: LINEAR.exporting.label, external: true },
+  },
+  {
+    id: 'la-agent',
+    title: 'An agent connected to both',
+    when: 'For the unresolved issues you still need',
+    steps: AGENT_STEPS,
+    link: { href: MCP_MANUAL, label: 'Connecting an agent', external: false },
+  },
+];
+---
+
+<section id="la-switching" class="border-t border-line" aria-labelledby="la-switching-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="la-switching-title" class="h2">
+        Moving issues over from Linear.
+      </h2>
+      <p class="prose mt-5">
+        There is no native Linear importer. Two paths work, and both need a person to check the result: the generic CSV
+        importer for bulk history, or an agent that reads Linear and writes to Nothing Left while you review each
+        mapping.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-6 lg:gap-8">
+      {PATHS.map(path => (
+        <div class="panel" aria-labelledby={`${path.id}-title`} role="group">
+          <div class="panel-head">
+            <h3 id={`${path.id}-title`} class="h3">
+              {path.title}
+            </h3>
+            <p class="mt-1 text-sm text-fg-2">{path.when}</p>
+          </div>
+          <div class="panel-pad">
+            <ol class="steps-list">
+              {path.steps.map(step => (
+                <li class="prose text-base">
+                  <strong>{step.title}.</strong> {step.body}
+                </li>
+              ))}
+            </ol>
+            <p class="mt-6 text-sm">
+              <a class="link" href={path.link.href} rel={path.link.external ? 'noopener' : undefined}>
+                {path.link.label}
+                <span class:list={['arr', { ext: path.link.external }]} aria-hidden="true">
+                  {path.link.external ? '↗' : '→'}
+                </span>
+              </a>
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <p class="mt-8 max-w-[680px] text-sm text-fg-2">
+      Neither path carries over everything: plan for attachments, full history, comment authorship and Linear-only
+      objects such as initiatives to need a decision. Linear’s MCP server and its CSV exports are described on its own
+      pages.{' '}
+      <a class="link font-normal" href={LINEAR.mcp.href} rel="noopener">
+        {LINEAR.mcp.label}
+        <span class="arr ext" aria-hidden="true">
+          ↗
+        </span>
+      </a>
+    </p>
+  </div>
+</section>

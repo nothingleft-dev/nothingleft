@@ -1,0 +1,281 @@
+---
+import { MCP_FEATURE_PATH, STORY, TIME_FEATURE_PATH, WORKFLOW } from '@lib/compare/linear-alternative';
+
+const dev = STORY.developer.name.split(' ')[0];
+---
+
+<section id="la-workflow" class="border-t border-line bg-app" aria-labelledby="la-workflow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="la-workflow-title" class="h2">
+        One bug, followed through both.
+      </h2>
+      <p class="prose mt-5">
+        <code>{STORY.key}</code> from report to fix. Each step shows what happens in Nothing Left, and what the same
+        step looks like in Linear according to Linear’s own documentation.
+      </p>
+    </div>
+
+    <ol class="la-steps mt-10 md:mt-14">
+      {WORKFLOW.map((step, index) => (
+        <li class="la-step">
+          <div class="la-step-head">
+            <span class="la-num mono" aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <h3 class="h3">{step.title}</h3>
+            <p class="la-when mono">{step.when}</p>
+          </div>
+          <div class="la-cell la-ours">
+            <p class="la-label">Nothing Left</p>
+            <p class="la-text">{step.ours}</p>
+          </div>
+          <div class="la-cell">
+            <p class="la-label">Linear</p>
+            <p class="la-text">{step.theirs.text}</p>
+            <p class="la-sources">
+              {step.theirs.sources.map(source => (
+                <a class="link font-normal" href={source.href} rel="noopener">
+                  {source.label}
+                  <span class="arr ext" aria-hidden="true">
+                    ↗
+                  </span>
+                </a>
+              ))}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ol>
+
+    <figure class="mt-12 md:mt-16">
+      <div class="la-view">
+        <div class="la-issue">
+          <div class="pane-bar">
+            <span class="mono text-xs">ACME</span>
+            <span class="sep">/</span>
+            <span>Issues</span>
+            <span class="sep">/</span>
+            <span class="mono text-xs text-fg">{STORY.key}</span>
+          </div>
+          <div class="wf-body">
+            <p class="flex items-center gap-2 text-xs text-fg-2">
+              <span class="badge l-bug" aria-hidden="true">
+                B
+              </span>
+              {STORY.type} · {STORY.priority}
+            </p>
+            <h3 class="wf-title">{STORY.title}</h3>
+            <dl class="fields">
+              <dt>Status</dt>
+              <dd>
+                <i class="dot done" aria-hidden="true"></i>
+                {STORY.status}
+              </dd>
+              <dt>Assignee</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  {STORY.developer.initials}
+                </span>
+                {STORY.developer.name}
+              </dd>
+              <dt>Reporter</dt>
+              <dd>
+                <span class="av" aria-hidden="true">
+                  {STORY.reporter.initials}
+                </span>
+                {STORY.reporter.name}
+              </dd>
+              <dt>Sprint</dt>
+              <dd>{STORY.sprint}</dd>
+              <dt>Story points</dt>
+              <dd class="mono">{STORY.points}</dd>
+              <dt>Estimation</dt>
+              <dd class="mono">{STORY.estimate}</dd>
+              <dt>Spent time</dt>
+              <dd class="la-spent">
+                <span class="mono">
+                  {STORY.spent} of {STORY.estimate}
+                </span>
+                <span class="la-meter" aria-hidden="true">
+                  <span style={`width:${STORY.spentShare}%`}></span>
+                </span>
+              </dd>
+              <dt>Due date</dt>
+              <dd>{STORY.due}</dd>
+            </dl>
+          </div>
+          <div class="activity la-activity" aria-label={`${STORY.key} history`} role="group">
+            {STORY.activity.map(line => (
+              <p>
+                <span>{line.text}</span>
+                <time class="t" datetime={line.iso}>
+                  {line.when}
+                </time>
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <div class="pane-agent">
+          <div class="pane-bar">
+            <span class="text-fg">{dev}’s agent</span>
+            <span class="sep">·</span>
+            <span>{STORY.agent.when}</span>
+          </div>
+          <p class="prompt">
+            <span class="mark" aria-hidden="true">
+              &gt;
+            </span>
+            <span>{STORY.agent.prompt}</span>
+          </p>
+          <ol class="calls" aria-label="Tool calls">
+            {STORY.agent.calls.map(call => (
+              <li>
+                <span class="tool">{call.tool}</span>
+                <span class="args">{call.args}</span>
+              </li>
+            ))}
+          </ol>
+          <p class="answer">{STORY.agent.answer}</p>
+        </div>
+      </div>
+      <figcaption class="mt-4 max-w-[680px] text-sm text-fg-2">
+        A representative issue with fictional data. The first two history lines came from the agent and read{' '}
+        {STORY.developer.name}, because it used {dev}’s token; the time it logged counts in the timesheet like any other
+        entry.
+        <span class="la-caption-links">
+          <a class="link" href={TIME_FEATURE_PATH}>
+            Time tracking
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <a class="link" href={MCP_FEATURE_PATH}>
+            MCP and AI agents
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .la-steps {
+    border-top: 1px solid var(--border);
+  }
+  .la-step {
+    display: grid;
+    gap: 14px 40px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .la-step {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .la-step-head {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (min-width: 1024px) {
+    .la-step {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 4.5fr) minmax(0, 4.5fr);
+    }
+    .la-step-head {
+      grid-column: auto;
+    }
+  }
+  .la-step-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 12px;
+  }
+  @media (min-width: 1024px) {
+    .la-step-head {
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+  .la-num {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .la-when {
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .la-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .la-text {
+    margin-top: 6px;
+    font-size: 15px;
+    line-height: 24px;
+    color: var(--text-secondary);
+  }
+  .la-ours .la-text {
+    color: var(--text);
+  }
+  .la-sources {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+  .la-view {
+    display: grid;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-surface);
+  }
+  .la-view > * {
+    min-width: 0;
+  }
+  @media (min-width: 1024px) {
+    .la-view {
+      grid-template-columns: 1.3fr 1fr;
+    }
+  }
+  .la-issue .pane-bar,
+  .pane-agent .pane-bar {
+    overflow: hidden;
+  }
+  .la-spent {
+    flex-wrap: wrap;
+  }
+  .la-meter {
+    width: 96px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--bg-inset);
+    overflow: hidden;
+  }
+  .la-meter span {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .la-activity {
+    min-height: 0;
+  }
+  .la-caption-links {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-left: 4px;
+  }
+</style>

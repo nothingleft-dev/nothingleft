@@ -1,0 +1,40 @@
+---
+const SECTIONS = [
+  { href: '#matrix', label: 'Side by side' },
+  { href: '#la-workflow', label: 'One bug in both' },
+  { href: '#la-switching', label: 'Switching' },
+  { href: '#la-choose', label: 'Which fits' },
+  { href: '#compare', label: 'Cost' },
+  { href: '#faq', label: 'Questions' },
+];
+---
+
+<nav class="mt-10 md:mt-12" aria-labelledby="la-toc-title">
+  <p id="la-toc-title" class="text-xs text-fg-2">
+    On this page
+  </p>
+  <ol class="la-toc mt-3">
+    {SECTIONS.map(section => (
+      <li>
+        <a class="link font-normal" href={section.href}>
+          {section.label}
+          <span class="arr" aria-hidden="true">
+            ↓
+          </span>
+        </a>
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .la-toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    line-height: 20px;
+  }
+</style>

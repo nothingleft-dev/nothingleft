@@ -1,0 +1,87 @@
+---
+import { CHOOSE_LINEAR, CHOOSE_US, LINEAR_STRENGTHS, OUR_STRENGTHS } from '@lib/compare/linear-alternative';
+---
+
+<section id="la-choose" class="border-t border-line" aria-labelledby="la-choose-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="la-choose-title" class="h2">
+        Which one fits your team.
+      </h2>
+      <p class="prose mt-5">
+        Linear is the broader product. Nothing Left is smaller on purpose and makes different trade-offs. Read both
+        lists; the one that describes how you work is the answer.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-10 md:gap-12">
+      <div>
+        <h3 class="h3">Choose Linear if…</h3>
+        <ul class="rule-list mt-3">
+          {CHOOSE_LINEAR.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+        <h4 class="mt-8 text-sm font-medium">What Linear does well</h4>
+        <ul class="la-strengths mt-3">
+          {LINEAR_STRENGTHS.map(item => (
+            <li>
+              <p>{item.text}</p>
+              {item.sources.map(source => (
+                <a class="link font-normal" href={source.href} rel="noopener">
+                  {source.label}
+                  <span class="arr ext" aria-hidden="true">
+                    ↗
+                  </span>
+                </a>
+              ))}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 class="h3">Choose Nothing Left if…</h3>
+        <ul class="rule-list mt-3">
+          {CHOOSE_US.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+        <h4 class="mt-8 text-sm font-medium">What Nothing Left does differently</h4>
+        <ul class="la-strengths mt-3">
+          {OUR_STRENGTHS.map(item => (
+            <li>
+              <p>{item.text}</p>
+              <a class="link font-normal" href={item.href} rel={item.external ? 'noopener' : undefined}>
+                {item.label}
+                <span class:list={['arr', { ext: item.external }]} aria-hidden="true">
+                  {item.external ? '↗' : '→'}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .la-strengths {
+    display: grid;
+    gap: 14px;
+    font-size: 14px;
+    line-height: 22px;
+  }
+  .la-strengths li {
+    padding-left: 14px;
+    border-left: 2px solid var(--border);
+  }
+  .la-strengths p {
+    color: var(--text-secondary);
+  }
+  .la-strengths a {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 12.5px;
+  }
+</style>
