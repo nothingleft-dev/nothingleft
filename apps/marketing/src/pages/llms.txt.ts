@@ -10,7 +10,9 @@ export const GET: APIRoute = () => {
     if (docs.length === 0) return '';
     const lines = docs.map(doc => {
       const description = SCHEMA_PAGES[docPath(doc.slug)]?.description;
-      return `- [${doc.label}](${SITE_URL}${docPath(doc.slug)}.md)${description ? `: ${description}` : ''}`;
+      // The API reference has no Markdown twin; its source is the OpenAPI document itself.
+      const source = doc.slug === 'api' ? '/docs/openapi.yaml' : `${docPath(doc.slug)}.md`;
+      return `- [${doc.label}](${SITE_URL}${source})${description ? `: ${description}` : ''}`;
     });
     return `## ${group.title}\n\n${lines.join('\n')}`;
   }).filter(Boolean);

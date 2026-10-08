@@ -4,6 +4,8 @@ dist
 .turbo
 bun.lock
 docs/
+!apps/marketing/src/components/docs/
+!apps/marketing/src/pages/docs/
 design/
 *.md
 packages/db/migrations/
