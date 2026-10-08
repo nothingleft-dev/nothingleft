@@ -1,0 +1,43 @@
+---
+import { ASANA, PATHS, SELF_HOSTING_FACTS } from '@lib/compare/asana-alternative';
+---
+
+<section id="aa-deploy" class="border-t border-line" aria-labelledby="aa-deploy-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="aa-deploy-title" class="h2">
+        Can we run it ourselves?
+      </h2>
+      <p class="prose mt-5">
+        Yes, and it is a real commitment. Nothing Left is open source under AGPL-3.0, and the hosted beta runs the same
+        build. Running it yourself means the infrastructure and its maintenance are your team’s responsibility, not
+        ours. The install guide ships with launch.
+      </p>
+      <p class="prose mt-4">
+        Asana is a cloud service; its pricing page says it does not plan to offer an internally hosted version.{' '}
+        <a class="link font-normal" href={ASANA.pricing} rel="noopener">
+          Asana pricing FAQ
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <a class="link text-sm" href={PATHS.selfHosting}>
+          Self-hosting in detail
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </div>
+    </div>
+    <dl class="lg:col-span-6 lg:col-start-7 rule-list">
+      {SELF_HOSTING_FACTS.map(fact => (
+        <div class="py-5">
+          <dt class="text-sm font-medium">{fact.title}</dt>
+          <dd class="prose text-base mt-1">{fact.body}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>

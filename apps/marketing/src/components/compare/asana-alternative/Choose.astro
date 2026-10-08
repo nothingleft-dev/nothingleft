@@ -1,0 +1,36 @@
+---
+import { CHOOSE_ASANA, CHOOSE_NOTHING_LEFT } from '@lib/compare/asana-alternative';
+
+const COLUMNS = [
+  { id: 'aa-choose-asana', title: 'Choose Asana if…', items: CHOOSE_ASANA },
+  { id: 'aa-choose-nl', title: 'Choose Nothing Left if…', items: CHOOSE_NOTHING_LEFT },
+];
+---
+
+<section id="aa-choose" class="border-t border-line bg-app" aria-labelledby="aa-choose-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="aa-choose-title" class="h2">
+        Which one fits your team?
+      </h2>
+      <p class="prose mt-5">
+        Asana is likely the better choice for organisation-wide programs and for departments outside engineering.
+        Nothing Left is narrower on purpose: a tracker for the engineering and product work itself.
+      </p>
+    </div>
+    <div class="mt-12 grid md:grid-cols-2 gap-10 md:gap-12">
+      {COLUMNS.map(column => (
+        <div>
+          <h3 id={column.id} class="h3">
+            {column.title}
+          </h3>
+          <ul class="rule-list mt-4" aria-labelledby={column.id}>
+            {column.items.map(item => (
+              <li class="py-4 prose text-base">{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

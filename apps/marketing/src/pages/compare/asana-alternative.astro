@@ -1,0 +1,100 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import ComparisonMatrix from '@components/compare/ComparisonMatrix.astro';
+import Choose from '@components/compare/asana-alternative/Choose.astro';
+import Deployment from '@components/compare/asana-alternative/Deployment.astro';
+import Strengths from '@components/compare/asana-alternative/Strengths.astro';
+import Switching from '@components/compare/asana-alternative/Switching.astro';
+import Tour from '@components/compare/asana-alternative/Tour.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Base from '@layouts/Base.astro';
+import { ASANA_COMPARISON, ASANA_FAQ, PATHS } from '@lib/compare/asana-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+
+const SECTIONS = [
+  { href: '#matrix', label: 'Comparison' },
+  { href: '#aa-strengths', label: 'Where Asana is stronger' },
+  { href: '#aa-deploy', label: 'Self-hosting' },
+  { href: '#aa-choose', label: 'Which to choose' },
+  { href: '#aa-switch', label: 'Switching' },
+  { href: '#compare', label: 'Cost' },
+];
+---
+
+<Base>
+  <PageHero
+    eyebrow="Compare"
+    title="Engineering work needs more than a task list."
+    lede="When the work is bugs and sprints, you need technical issue detail: keys, links, severity, estimates and history. Nothing Left is an open-source tracker for engineering teams that plan in project sprints and want their notes and their AI agent in the same place."
+  >
+    <a class="btn" href="#aa-tour">
+      Take the product tour
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <a class="link text-sm" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <nav slot="note" class="mt-6" aria-label="On this page">
+      <p class="text-xs text-fg-3">On this page</p>
+      <ul class="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        {SECTIONS.map(section => (
+          <li>
+            <a class="link font-normal" href={section.href}>
+              {section.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </PageHero>
+  <Tour />
+  <ComparisonMatrix
+    comparison={ASANA_COMPARISON}
+    title="Nothing Left and Asana, row by row."
+    intro="Each Asana cell links to Asana’s own page; each Nothing Left cell links to its manual. Nothing Left has no Asana-style intake forms, portfolios or goal management, and the rows say so."
+  />
+  <Strengths />
+  <Deployment />
+  <Choose />
+  <Switching />
+  <Calculator
+    preselect="asana"
+    title="Compare your Asana bill."
+    intro="Enter what your team pays Asana today and see what the beta takes off it. Your figure only: no Asana price is filled in for you, and nothing you type leaves this page."
+  />
+  <Faq
+    entries={ASANA_FAQ}
+    title="Questions teams ask before leaving Asana."
+    intro="About fit, agents, hosting and moving work. Short answers here, details in the docs."
+  />
+  <CallToAction
+    title="Bring one engineering project across."
+    body="Join the beta, create a project and file the bug you are working on now. Your other teams can stay where they are."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={PATHS.engineering}>
+      For engineering teams
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={PATHS.pricing}>
+      Pricing
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

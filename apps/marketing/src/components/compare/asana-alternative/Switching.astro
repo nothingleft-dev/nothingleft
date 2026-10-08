@@ -1,0 +1,89 @@
+---
+import { PATHS, SWITCH_STEPS } from '@lib/compare/asana-alternative';
+---
+
+<section id="aa-switch" class="border-t border-line" aria-labelledby="aa-switch-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="aa-switch-title" class="h2">
+        Moving work across.
+      </h2>
+      <p class="prose mt-5">
+        There is no native Asana importer. At launch there are two paths: a generic CSV import for the bulk of it, and
+        an agent you guide, with every mapping reviewed before anything is written.
+      </p>
+      <ul class="mt-6 space-y-2 text-sm">
+        <li>
+          <a class="link" href={PATHS.mcp}>
+            MCP and AI agents
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="link" href={PATHS.engineering}>
+            For engineering teams
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+        <li>
+          <a class="link" href={PATHS.pricing}>
+            Pricing
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    <ol class="lg:col-span-6 lg:col-start-7 aa-switch-list">
+      {SWITCH_STEPS.map((step, index) => (
+        <li>
+          <span class="aa-switch-n" aria-hidden="true">
+            {index + 1}
+          </span>
+          <div>
+            <h3 class="h3">{step.title}</h3>
+            <p class="prose text-base mt-1">{step.body}</p>
+            {step.source && (
+              <a class="link font-normal text-sm mt-2 inline-block" href={step.source.href} rel="noopener">
+                {step.source.label}
+                <span class="arr ext" aria-hidden="true">
+                  ↗
+                </span>
+              </a>
+            )}
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .aa-switch-list > li {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 14px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+  }
+  .aa-switch-list > li:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+  .aa-switch-n {
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+</style>

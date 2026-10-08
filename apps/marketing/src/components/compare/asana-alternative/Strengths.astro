@@ -1,0 +1,107 @@
+---
+import { ASANA_MCP_SOURCE, ASANA_STRENGTHS, NOT_IN_NOTHING_LEFT } from '@lib/compare/asana-alternative';
+---
+
+<section id="aa-strengths" class="border-t border-line bg-app" aria-labelledby="aa-strengths-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-6">
+        <h2 id="aa-strengths-title" class="h2">
+          Where Asana is the stronger tool.
+        </h2>
+      </div>
+      <div class="lg:col-span-5 lg:col-start-8">
+        <p class="prose">
+          Asana is built for work that crosses departments, and it is not only a task list: it documents engineering
+          workflows, AI features and its own MCP server. Each point below links to Asana’s own page.
+        </p>
+        <a class="link font-normal text-sm mt-4 inline-block" href={ASANA_MCP_SOURCE.href} rel="noopener">
+          {ASANA_MCP_SOURCE.label}
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+      </div>
+    </div>
+
+    <ul class="aa-grid mt-12">
+      {ASANA_STRENGTHS.map(strength => (
+        <li>
+          <h3 class="h3">{strength.title}</h3>
+          <p class="prose text-[15px] leading-[24px] mt-2">{strength.body}</p>
+          <a class="link font-normal text-sm mt-3 inline-block" href={strength.source.href} rel="noopener">
+            {strength.source.label}
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <div class="aa-lacks panel panel-pad mt-12" role="note" aria-labelledby="aa-lacks-title">
+      <h3 id="aa-lacks-title" class="h3">
+        What Nothing Left does not have
+      </h3>
+      <p class="prose text-[15px] leading-[24px] mt-2">
+        No Asana-style forms, portfolios or goal management. If your team depends on these, keep them in Asana or choose
+        Asana.
+      </p>
+      <ul class="aa-lacks-list mt-4">
+        {NOT_IN_NOTHING_LEFT.map(item => (
+          <li>{item}</li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .aa-grid {
+    display: grid;
+    gap: 0 48px;
+    border-top: 1px solid var(--border);
+  }
+  .aa-grid > li {
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  @media (min-width: 768px) {
+    .aa-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (min-width: 1024px) {
+    .aa-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .aa-lacks {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .aa-lacks-list {
+    display: grid;
+    gap: 6px 32px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text);
+  }
+  .aa-lacks-list li {
+    display: flex;
+    gap: 10px;
+  }
+  .aa-lacks-list li::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    margin-top: 5px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    flex: none;
+  }
+  @media (min-width: 768px) {
+    .aa-lacks-list {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

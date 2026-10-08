@@ -1,0 +1,525 @@
+---
+import { PATHS, TOUR, TOUR_STEPS } from '@lib/compare/asana-alternative';
+
+const BAR_WIDTHS = [40, 32, 24, 16, 10];
+const total = TOUR_STEPS.length;
+const step = (id: string) => {
+  const index = TOUR_STEPS.findIndex(candidate => candidate.id === id);
+  return { n: index + 1, ...TOUR_STEPS[index] };
+};
+const priorityClass = `l-${TOUR.priority.toLowerCase()}`;
+const splitRefs = (text: string) => text.split(/(@\w+|ACME-\d+)/);
+const filed = step('filed');
+const planned = step('planned');
+const worked = step('worked');
+const fixed = step('fixed');
+const notes = step('notes');
+---
+
+<section id="aa-tour" class="border-t border-line bg-app" aria-labelledby="aa-tour-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="aa-tour-title" class="h2">
+        A technical home for bugs, sprints and the notes behind them.
+      </h2>
+      <p class="prose mt-5">
+        Follow <code>{TOUR.key}</code> from the first report, through a sprint, to the decision record and runbooks
+        beside it. Every step changes the same issue, and its history records who changed what.
+      </p>
+    </div>
+
+    <div class="aa-tour mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="aa-steps lg:col-span-4" role="group" aria-label={`${TOUR.key}, step by step`} data-aa-steps>
+        {TOUR_STEPS.map((entry, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-aa-step={entry.id}
+            data-aa-title={entry.title}
+            data-last={index === total - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="aa-panel"
+          >
+            <span class="bar" style={`width:${BAR_WIDTHS[index]}px`} />
+            <span>
+              <b>
+                <span class="sr-only">{`Step ${index + 1}: `}</span>
+                {entry.title}
+              </b>
+              <span>{entry.body}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="aa-views lg:col-span-8">
+        <div class="wf-panel" id="aa-panel">
+          <div data-view="filed" class="on">
+            <h3 class="aa-cap">
+              <span class="aa-n">
+                {filed.n} / {total}
+              </span>
+              <span>
+                {filed.title} · {TOUR.filed.by.name}, {TOUR.filed.when}
+              </span>
+            </h3>
+            <p class="aa-lede">{filed.body}</p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">{TOUR.key}</span>
+            </div>
+            <div class="wf-body">
+              <div class="flex items-center gap-2 text-xs text-fg-2">
+                <span class="badge l-bug" aria-hidden="true">
+                  B
+                </span>
+                {TOUR.type}
+                <span class:list={['badge ml-2', priorityClass]} aria-hidden="true">
+                  {TOUR.priority.charAt(0)}
+                </span>
+                {TOUR.priority}
+              </div>
+              <p class="wf-title">{TOUR.title}</p>
+              <div class="wf-md">
+                <p>
+                  <strong class="text-fg font-medium">Steps.</strong> Open an invitation link that is older than seven
+                  days.
+                </p>
+                <p>
+                  <strong class="text-fg font-medium">Expected.</strong> A message that the link has expired and a way
+                  to request a new one.
+                </p>
+                <p>
+                  <strong class="text-fg font-medium">Actual.</strong> A blank page.
+                </p>
+              </div>
+              <dl class="fields">
+                <dt>Reporter</dt>
+                <dd>
+                  <span class="av" aria-hidden="true">
+                    {TOUR.filed.by.initials}
+                  </span>
+                  {TOUR.filed.by.name}
+                </dd>
+                <dt>Assignee</dt>
+                <dd class="empty">Unassigned</dd>
+                <dt>Severity</dt>
+                <dd>{TOUR.filed.severity}</dd>
+                <dt>Sprint</dt>
+                <dd class="empty">Unscheduled</dd>
+              </dl>
+            </div>
+            <div class="activity">
+              <p>
+                {TOUR.filed.by.name} created {TOUR.key}
+                <span class="t">{TOUR.filed.when}</span>
+              </p>
+            </div>
+          </div>
+
+          <div data-view="planned">
+            <h3 class="aa-cap">
+              <span class="aa-n">
+                {planned.n} / {total}
+              </span>
+              <span>
+                {planned.title} · {TOUR.planned.when}
+              </span>
+            </h3>
+            <p class="aa-lede">{planned.body}</p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Backlog</span>
+              <span class="sep">/</span>
+              <span class="text-fg">{TOUR.planned.sprint}</span>
+            </div>
+            <div class="aa-sprint">
+              <p class="text-fg font-medium">{TOUR.planned.sprint}</p>
+              <p>{TOUR.planned.goal}</p>
+              <p>{TOUR.planned.dates}</p>
+            </div>
+            <div class="wf-body">
+              <p class="aa-issue-line">
+                <span class="key">{TOUR.key}</span>
+                <span>{TOUR.title}</span>
+              </p>
+              <dl class="fields">
+                <dt>Assignee</dt>
+                <dd>
+                  <span class="av" aria-hidden="true">
+                    {TOUR.planned.developer.initials}
+                  </span>
+                  {TOUR.planned.developer.name}
+                </dd>
+                <dt>Story points</dt>
+                <dd class="mono text-xs">{TOUR.planned.points}</dd>
+                <dt>Estimation</dt>
+                <dd class="mono text-xs">{TOUR.planned.estimate}</dd>
+                <dt>Due date</dt>
+                <dd>{TOUR.planned.due}</dd>
+              </dl>
+            </div>
+            <div class="activity">
+              {TOUR.planned.history.map(entry => (
+                <p>
+                  <span>
+                    {entry.who} · {entry.what}
+                  </span>
+                  <span class="t">{entry.when}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <div data-view="worked">
+            <h3 class="aa-cap">
+              <span class="aa-n">
+                {worked.n} / {total}
+              </span>
+              <span>
+                {worked.title} · {TOUR.worked.when}
+              </span>
+            </h3>
+            <p class="aa-lede">{worked.body}</p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">{TOUR.key}</span>
+            </div>
+            <div class="wf-body">
+              <p class="wf-title">{TOUR.title}</p>
+              <div class="ref">
+                <p class="lbl">Depends on</p>
+                <p class="aa-issue-line">
+                  <span class="key">{TOUR.worked.dependency.key}</span>
+                  <span>{TOUR.worked.dependency.title}</span>
+                </p>
+                {TOUR.worked.subtask && (
+                  <>
+                    <p class="lbl mt-3">Parent for</p>
+                    <p class="aa-issue-line">
+                      <span class="key">{TOUR.worked.subtask.key}</span>
+                      <span>{TOUR.worked.subtask.title}</span>
+                    </p>
+                  </>
+                )}
+              </div>
+              <div class="comment">
+                <div class="by">
+                  <span class="av" aria-hidden="true">
+                    {TOUR.planned.developer.initials}
+                  </span>
+                  {TOUR.planned.developer.name}
+                </div>
+                {splitRefs(TOUR.worked.note.text).map(part =>
+                  part.startsWith('@') ? (
+                    <code class="aa-mention">{part}</code>
+                  ) : /^ACME-\d+$/.test(part) ? (
+                    <span class="key">{part}</span>
+                  ) : (
+                    part
+                  ),
+                )}
+              </div>
+              <dl class="fields">
+                <dt>Status</dt>
+                <dd>
+                  <i class="dot started"></i> In Progress
+                </dd>
+                <dt>Spent time</dt>
+                <dd class="mono text-xs">
+                  {TOUR.worked.spent} <span class="text-fg-2 font-sans">of {TOUR.planned.estimate}</span>
+                </dd>
+              </dl>
+            </div>
+            <div class="activity">
+              {TOUR.worked.history.map(entry => (
+                <p>
+                  <span>
+                    {entry.who} · {entry.what}
+                  </span>
+                  <span class="t">{entry.when}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+
+          <div data-view="fixed">
+            <h3 class="aa-cap">
+              <span class="aa-n">
+                {fixed.n} / {total}
+              </span>
+              <span>
+                {fixed.title} · {TOUR.fixed.when}
+              </span>
+            </h3>
+            <p class="aa-lede">{fixed.body}</p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">{TOUR.key}</span>
+            </div>
+            <div class="wf-body">
+              <p class="wf-title">{TOUR.title}</p>
+              <div class="comment">
+                <div class="by">
+                  <span class="av" aria-hidden="true">
+                    {TOUR.planned.developer.initials}
+                  </span>
+                  {TOUR.planned.developer.name}
+                </div>
+                {TOUR.fixed.note.text}
+              </div>
+              <dl class="fields">
+                <dt>Status</dt>
+                <dd>
+                  <i class="dot done"></i> Fixed
+                </dd>
+                <dt>Spent time</dt>
+                <dd class="mono text-xs">
+                  {TOUR.fixed.spent} <span class="text-fg-2 font-sans">of {TOUR.planned.estimate}</span>
+                </dd>
+                <dt>Sprint</dt>
+                <dd>{TOUR.planned.sprint}</dd>
+              </dl>
+            </div>
+            <div class="aa-progress">
+              <p>
+                <span class="text-fg font-medium">{TOUR.planned.sprint}</span> at the end of {TOUR.fixed.sprintDay}:{' '}
+                {TOUR.fixed.sprintCompleted} of {TOUR.fixed.sprintScope} points done
+              </p>
+              <span class="aa-meter" aria-hidden="true">
+                <span
+                  style={`width:${Math.round((TOUR.fixed.sprintCompleted / TOUR.fixed.sprintScope) * 100)}%`}
+                ></span>
+              </span>
+            </div>
+          </div>
+
+          <div data-view="notes">
+            <h3 class="aa-cap">
+              <span class="aa-n">
+                {notes.n} / {total}
+              </span>
+              <span>
+                {notes.title} · decision record published {TOUR.notes.decision.published}
+              </span>
+            </h3>
+            <p class="aa-lede">{notes.body}</p>
+            <div class="pane-bar">
+              <span class="mono text-xs">ACME</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Knowledge base</span>
+            </div>
+            <div class="aa-kb">
+              <ul class="aa-tree" aria-label="Knowledge base articles">
+                <li>
+                  <span class="aa-folder">{TOUR.notes.decision.folder}</span>
+                  <ul>
+                    <li class="aa-sel">{TOUR.notes.decision.title}</li>
+                  </ul>
+                </li>
+                <li>
+                  <span class="aa-folder">{TOUR.notes.runbook.folder}</span>
+                  <ul>
+                    <li>{TOUR.notes.runbook.title}</li>
+                  </ul>
+                </li>
+              </ul>
+              <div class="aa-article">
+                <p class="text-xs text-fg-2">{TOUR.notes.decision.kind}</p>
+                <p class="wf-title">{TOUR.notes.decision.title}</p>
+                <p class="mono text-xs text-fg-2 mt-2 aa-break">{TOUR.notes.decision.uri}</p>
+                <dl class="fields">
+                  <dt>Author</dt>
+                  <dd>
+                    <span class="av" aria-hidden="true">
+                      {TOUR.notes.decision.author.initials}
+                    </span>
+                    {TOUR.notes.decision.author.name}
+                  </dd>
+                  <dt>References</dt>
+                  <dd>
+                    <span class="key">{TOUR.key}</span> <s>{TOUR.title}</s>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+            <div class="wf-body aa-note">
+              <p>
+                Open <span class="key">{TOUR.key}</span> and the record is listed under <em>Referenced by</em>. Runbooks
+                work the same way: {TOUR.notes.runbook.author.name}’s <em>{TOUR.notes.runbook.title}</em> references{' '}
+                <span class="key">{TOUR.notes.runbook.issueKey}</span>, {TOUR.notes.runbook.issueTitle}, so whoever
+                opens that issue finds the steps.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="sr-only" aria-live="polite" data-aa-status></p>
+        <p class="mt-4 text-xs text-fg-3">
+          Hand-drawn product views with fictional data.{' '}
+          <a class="link font-normal" href={PATHS.engineering}>
+            More on engineering teams
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/compare/asana-alternative';
+</script>
+
+<style>
+  html:not(.js) .aa-steps {
+    display: none;
+  }
+  html:not(.js) .aa-views {
+    grid-column: 1 / -1;
+  }
+  .aa-cap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .aa-n {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    flex: none;
+  }
+  .aa-lede {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  html.js .aa-lede {
+    display: none;
+  }
+  .aa-sprint {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .aa-issue-line {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .aa-issue-line .key {
+    flex: none;
+  }
+  .aa-mention {
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  .aa-progress {
+    display: grid;
+    gap: 8px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .aa-meter {
+    display: block;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--border);
+    overflow: hidden;
+  }
+  .aa-meter span {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .aa-kb {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .aa-tree {
+    padding: 12px 8px 16px 16px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .aa-tree > li + li {
+    margin-top: 10px;
+  }
+  .aa-folder {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .aa-tree ul li {
+    margin-top: 4px;
+    padding: 2px 8px;
+    margin-left: 4px;
+    border-left: 1px solid var(--border);
+  }
+  .aa-tree .aa-sel {
+    background: var(--bg-selected);
+    box-shadow: inset 2px 0 0 var(--accent);
+    border-left-color: transparent;
+  }
+  .aa-article {
+    padding: 16px 20px 20px;
+    min-width: 0;
+  }
+  .aa-break {
+    overflow-wrap: anywhere;
+  }
+  .aa-article s {
+    color: var(--text-secondary);
+  }
+  .aa-note {
+    padding-top: 14px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  @media (max-width: 640px) {
+    .aa-kb {
+      grid-template-columns: 1fr;
+    }
+    .aa-tree {
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+    }
+  }
+</style>
