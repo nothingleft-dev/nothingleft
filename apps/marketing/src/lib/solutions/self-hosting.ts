@@ -4,7 +4,7 @@ import { GITHUB_URL, LICENSE_URL } from '@lib/site';
 
 export const COMPOSE_URL = `${GITHUB_URL}/blob/main/docker-compose.yml`;
 export const INFRASTRUCTURE_DOC_URL = `${GITHUB_URL}/blob/main/docs/infrastructure.md`;
-export const STORAGE_MANUAL_PATH = '/docs/manual/storage';
+export const STORAGE_MANUAL_PATH = '/docs/storage';
 
 // Shown from `services:` on, exactly as committed; the header comment is local-development advice.
 export const COMPOSE_SERVICES = composeFile.slice(composeFile.indexOf('services:')).trimEnd();
@@ -290,7 +290,7 @@ export const SELF_HOSTING_FAQ: FaqEntry[] = [
     answer: [
       'Yes. MCP is served by the API at /mcp, so an HTTP client points at your own address with a personal access token. The local stdio shim reads the address from NOTHINGLEFT_MCP_URL.',
     ],
-    link: { href: '/docs/manual/mcp', label: 'MCP setup guide' },
+    link: { href: '/docs/mcp', label: 'MCP setup guide' },
   },
   {
     question: 'Is connecting our own bucket the same as self-hosting?',

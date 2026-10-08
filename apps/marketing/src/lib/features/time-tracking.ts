@@ -19,8 +19,8 @@ import {
 } from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
-export const TIME_MANUAL_PATH = '/docs/manual/issues#time-tracking';
-export const TIMESHEET_MANUAL_PATH = '/docs/manual/reports#timesheet';
+export const TIME_MANUAL_PATH = '/docs/issues#time-tracking';
+export const TIMESHEET_MANUAL_PATH = '/docs/reports#timesheet';
 
 export { formatDuration };
 

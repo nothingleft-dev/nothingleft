@@ -43,43 +43,43 @@ export interface SupportGuide extends SupportLink {
 
 export const SUPPORT_GUIDES: SupportGuide[] = [
   {
-    href: '/docs/onboarding',
+    href: '/docs/getting-started',
     label: 'Getting started',
     detail: 'Signing up, joining from an invitation, and landing in a first project.',
     keywords: 'setup sign up signup invite invitation join organisation organization project start onboarding',
   },
   {
-    href: '/docs/manual/mcp',
+    href: '/docs/mcp',
     label: 'Connecting an AI agent',
     detail: 'Create a personal access token and connect an MCP client to your organisation.',
     keywords: 'agent ai mcp token pat claude codex cursor setup connect stdio http',
   },
   {
-    href: '/docs/manual/issues',
+    href: '/docs/issues',
     label: 'Issues',
     detail: 'Keys, fields, statuses, comments, time logs, attachments, deleting and restoring.',
     keywords: 'issue bug task key status comment subtask link tag attachment time log delete restore',
   },
   {
-    href: '/docs/manual/search',
+    href: '/docs/search',
     label: 'Searching for issues',
     detail: 'One search language for the search bar, saved views, filters and agents.',
     keywords: 'search query filter saved view find',
   },
   {
-    href: '/docs/manual/storage',
+    href: '/docs/storage',
     label: 'Storage',
     detail: 'What counts toward the 5 GB, making room, and bringing your own R2 or S3 bucket.',
     keywords: 'storage files upload attachment quota full bucket r2 s3 space',
   },
   {
-    href: '/docs/manual/account-security',
+    href: '/docs/account-security',
     label: 'Account access and security',
     detail: 'Two-factor, recovery codes, access tokens, sessions, deactivating and transferring ownership.',
     keywords: 'account sign in login password two-factor 2fa recovery codes token session deactivate erase owner',
   },
   {
-    href: '/docs/manual/members',
+    href: '/docs/members',
     label: 'Members',
     detail: 'Organisation roles, handles, and removing someone from an organisation.',
     keywords: 'member people role admin remove invite handle username',
@@ -108,9 +108,9 @@ export const REQUEST_HELP: Record<RequestType, RequestHelp> = {
       'Whether it happens every time, and in which browser or agent client.',
     ],
     links: [
-      { href: '/docs/manual/issues', label: 'Issues' },
-      { href: '/docs/manual/storage', label: 'Storage' },
-      { href: '/docs/manual/mcp', label: 'Connecting an AI agent' },
+      { href: '/docs/issues', label: 'Issues' },
+      { href: '/docs/storage', label: 'Storage' },
+      { href: '/docs/mcp', label: 'Connecting an AI agent' },
     ],
   },
   feedback: {
@@ -134,8 +134,8 @@ export const REQUEST_HELP: Record<RequestType, RequestHelp> = {
       'Lost both your phone and your recovery codes? Nobody can switch off two-factor for you, so check the manual first.',
     ],
     links: [
-      { href: '/docs/manual/account-security', label: 'Account access and security' },
-      { href: '/docs/manual/members', label: 'Members' },
+      { href: '/docs/account-security', label: 'Account access and security' },
+      { href: '/docs/members', label: 'Members' },
     ],
   },
   question: {
@@ -148,7 +148,7 @@ export const REQUEST_HELP: Record<RequestType, RequestHelp> = {
     links: [
       { href: '/pricing', label: 'Pricing and beta terms' },
       { href: '/docs/limits-and-billing', label: 'Limits and billing' },
-      { href: '/docs/manual/mcp', label: 'Connecting an AI agent' },
+      { href: '/docs/mcp', label: 'Connecting an AI agent' },
     ],
   },
 };
@@ -171,14 +171,14 @@ export const SUPPORT_FAQ: FaqEntry[] = [
     answer: [
       'No. Two-factor exists so that nobody else can sign in as you, and that includes us. Each recovery code signs you in once; if you still have one, use it and create new codes. If you signed in with Google or GitHub, that route never asks for a code.',
     ],
-    link: { href: '/docs/manual/account-security', label: 'Account security' },
+    link: { href: '/docs/account-security', label: 'Account security' },
   },
   {
     question: 'How do I reactivate my account, or have my data erased?',
     answer: [
       `Email ${SUPPORT_EMAIL} from the address on the account, or send the form with that address as the reply email. Reactivation brings your memberships back as they were. Erasure is done by hand and replaces your name with Deleted user; what you wrote in issues and comments is not rewritten.`,
     ],
-    link: { href: '/docs/manual/account-security', label: 'Deactivating your account' },
+    link: { href: '/docs/account-security', label: 'Deactivating your account' },
   },
   {
     question: 'Where do I report a security vulnerability?',

@@ -2,7 +2,7 @@ import { firstName, formatDate, issue } from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
 export const LIMITS_PATH = '/docs/limits-and-billing';
-export const MCP_MANUAL_PATH = '/docs/manual/mcp';
+export const MCP_MANUAL_PATH = '/docs/mcp';
 
 export interface FirstRunStep {
   id: string;

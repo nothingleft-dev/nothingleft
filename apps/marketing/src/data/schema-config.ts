@@ -20,7 +20,8 @@ import { PRICING_FAQ } from '@lib/pricing';
 import { SITE_DESCRIPTION } from '@lib/site';
 import { SITEMAP_PAGES } from './sitemap-config.mjs';
 
-export type SchemaNode = 'Organization' | 'WebSite' | 'WebPage' | 'SoftwareApplication' | 'FAQPage' | 'BreadcrumbList';
+export type SchemaNode =
+  'Organization' | 'WebSite' | 'WebPage' | 'SoftwareApplication' | 'FAQPage' | 'BreadcrumbList' | 'TechArticle';
 
 export interface PageSchema {
   title: string;
@@ -29,6 +30,8 @@ export interface PageSchema {
   breadcrumb?: { name: string; path: string }[];
   faq?: FaqEntry[];
   noindex?: boolean;
+  /** A doc article's own title, when the page title adds the site name. */
+  headline?: string;
 }
 
 const HOME_CRUMB = { name: 'Home', path: '/' };
@@ -193,6 +196,21 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Notion Projects alternative', path: '/compare/notion-projects-alternative' }],
     faq: NOTION_PROJECTS_FAQ,
+  },
+  '/docs': {
+    title: 'Docs | Nothing Left',
+    description:
+      'Guides for Nothing Left: issues, search, sprints, reports, the knowledge base, account security and connecting an AI agent over MCP.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }],
+  },
+  '/docs/mcp': {
+    title: 'Connecting an AI Agent over MCP | Nothing Left Docs',
+    headline: 'Connecting an AI agent',
+    description:
+      'Create a personal access token, connect Claude Code, Claude Desktop, Codex, Cursor or another MCP client, and see what an agent can do in Nothing Left.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Connecting an AI agent', path: '/docs/mcp' }],
   },
 };
 

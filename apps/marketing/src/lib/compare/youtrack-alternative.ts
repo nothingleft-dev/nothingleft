@@ -62,12 +62,12 @@ const YT_SOURCES = {
 };
 
 export const DOCS = {
-  issues: '/docs/manual/issues',
-  search: '/docs/manual/search',
-  agile: '/docs/manual/agile',
-  reports: '/docs/manual/reports',
-  knowledgeBase: '/docs/manual/knowledge-base',
-  mcp: '/docs/manual/mcp',
+  issues: '/docs/issues',
+  search: '/docs/search',
+  agile: '/docs/agile',
+  reports: '/docs/reports',
+  knowledgeBase: '/docs/knowledge-base',
+  mcp: '/docs/mcp',
   tools: TOOL_REFERENCE_PATH,
   permissions: '/docs/permissions',
   limits: '/docs/limits-and-billing',

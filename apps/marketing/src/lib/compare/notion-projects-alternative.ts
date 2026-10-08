@@ -37,8 +37,8 @@ export const LAST_VERIFIED = '2026-10-08';
 export const KB_FEATURE_PATH = '/features/project-knowledge-base';
 export const SPRINTS_FEATURE_PATH = '/features/sprints-kanban-boards';
 export const PRICING_PATH = '/pricing';
-export const KB_MANUAL_PATH = '/docs/manual/knowledge-base';
-export const MCP_MANUAL_PATH = '/docs/manual/mcp';
+export const KB_MANUAL_PATH = '/docs/knowledge-base';
+export const MCP_MANUAL_PATH = '/docs/mcp';
 
 export const NOTION = {
   projects: 'https://www.notion.com/product/projects',
@@ -71,7 +71,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'yes',
         note: 'Every issue gets its project key and the next number, such as ACME-12, on creation. The number never changes and the key is the issue’s address in the app, the API and the agent tools.',
-        source: docsSource('Issues manual: keys', '/docs/manual/issues#keys'),
+        source: docsSource('Issues manual: keys', '/docs/issues#keys'),
       },
       theirs: {
         support: 'yes',
@@ -85,7 +85,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'yes',
         note: 'Relates to, depends on, duplicates and subtask of, each read from both ends. A depends-on loop is refused, and a key typed in any text becomes a link.',
-        source: docsSource('Issues manual: links', '/docs/manual/issues#subtasks-and-links'),
+        source: docsSource('Issues manual: links', '/docs/issues#subtasks-and-links'),
       },
       theirs: {
         support: 'yes',
@@ -99,7 +99,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'yes',
         note: 'A sprint is planned, active, then completed, with one active sprint per project. Finishing it asks where unfinished issues go, and resolved ones stay with the sprint.',
-        source: docsSource('Agile manual', '/docs/manual/agile'),
+        source: docsSource('Agile manual', '/docs/agile'),
       },
       theirs: {
         support: 'yes',
@@ -113,7 +113,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'limited',
         note: 'Issues have a fixed shape. Admins set statuses, priorities, types and custom fields, and saved views filter the list, backlog and board. You do not design your own databases or layouts.',
-        source: docsSource('Custom fields manual', '/docs/manual/custom-fields'),
+        source: docsSource('Custom fields manual', '/docs/custom-fields'),
       },
       theirs: {
         support: 'yes',
@@ -141,7 +141,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'yes',
         note: 'Log a date, a duration and a work type. Spent time shows against the estimate and includes subtasks, and timesheets and a time report add the logs up.',
-        source: docsSource('Issues manual: time tracking', '/docs/manual/issues#time-tracking'),
+        source: docsSource('Issues manual: time tracking', '/docs/issues#time-tracking'),
       },
       theirs: {
         support: 'limited',
@@ -155,7 +155,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'yes',
         note: 'Remaining work per day against an ideal line, recorded nightly. Scope added after the start is its own line.',
-        source: docsSource('Reports manual: burndown', '/docs/manual/reports#burndown'),
+        source: docsSource('Reports manual: burndown', '/docs/reports#burndown'),
       },
       theirs: {
         support: 'limited',
@@ -169,7 +169,7 @@ export const NOTION_COMPARISON: Comparison = {
       ours: {
         support: 'yes',
         note: 'Nine reports, each scoped by a search query, a saved view or projects. Every bar opens the issues it counts, and each report exports to CSV.',
-        source: docsSource('Reports manual', '/docs/manual/reports'),
+        source: docsSource('Reports manual', '/docs/reports'),
       },
       theirs: {
         support: 'yes',

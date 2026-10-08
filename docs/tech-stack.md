@@ -80,6 +80,7 @@ case, not an `eslint-disable`.
 | Hosting | Cloudflare Workers static assets, `nothingleft.dev`. Pages are served as assets and never run Worker code; only `/api/*` runs the Worker (`worker/index.ts`, `run_worker_first`) |
 | Support form | `POST /api/support` validates against `src/lib/support-contract.ts` (shared with the page), drops honeypot and too-fast submissions with the same success answer, and inserts a `support_requests` row into Turso over its HTTP API. No client library; credentials are Worker secrets (`TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`). The table is created on first write and holds no IP address |
 | SEO | Canonical, Open Graph, `@astrojs/sitemap`, `robots.txt`, JSON-LD (Organization, WebSite, WebPage, SoftwareApplication, FAQPage) |
+| Docs at `/docs` | Rendered at build time from `docs/manual/*.md` (an Astro content collection), so the manual has one source. Each article also ships as Markdown at `/docs/<slug>.md`, listed in `/llms.txt`. Search is a Pagefind index built after `astro build`; reactions (four Lucide icons, one per visitor per article, remembered in localStorage) are counted in Turso `doc_reactions` through `GET`/`POST /api/reactions`, cached at the edge for 60 s |
 | Analytics | `track()` in `src/lib/analytics.ts` is a no-op until `packages/analytics` is wired; `PUBLIC_GA_MEASUREMENT_ID` and `PUBLIC_CLARITY_PROJECT_ID` are declared in `.env.example` and not loaded yet |
 
 ## MCP

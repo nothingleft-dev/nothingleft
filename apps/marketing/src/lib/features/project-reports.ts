@@ -34,7 +34,7 @@ import {
   type PersonId,
 } from '@lib/features/time-tracking';
 
-export const REPORTS_MANUAL_PATH = '/docs/manual/reports';
+export const REPORTS_MANUAL_PATH = '/docs/reports';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const shareOf = (part: number, whole: number) => (whole > 0 ? round1((part / whole) * 100) : 0);

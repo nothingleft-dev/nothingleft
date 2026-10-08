@@ -1,8 +1,8 @@
 import { assigneesOf, ISSUES, isResolvedAt, severityOf, sprint } from '@data/sample';
 
 export const MCP_URL = 'https://api.nothingleft.dev/mcp';
-export const SETUP_GUIDE_PATH = '/docs/manual/mcp';
-export const TOOL_REFERENCE_PATH = '/docs/manual/mcp-tools';
+export const SETUP_GUIDE_PATH = '/docs/mcp';
+export const TOOL_REFERENCE_PATH = '/docs/mcp-tools';
 
 export interface ClientSetup {
   id: string;

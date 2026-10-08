@@ -33,7 +33,7 @@ export const MCP_FEATURE_PATH = '/features/mcp-ai-agents';
 export const REPORTS_FEATURE_PATH = '/features/project-reports';
 export const KB_FEATURE_PATH = '/features/project-knowledge-base';
 export const PRICING_PATH = '/pricing';
-export const SHORTCUTS_MANUAL_PATH = '/docs/manual/keyboard-shortcuts';
+export const SHORTCUTS_MANUAL_PATH = '/docs/keyboard-shortcuts';
 export const PERMISSIONS_PATH = '/docs/permissions';
 export { TOOL_REFERENCE_PATH };
 

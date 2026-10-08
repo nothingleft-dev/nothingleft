@@ -78,6 +78,23 @@ export function faqPage(path: string, entries: FaqEntry[]): JsonLd {
   };
 }
 
+export function techArticle(path: string, headline: string, description: string, dateModified?: string): JsonLd {
+  return {
+    '@type': 'TechArticle',
+    '@id': `${SITE_URL}${path}#article`,
+    headline,
+    description,
+    url: `${SITE_URL}${path}`,
+    inLanguage: 'en',
+    author: { '@id': ORGANIZATION_ID },
+    publisher: { '@id': ORGANIZATION_ID },
+    isPartOf: { '@id': WEBSITE_ID },
+    mainEntityOfPage: { '@id': `${SITE_URL}${path}#webpage` },
+    about: { '@id': SOFTWARE_ID },
+    ...(dateModified && { dateModified }),
+  };
+}
+
 export function breadcrumb(trail: { name: string; path: string }[]): JsonLd {
   return {
     '@type': 'BreadcrumbList',

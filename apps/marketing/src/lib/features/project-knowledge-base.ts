@@ -15,7 +15,7 @@ import {
 import type { FaqEntry } from '@lib/faq';
 import type { AgentRequest } from '@lib/mcp';
 
-export const KB_MANUAL_PATH = '/docs/manual/knowledge-base';
+export const KB_MANUAL_PATH = '/docs/knowledge-base';
 
 export const DECISION = article('invitation-links-and-expiry');
 export const DECISION_META = {

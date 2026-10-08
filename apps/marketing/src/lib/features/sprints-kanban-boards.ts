@@ -24,8 +24,8 @@ import {
 } from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
-export const AGILE_MANUAL_PATH = '/docs/manual/agile';
-export const REPORTS_MANUAL_PATH = '/docs/manual/reports';
+export const AGILE_MANUAL_PATH = '/docs/agile';
+export const REPORTS_MANUAL_PATH = '/docs/reports';
 export const REPORTS_FEATURE_PATH = '/features/project-reports';
 
 export interface Person {

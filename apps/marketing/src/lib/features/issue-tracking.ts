@@ -31,8 +31,8 @@ import {
 } from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
-export const ISSUES_MANUAL_PATH = '/docs/manual/issues';
-export const CUSTOM_FIELDS_MANUAL_PATH = '/docs/manual/custom-fields';
+export const ISSUES_MANUAL_PATH = '/docs/issues';
+export const CUSTOM_FIELDS_MANUAL_PATH = '/docs/custom-fields';
 
 export interface SampleRow {
   key: string;

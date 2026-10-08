@@ -1,0 +1,157 @@
+---
+import DocsSearch from '@components/docs/DocsSearch.astro';
+import CallToAction from '@components/CallToAction.astro';
+import { DOC_GROUPS, docPath, isPublished } from '@data/docs';
+import Base from '@layouts/Base.astro';
+import '@styles/docs.css';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <section class="wrap pt-12 md:pt-16 pb-10 md:pb-14" aria-labelledby="docs-title">
+    <div class="max-w-[760px]">
+      <p class="text-sm md:text-base text-fg-2">Docs</p>
+      <h1 id="docs-title" class="h1-page mt-4 md:mt-5">
+        Find your way around Nothing Left<span class="period">.</span>
+      </h1>
+      <p class="prose mt-6 max-w-[600px] text-[17px] leading-[27px] md:text-[19px] md:leading-[30px]">
+        How the app works, page by page, with the same names you see on screen. Every guide is also plain Markdown, so
+        your agent can read it too.
+      </p>
+      <div class="mt-8 max-w-[600px]">
+        <DocsSearch size="large" id="docs-search-home" />
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-line bg-app" aria-labelledby="docs-groups-title">
+    <div class="wrap py-14 md:py-20">
+      <h2 id="docs-groups-title" class="sr-only">
+        Guides
+      </h2>
+      <div class="docs-groups">
+        {DOC_GROUPS.map(group => (
+          <div class="docs-group panel">
+            <h3 class="h3">{group.title}</h3>
+            <p class="mt-1 text-sm text-fg-2">{group.description}</p>
+            <ul class="mt-4">
+              {group.docs.map(doc => (
+                <li>
+                  {isPublished(doc.slug) ? (
+                    <a class="docs-group-link" href={docPath(doc.slug)}>
+                      {doc.label}
+                      <span class="arr" aria-hidden="true">
+                        →
+                      </span>
+                    </a>
+                  ) : (
+                    <span class="docs-group-soon">
+                      {doc.label}
+                      <span class="text-xs">Soon</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-line" aria-labelledby="docs-agents-title">
+    <div class="wrap py-14 md:py-20 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-5">
+        <h2 id="docs-agents-title" class="h2">
+          Docs your agent can read.
+        </h2>
+        <p class="prose mt-5 max-w-[46ch]">
+          Every guide has a Markdown twin at the same address with <code>.md</code> on the end, and
+          <code>/llms.txt</code> lists them all. Point your agent there before it starts work.
+        </p>
+      </div>
+      <div class="lg:col-span-6 lg:col-start-7">
+        <pre class="code" tabindex="0" aria-label="Markdown addresses">https://nothingleft.dev/llms.txt
+https://nothingleft.dev/docs/mcp.md</pre>
+        <p class="mt-4 text-sm text-fg-2">
+          Connecting one for the first time?{' '}
+          <a class="link" href="/docs/mcp">
+            Connecting an AI agent
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <CallToAction
+    title="Not covered here?"
+    body="Ask us directly, or try the product on one project and see how it fits. Nothing here needs an account to read."
+  >
+    <a class="btn" href="/support">
+      Ask a question
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>
+
+<script>
+  import '@scripts/docs';
+</script>
+
+<style>
+  .docs-groups {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 768px) {
+    .docs-groups {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .docs-groups {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .docs-group {
+    padding: 22px 22px 18px;
+  }
+  .docs-group ul {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .docs-group-link,
+  .docs-group-soon {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 14px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .docs-group li:last-child .docs-group-link,
+  .docs-group li:last-child .docs-group-soon {
+    border-bottom: 0;
+  }
+  .docs-group-link:hover {
+    color: var(--text);
+  }
+  .docs-group-link:hover .arr {
+    transform: translateX(3px);
+  }
+  .docs-group-soon {
+    color: var(--text-muted);
+  }
+</style>

@@ -153,6 +153,9 @@ Sitemap and JSON-LD are controlled per page in `apps/marketing/src/data/`. A new
 entry in `schema-config.ts` (title, description, JSON-LD nodes) and, if indexable, in
 `sitemap-config.mjs`; bump its `lastmod` there when the page changes, which also updates the
 page's JSON-LD `dateModified`. The build fails when the two disagree.
+Docs articles render from `docs/manual/*.md`; publishing one also means adding its slug to
+`PUBLISHED_DOCS` and its nav entry in `apps/marketing/src/data/docs.ts`, and its `lastmod` there
+is the "Updated" date readers see.
 
 ## Layering
 

@@ -22,6 +22,8 @@ export const SITEMAP_PAGES = {
   '/compare/clickup-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
   '/compare/asana-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
   '/compare/notion-projects-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
+  '/docs': { lastmod: '2026-10-08T07:00:00+05:30' },
+  '/docs/mcp': { lastmod: '2026-10-08T07:00:00+05:30' },
 };
 
 export function normalizePath(pathname) {

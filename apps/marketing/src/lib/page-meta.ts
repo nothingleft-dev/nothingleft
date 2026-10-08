@@ -6,6 +6,7 @@ import {
   graph,
   organization,
   softwareApplication,
+  techArticle,
   webPage,
   website,
   type JsonLd,
@@ -28,6 +29,7 @@ export function pageMeta(pathname: string): PageMeta {
     WebSite: website,
     WebPage: () => webPage(path, schema.title, schema.description, lastmod),
     SoftwareApplication: softwareApplication,
+    TechArticle: () => techArticle(path, schema.headline ?? schema.title, schema.description, lastmod),
     FAQPage: () => (schema.faq ? faqPage(path, schema.faq) : undefined),
     BreadcrumbList: () => (schema.breadcrumb ? breadcrumb(schema.breadcrumb) : undefined),
   };

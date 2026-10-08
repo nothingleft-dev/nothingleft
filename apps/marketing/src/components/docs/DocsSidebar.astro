@@ -1,0 +1,84 @@
+---
+import { DOC_GROUPS, docPath, isPublished } from '@data/docs';
+
+interface Props {
+  current?: string;
+}
+
+const { current } = Astro.props;
+---
+
+<nav aria-label="Docs" class="docs-nav">
+  <a class="docs-nav-home" href="/docs" aria-current={current ? undefined : 'page'}>
+    Docs home
+  </a>
+  {DOC_GROUPS.map(group => (
+    <div class="docs-nav-group">
+      <p class="docs-nav-title">{group.title}</p>
+      <ul>
+        {group.docs.map(doc => (
+          <li>
+            {isPublished(doc.slug) ? (
+              <a href={docPath(doc.slug)} aria-current={doc.slug === current ? 'page' : undefined}>
+                {doc.label}
+              </a>
+            ) : (
+              <span class="docs-nav-soon">
+                {doc.label}
+                <span class="sr-only">, coming soon</span>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</nav>
+
+<style>
+  .docs-nav {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .docs-nav a,
+  .docs-nav-soon {
+    display: block;
+    padding: 5px 10px;
+    margin: 0 -10px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .docs-nav a:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .docs-nav a[aria-current='page'] {
+    color: var(--text);
+    font-weight: 500;
+    background: var(--bg-selected);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .docs-nav-soon {
+    color: var(--text-muted);
+    cursor: default;
+  }
+  .docs-nav-home {
+    font-weight: 500;
+  }
+  .docs-nav-group {
+    margin-top: 20px;
+  }
+  .docs-nav-title {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+</style>

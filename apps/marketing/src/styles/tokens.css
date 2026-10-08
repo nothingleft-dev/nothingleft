@@ -27,7 +27,8 @@
   --accent-c: 0.16;
   --accent-l: 0.81;
   --accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h));
-  --accent-soft: color-mix(in oklch, var(--accent) 15%, var(--bg-surface));
+  /* Mixed in oklab: in oklch the hue swings through pink on its way to white. */
+  --accent-soft: color-mix(in oklab, var(--accent) 15%, var(--bg-surface));
   --accent-text: oklch(0.39 calc(var(--accent-c) * 0.47) var(--accent-h));
   --focus: oklch(0.49 calc(var(--accent-c) * 0.625) var(--accent-h));
   --focus-soft: color-mix(in srgb, var(--focus) 80%, transparent);

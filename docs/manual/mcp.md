@@ -83,7 +83,7 @@ Restart Claude Desktop. Nothing Left appears in the tools menu.
 
 The shim reads two settings:
 
-| Variable              |                                                                                                   |
+| Variable              | Meaning                                                                                           |
 | --------------------- | ------------------------------------------------------------------------------------------------- |
 | `NOTHINGLEFT_TOKEN`   | Your personal access token. Required                                                              |
 | `NOTHINGLEFT_MCP_URL` | The endpoint. Default `https://api.nothingleft.dev/mcp`; change it only for a self-hosted install |

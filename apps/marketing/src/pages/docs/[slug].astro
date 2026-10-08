@@ -1,0 +1,141 @@
+---
+import { getCollection, render } from 'astro:content';
+import DocsReactions from '@components/docs/DocsReactions.astro';
+import DocsSearch from '@components/docs/DocsSearch.astro';
+import DocsSidebar from '@components/docs/DocsSidebar.astro';
+import DocsToc from '@components/docs/DocsToc.astro';
+import { DOC_GROUPS, DOC_ORDER, docPath, docSourcePath, isPublished } from '@data/docs';
+import { SITEMAP_PAGES } from '@data/sitemap-config.mjs';
+import Base from '@layouts/Base.astro';
+import '@styles/docs.css';
+import { displayDate } from '@lib/compare';
+import { readingMinutes } from '@lib/docs-markdown';
+import { GITHUB_URL } from '@lib/site';
+
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  return docs.filter(doc => isPublished(doc.id)).map(doc => ({ params: { slug: doc.id }, props: { doc } }));
+}
+
+const { doc } = Astro.props;
+const { Content, headings } = await render(doc);
+const title = /^#\s+(.+)$/m.exec(doc.body ?? '')?.[1]?.trim() ?? doc.id;
+const group = DOC_GROUPS.find(entry => entry.docs.some(item => item.slug === doc.id));
+const lastmod = SITEMAP_PAGES[docPath(doc.id)]?.lastmod;
+const published = DOC_ORDER.filter(item => isPublished(item.slug));
+const position = published.findIndex(item => item.slug === doc.id);
+const previous = position > 0 ? published[position - 1] : undefined;
+const next = position >= 0 ? published[position + 1] : undefined;
+const sourceUrl = `${GITHUB_URL}/blob/main/${docSourcePath(doc.id)}`;
+const editUrl = `${GITHUB_URL}/edit/main/${docSourcePath(doc.id)}`;
+---
+
+<Base>
+  <div class="wrap docs-shell">
+    <aside class="docs-side" aria-label="Docs navigation">
+      <div class="docs-side-inner">
+        <DocsSearch id="docs-search-side" />
+        <details class="docs-menu" data-docs-menu open>
+          <summary>Menu</summary>
+          <DocsSidebar current={doc.id} />
+        </details>
+      </div>
+    </aside>
+
+    <article class="docs-article" data-pagefind-body>
+      <p class="docs-crumb" data-pagefind-ignore>
+        <a href="/docs">Docs</a>
+        {group && <span aria-hidden="true">/</span>}
+        {group && <span>{group.title}</span>}
+      </p>
+      <h1 class="docs-title" data-pagefind-meta="title">
+        {title}
+      </h1>
+      <div class="docs-meta" data-pagefind-ignore>
+        {lastmod && (
+          <span>
+            Updated <time datetime={lastmod}>{displayDate(lastmod.slice(0, 10))}</time>
+          </span>
+        )}
+        <span>{readingMinutes(doc.body ?? '')} min read</span>
+      </div>
+      <div class="docs-actions" data-pagefind-ignore>
+        <button type="button" class="btn btn-sm btn-ghost" data-copy-markdown={doc.id} hidden>
+          <span data-copy-label>Copy as Markdown</span>
+        </button>
+        <a class="link text-sm font-normal" href={`${docPath(doc.id)}.md`}>
+          View as Markdown
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link text-sm font-normal" href={editUrl} rel="noopener">
+          Suggest an edit
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+        <span class="sr-only" aria-live="polite" data-copy-status></span>
+      </div>
+
+      <details class="docs-toc-mobile" data-pagefind-ignore>
+        <summary>On this page</summary>
+        <DocsToc headings={headings} />
+      </details>
+
+      <div class="doc-content">
+        <Content />
+      </div>
+
+      <div class="docs-after" data-pagefind-ignore>
+        <DocsReactions article={doc.id} />
+        <p class="docs-help">
+          Still stuck?{' '}
+          <a class="link" href="/support">
+            Ask us
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <span class="text-fg-3" aria-hidden="true">
+            ·
+          </span>
+          <a class="link font-normal" href={sourceUrl} rel="noopener">
+            Source on GitHub
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </p>
+        {(previous || next) && (
+          <nav class="docs-pager" aria-label="Previous and next">
+            {previous ? (
+              <a href={docPath(previous.slug)} class="docs-pager-link">
+                <span class="text-xs text-fg-3">Previous</span>
+                <span>{previous.label}</span>
+              </a>
+            ) : (
+              <span />
+            )}
+            {next && (
+              <a href={docPath(next.slug)} class="docs-pager-link docs-pager-next">
+                <span class="text-xs text-fg-3">Next</span>
+                <span>{next.label}</span>
+              </a>
+            )}
+          </nav>
+        )}
+      </div>
+    </article>
+
+    <aside class="docs-rail" aria-label="On this page">
+      <div class="docs-rail-inner">
+        <DocsToc headings={headings} />
+      </div>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  import '@scripts/docs';
+</script>

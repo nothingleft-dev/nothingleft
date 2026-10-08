@@ -10,7 +10,7 @@ import {
 } from '@data/sample';
 import type { FaqEntry } from '@lib/faq';
 
-export const SEARCH_MANUAL_PATH = '/docs/manual/search';
+export const SEARCH_MANUAL_PATH = '/docs/search';
 
 export type IssueType = 'Bug' | 'Feature' | 'Task';
 export type Priority = 'Critical' | 'Major' | 'Normal' | 'Minor';
