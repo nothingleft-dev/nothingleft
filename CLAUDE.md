@@ -153,6 +153,10 @@ Sitemap and JSON-LD are controlled per page in `apps/marketing/src/data/`. A new
 entry in `schema-config.ts` (title, description, JSON-LD nodes) and, if indexable, in
 `sitemap-config.mjs`; bump its `lastmod` there when the page changes, which also updates the
 page's JSON-LD `dateModified`. The build fails when the two disagree.
+Marketing link previews use 1200×630 PNGs at `https://static.nothingleft.dev/marketing/`.
+Upload a card before adding its route and alt text to `apps/marketing/src/data/og-images.ts`;
+`src/lib/page-meta.ts` maps routes to filenames and uses the home card when no dedicated card exists.
+The selected B/C concept reference is `ops/docs/marketing/og-exploration.html`.
 Docs articles render from `docs/manual/*.md`; publishing one also means adding its slug to
 `PUBLISHED_DOCS` and its nav entry in `apps/marketing/src/data/docs.ts`, and its `lastmod` there
 is the "Updated" date readers see.

@@ -1,3 +1,4 @@
+import { OG_IMAGE_ALTS } from '../data/og-images';
 import { SCHEMA_PAGES, type PageSchema } from '../data/schema-config';
 import { SITEMAP_PAGES, normalizePath } from '../data/sitemap-config.mjs';
 import {
@@ -16,6 +17,19 @@ export interface PageMeta {
   path: string;
   schema: PageSchema;
   jsonLd: string;
+  ogImage: string;
+  ogImageAlt: string;
+}
+
+export const OG_IMAGE = { width: 1200, height: 630 };
+
+export const ogImageSlug = (path: string) => (path === '/' ? 'home' : path.slice(1).replace(/\//g, '-'));
+
+// Uploaded cards are tracked explicitly so builds never depend on local PNGs.
+export function ogImagePath(path: string): string {
+  const normalized = normalizePath(path);
+  const imagePath = OG_IMAGE_ALTS[normalized] ? normalized : '/';
+  return `https://static.nothingleft.dev/marketing/${ogImageSlug(imagePath)}.png`;
 }
 
 export function pageMeta(pathname: string): PageMeta {
@@ -40,5 +54,11 @@ export function pageMeta(pathname: string): PageMeta {
     if (!built) throw new Error(`${path} lists ${node} in schema-config without the data it needs`);
     return built;
   });
-  return { path, schema, jsonLd: graph(nodes) };
+  return {
+    path,
+    schema,
+    jsonLd: graph(nodes),
+    ogImage: ogImagePath(path),
+    ogImageAlt: OG_IMAGE_ALTS[path] ?? OG_IMAGE_ALTS['/'],
+  };
 }

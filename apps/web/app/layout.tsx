@@ -9,8 +9,11 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono', display: 'swap' });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://work.nothingleft.dev'),
   title: { default: 'Nothing Left', template: '%s · Nothing Left' },
   description: 'An MCP-first project management tool.',
+  // Only the public sign-in and sign-up pages opt into indexing.
+  robots: { index: false, follow: true },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

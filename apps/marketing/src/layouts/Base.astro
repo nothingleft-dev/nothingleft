@@ -9,12 +9,13 @@ import inter400 from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
 import inter600 from '@fontsource/inter/files/inter-latin-600-normal.woff2?url';
 import Header from '@components/Header.astro';
 import Footer from '@components/Footer.astro';
-import { pageMeta } from '@lib/page-meta';
+import { OG_IMAGE, pageMeta } from '@lib/page-meta';
 import { SITE_NAME } from '@lib/site';
 
-const { path, schema, jsonLd } = pageMeta(Astro.url.pathname);
+const { path, schema, jsonLd, ogImage, ogImageAlt } = pageMeta(Astro.url.pathname);
 const { title, description, noindex } = schema;
 const canonical = new URL(path, Astro.site).href;
+const ogImageUrl = new URL(ogImage, Astro.site).href;
 ---
 
 <!doctype html>
@@ -34,9 +35,16 @@ const canonical = new URL(path, Astro.site).href;
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content={String(OG_IMAGE.width)} />
+    <meta property="og:image:height" content={String(OG_IMAGE.height)} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="preload" href={inter400} as="font" type="font/woff2" crossorigin />
