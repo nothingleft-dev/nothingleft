@@ -1,0 +1,26 @@
+.legal-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 64px;
+  padding-top: 40px;
+  padding-bottom: 72px;
+}
+@media (min-width: 1280px) {
+  .legal-shell {
+    grid-template-columns: minmax(0, 760px) 220px;
+    justify-content: space-between;
+  }
+}
+
+.legal-article {
+  min-width: 0;
+  max-width: 760px;
+}
+.legal-article .docs-meta {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-content td {
+  min-width: 140px;
+}

@@ -363,6 +363,22 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'API reference', path: '/docs/api' }],
   },
+  '/terms': {
+    title: 'Terms of Service | Nothing Left',
+    description:
+      'The terms for using the hosted Nothing Left service during the beta: accounts, acceptable use, your content, open source, liability and governing law.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Terms of Service', path: '/terms' }],
+    noindex: true,
+  },
+  '/privacy': {
+    title: 'Privacy Policy | Nothing Left',
+    description:
+      'What personal data Nothing Left collects, why, who receives it, where it is stored, how long it is kept and how to exercise your rights.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Privacy Policy', path: '/privacy' }],
+    noindex: true,
+  },
 };
 
 for (const path of Object.keys(SITEMAP_PAGES)) {

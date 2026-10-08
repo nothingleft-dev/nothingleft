@@ -1,0 +1,49 @@
+---
+import type { MarkdownHeading } from 'astro';
+import DocsToc from '@components/docs/DocsToc.astro';
+import Base from '@layouts/Base.astro';
+import { displayDate } from '@lib/compare';
+import '@styles/docs.css';
+import '@styles/legal.css';
+
+interface Props {
+  title: string;
+  updated: string;
+  headings: MarkdownHeading[];
+}
+
+const { title, updated } = Astro.props;
+const sections = Astro.props.headings.filter(heading => heading.depth === 2);
+---
+
+<Base>
+  <div class="wrap legal-shell">
+    <article class="legal-article">
+      <h1 class="docs-title">{title}</h1>
+      <p class="docs-meta">
+        <span>
+          Last updated <time datetime={updated}>{displayDate(updated)}</time>
+        </span>
+      </p>
+
+      <details class="docs-toc-mobile">
+        <summary>On this page</summary>
+        <DocsToc headings={sections} />
+      </details>
+
+      <div class="doc-content legal-content">
+        <slot />
+      </div>
+    </article>
+
+    <aside class="docs-rail" aria-label="On this page">
+      <div class="docs-rail-inner">
+        <DocsToc headings={sections} />
+      </div>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  import '@scripts/docs';
+</script>

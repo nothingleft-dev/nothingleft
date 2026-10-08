@@ -53,6 +53,10 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
     ],
   },
 ];
+const LEGAL_LINKS: FooterLink[] = [
+  { href: '/terms', label: 'Terms' },
+  { href: '/privacy', label: 'Privacy' },
+];
 const path = normalizePath(Astro.url.pathname);
 ---
 
@@ -85,6 +89,19 @@ const path = normalizePath(Astro.url.pathname);
         </ul>
       </nav>
     ))}
+  </div>
+  <div class="wrap border-t border-line py-5">
+    <nav aria-label="Legal">
+      <ul class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        {LEGAL_LINKS.map(link => (
+          <li>
+            <a class="nav-link" href={link.href} aria-current={link.href === path ? 'page' : undefined}>
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
   </div>
 </footer>
 
