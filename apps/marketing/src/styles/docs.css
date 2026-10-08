@@ -39,10 +39,14 @@
   top: 88px;
 }
 @media (min-width: 1024px) {
+  /* The nav's hover backgrounds bleed 10px left of the text; the inset keeps them inside the scroller. */
   .docs-side-inner {
     max-height: calc(100vh - 112px);
-    overflow-y: auto;
-    padding-right: 4px;
+    overflow: hidden auto;
+    margin-left: -10px;
+    padding: 2px 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
 }
 .docs-menu {

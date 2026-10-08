@@ -2,76 +2,97 @@
 import Brand from '@components/Brand.astro';
 import { GITHUB_URL, LICENSE_URL } from '@lib/site';
 
-const COLUMNS = [
-  [
-    { href: '/features/issue-tracking', label: 'Issues' },
-    { href: '/features/sprints-kanban-boards', label: 'Sprints and boards' },
-    { href: '/features/search-saved-views', label: 'Search and saved views' },
-    { href: '/features/time-tracking', label: 'Time tracking' },
-    { href: '/features/project-reports', label: 'Reports' },
-    { href: '/features/project-knowledge-base', label: 'Knowledge base' },
-    { href: '/features/mcp-ai-agents', label: 'MCP and agents' },
-  ],
-  [
-    { href: '/solutions/engineering-teams', label: 'Engineering teams' },
-    { href: '/solutions/product-teams', label: 'Product teams' },
-    { href: '/solutions/startups', label: 'Startups' },
-    { href: '/solutions/self-hosting', label: 'Self-hosting' },
-  ],
-  [
-    { href: '/compare/jira-alternative', label: 'Jira alternative' },
-    { href: '/compare/linear-alternative', label: 'Linear alternative' },
-    { href: '/compare/youtrack-alternative', label: 'YouTrack alternative' },
-    { href: '/compare/clickup-alternative', label: 'ClickUp alternative' },
-    { href: '/compare/asana-alternative', label: 'Asana alternative' },
-    { href: '/compare/notion-projects-alternative', label: 'Notion alternative' },
-  ],
+interface FooterLink {
+  href: string;
+  label: string;
+  external?: boolean;
+}
+
+const COLUMNS: { title: string; links: FooterLink[] }[] = [
+  {
+    title: 'Product',
+    links: [
+      { href: '/features/issue-tracking', label: 'Issues' },
+      { href: '/features/sprints-kanban-boards', label: 'Sprints and boards' },
+      { href: '/features/search-saved-views', label: 'Search and views' },
+      { href: '/features/time-tracking', label: 'Time tracking' },
+      { href: '/features/project-reports', label: 'Reports' },
+      { href: '/features/project-knowledge-base', label: 'Knowledge base' },
+      { href: '/features/mcp-ai-agents', label: 'MCP and agents' },
+    ],
+  },
+  {
+    title: 'Solutions',
+    links: [
+      { href: '/solutions/engineering-teams', label: 'Engineering teams' },
+      { href: '/solutions/product-teams', label: 'Product teams' },
+      { href: '/solutions/startups', label: 'Startups' },
+      { href: '/solutions/self-hosting', label: 'Self-hosting' },
+    ],
+  },
+  {
+    title: 'Compare',
+    links: [
+      { href: '/compare/jira-alternative', label: 'Jira alternative' },
+      { href: '/compare/linear-alternative', label: 'Linear alternative' },
+      { href: '/compare/youtrack-alternative', label: 'YouTrack alternative' },
+      { href: '/compare/clickup-alternative', label: 'ClickUp alternative' },
+      { href: '/compare/asana-alternative', label: 'Asana alternative' },
+      { href: '/compare/notion-projects-alternative', label: 'Notion alternative' },
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      { href: '/pricing', label: 'Pricing' },
+      { href: '/docs', label: 'Docs' },
+      { href: '/support', label: 'Support' },
+      { href: GITHUB_URL, label: 'GitHub', external: true },
+      { href: LICENSE_URL, label: 'Licence', external: true },
+    ],
+  },
 ];
 ---
 
 <footer class="border-t border-line">
-  <div class="wrap py-10 md:py-12 flex flex-col lg:flex-row lg:items-start justify-between gap-8">
-    <div>
+  <div class="wrap py-12 md:py-14 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-10">
+    <div class="col-span-2 md:col-span-4 lg:col-span-2">
       <div class="flex items-center gap-2">
         <Brand size={18} />
         <span class="text-sm font-medium">Nothing Left</span>
       </div>
-      <p class="mt-3 text-sm text-fg-2">Project tracking for people and AI agents.</p>
+      <p class="mt-3 text-sm text-fg-2 max-w-[30ch]">Project tracking for people and AI agents.</p>
       <p class="mt-6 text-xs text-fg-3">© 2026 Nothing Left</p>
     </div>
-    <nav aria-label="Footer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-10 gap-y-6 lg:gap-y-2 text-sm">
-      {COLUMNS.map(links => (
-        <div class="flex flex-col items-start gap-2">
-          {links.map(link => (
-            <a class="nav-link" href={link.href}>
-              {link.label}
-            </a>
+    {COLUMNS.map(column => (
+      <nav aria-label={column.title}>
+        <p class="footer-title">{column.title}</p>
+        <ul class="mt-4 flex flex-col items-start gap-2.5 text-sm">
+          {column.links.map(link => (
+            <li>
+              <a class="nav-link" href={link.href}>
+                {link.label}
+                {link.external && (
+                  <span class="arr ext" aria-hidden="true">
+                    ↗
+                  </span>
+                )}
+              </a>
+            </li>
           ))}
-        </div>
-      ))}
-      <div class="flex flex-col items-start gap-2 col-span-2 sm:col-span-1">
-        <a class="nav-link" href="/pricing">
-          Pricing
-        </a>
-        <a class="nav-link" href="/docs">
-          Docs
-        </a>
-        <a class="nav-link" href="/support">
-          Support
-        </a>
-        <a class="nav-link" href={GITHUB_URL}>
-          GitHub
-          <span class="arr ext" aria-hidden="true">
-            ↗
-          </span>
-        </a>
-        <a class="nav-link" href={LICENSE_URL}>
-          Licence
-          <span class="arr ext" aria-hidden="true">
-            ↗
-          </span>
-        </a>
-      </div>
-    </nav>
+        </ul>
+      </nav>
+    ))}
   </div>
 </footer>
+
+<style>
+  .footer-title {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+</style>

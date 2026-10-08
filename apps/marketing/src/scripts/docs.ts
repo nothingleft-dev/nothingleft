@@ -247,12 +247,12 @@ function initReactions(): void {
   };
   const setBusy = (busy: boolean) => buttons.forEach(button => (button.disabled = busy));
 
-  root.hidden = false;
-  paint();
+  // Shown only once the counts load, so a missing or unconfigured API never leaves dead buttons.
   fetch(`${REACTIONS_ENDPOINT}?article=${encodeURIComponent(article)}`)
     .then(response => (response.ok ? response.json() : Promise.reject()))
     .then((body: { data: { counts: ReactionCounts } }) => {
       counts = body.data.counts;
+      root.hidden = false;
       paint();
     })
     .catch(() => undefined);
