@@ -61,6 +61,12 @@ down there.**
     `bun run --cwd packages/mcp docs:tools`. The parity test, the tool tests in
     `apps/api/test/mcp.tools.test.ts` and the typecheck on shared DTOs catch a
     missed one.
+22. **A product change is a marketing and docs change.** When a feature, its
+    behaviour, a limit or a piece of wording changes in the app (`apps/web`,
+    `apps/api`, MCP), check the marketing site (`apps/marketing`: feature,
+    solutions, compare and pricing pages, FAQs, sample views in
+    `src/data/sample.ts`) and the published docs (`docs/manual/`, served at
+    `/docs`) in the same change, and update every claim that no longer holds.
 
 ## Comments in code
 
@@ -168,6 +174,7 @@ a table definition never appears outside `schema/`.
 - The affected user-manual page updated
 - MCP tool added or updated if the capability is user-facing, or if a route
   it calls changed (rule 21); parity test green
+- Marketing pages and published docs that describe the feature still true (rule 22)
 - Lint and typecheck clean
 
 ## Working style
