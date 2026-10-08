@@ -1,0 +1,79 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import ComparisonMatrix from '@components/compare/ComparisonMatrix.astro';
+import Choose from '@components/compare/jira-alternative/Choose.astro';
+import OnThisPage from '@components/compare/jira-alternative/OnThisPage.astro';
+import Roles from '@components/compare/jira-alternative/Roles.astro';
+import Switching from '@components/compare/jira-alternative/Switching.astro';
+import Walkthrough from '@components/compare/jira-alternative/Walkthrough.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Base from '@layouts/Base.astro';
+import { FAQ_CHECKED, JIRA_COMPARISON, JIRA_FAQ, PATHS } from '@lib/compare/jira-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Compare"
+    title="Keep the issue, backlog and report; skip the workflow engine."
+    lede="Nothing Left is for teams that want issues, sprints, time logs and reports but do not need Jira’s extensive administration model: transition rules, permission schemes and field configurations to maintain. Five fixed roles, one search language and an MCP server that people and agents share."
+  >
+    <a class="btn" href={PATHS.tour}>
+      Take the product tour
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#matrix">
+      See the comparison
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <OnThisPage slot="note" />
+  </PageHero>
+  <ComparisonMatrix
+    comparison={JIRA_COMPARISON}
+    title="Nothing Left and Jira, row by row."
+    intro="Both track issues, run sprints, log time and answer agents. Where Jira goes further, the note says how; where Nothing Left has nothing, the cell says No. Each cell links to the page it was checked against."
+  />
+  <Walkthrough />
+  <Roles />
+  <Switching />
+  <Choose />
+  <Calculator
+    preselect="jira"
+    title="Compare what Jira costs you now."
+    intro="Enter what your team pays for Jira today and see what the beta takes off the bill. Your figure only: no list price is filled in, and nothing you type leaves this page."
+  />
+  <Faq
+    entries={JIRA_FAQ}
+    title="Questions about moving from Jira."
+    intro={`Import, agents and what needs a person to check it. Answers checked on ${FAQ_CHECKED}.`}
+  />
+  <CallToAction
+    title="Run one sprint here before you decide."
+    body="Join the beta, create a project and plan a sprint with the work you have now. Keep Jira running beside it until you know which one the team would rather open."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={PATHS.agile}>
+      Read the sprints manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={PATHS.pricing}>
+      Pricing
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

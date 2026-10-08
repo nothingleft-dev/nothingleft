@@ -1,0 +1,769 @@
+---
+import { PATHS, PROJECT_DEFAULTS, WALKTHROUGH } from '@lib/compare/jira-alternative';
+
+const { project, planner, mover, sprint, backlog, search, board, burndown } = WALKTHROUGH;
+
+const STEPS = [
+  {
+    id: 'project',
+    title: 'Create the project',
+    body: 'A name and a key. Statuses, types, a board and five roles are already there.',
+  },
+  {
+    id: 'backlog',
+    title: 'Plan from the backlog',
+    body: 'Drag issues into a sprint with a goal and story points.',
+  },
+  {
+    id: 'search',
+    title: 'Search the sprint',
+    body: 'One query language for the bar, the board, reports and agents.',
+  },
+  {
+    id: 'board',
+    title: 'Move it on the board',
+    body: 'Dropping a card in Fixed resolves the issue.',
+  },
+  {
+    id: 'burndown',
+    title: 'Read the burndown',
+    body: 'Recorded nightly, so late scope shows as its own line.',
+  },
+];
+const BAR_WIDTHS = [40, 33, 26, 19, 12];
+const total = STEPS.length;
+
+const points = (value: number | null) =>
+  value === null ? 'Not estimated' : `${value} ${value === 1 ? 'point' : 'points'}`;
+
+const last = burndown.days.length - 1;
+const x = (index: number) => (index / last) * 100;
+const y = (value: number) => 100 - (value / burndown.max) * 100;
+const line = (values: (number | null)[]) =>
+  values
+    .map((value, index) => (value === null ? null : `${x(index)},${y(value)}`))
+    .filter(Boolean)
+    .join(' ');
+const remainingLine = line(burndown.days.map(day => day.remaining));
+const idealLine = line(burndown.days.map(day => day.ideal));
+const scopeLine = line(burndown.days.map(day => day.scope));
+const ticks = [0, 10, 20, 30].filter(tick => tick <= burndown.max);
+const labelled = new Set([0, burndown.days.findIndex(day => day.live), last]);
+const { summary } = burndown;
+const addedText = (value: number | null) => (value === null ? '—' : value === 0 ? '0' : `+${value}`);
+const show = (value: number | null) => (value === null ? '—' : String(value));
+---
+
+<section id="ja-walkthrough" class="border-t border-line bg-app" aria-labelledby="ja-walkthrough-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="ja-walkthrough-title" class="h2">
+        From a new project to a burndown, in five screens.
+      </h2>
+      <p class="prose mt-5">
+        What setting up looks like when there is no scheme to choose first. Acme’s team creates{' '}
+        <code>{project.key}</code>, plans {sprint.name}, finds its open bugs, moves one to Fixed and reads the chart.
+        Pick a step to see that screen.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label="A new project, step by step" data-ja-steps>
+        {STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-ja-step={step.id}
+            data-ja-title={step.title}
+            data-last={index === total - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="ja-panel"
+          >
+            <span class="bar" style={`width:${BAR_WIDTHS[index]}px`} />
+            <span>
+              <b>
+                <span class="sr-only">{`Step ${index + 1}: `}</span>
+                {step.title}
+              </b>
+              <span>{step.body}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8 min-w-0">
+        <div class="wf-panel" id="ja-panel">
+          <div data-view="project" class="on">
+            <p class="ja-cap">
+              <span class="ja-n">1 / {total}</span>
+              An Org Admin creates the project
+            </p>
+            <div class="pane-bar">
+              <span class="text-fg">{project.name}</span>
+              <span class="sep">/</span>
+              <span>New project</span>
+            </div>
+            <div class="wf-body">
+              <div class="ja-form">
+                <div class="ja-field">
+                  <span class="ja-label">Project name</span>
+                  <span class="ja-input">{project.name}</span>
+                </div>
+                <div class="ja-field">
+                  <span class="ja-label">Project key</span>
+                  <span class="ja-input mono">{project.key}</span>
+                  <span class="ja-hint">
+                    Used in issue keys, such as {project.key}-1. It can change until the first issue exists.
+                  </span>
+                </div>
+              </div>
+              <p class="ja-sub mt-6">Ready the moment it exists</p>
+              <dl class="ja-defaults mt-2">
+                {PROJECT_DEFAULTS.map(item => (
+                  <div>
+                    <dt>{item.label}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div class="wf-body ja-note">
+              <p>
+                No workflow, screen or field configuration to pick first. A Project Admin can rename, add or archive
+                values later; any status may follow any status.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="backlog">
+            <p class="ja-cap">
+              <span class="ja-n">2 / {total}</span>
+              {planner.name} plans {sprint.name} · {backlog.when}
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{project.key}</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Backlog</span>
+            </div>
+            <div class="ja-bl">
+              <p class="ja-bl-head">
+                <span class="text-fg font-medium">{sprint.name}</span>
+                <span class="ja-pill">Planned</span>
+                <span class="ja-bl-meta">
+                  {sprint.goal} · {backlog.planned.length} issues, {backlog.plannedPoints} points · {sprint.dates}
+                </span>
+              </p>
+              <ul aria-label={sprint.name}>
+                {backlog.planned.map((row, index) => (
+                  <li class:list={['ja-bl-row', { 'ja-dropped': index === 0 }]}>
+                    <span class="ja-grip" aria-hidden="true"></span>
+                    <span class="key">{row.key}</span>
+                    <span class="ja-bl-title">{row.title}</span>
+                    <span class="ja-pts">{points(row.points)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div class="ja-bl">
+              <p class="ja-bl-head">
+                <span class="text-fg font-medium">Backlog</span>
+                <span class="ja-bl-meta">Issues in no sprint</span>
+              </p>
+              <ul aria-label="Backlog">
+                {backlog.backlog.map(row => (
+                  <li class="ja-bl-row">
+                    <span class="ja-grip" aria-hidden="true"></span>
+                    <span class="key">{row.key}</span>
+                    <span class="ja-bl-title">{row.title}</span>
+                    <span class:list={['ja-pts', { 'ja-none': row.points === null }]}>{points(row.points)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div class="wf-body ja-note">
+              <p>
+                Putting an issue into a sprint is an ordinary issue edit, open to Contributors. Starting and finishing
+                the sprint is for Project Admins.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="search">
+            <p class="ja-cap">
+              <span class="ja-n">3 / {total}</span>
+              The sprint’s open bugs · {search.when}
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{project.key}</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Issues</span>
+            </div>
+            <p class="querybar">
+              <span class="q">{search.query}</span>
+              <span class="count">{search.rows.length} issues</span>
+            </p>
+            <ul aria-label="Search results">
+              {search.rows.map(row => (
+                <li class="row">
+                  <span class="key">{row.key}</span>
+                  <span class="title">{row.title}</span>
+                  <span class:list={['badge pri', `l-${row.priority.toLowerCase()}`]}>
+                    <span aria-hidden="true">{row.priority.charAt(0)}</span>
+                    <span class="sr-only">{row.priority}</span>
+                  </span>
+                  <span class="meta">
+                    <span class:list={['who', { none: row.assignees.length === 0 }]}>
+                      {row.assignees.length === 0 ? 'Unassigned' : row.assignees.join(', ')}
+                    </span>
+                    <span class="spent">{row.spent}</span>
+                    <span class="status">
+                      <i class:list={['dot', { started: row.status === 'In Progress' }]}></i>
+                      {row.status}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div class="wf-body ja-note">
+              <p>
+                The same text filters the board and scopes a report, and an agent passes it to{' '}
+                <code>search_issues</code>
+                unchanged. Save it as a view and it becomes a tab with its count.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="board">
+            <p class="ja-cap">
+              <span class="ja-n">4 / {total}</span>
+              {mover.name} moves <span class="mono text-xs text-fg">{backlog.planned[0]?.key}</span> · {board.when}
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{project.key}</span>
+              <span class="sep">/</span>
+              <span>Board</span>
+              <span class="sep">/</span>
+              <span class="text-fg">{sprint.name}</span>
+            </div>
+            <div class="ja-board-head">
+              <h3 class="text-fg font-medium">{sprint.goal}</h3>
+              <span>Ends {sprint.ends}</span>
+            </div>
+            <div class="board">
+              {board.columns.map(column => (
+                <div class="col">
+                  <h4>
+                    <span>
+                      {column.name}
+                      {column.resolved && <span class="ja-tag">resolved</span>}
+                    </span>
+                    <span>{column.cards.length}</span>
+                  </h4>
+                  {column.cards.map(card => (
+                    <div class:list={['card', { sel: card.key === backlog.planned[0]?.key }]}>
+                      <span class="pts">{card.points}</span>
+                      <span class="key">{card.key}</span>
+                      <br />
+                      {card.title}
+                      <span class="ja-people">
+                        {card.assignees.map(person => (
+                          <span class="av" title={person.name}>
+                            <span aria-hidden="true">{person.initials}</span>
+                            <span class="sr-only">{person.name}</span>
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div class="wf-body ja-note">
+              <p>
+                Acme’s board uses its statuses as columns: Open with Reopened, In Progress, and Fixed. Fixed is a done
+                status, so the move resolves the issue and its reporter is told. No transition screen, no validator.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="burndown">
+            <p class="ja-cap">
+              <span class="ja-n">5 / {total}</span>
+              Burndown · {sprint.name} · {burndown.asOf}
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{project.key}</span>
+              <span class="sep">/</span>
+              <span>Reports</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Burndown</span>
+            </div>
+            <div class="wf-body">
+              <p class="ja-figs">
+                <span>
+                  <b class="mono">{summary.completed}</b> of {summary.scope} points resolved
+                </span>
+                <span>
+                  <b class="mono">{summary.added}</b> points added after the start
+                </span>
+                <span>
+                  <b class="mono">{burndown.daysLeft}</b> days left
+                </span>
+              </p>
+              <ul class="ja-legend mt-4">
+                <li>
+                  <span class="ja-key remaining" aria-hidden="true"></span>Remaining
+                </li>
+                <li>
+                  <span class="ja-key ideal" aria-hidden="true"></span>Ideal
+                </li>
+                <li>
+                  <span class="ja-key scope" aria-hidden="true"></span>Scope
+                </li>
+              </ul>
+              <div
+                class="ja-chart mt-4"
+                role="img"
+                aria-label={`${sprint.name} burndown: ${summary.committed} points committed, ${summary.added} added on ${burndown.addedOn}, ${summary.remaining} remaining as of ${burndown.asOf}.`}
+              >
+                <div class="ja-plot">
+                  {ticks.map(tick => (
+                    <span class="ja-grid" style={`top:${y(tick)}%`}>
+                      <span class="ja-y">{tick}</span>
+                    </span>
+                  ))}
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline class="ja-l-ideal" points={idealLine} />
+                    <polyline class="ja-l-scope" points={scopeLine} />
+                    <polyline class="ja-l-remaining" points={remainingLine} />
+                  </svg>
+                </div>
+                <div class="ja-x" aria-hidden="true">
+                  {burndown.days.map((day, index) =>
+                    labelled.has(index) ? (
+                      <span style={`left:${x(index)}%`} class:list={{ first: index === 0, end: index === last }}>
+                        {day.label}
+                      </span>
+                    ) : null,
+                  )}
+                </div>
+              </div>
+              <details class="ja-details mt-6">
+                <summary>Daily figures</summary>
+                <div class="ja-table-wrap" tabindex="0" role="region" aria-label="Daily figures">
+                  <table class="ja-table">
+                    <caption class="sr-only">{sprint.name}daily burndown figures, in story points</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Day</th>
+                        <th scope="col">Remaining</th>
+                        <th scope="col">Ideal</th>
+                        <th scope="col">Scope</th>
+                        <th scope="col">Added</th>
+                        <th scope="col">Done</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {burndown.days.map(day => (
+                        <tr data-for={day.date}>
+                          <th scope="row">{day.label}</th>
+                          <td>{show(day.remaining)}</td>
+                          <td>{day.ideal}</td>
+                          <td>{show(day.scope)}</td>
+                          <td>{addedText(day.added)}</td>
+                          <td>{show(day.completed)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+            <div class="wf-body ja-note">
+              <p>
+                One of nine reports. Each has the table under its chart and a CSV export, and an agent reads the same
+                numbers through <code>run_report</code>.{' '}
+                <a class="link font-normal" href={`${PATHS.reports}#burndown`}>
+                  Burndown in the manual
+                  <span class="arr" aria-hidden="true">
+                    →
+                  </span>
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="ja-nav mt-4" data-ja-nav hidden>
+          <button type="button" class="btn btn-sm btn-ghost" data-ja-prev>
+            <span class="arr" aria-hidden="true">
+              ←
+            </span>
+            Previous step
+          </button>
+          <button type="button" class="btn btn-sm btn-ghost" data-ja-next>
+            Next step
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </button>
+        </div>
+        <p class="sr-only" aria-live="polite" data-ja-status></p>
+        <p class="mt-4 text-xs text-fg-3">Hand-drawn product views with fictional data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/compare/jira-alternative';
+</script>
+
+<style>
+  .ja-cap {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .ja-n {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    flex: none;
+  }
+  .ja-note {
+    padding-top: 14px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .ja-note code {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .l-minor {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  .ja-form {
+    display: grid;
+    gap: 14px;
+    max-width: 420px;
+  }
+  .ja-field {
+    display: grid;
+    gap: 5px;
+  }
+  .ja-label {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .ja-input {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    font-size: 14px;
+    color: var(--text);
+  }
+  .ja-hint {
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .ja-sub {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .ja-defaults > div {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 19px;
+  }
+  .ja-defaults dt {
+    color: var(--text-secondary);
+  }
+  @media (max-width: 640px) {
+    .ja-defaults > div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+  .ja-bl + .ja-bl {
+    border-top: 1px solid var(--border);
+  }
+  .ja-bl-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ja-pill {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .ja-bl-meta {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+  }
+  .ja-bl-row {
+    display: grid;
+    grid-template-columns: 10px 60px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    min-height: 34px;
+    padding: 6px 16px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .ja-dropped {
+    background: var(--bg-selected);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .ja-bl-title {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .ja-grip {
+    width: 6px;
+    height: 12px;
+    background-image: radial-gradient(var(--border-strong) 1px, transparent 1.2px);
+    background-size: 3px 4px;
+  }
+  .ja-pts {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .ja-pts.ja-none {
+    color: var(--text-muted);
+  }
+  @media (max-width: 640px) {
+    .ja-bl-meta {
+      flex-basis: 100%;
+      margin-left: 0;
+    }
+    .ja-bl-row {
+      grid-template-columns: 10px 56px minmax(0, 1fr);
+      row-gap: 2px;
+    }
+    .ja-bl-title {
+      white-space: normal;
+    }
+    .ja-pts {
+      grid-column: 3;
+    }
+  }
+  .ja-board-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 16px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .ja-tag {
+    margin-left: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .ja-people {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .ja-figs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 24px;
+    font-size: 13.5px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .ja-figs b {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-right: 2px;
+  }
+  .ja-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .ja-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .ja-key {
+    width: 18px;
+    height: 0;
+    border-top: 2px solid var(--text);
+  }
+  .ja-key.ideal {
+    border-top: 2px dashed var(--chart-ideal);
+  }
+  .ja-key.scope {
+    border-top-color: var(--chart-2);
+  }
+  .ja-chart {
+    padding-left: 26px;
+  }
+  .ja-plot {
+    position: relative;
+    height: 200px;
+  }
+  @media (min-width: 768px) {
+    .ja-plot {
+      height: 240px;
+    }
+  }
+  .ja-plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .ja-plot polyline {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .ja-l-remaining {
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  .ja-l-ideal {
+    stroke: var(--chart-ideal);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+  .ja-l-scope {
+    stroke: var(--chart-2);
+    stroke-width: 2;
+  }
+  .ja-grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px solid var(--chart-grid);
+  }
+  .ja-y {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: -9px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .ja-x {
+    position: relative;
+    height: 22px;
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .ja-x span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .ja-x span.first {
+    transform: none;
+  }
+  .ja-x span.end {
+    transform: translateX(-100%);
+  }
+  .ja-details summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    width: fit-content;
+  }
+  .ja-table-wrap {
+    margin-top: 10px;
+    overflow-x: auto;
+  }
+  .ja-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ja-table th,
+  .ja-table td {
+    padding: 5px 6px;
+    border-top: 1px solid var(--border-subtle);
+    text-align: right;
+  }
+  .ja-table th:first-child {
+    text-align: left;
+  }
+  .ja-table thead th {
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-top: 0;
+  }
+  .ja-table tbody th {
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+  .ja-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ja-nav .btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+    background: transparent;
+  }
+</style>

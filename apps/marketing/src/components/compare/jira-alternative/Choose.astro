@@ -1,0 +1,58 @@
+---
+import { CHOOSE_JIRA, CHOOSE_US, PATHS } from '@lib/compare/jira-alternative';
+---
+
+<section id="ja-choose" class="border-t border-line" aria-labelledby="ja-choose-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="ja-choose-title" class="h2">
+        Which one fits your team.
+      </h2>
+      <p class="prose mt-5">
+        Jira is the deeper system: cross-team planning, automation, a large app ecosystem and fine-grained control.
+        Nothing Left is the smaller one, on purpose. Pick by the work you have, not by the longer feature list.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-10 md:gap-12">
+      <div class="min-w-0">
+        <h3 class="h3">Choose Jira if…</h3>
+        <ul class="rule-list mt-4">
+          {CHOOSE_JIRA.map(item => (
+            <li class="py-4">
+              <p class="prose text-base">{item.text}</p>
+              <a class="link font-normal text-sm mt-2 inline-block" href={item.source.href} rel="noopener">
+                {item.source.label}
+                <span class="arr ext" aria-hidden="true">
+                  ↗
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="min-w-0">
+        <h3 class="h3">Choose Nothing Left if…</h3>
+        <ul class="rule-list mt-4">
+          {CHOOSE_US.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+        <p class="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <a class="link" href={PATHS.tour}>
+            Sprints and boards
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+          <a class="link" href={PATHS.mcpFeature}>
+            MCP and AI agents
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

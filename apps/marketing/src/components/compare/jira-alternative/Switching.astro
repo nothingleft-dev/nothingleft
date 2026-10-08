@@ -1,0 +1,120 @@
+---
+import { AGENT_PROMPT, AGENT_STEPS, EVALUATE_FIRST, JIRA, PATHS } from '@lib/compare/jira-alternative';
+---
+
+<section id="ja-switching" class="border-t border-line bg-app" aria-labelledby="ja-switching-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="ja-switching-title" class="h2">
+        What to check before you move.
+      </h2>
+      <p class="prose mt-5">
+        Moving issues is the easy part. What decides whether a team can leave Jira is the configuration around them, so
+        start with these four.
+      </p>
+    </div>
+
+    <ol class="ja-eval mt-10 md:mt-14">
+      {EVALUATE_FIRST.map((item, index) => (
+        <li>
+          <span class="ja-eval-n mono" aria-hidden="true">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <h3 class="h3">{item.title}</h3>
+          <p class="prose text-base mt-2">{item.body}</p>
+          <a
+            class="link font-normal text-sm mt-3 inline-block"
+            href={item.source.href}
+            rel={item.source.href.startsWith('http') ? 'noopener' : undefined}
+          >
+            {item.source.label}
+            <span class:list={['arr', { ext: item.source.href.startsWith('http') }]} aria-hidden="true">
+              {item.source.href.startsWith('http') ? '↗' : '→'}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+
+    <div class="mt-14 md:mt-20 grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="lg:col-span-5">
+        <h3 class="ja-path-title">The bulk path: CSV</h3>
+        <p class="prose text-base mt-3">
+          Generic CSV import arrives at launch. Export work items from a Jira search, map the columns to issue fields,
+          run a dry run and read the errors row by row before anything is created.
+        </p>
+        <a class="link font-normal text-sm mt-3 inline-block" href={JIRA.csvExport} rel="noopener">
+          Export search results in Jira
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+        <h3 class="ja-path-title mt-10">Not built: a native Jira importer</h3>
+        <p class="prose text-base mt-3">
+          Nothing reads a Jira site directly, and workflows, automation rules and app data have no place to land. Plan
+          to leave them behind.
+        </p>
+      </div>
+      <div class="lg:col-span-6 lg:col-start-7">
+        <h3 class="ja-path-title">The guided path: an agent on both sides</h3>
+        <p class="prose text-base mt-3">
+          Only when one agent can reach your Jira site and Nothing Left. It reads the unresolved work there and creates
+          issues here through the documented tools, after you approve the mapping.
+        </p>
+        <div class="panel mt-5">
+          <p class="prompt">
+            <span class="mark" aria-hidden="true">
+              ›
+            </span>
+            <span>{AGENT_PROMPT}</span>
+          </p>
+        </div>
+        <ol class="steps-list mt-6 prose text-base">
+          {AGENT_STEPS.map(step => (
+            <li>
+              <strong>{step.title}.</strong> {step.body}
+            </li>
+          ))}
+        </ol>
+        <a class="link text-sm mt-6 inline-block" href={PATHS.mcp}>
+          Connecting an agent
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .ja-eval {
+    display: grid;
+    border-top: 1px solid var(--border);
+  }
+  .ja-eval li {
+    position: relative;
+    padding: 22px 0 24px 44px;
+    border-bottom: 1px solid var(--border);
+    min-width: 0;
+  }
+  .ja-eval-n {
+    position: absolute;
+    left: 0;
+    top: 25px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  @media (min-width: 768px) {
+    .ja-eval {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 48px;
+    }
+  }
+  .ja-path-title {
+    font-size: 17px;
+    line-height: 24px;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+</style>

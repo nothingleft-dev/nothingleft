@@ -1,0 +1,61 @@
+---
+import { JIRA, PATHS, ROLE_LIMITS, ROLES } from '@lib/compare/jira-alternative';
+---
+
+<section id="ja-roles" class="border-t border-line" aria-labelledby="ja-roles-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="ja-roles-title" class="h2">
+        Five roles, decided before you arrive.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        There is no role editor and no permission scheme to design. Each person has an organisation role and a role in
+        each project, and the same matrix answers the app, the API and every agent.
+      </p>
+      <p class="prose mt-4 max-w-[46ch]">
+        That is a trade, not a shortcut to every permission need. Jira’s{' '}
+        <a class="link font-normal" href={JIRA.permissions} rel="noopener">
+          permission schemes
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>{' '}
+        and{' '}
+        <a class="link font-normal" href={JIRA.workflows} rel="noopener">
+          workflow conditions
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>{' '}
+        go much further.
+      </p>
+      <a class="link text-sm mt-6 inline-block" href={PATHS.permissions}>
+        The full permission matrix
+        <span class="arr" aria-hidden="true">
+          →
+        </span>
+      </a>
+    </div>
+    <div class="lg:col-span-6 lg:col-start-7 space-y-10">
+      <div>
+        <h3 class="text-sm font-medium">The five roles</h3>
+        <dl class="scopes mt-3">
+          {ROLES.map(item => (
+            <>
+              <dt>{item.role}</dt>
+              <dd>{item.can}</dd>
+            </>
+          ))}
+        </dl>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium">Deliberately not built</h3>
+        <ul class="rule-list mt-3">
+          {ROLE_LIMITS.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>

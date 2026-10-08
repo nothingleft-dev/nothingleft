@@ -1,0 +1,47 @@
+---
+const SECTIONS = [
+  { href: '#matrix', label: 'Comparison' },
+  { href: '#ja-walkthrough', label: 'A new project' },
+  { href: '#ja-roles', label: 'Roles' },
+  { href: '#ja-switching', label: 'Switching' },
+  { href: '#ja-choose', label: 'Which to choose' },
+  { href: '#compare', label: 'Cost' },
+  { href: '#faq', label: 'FAQ' },
+];
+---
+
+<div class="ja-note mt-8">
+  <p class="ja-line">Enough structure for the sprint. Less administration around it.</p>
+  <nav class="mt-4" aria-label="On this page">
+    <ul class="ja-toc">
+      {SECTIONS.map(section => (
+        <li>
+          <a class="link font-normal" href={section.href}>
+            {section.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</div>
+
+<style>
+  .ja-note {
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .ja-line {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .ja-toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+</style>
