@@ -24,6 +24,22 @@ export const SITEMAP_PAGES = {
   '/compare/notion-projects-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
   '/docs': { lastmod: '2026-10-08T07:00:00+05:30' },
   '/docs/mcp': { lastmod: '2026-10-08T07:00:00+05:30' },
+  '/docs/getting-started': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/members': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/limits-and-billing': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/issues': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/custom-fields': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/search': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/agile': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/reports': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/knowledge-base': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/mcp-tools': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/account-security': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/permissions': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/notifications': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/storage': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/keyboard-shortcuts': { lastmod: '2026-10-08T08:00:00+05:30' },
+  '/docs/api': { lastmod: '2026-10-08T08:00:00+05:30' },
 };
 
 export function normalizePath(pathname) {

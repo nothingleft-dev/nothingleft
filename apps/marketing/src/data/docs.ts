@@ -55,16 +55,18 @@ export const DOC_GROUPS: DocGroup[] = [
   },
   {
     title: 'Reference',
-    description: 'Shortcuts for every page.',
-    docs: [{ slug: 'keyboard-shortcuts', label: 'Keyboard shortcuts' }],
+    description: 'Shortcuts for every page, and the REST API the app and agents share.',
+    docs: [
+      { slug: 'keyboard-shortcuts', label: 'Keyboard shortcuts' },
+      { slug: 'api', label: 'API reference' },
+    ],
   },
 ];
 
 export const DOC_ORDER: DocLink[] = DOC_GROUPS.flatMap(group => group.docs);
 export const DOC_SLUGS: string[] = DOC_ORDER.map(doc => doc.slug);
 
-// Pages switched on for the owner's review; the rest follow once the template is approved.
-export const PUBLISHED_DOCS = new Set<string>(['mcp']);
+export const PUBLISHED_DOCS = new Set<string>(DOC_SLUGS);
 
 export const isPublished = (slug: string) => PUBLISHED_DOCS.has(slug);
 export const docPath = (slug: string) => `/docs/${slug}`;
