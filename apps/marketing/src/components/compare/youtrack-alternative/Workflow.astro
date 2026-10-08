@@ -1,0 +1,418 @@
+---
+import { formatDuration } from '@data/sample';
+import { QUERY, STORY, WORKFLOW } from '@lib/compare/youtrack-alternative';
+
+const dev = STORY.developer;
+const priorityClass = (priority: string) => `l-${priority.toLowerCase()}`;
+---
+
+<section id="yt-workflow" class="border-t border-line bg-app" aria-labelledby="yt-workflow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="yt-workflow-title" class="h2">
+        One bug, three everyday steps, in both products.
+      </h2>
+      <p class="prose mt-5">
+        On {STORY.log.date}, {dev.name} finds the open invitation work, logs the afternoon on{' '}
+        <code class="whitespace-nowrap">{STORY.key}</code>
+        and ties the fix to the decision behind it. Nothing Left is drawn with fictional data. YouTrack’s side is its
+        own documented steps, each linked to the page that says so, rather than screenshots.
+      </p>
+    </div>
+
+    <div class="tabs mt-10 md:mt-14" data-tabs>
+      <div class="tablist" role="tablist" aria-label="Workflow step">
+        {WORKFLOW.map((stage, index) => (
+          <button
+            type="button"
+            role="tab"
+            id={`yt-tab-${stage.id}`}
+            aria-controls={`yt-panel-${stage.id}`}
+            aria-selected={index === 0 ? 'true' : 'false'}
+            tabindex={index === 0 ? 0 : -1}
+          >
+            <span class="yt-n" aria-hidden="true">
+              {index + 1}
+            </span>
+            {stage.label}
+          </button>
+        ))}
+      </div>
+
+      {WORKFLOW.map((stage, index) => (
+        <div
+          class:list={['tabpanel', { on: index === 0 }]}
+          role="tabpanel"
+          id={`yt-panel-${stage.id}`}
+          aria-labelledby={`yt-tab-${stage.id}`}
+        >
+          <p class="tab-title tabpanel-bar text-sm font-medium text-fg">
+            {index + 1}. {stage.label}
+          </p>
+          <div class="yt-cols">
+            <div class="yt-col yt-ours">
+              <h3 class="yt-col-head">
+                <span class="text-fg font-medium">Nothing Left</span>
+                <span>{stage.heading}</span>
+              </h3>
+
+              {stage.id === 'search' && (
+                <div class="yt-view">
+                  <div class="pane-bar">
+                    <span class="mono text-xs">ACME</span>
+                    <span class="sep">/</span>
+                    <span>Issues</span>
+                    <span class="ml-auto yt-when">{STORY.search.when}</span>
+                  </div>
+                  <p class="querybar">
+                    <span class="q">{QUERY}</span>
+                    <span class="count">{STORY.search.rows.length} issues</span>
+                  </p>
+                  <ul aria-label={`Results for ${QUERY}`}>
+                    {STORY.search.rows.map(row => (
+                      <li class:list={['row', { sel: row.key === STORY.key }]}>
+                        <span class="key">{row.key}</span>
+                        <span class="title">{row.title}</span>
+                        <span class:list={['badge pri', priorityClass(row.priority)]}>
+                          <span aria-hidden="true">{row.priority.charAt(0)}</span>
+                          <span class="sr-only">{row.priority}</span>
+                        </span>
+                        <span class="meta">
+                          {row.assignees.length > 0 ? (
+                            <span class="who">
+                              <span class="av" aria-hidden="true">
+                                {row.assignees[0]?.initials}
+                              </span>
+                              {row.assignees.map(person => person.name).join(', ')}
+                            </span>
+                          ) : (
+                            <span class="who none">Unassigned</span>
+                          )}
+                          <span class="spent">{row.spent > 0 ? formatDuration(row.spent) : '—'}</span>
+                          <span class="status">
+                            <i class:list={['dot', { started: row.status === 'In Progress' }]} />
+                            {row.status}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {stage.id === 'time' && (
+                <div class="yt-view">
+                  <div class="pane-bar">
+                    <span class="mono text-xs">ACME</span>
+                    <span class="sep">/</span>
+                    <span>Issues</span>
+                    <span class="sep">/</span>
+                    <span class="mono text-xs text-fg">{STORY.key}</span>
+                  </div>
+                  <div class="wf-body">
+                    <div class="flex items-center gap-2 text-xs text-fg-2">
+                      <span class="badge l-bug" aria-hidden="true">
+                        B
+                      </span>
+                      {STORY.type}
+                      <span class:list={['badge ml-2', priorityClass(STORY.priority)]} aria-hidden="true">
+                        {STORY.priority.charAt(0)}
+                      </span>
+                      {STORY.priority}
+                    </div>
+                    <p class="wf-title">{STORY.title}</p>
+                    <div class="yt-log" aria-label="Add spent time" role="group">
+                      <p class="yt-log-head">Add spent time</p>
+                      <dl class="yt-log-fields">
+                        <div>
+                          <dt>Date</dt>
+                          <dd>{STORY.log.date}</dd>
+                        </div>
+                        <div>
+                          <dt>Time spent</dt>
+                          <dd class="mono">{STORY.log.spent}</dd>
+                        </div>
+                        <div>
+                          <dt>Type</dt>
+                          <dd>{STORY.log.workType}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                    <dl class="fields">
+                      <dt>Status</dt>
+                      <dd>
+                        <i class="dot started" />
+                        {STORY.log.status}
+                      </dd>
+                      <dt>Estimation</dt>
+                      <dd class="mono text-xs">{STORY.estimate}</dd>
+                      <dt>Spent time</dt>
+                      <dd class="yt-spent">
+                        <span class="mono text-xs">
+                          {STORY.log.spentAfter} <span class="text-fg-2 font-sans">of {STORY.estimate}</span>
+                        </span>
+                        <span class="yt-meter" aria-hidden="true">
+                          <span style={`width:${STORY.log.spentShare}%`} />
+                        </span>
+                      </dd>
+                    </dl>
+                  </div>
+                  <div class="activity">
+                    <p>
+                      {dev.name} logged {STORY.log.spent}, {STORY.log.workType}
+                      <span class="t">{STORY.log.when}</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {stage.id === 'kb' && (
+                <div class="yt-view">
+                  <div class="pane-bar yt-crumbs">
+                    <span class="mono text-xs">ACME</span>
+                    <span class="sep">/</span>
+                    <span class="yt-mid">Knowledge base</span>
+                    <span class="sep yt-mid">/</span>
+                    <span>{STORY.kb.folder}</span>
+                  </div>
+                  <div class="wf-body">
+                    <p class="text-xs text-fg-2">
+                      {STORY.kb.kind} · Published {STORY.kb.published} · {STORY.kb.author.name}
+                    </p>
+                    <p class="wf-title">{STORY.kb.title}</p>
+                    <div class="wf-md">
+                      <p>
+                        An expired invitation link explains itself and offers a new one. First seen in{' '}
+                        <s class="yt-key">{STORY.key}</s>
+                        <span class="sr-only">(resolved)</span>, resolved {STORY.kb.resolved}.
+                      </p>
+                    </div>
+                    <dl class="fields">
+                      <dt>Page</dt>
+                      <dd class="mono text-xs yt-wrap">{STORY.kb.path}</dd>
+                      <dt>For agents</dt>
+                      <dd class="mono text-xs yt-wrap">{STORY.kb.uri}</dd>
+                    </dl>
+                    <div class="ref">
+                      <p class="lbl">
+                        On <span class="mono">{STORY.key}</span>, under Referenced by
+                      </p>
+                      <p class="text-fg">{STORY.kb.title}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <ol class="steps-list yt-steps">
+                {stage.ours.map(step => (
+                  <li>{step}</li>
+                ))}
+              </ol>
+            </div>
+
+            <div class="yt-col yt-theirs">
+              <h3 class="yt-col-head">
+                <span class="text-fg font-medium">YouTrack</span>
+                <span>Documented steps</span>
+              </h3>
+              <ol class="steps-list yt-steps">
+                {stage.theirs.map(step => (
+                  <li>
+                    {step.text}
+                    {step.code && <code class="yt-code">{step.code}</code>}
+                    {step.after}
+                    <a class="link font-normal yt-source" href={step.source.href} rel="noopener">
+                      {step.source.label}
+                      <span class="arr ext" aria-hidden="true">
+                        ↗
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <p class="mt-4 text-xs text-fg-3">
+      Nothing Left views are hand-drawn with fictional data. YouTrack steps are paraphrased from its documentation as of
+      the matrix date above.
+    </p>
+  </div>
+</section>
+
+<style>
+  .l-minor {
+    --c-bg: var(--palette-gray-bg);
+    --c-fg: var(--palette-gray-fg);
+  }
+  .yt-n {
+    display: inline-grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .yt-cols {
+    display: grid;
+  }
+  .yt-col {
+    min-width: 0;
+    padding: 20px;
+  }
+  .yt-theirs {
+    border-top: 1px solid var(--border);
+    background: var(--bg-app);
+  }
+  @media (min-width: 1024px) {
+    .yt-cols {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    }
+    .yt-col {
+      padding: 24px;
+    }
+    .yt-theirs {
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+  @media (max-width: 640px) {
+    .yt-col {
+      padding: 16px;
+    }
+  }
+  .yt-col-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 400;
+    color: var(--text-secondary);
+  }
+  .yt-view {
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    overflow: hidden;
+  }
+  @media (max-width: 640px) {
+    .yt-view .querybar {
+      height: auto;
+      min-height: 40px;
+      padding-block: 9px;
+      align-items: baseline;
+    }
+    .yt-view .querybar .q {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+  .yt-when {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .yt-steps {
+    margin-top: 18px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  .yt-theirs .yt-steps {
+    margin-top: 14px;
+  }
+  .yt-code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 1px 5px;
+    border-radius: var(--radius-xs);
+    overflow-wrap: anywhere;
+  }
+  .yt-source {
+    display: block;
+    width: fit-content;
+    margin-top: 4px;
+    font-size: 12.5px;
+  }
+  .yt-log {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .yt-log-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+  .yt-log-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    font-size: 13px;
+  }
+  .yt-log-fields > div {
+    padding: 8px 12px;
+    min-width: 0;
+  }
+  .yt-log-fields > div + div {
+    border-left: 1px solid var(--border-subtle);
+  }
+  .yt-log-fields dt {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .yt-log-fields .mono {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  @media (max-width: 400px) {
+    .yt-log-fields {
+      grid-template-columns: 1fr;
+    }
+    .yt-log-fields > div + div {
+      border-left: 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+  }
+  .yt-spent {
+    flex-wrap: wrap;
+  }
+  .yt-meter {
+    display: block;
+    width: 96px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--border);
+    overflow: hidden;
+  }
+  .yt-meter span {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .yt-key {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .yt-wrap {
+    overflow-wrap: anywhere;
+  }
+  .yt-crumbs {
+    overflow: hidden;
+  }
+  @media (max-width: 400px) {
+    .yt-mid {
+      display: none;
+    }
+  }
+</style>

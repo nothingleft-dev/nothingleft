@@ -1,0 +1,35 @@
+---
+import { ANGLE } from '@lib/compare/youtrack-alternative';
+---
+
+<section id="yt-angle" class="border-t border-line" aria-labelledby="yt-angle-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="yt-angle-title" class="h2">
+        Less to configure, on purpose.
+      </h2>
+      <p class="prose mt-5">
+        YouTrack is a deep, mature tracker, and much of its strength is how far it can be configured. Nothing Left makes
+        the opposite trade: fewer settings, decided defaults, and the same surface for people and agents.
+      </p>
+    </div>
+    <ul class="areas mt-10 md:mt-14">
+      {ANGLE.map(point => (
+        <li>
+          <h3 class="h3">{point.title}</h3>
+          <p class="prose text-base mt-2">{point.body}</p>
+          <a
+            class="link text-sm mt-3 inline-block"
+            href={point.link.href}
+            rel={point.link.external ? 'noopener' : undefined}
+          >
+            {point.link.label}
+            <span class:list={['arr', { ext: point.link.external }]} aria-hidden="true">
+              {point.link.external ? '↗' : '→'}
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

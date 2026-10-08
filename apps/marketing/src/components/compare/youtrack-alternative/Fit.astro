@@ -1,0 +1,36 @@
+---
+import { CHOOSE_NOTHING_LEFT, STAY_WITH_YOUTRACK } from '@lib/compare/youtrack-alternative';
+
+const COLUMNS = [
+  { id: 'stay', title: 'Stay with YouTrack if…', items: STAY_WITH_YOUTRACK },
+  { id: 'choose', title: 'Choose Nothing Left if…', items: CHOOSE_NOTHING_LEFT },
+];
+---
+
+<section id="yt-fit" class="border-t border-line" aria-labelledby="yt-fit-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="yt-fit-title" class="h2">
+        Which one fits your team.
+      </h2>
+      <p class="prose mt-5">
+        Not a verdict from a seat count. The question is how much of YouTrack’s depth your team uses every week, and
+        whether the rest is worth maintaining.
+      </p>
+    </div>
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-10 lg:gap-16">
+      {COLUMNS.map(column => (
+        <div class="min-w-0">
+          <h3 id={`yt-fit-${column.id}`} class="h3">
+            {column.title}
+          </h3>
+          <ul class="rule-list mt-3" aria-labelledby={`yt-fit-${column.id}`}>
+            {column.items.map(item => (
+              <li class="py-4 prose text-base">{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

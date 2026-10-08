@@ -1,0 +1,79 @@
+---
+import { YOUTRACK_LINKS } from '@lib/compare/youtrack-alternative';
+
+const SECTIONS = [
+  { href: '#yt-matrix', label: 'Feature matrix' },
+  { href: '#yt-workflow', label: 'Side by side' },
+  { href: '#yt-switch', label: 'Switching' },
+  { href: '#yt-fit', label: 'Which to choose' },
+  { href: '#compare', label: 'Your bill' },
+];
+
+const OWN_WORDS = [
+  { href: YOUTRACK_LINKS.features, label: 'Feature directory' },
+  { href: YOUTRACK_LINKS.issues, label: 'Task tracking' },
+  { href: YOUTRACK_LINKS.agile, label: 'Agile boards' },
+  { href: YOUTRACK_LINKS.mcp, label: 'MCP server' },
+];
+---
+
+<div class="yt-jump mt-10">
+  <p class="yt-line">Keep issues, time and project knowledge together—with fewer settings to maintain.</p>
+  <nav class="mt-5" aria-label="On this page">
+    <ul class="yt-links">
+      {SECTIONS.map(section => (
+        <li>
+          <a class="link font-normal" href={section.href}>
+            {section.label}
+            <span class="arr" aria-hidden="true">
+              ↓
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+  <div class="yt-own mt-4">
+    <p class="text-xs text-fg-3" id="yt-own-label">
+      YouTrack in its own words
+    </p>
+    <ul class="yt-links yt-own-links" aria-labelledby="yt-own-label">
+      {OWN_WORDS.map(item => (
+        <li>
+          <a class="link font-normal" href={item.href} rel="noopener">
+            {item.label}
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+<style>
+  .yt-jump {
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    max-width: 640px;
+  }
+  .yt-line {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 500;
+    color: var(--text);
+    padding-left: 12px;
+    border-left: 2px solid var(--accent);
+  }
+  .yt-own-links {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+  .yt-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-size: 14px;
+  }
+</style>

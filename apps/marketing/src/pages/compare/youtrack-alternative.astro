@@ -1,0 +1,80 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import ComparisonMatrix from '@components/compare/ComparisonMatrix.astro';
+import Angle from '@components/compare/youtrack-alternative/Angle.astro';
+import Fit from '@components/compare/youtrack-alternative/Fit.astro';
+import Jump from '@components/compare/youtrack-alternative/Jump.astro';
+import Switching from '@components/compare/youtrack-alternative/Switching.astro';
+import Workflow from '@components/compare/youtrack-alternative/Workflow.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Base from '@layouts/Base.astro';
+import { DOCS, YOUTRACK_COMPARISON, YOUTRACK_FAQ } from '@lib/compare/youtrack-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="Compare"
+    title="A simpler choice for teams that use YouTrack's core, but not its entire configuration surface."
+    lede="YouTrack is a strong, close competitor: issues, agile boards, time tracking, a knowledge base, reports, self-hosting and an MCP server. Nothing Left covers that core with far fewer settings, fixed roles and one documented surface for people and agents."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href="#yt-matrix">
+      See the comparison
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <Jump slot="note" />
+  </PageHero>
+  <ComparisonMatrix
+    id="yt-matrix"
+    comparison={YOUTRACK_COMPARISON}
+    title="Feature by feature, dated and sourced."
+    intro="Each YouTrack cell links to the JetBrains page it was checked against; each Nothing Left cell to its manual. Where YouTrack goes further, the table says so."
+  />
+  <Workflow />
+  <Angle />
+  <Switching />
+  <Fit />
+  <Calculator
+    preselect="youtrack"
+    title="Compare what you pay for YouTrack."
+    intro="Enter your current YouTrack bill and see what the beta takes off it. Check your plan on YouTrack’s own pricing page; no list price is filled in here, and nothing you type leaves this page."
+  />
+  <Faq
+    entries={YOUTRACK_FAQ}
+    title="Questions from YouTrack teams."
+    intro="MCP, migration, public articles, automation and cost. Short answers here, the rest in the manual."
+  />
+  <CallToAction
+    title="Try it on one project first."
+    body="Join the beta, create a project and move a handful of open YouTrack issues with an agent. Keep both running until you know which fits."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={DOCS.pricing}>
+      See pricing
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={DOCS.mcp}>
+      Read the agent setup guide
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

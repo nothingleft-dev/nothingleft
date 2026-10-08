@@ -1,0 +1,104 @@
+---
+import { DOCS, MIGRATION_PROMPT, SWITCH_STEPS, SWITCH_TOOLS, YOUTRACK_LINKS } from '@lib/compare/youtrack-alternative';
+---
+
+<section id="yt-switch" class="border-t border-line bg-app" aria-labelledby="yt-switch-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5 min-w-0">
+      <h2 id="yt-switch-title" class="h2">
+        Switching, with you reviewing every mapping.
+      </h2>
+      <p class="prose mt-5">
+        Both products speak MCP, so one agent can read your unresolved YouTrack work and recreate the supported parts
+        here: projects, members, tags and issues. It is a guided move by prompt, not a one-click importer.
+      </p>
+      <ol class="steps-list mt-8 prose text-base">
+        {SWITCH_STEPS.map(step => (
+          <li>
+            <strong>{step.title}.</strong> {step.body}
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <div class="lg:col-span-7 min-w-0">
+      <div class="tabs">
+        <div class="tabpanel-bar">
+          <span class="text-sm font-medium text-fg">A review-first migration prompt</span>
+          <button type="button" class="copy" data-copy="yt-prompt">
+            Copy
+          </button>
+        </div>
+        <pre
+          id="yt-prompt"
+          class="config yt-prompt"
+          tabindex="0"
+          aria-label="Migration prompt"
+          set:text={MIGRATION_PROMPT}
+        />
+      </div>
+
+      <h3 class="h3 mt-10">What the agent uses</h3>
+      <p class="prose text-base mt-2">
+        On this side, documented tools that act with your role and your token’s scopes. On the YouTrack side, its own
+        MCP server with your permissions there.
+      </p>
+      <ul class="yt-tools mt-4" aria-label="Nothing Left tools">
+        {SWITCH_TOOLS.map(tool => (
+          <li>
+            <code>{tool}</code>
+          </li>
+        ))}
+      </ul>
+
+      <h3 class="h3 mt-10">What to expect</h3>
+      <ul class="rule-list mt-3">
+        <li class="py-4 prose text-base">
+          Issues are created by you, now. Their full history, original timestamps and workflow state stay in YouTrack.
+        </li>
+        <li class="py-4 prose text-base">
+          Attachments, time records and articles are not part of the prompt above; move them only once the issues are
+          right.
+        </li>
+        <li class="py-4 prose text-base">
+          For a bulk move, generic CSV import arrives at launch. A native YouTrack importer is not built.
+        </li>
+      </ul>
+      <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <a class="link" href={DOCS.mcp}>
+          Connecting an AI agent
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link" href={YOUTRACK_LINKS.mcp} rel="noopener">
+          YouTrack’s MCP server
+          <span class="arr ext" aria-hidden="true">
+            ↗
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .yt-prompt {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .yt-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .yt-tools code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: var(--radius-xs);
+  }
+</style>
