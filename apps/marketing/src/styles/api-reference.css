@@ -1,0 +1,132 @@
+@media (min-width: 1280px) {
+  .docs-shell.api-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+}
+
+.api-main {
+  min-width: 0;
+}
+
+.api-facts {
+  border-top: 1px solid var(--border-subtle);
+}
+.api-facts > div {
+  display: grid;
+  gap: 2px 24px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+@media (min-width: 640px) {
+  .api-facts > div {
+    grid-template-columns: 128px minmax(0, 1fr);
+  }
+}
+.api-facts dt {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.doc-content .api-facts + pre {
+  margin-top: 20px;
+}
+
+.api-ref {
+  margin-top: 48px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.api-ref-fallback {
+  padding: 24px 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+.api-ref-static {
+  display: none;
+}
+html:not(.js) .api-ref-static {
+  display: inline;
+}
+html:not(.js) .api-ref-loading {
+  display: none;
+}
+
+/* The intro above already covers servers, auth and the document's own title. */
+.api-ref .section-container:has(> .introduction-section),
+.api-ref li:has(> a[href='#description/introduction']),
+.api-ref .scalar-mcp-layer {
+  display: none;
+}
+
+/* The narrow-screen bar shows the current operation's summary unclipped, which widens the page. */
+.api-ref .t-doc__header header > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A capped list of plain-text paths becomes a scroll region no keyboard can reach. */
+.api-ref .scalar-card-content:has(> .endpoints) {
+  max-height: none;
+}
+.api-ref .endpoints .endpoint-path {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Scalar sets its theme on body.light-mode and darkens request cards; the extra :root outranks both. */
+:root .light-mode,
+.api-ref,
+:root .api-ref .dark-mode {
+  color-scheme: light;
+  --scalar-custom-header-height: 65px;
+  --scalar-font: var(--font-sans);
+  --scalar-font-code: var(--font-mono);
+  --scalar-radius: var(--radius-sm);
+  --scalar-radius-lg: var(--radius-md);
+  --scalar-radius-xl: var(--radius-lg);
+
+  --scalar-background-1: var(--bg-surface);
+  --scalar-background-2: var(--bg-app);
+  --scalar-background-3: var(--border-subtle);
+  --scalar-background-accent: var(--accent-soft);
+  --scalar-color-1: var(--text);
+  --scalar-color-2: var(--text-secondary);
+  --scalar-color-3: var(--text-muted);
+  --scalar-color-accent: var(--accent-text);
+  --scalar-color-disabled: var(--text-disabled);
+  --scalar-color-ghost: var(--text-muted);
+  --scalar-border-color: var(--border);
+  --scalar-focus-color: var(--focus);
+  --scalar-link-color: var(--text);
+  --scalar-link-color-hover: var(--text);
+
+  --scalar-button-1: var(--ink);
+  --scalar-button-1-hover: var(--ink-hover);
+  --scalar-button-1-color: var(--ink-fg);
+
+  --scalar-color-green: var(--palette-green-fg);
+  --scalar-color-red: var(--palette-red-fg);
+  --scalar-color-yellow: var(--palette-amber-fg);
+  --scalar-color-blue: var(--palette-blue-fg);
+  --scalar-color-orange: var(--palette-orange-fg);
+  --scalar-color-purple: var(--palette-violet-fg);
+
+  --scalar-sidebar-background-1: var(--bg-surface);
+  --scalar-sidebar-color-1: var(--text);
+  --scalar-sidebar-color-2: var(--text-secondary);
+  --scalar-sidebar-color-active: var(--text);
+  --scalar-sidebar-item-hover-background: var(--bg-hover);
+  --scalar-sidebar-item-hover-color: var(--text);
+  --scalar-sidebar-item-active-background: var(--bg-selected);
+  --scalar-sidebar-search-background: var(--bg-surface);
+  --scalar-sidebar-search-border-color: var(--border);
+  --scalar-sidebar-search-color: var(--text-muted);
+
+  --scalar-scrollbar-color: var(--border);
+  --scalar-scrollbar-color-active: var(--border-strong);
+  --scalar-shadow-1: 0 0 0 1px var(--border);
+  --scalar-shadow-2: var(--shadow-popover);
+  --scalar-tooltip-background: var(--ink);
+  --scalar-tooltip-color: var(--ink-fg);
+}

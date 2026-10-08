@@ -1,0 +1,29 @@
+---
+interface Props {
+  spec: string;
+}
+
+const { spec } = Astro.props;
+const SCALAR_SRC = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.73.1/dist/browser/standalone.js';
+const SCALAR_SRI = 'sha384-kYDGzV91Jnn3TbHINV3nt54riK2uMJDfN5Al8dAkz4FssELTBWbD8rgw32sTKfOi';
+---
+
+<section class="api-ref" aria-label="Endpoints">
+  <div class="api-ref-mount" data-api-reference={spec}>
+    <p class="api-ref-fallback">
+      <span class="api-ref-loading">Loading the endpoints…</span>
+      <span class="api-ref-static">
+        The interactive reference needs JavaScript. Every endpoint is in{' '}
+        <a class="link" href={spec}>
+          openapi.yaml
+        </a>
+        .
+      </span>
+    </p>
+  </div>
+</section>
+
+<script is:inline defer src={SCALAR_SRC} integrity={SCALAR_SRI} crossorigin="anonymous" data-scalar></script>
+<script>
+  import '@scripts/api-reference';
+</script>

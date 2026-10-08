@@ -1,0 +1,111 @@
+---
+import ApiReference from '@components/docs/ApiReference.astro';
+import DocsSearch from '@components/docs/DocsSearch.astro';
+import DocsSidebar from '@components/docs/DocsSidebar.astro';
+import { DOC_GROUPS, docPath } from '@data/docs';
+import { SITEMAP_PAGES } from '@data/sitemap-config.mjs';
+import Base from '@layouts/Base.astro';
+import '@styles/docs.css';
+import '@styles/api-reference.css';
+import { displayDate } from '@lib/compare';
+
+const SLUG = 'api';
+const SPEC_PATH = '/docs/openapi.yaml';
+const group = DOC_GROUPS.find(entry => entry.docs.some(item => item.slug === SLUG));
+const lastmod = SITEMAP_PAGES[docPath(SLUG)]?.lastmod;
+---
+
+<Base>
+  <div class="wrap docs-shell api-shell">
+    <aside class="docs-side" aria-label="Docs navigation">
+      <div class="docs-side-inner">
+        <DocsSearch id="docs-search-side" />
+        <details class="docs-menu" data-docs-menu open>
+          <summary>Menu</summary>
+          <DocsSidebar current={SLUG} />
+        </details>
+      </div>
+    </aside>
+
+    <div class="api-main">
+      <article class="docs-article api-intro" data-pagefind-body>
+        <p class="docs-crumb" data-pagefind-ignore>
+          <a href="/docs">Docs</a>
+          {group && <span aria-hidden="true">/</span>}
+          {group && <span>{group.title}</span>}
+        </p>
+        <h1 class="docs-title" data-pagefind-meta="title">
+          API reference
+        </h1>
+        <div class="docs-meta" data-pagefind-ignore>
+          {lastmod && (
+            <span>
+              Updated <time datetime={lastmod}>{displayDate(lastmod.slice(0, 10))}</time>
+            </span>
+          )}
+          <span>OpenAPI 3.1</span>
+        </div>
+        <div class="docs-actions" data-pagefind-ignore>
+          <a class="btn btn-sm btn-ghost" href={SPEC_PATH} download="nothingleft-openapi.yaml">
+            Download openapi.yaml
+          </a>
+          <a class="link text-sm font-normal" href="/docs/mcp">
+            Connecting an AI agent
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </div>
+
+        <div class="doc-content">
+          <p>
+            The web app and the MCP server both run on this API, so anything you can do on screen you can script. The
+            reference below is rendered from the OpenAPI document that changes in the same commit as the routes.
+          </p>
+
+          <dl class="api-facts">
+            <div>
+              <dt>Base URL</dt>
+              <dd>
+                <code>https://api.nothingleft.dev</code>, and every path starts with <code>/v1</code>.
+              </dd>
+            </div>
+            <div>
+              <dt>Authentication</dt>
+              <dd>
+                In the browser, the session cookie you get when you sign in. From scripts and agents, a personal access
+                token sent as <code>Authorization: Bearer nl_pat_…</code>, created under{' '}
+                <strong>Settings → Access tokens</strong>. A token reaches every organisation you belong to; send{' '}
+                <code>X-Organization: &lt;slug&gt;</code> to choose one.
+              </dd>
+            </div>
+            <div>
+              <dt>Responses</dt>
+              <dd>
+                JSON in one envelope: <code>data</code> and <code>meta</code> on success, <code>error</code> on failure,
+                never both. Errors carry a stable <code>code</code>, plus the <code>field</code> and its{' '}
+                <code>valid_values</code> when the input was wrong.
+              </dd>
+            </div>
+            <div>
+              <dt>Identifiers</dt>
+              <dd>
+                The names you see on screen, never an internal ID: issue keys like <code>ACME-42</code>, usernames,
+                status names like <code>In Progress</code>.
+              </dd>
+            </div>
+          </dl>
+
+          <pre tabindex="0" aria-label="Example request"><code>curl https://api.nothingleft.dev/v1/issues/ACME-42 \
+  -H "Authorization: Bearer $NOTHINGLEFT_TOKEN"</code></pre>
+        </div>
+      </article>
+
+      <ApiReference spec={SPEC_PATH} />
+    </div>
+  </div>
+</Base>
+
+<script>
+  import '@scripts/docs';
+</script>
