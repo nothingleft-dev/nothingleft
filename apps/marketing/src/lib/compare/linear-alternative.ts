@@ -1,3 +1,4 @@
+import { OUR_SELF_HOSTING } from '@lib/compare';
 import {
   assigneesOf,
   formatDate,
@@ -175,11 +176,7 @@ export const LINEAR_COMPARISON: Comparison = {
     {
       group: 'hosting',
       capability: 'Self-hosting',
-      ours: {
-        support: 'yes',
-        note: 'AGPL-3.0 code. The hosted service runs the same build, and seat and storage limits are settings you choose.',
-        source: ours('Limits and billing', LIMITS_DOC),
-      },
+      ours: OUR_SELF_HOSTING,
       theirs: {
         support: 'no',
         note: 'No self-hosted edition is listed on its pricing or security pages. A workspace stores its data in the EU or the US.',

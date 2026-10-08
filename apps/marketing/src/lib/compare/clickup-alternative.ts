@@ -1,3 +1,4 @@
+import { OUR_SELF_HOSTING } from '@lib/compare';
 import type { Comparison } from '@lib/compare';
 import type { FaqEntry } from '@lib/faq';
 import { TOOL_REFERENCE_PATH } from '@lib/mcp';
@@ -202,11 +203,7 @@ export const CLICKUP_COMPARISON: Comparison = {
     {
       group: 'hosting',
       capability: 'Self-hosting',
-      ours: {
-        support: 'yes',
-        note: 'The same build runs on your PostgreSQL, Redis and S3-compatible storage. The install guide ships with launch.',
-        source: ours('Self-hosting', SELF_HOSTING_PATH),
-      },
+      ours: OUR_SELF_HOSTING,
       theirs: {
         support: 'no',
         note: 'A cloud service hosted on AWS. Enterprise plans can choose a data region; no self-hosted edition is offered.',

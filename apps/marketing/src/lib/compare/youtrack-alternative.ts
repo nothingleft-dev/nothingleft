@@ -1,3 +1,4 @@
+import { OUR_SELF_HOSTING } from '@lib/compare';
 import {
   ARTICLES,
   articlePath,
@@ -209,11 +210,7 @@ export const YOUTRACK_COMPARISON: Comparison = {
     {
       group: 'hosting',
       capability: 'Hosting',
-      ours: {
-        support: 'yes',
-        note: 'Hosted service, or self-host the same AGPL-3.0 build. The install guide ships with launch.',
-        source: nl('Self-hosting', DOCS.selfHosting),
-      },
+      ours: OUR_SELF_HOSTING,
       theirs: {
         support: 'yes',
         note: 'Cloud, or Server installed from a ZIP archive or Docker image. A Cloud team can move to Server.',

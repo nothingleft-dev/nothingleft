@@ -16,12 +16,12 @@ export const SITEMAP_PAGES = {
   '/solutions/product-teams': { lastmod: '2026-10-07T23:00:00+05:30' },
   '/solutions/startups': { lastmod: '2026-10-07T23:00:00+05:30' },
   '/support': { lastmod: '2026-10-07T23:00:00+05:30' },
-  '/compare/linear-alternative': { lastmod: '2026-10-07T23:50:00+05:30' },
-  '/compare/jira-alternative': { lastmod: '2026-10-07T23:50:00+05:30' },
-  '/compare/youtrack-alternative': { lastmod: '2026-10-07T23:50:00+05:30' },
-  '/compare/clickup-alternative': { lastmod: '2026-10-07T23:50:00+05:30' },
-  '/compare/asana-alternative': { lastmod: '2026-10-07T23:50:00+05:30' },
-  '/compare/notion-projects-alternative': { lastmod: '2026-10-07T23:50:00+05:30' },
+  '/compare/linear-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
+  '/compare/jira-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
+  '/compare/youtrack-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
+  '/compare/clickup-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
+  '/compare/asana-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
+  '/compare/notion-projects-alternative': { lastmod: '2026-10-08T06:08:00+05:30' },
 };
 
 export function normalizePath(pathname) {

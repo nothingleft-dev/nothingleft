@@ -1,3 +1,4 @@
+import { OUR_SELF_HOSTING } from '@lib/compare';
 import {
   ARTICLES,
   articlePath,
@@ -221,11 +222,7 @@ export const NOTION_COMPARISON: Comparison = {
     {
       group: 'hosting',
       capability: 'Hosting',
-      ours: {
-        support: 'yes',
-        note: 'A hosted service, or self-host the same AGPL-3.0 build. Seat and storage limits are settings a self-hoster changes.',
-        source: docsSource('Limits: self-hosting', '/docs/limits-and-billing#self-hosting'),
-      },
+      ours: OUR_SELF_HOSTING,
       theirs: {
         support: 'no',
         note: 'A cloud service. Its plans page lists no self-hosted edition.',

@@ -1,3 +1,4 @@
+import { OUR_SELF_HOSTING } from '@lib/compare';
 import {
   ARTICLES,
   burndown,
@@ -225,11 +226,7 @@ export const ASANA_COMPARISON: Comparison = {
     {
       group: 'hosting',
       capability: 'Self-hosting and source',
-      ours: {
-        support: 'yes',
-        note: 'AGPL-3.0, and a self-hosted install runs the same build as the hosted service. The install guide ships with launch.',
-        source: { label: 'Self-hosting', href: PATHS.selfHosting },
-      },
+      ours: OUR_SELF_HOSTING,
       theirs: {
         support: 'no',
         note: 'Cloud service. Its pricing page says it does not plan to offer an internally hosted version; data residency is an enterprise option.',

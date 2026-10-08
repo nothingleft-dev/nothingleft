@@ -1,3 +1,4 @@
+import { OUR_SELF_HOSTING } from '@lib/compare';
 import {
   assigneesOf,
   backlogAt,
@@ -233,11 +234,7 @@ export const JIRA_COMPARISON: Comparison = {
     {
       group: 'hosting',
       capability: 'Hosting',
-      ours: {
-        support: 'limited',
-        note: 'Hosted beta today. The AGPL-3.0 code is the same build and its limits are settings; the install guide ships with launch.',
-        source: doc('Self-hosting limits', PATHS.selfHosting),
-      },
+      ours: OUR_SELF_HOSTING,
       theirs: {
         support: 'limited',
         note: 'Cloud, hosted by Atlassian. Self-managed Data Center closed to new customers on 30 Mar 2026 and reaches end of life on 28 Mar 2029.',

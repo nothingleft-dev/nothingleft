@@ -18,11 +18,19 @@ const COLUMNS = [
     { href: '/solutions/startups', label: 'Startups' },
     { href: '/solutions/self-hosting', label: 'Self-hosting' },
   ],
+  [
+    { href: '/compare/jira-alternative', label: 'Jira alternative' },
+    { href: '/compare/linear-alternative', label: 'Linear alternative' },
+    { href: '/compare/youtrack-alternative', label: 'YouTrack alternative' },
+    { href: '/compare/clickup-alternative', label: 'ClickUp alternative' },
+    { href: '/compare/asana-alternative', label: 'Asana alternative' },
+    { href: '/compare/notion-projects-alternative', label: 'Notion alternative' },
+  ],
 ];
 ---
 
 <footer class="border-t border-line">
-  <div class="wrap py-10 md:py-12 flex flex-col md:flex-row md:items-start justify-between gap-8">
+  <div class="wrap py-10 md:py-12 flex flex-col lg:flex-row lg:items-start justify-between gap-8">
     <div>
       <div class="flex items-center gap-2">
         <Brand size={18} />
@@ -31,7 +39,7 @@ const COLUMNS = [
       <p class="mt-3 text-sm text-fg-2">Project tracking for people and AI agents.</p>
       <p class="mt-6 text-xs text-fg-3">© 2026 Nothing Left</p>
     </div>
-    <nav aria-label="Footer" class="grid grid-cols-2 sm:grid-cols-3 gap-x-12 gap-y-2 text-sm">
+    <nav aria-label="Footer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-10 gap-y-6 lg:gap-y-2 text-sm">
       {COLUMNS.map(links => (
         <div class="flex flex-col items-start gap-2">
           {links.map(link => (
