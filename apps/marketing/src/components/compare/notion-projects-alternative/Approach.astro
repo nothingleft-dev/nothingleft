@@ -1,0 +1,116 @@
+---
+import { FLOW, NOTION } from '@lib/compare/notion-projects-alternative';
+
+const notionPoints = [
+  {
+    text: 'Tasks are items in a database. The team picks their properties and views, and each view can be a board, a timeline, a calendar or a chart.',
+    href: NOTION.views,
+    label: 'Views, filters and sorts',
+  },
+  {
+    text: 'An ID property with a prefix gives tasks keys, and sub-items and dependencies are switched on per database.',
+    href: NOTION.uniqueId,
+    label: 'Unique ID',
+  },
+  {
+    text: 'The sprints setup adds current, next and last sprints and a Complete sprint button.',
+    href: NOTION.sprints,
+    label: 'Sprints',
+  },
+  {
+    text: 'Docs, wikis, Notion AI and Notion MCP sit in the same workspace as the tasks.',
+    href: NOTION.projects,
+    label: 'Notion Projects',
+  },
+];
+
+const ourPoints = [
+  `Every issue has a key such as ${FLOW.key}, a type, a priority, a status, story points, a sprint, an estimate and spent time. You do not have to set any of this up.`,
+  'Links read from both ends, and a depends-on loop is refused before it is saved.',
+  'Sprints are planned, active, then completed. The burndown is recorded every night, so editing an issue later does not rewrite the chart.',
+  'Each project has its own private knowledge base. An issue key in an article links to the issue, and the issue links back.',
+];
+---
+
+<section id="np-approach" class="border-t border-line bg-app" aria-labelledby="np-approach-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[720px]">
+      <h2 id="np-approach-title" class="h2">
+        Issues should behave like issues, even when the team also writes docs.
+      </h2>
+      <p class="prose mt-5">
+        A general workspace can be shaped into an issue tracker, and it can work well. The trade-off is who keeps the
+        shape. In Notion Projects the team builds its own task model from databases and keeps it consistent. In Nothing
+        Left the issue model comes built in. You cannot redesign it, and you do not have to maintain it.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid md:grid-cols-2 gap-6 lg:gap-8">
+      <div class="panel">
+        <h3 class="np-col-head">In Notion Projects, you assemble it</h3>
+        <ul class="np-points">
+          {notionPoints.map(point => (
+            <li>
+              {point.text}{' '}
+              <a class="link font-normal np-src" href={point.href} rel="noopener">
+                {point.label}
+                <span class="arr ext" aria-hidden="true">
+                  ↗
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="panel">
+        <h3 class="np-col-head">In Nothing Left, it is already there</h3>
+        <ul class="np-points">
+          {ourPoints.map(point => (
+            <li>{point}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+    <p class="mt-5 text-xs text-fg-3 max-w-[680px]">
+      Notion details are taken from its own product and help pages, linked above. A Notion workspace can be set up in
+      many different ways, so we describe what it offers rather than draw one.
+    </p>
+  </div>
+</section>
+
+<style>
+  .np-col-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+  }
+  .np-points {
+    padding: 4px 20px 8px;
+  }
+  .np-points li {
+    padding: 12px 0 12px 18px;
+    position: relative;
+    font-size: 14.5px;
+    line-height: 22px;
+    color: var(--text-secondary);
+  }
+  .np-points li + li {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .np-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .np-src {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+</style>

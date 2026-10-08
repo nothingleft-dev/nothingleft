@@ -1,0 +1,114 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import ComparisonMatrix from '@components/compare/ComparisonMatrix.astro';
+import Approach from '@components/compare/notion-projects-alternative/Approach.astro';
+import Choose from '@components/compare/notion-projects-alternative/Choose.astro';
+import Flow from '@components/compare/notion-projects-alternative/Flow.astro';
+import Switching from '@components/compare/notion-projects-alternative/Switching.astro';
+import Faq from '@components/Faq.astro';
+import PageHero from '@components/PageHero.astro';
+import Calculator from '@components/pricing/Calculator.astro';
+import Base from '@layouts/Base.astro';
+import {
+  KB_FEATURE_PATH,
+  NOTION_COMPARISON,
+  NOTION_PROJECTS_FAQ,
+  SPRINTS_FEATURE_PATH,
+} from '@lib/compare/notion-projects-alternative';
+import { SIGN_UP_URL } from '@lib/site';
+
+const sections = [
+  { href: '#matrix', label: 'Comparison' },
+  { href: '#np-flow', label: 'Sample flow' },
+  { href: '#np-choose', label: 'Choose Notion if…' },
+  { href: '#np-both', label: 'Use both' },
+  { href: '#np-switch', label: 'Switching' },
+  { href: '#compare', label: 'Cost' },
+];
+---
+
+<Base>
+  <PageHero
+    eyebrow="Compare"
+    title="Keep the flexibility for notes; give delivery a dedicated issue model."
+    lede="For teams running bugs and sprints in a general workspace. Notion Projects is flexible and does a great deal: databases, sprints, docs, AI and MCP. Nothing Left is narrower on purpose: an issue tracker in which keys, links, sprint state, time logs, burndown and project runbooks are built in."
+  >
+    <a class="btn" href="#np-flow">
+      See a sample issue flow
+      <span class="arr" aria-hidden="true">
+        ↓
+      </span>
+    </a>
+    <a class="link text-sm" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <nav slot="note" class="np-jump mt-6" aria-label="On this page">
+      <p class="text-xs text-fg-3">On this page</p>
+      <ul>
+        {sections.map(section => (
+          <li>
+            <a class="link font-normal" href={section.href}>
+              {section.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </PageHero>
+  <Approach />
+  <ComparisonMatrix
+    comparison={NOTION_COMPARISON}
+    title="Notion Projects and Nothing Left, row by row."
+    intro="What each one builds in, with a source for every cell. Limited means the capability is there with a narrower scope, and the note says how. Filter by group, or read the whole table."
+  />
+  <Flow />
+  <Choose />
+  <Calculator
+    preselect="notion"
+    title="What you would pay, next to Notion."
+    intro="Enter what your team pays Notion today and see what the beta takes off the bill. Your figure only: Notion's prices stay on its own pricing page, linked below, and nothing you type leaves this page."
+  />
+  <Switching />
+  <Faq
+    entries={NOTION_PROJECTS_FAQ}
+    title="Questions from teams on Notion."
+    intro="About sprints, docs, agents, moving tasks and cost. Short answers here, sources linked."
+  />
+  <CallToAction
+    title="Give the next bug an issue, and keep writing where you write."
+    body="Join the beta, create a project and file the bug you are working on now. Plan it into a sprint, log time on it, and write the runbook beside it when it is fixed."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={SPRINTS_FEATURE_PATH}>
+      See sprints and boards
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={KB_FEATURE_PATH}>
+      See the knowledge base
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>
+
+<style>
+  .np-jump ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 6px;
+    font-size: 13.5px;
+    line-height: 20px;
+  }
+</style>

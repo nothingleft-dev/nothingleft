@@ -1,0 +1,103 @@
+---
+import { MCP_MANUAL_PATH, NOTION, PRICING_PATH } from '@lib/compare/notion-projects-alternative';
+
+const review = [
+  'Access: the agent sees what your Notion connection can see, and nothing more',
+  'Mapping: which Notion properties become which fields, statuses and types',
+  'Duplicates: tasks that already exist as issues',
+  'Attachments and images inside task pages',
+  'People: Notion members matched to Nothing Left members',
+  'History: Notion’s edit history does not come across; each issue’s history starts when it is created',
+];
+---
+
+<section id="np-switch" class="border-t border-line" aria-labelledby="np-switch-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="lg:col-span-5">
+      <h2 id="np-switch-title" class="h2">
+        Moving tasks across from Notion.
+      </h2>
+      <p class="prose mt-5">
+        There is no native Notion importer, and nothing is moved in one click. There are two routes, and both expect you
+        to check the result.
+      </p>
+      <p class="mt-6 text-sm">
+        <a class="link" href={PRICING_PATH}>
+          What it costs
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+
+    <div class="lg:col-span-7">
+      <ol class="steps-list prose text-base">
+        <li>
+          <strong>CSV, the dependable route.</strong> Notion exports a database as CSV, with a markdown file for each
+          page.
+          <a class="link font-normal" href={NOTION.export} rel="noopener">
+            Notion’s export guide
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+          Nothing Left’s generic CSV import arrives at launch.
+        </li>
+        <li>
+          <strong>An agent, guided by you.</strong> Connect the same agent to Notion MCP and to Nothing Left. It reads
+          your open tasks and creates the projects, tags and issues through documented tools, as you and within your
+          role.
+          <a class="link font-normal" href={MCP_MANUAL_PATH}>
+            Connecting an agent
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </li>
+      </ol>
+
+      <div class="panel mt-8">
+        <p class="np-review-head">Review before you rely on it</p>
+        <ul class="np-review">
+          {review.map(item => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .np-review-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .np-review {
+    padding: 6px 20px 10px;
+  }
+  .np-review li {
+    position: relative;
+    padding: 8px 0 8px 18px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text-secondary);
+  }
+  .np-review li + li {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .np-review li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 15px;
+    width: 8px;
+    height: 8px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 2px;
+  }
+</style>

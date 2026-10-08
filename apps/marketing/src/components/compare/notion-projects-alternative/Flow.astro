@@ -1,0 +1,768 @@
+---
+import { FLOW, KB_FEATURE_PATH, SPRINTS_FEATURE_PATH } from '@lib/compare/notion-projects-alternative';
+
+const { issue, sprint, report, article } = FLOW;
+
+const STEPS = [
+  {
+    id: 'issue',
+    title: 'The bug',
+    body: `${FLOW.key} keeps its key, links, estimate and logged time from report to fix.`,
+  },
+  {
+    id: 'sprint',
+    title: 'Its sprint',
+    body: `${sprint.name} knows its goal, its dates and how much of it is resolved.`,
+  },
+  {
+    id: 'report',
+    title: 'The report',
+    body: 'The burndown reads the same issues, and work added mid-sprint gets its own line.',
+  },
+  {
+    id: 'article',
+    title: 'The write-up',
+    body: 'The decision record names the bug, and the bug links back to it.',
+  },
+];
+const BAR_WIDTHS = [40, 30, 20, 10];
+const total = STEPS.length;
+
+const last = report.days.length - 1;
+const x = (index: number) => (index / last) * 100;
+const y = (value: number) => 100 - (value / report.max) * 100;
+const recorded = report.days.flatMap((day, index) => (day.remaining === null ? [] : [{ ...day, index }]));
+const line = (points: { index: number; value: number }[]) =>
+  points.map(point => `${x(point.index)},${y(point.value)}`).join(' ');
+const remainingLine = line(recorded.map(day => ({ index: day.index, value: day.remaining ?? 0 })));
+const idealLine = line(report.days.map((day, index) => ({ index, value: day.ideal })));
+const addedLine = line(recorded.map(day => ({ index: day.index, value: day.added ?? 0 })));
+const ticks = [0, 10, 20, 30].filter(tick => tick <= report.max);
+const labelled = new Set([0, recorded.at(-1)?.index ?? 0, last]);
+const addedDay = recorded.find(day => (day.added ?? 0) > 0);
+const today = recorded.at(-1);
+const weekends = report.days.flatMap((day, index) => (day.working ? [] : [index]));
+const signed = (value: number | null) => (value === null ? '—' : value > 0 ? `+${value}` : String(value));
+const shown = (value: number | null) => (value === null ? '—' : String(value));
+---
+
+<section id="np-flow" class="border-t border-line bg-app" aria-labelledby="np-flow-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="np-flow-title" class="h2">
+        One bug, from its sprint to its write-up.
+      </h2>
+      <p class="prose mt-5">
+        <code>{FLOW.key}</code> as it stands on {report.today}, in a fictional project three weeks in. Each step below
+        opens the same piece of work from a different angle. Pick a step to see that screen.
+      </p>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div class="lg:col-span-4" role="group" aria-label={`${FLOW.key}, step by step`} data-np-steps>
+        {STEPS.map((step, index) => (
+          <button
+            type="button"
+            class="wf-step"
+            data-np-step={step.id}
+            data-np-title={step.title}
+            data-last={index === total - 1 ? '' : undefined}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+            aria-controls="np-panel"
+          >
+            <span class="bar" style={`width:${BAR_WIDTHS[index]}px`} />
+            <span>
+              <b>
+                <span class="sr-only">{`Step ${index + 1}: `}</span>
+                {step.title}
+              </b>
+              <span>{step.body}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div class="lg:col-span-8 min-w-0">
+        <div class="wf-panel" id="np-panel">
+          <div data-view="issue" class="on">
+            <p class="np-cap">
+              <span class="np-n">1 / {total}</span>
+              <span>The bug, fixed by {issue.assignee}</span>
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{FLOW.project}</span>
+              <span class="sep">/</span>
+              <span>Issues</span>
+              <span class="sep">/</span>
+              <span class="mono text-xs text-fg">{FLOW.key}</span>
+            </div>
+            <div class="wf-body">
+              <div class="flex items-center gap-2 text-xs text-fg-2">
+                <span class="badge l-bug" aria-hidden="true">
+                  B
+                </span>
+                {issue.type}
+                <span class:list={['badge ml-2', `l-${issue.priority.toLowerCase()}`]} aria-hidden="true">
+                  {issue.priority.charAt(0)}
+                </span>
+                {issue.priority}
+              </div>
+              <h3 class="wf-title">{issue.title}</h3>
+              <dl class="fields">
+                <dt>Status</dt>
+                <dd class="np-wrap">
+                  <i class="dot done"></i>
+                  {issue.status}
+                  <span class="text-fg-2">resolved {issue.resolved}</span>
+                </dd>
+                <dt>Reporter</dt>
+                <dd>{issue.reporter}</dd>
+                <dt>Assignee</dt>
+                <dd>
+                  <span class="av" aria-hidden="true">
+                    {issue.initials}
+                  </span>
+                  {issue.assignee}
+                </dd>
+                <dt>Sprint</dt>
+                <dd>{issue.sprint}</dd>
+                <dt>Story points</dt>
+                <dd class="mono text-xs">{issue.points}</dd>
+                <dt>Severity</dt>
+                <dd>{issue.severity}</dd>
+                <dt>Spent time</dt>
+                <dd class="np-wrap">
+                  <span class="mono text-xs">
+                    {issue.spent} <span class="text-fg-2 font-sans">of {issue.estimate}</span>
+                  </span>
+                  <span class="np-meter" aria-hidden="true">
+                    <span style={`width:${issue.spentShare}%`}></span>
+                  </span>
+                </dd>
+              </dl>
+              <div class="np-refs">
+                {issue.parent && (
+                  <div class="ref">
+                    <p class="lbl">Subtask of</p>
+                    <p class="np-ref-row">
+                      <span class="key">{issue.parent.key}</span>
+                      <span class="np-ellipsis">{issue.parent.title}</span>
+                    </p>
+                  </div>
+                )}
+                <div class="ref">
+                  <p class="lbl">
+                    Depends on <span class="mono">{issue.dependsOn.length}</span>
+                  </p>
+                  {issue.dependsOn.map(link => (
+                    <p class="np-ref-row">
+                      <s class="key">{link.key}</s>
+                      <span class="np-ellipsis">{link.title}</span>
+                      <span class="sr-only">, resolved</span>
+                    </p>
+                  ))}
+                </div>
+                <div class="ref">
+                  <p class="lbl">
+                    Referenced by <span class="mono">1</span>
+                  </p>
+                  <p class="np-ref-row">
+                    <span class="np-doc" aria-hidden="true"></span>
+                    <span class="np-ellipsis">{article.title}</span>
+                    <span class="text-fg-3 text-xs">{article.kind}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div data-view="sprint">
+            <p class="np-cap">
+              <span class="np-n">2 / {total}</span>
+              <span>Its sprint, on {report.today}</span>
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{FLOW.project}</span>
+              <span class="sep">/</span>
+              <span>Board</span>
+              <span class="sep">/</span>
+              <span class="text-fg">{sprint.name}</span>
+            </div>
+            <div class="np-sprint-head">
+              <p class="text-fg font-medium">{sprint.goal}</p>
+              <p>
+                {sprint.dates} · {sprint.daysLeft} days left · {sprint.completed} of {sprint.scope} points resolved
+              </p>
+            </div>
+            <div class="board">
+              {sprint.columns.map(column => (
+                <div class="col">
+                  <h4>
+                    {column.name}
+                    <span>{column.count}</span>
+                  </h4>
+                  {column.cards.map(card => (
+                    <div class:list={['card', { sel: card.key === FLOW.key }]}>
+                      <span class="pts">{card.points}</span>
+                      <span class="key">{card.key}</span>
+                      <br />
+                      {card.title}
+                      <span class="sr-only">
+                        {card.assignees.length > 0 ? `, assigned to ${card.assignees.join(' and ')}` : ', unassigned'}
+                      </span>
+                    </div>
+                  ))}
+                  {column.more > 0 && <p class="np-more">{column.more} more</p>}
+                </div>
+              ))}
+            </div>
+            <div class="wf-body np-note">
+              <p>
+                Fixed is a done status, so {FLOW.key} counts as resolved for the sprint and its burndown. When the
+                sprint is finished, you choose where its unfinished issues go, and the resolved ones stay with it.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="report">
+            <p class="np-cap">
+              <span class="np-n">3 / {total}</span>
+              <span>The burndown, read live on {report.today}</span>
+            </p>
+            <div class="pane-bar">
+              <span class="mono text-xs">{FLOW.project}</span>
+              <span class="sep">/</span>
+              <span>Reports</span>
+              <span class="sep">/</span>
+              <span class="text-fg">Burndown</span>
+            </div>
+            <div class="wf-body">
+              <p class="np-choices">
+                <span>
+                  <span class="text-fg-3">Project</span> {FLOW.project}
+                </span>
+                <span>
+                  <span class="text-fg-3">Sprint</span> {sprint.name}
+                </span>
+                <span>
+                  <span class="text-fg-3">Measure</span> Story points
+                </span>
+              </p>
+              <ul class="np-legend mt-4">
+                <li>
+                  <span class="np-line np-remaining" aria-hidden="true"></span>Remaining
+                </li>
+                <li>
+                  <span class="np-line np-ideal" aria-hidden="true"></span>Ideal
+                </li>
+                <li>
+                  <span class="np-line np-added" aria-hidden="true"></span>Added after the start
+                </li>
+              </ul>
+              <figure class="mt-5">
+                <div class="np-chart" role="img" aria-labelledby="np-chart-caption">
+                  <div class="np-plot">
+                    {weekends.map(index => (
+                      <span
+                        class="np-weekend"
+                        style={`left:${Math.max(0, x(index - 0.5))}%;width:${Math.min(x(index + 0.5), 100) - Math.max(0, x(index - 0.5))}%`}
+                      />
+                    ))}
+                    {ticks.map(tick => (
+                      <span class="np-grid" style={`top:${y(tick)}%`}>
+                        <span class="np-y">{tick}</span>
+                      </span>
+                    ))}
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                      <polyline class="np-l-ideal" points={idealLine} />
+                      <polyline class="np-l-added" points={addedLine} />
+                      <polyline class="np-l-remaining" points={remainingLine} />
+                    </svg>
+                    {today && (
+                      <span class="np-today" style={`left:${x(today.index)}%;top:${y(today.remaining ?? 0)}%`} />
+                    )}
+                  </div>
+                  <div class="np-x" aria-hidden="true">
+                    {report.days.map((day, index) =>
+                      labelled.has(index) ? (
+                        <span style={`left:${x(index)}%`} class:list={{ first: index === 0, end: index === last }}>
+                          {day.label}
+                        </span>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+                <figcaption id="np-chart-caption" class="mt-4 text-sm text-fg-2">
+                  {sprint.name} started with {report.committed} points. On {addedDay?.label ?? ''}, {sprint.added}{' '}
+                  points were added after the start, so remaining work rose that day because of new work, not lost
+                  progress. On {report.today}, {report.remaining} of {sprint.scope} points left.
+                </figcaption>
+              </figure>
+              <details class="np-figures mt-5">
+                <summary>Daily figures</summary>
+                <div class="np-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Remaining</th>
+                        <th scope="col">Ideal</th>
+                        <th scope="col">Scope</th>
+                        <th scope="col">Added</th>
+                        <th scope="col">Done</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recorded.map(day => (
+                        <tr data-for={day.iso}>
+                          <th scope="row">{day.label}</th>
+                          <td>{shown(day.remaining)}</td>
+                          <td>{day.ideal}</td>
+                          <td>{shown(day.scope)}</td>
+                          <td>{signed(day.added)}</td>
+                          <td>{shown(day.completed)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+            <div class="wf-body np-note">
+              <p>
+                The same report can be scoped by a search query or a saved view, and an agent asking for it through{' '}
+                <code>run_report</code> gets this table.
+              </p>
+            </div>
+          </div>
+
+          <div data-view="article">
+            <p class="np-cap">
+              <span class="np-n">4 / {total}</span>
+              <span>The write-up, in {FLOW.project}’s knowledge base</span>
+            </p>
+            <div class="pane-bar np-crumbs">
+              <span class="mono text-xs">{FLOW.project}</span>
+              <span class="sep">/</span>
+              <span class="np-mid">Knowledge base</span>
+              <span class="sep np-mid">/</span>
+              <span>{article.folder}</span>
+              <span class="sep">/</span>
+              <span class="text-fg np-last">{article.title}</span>
+            </div>
+            <div class="np-kb">
+              <nav class="np-tree" aria-label="Knowledge base">
+                <ul>
+                  <li>
+                    {article.folder}
+                    <ul>
+                      <li aria-current="page" class="np-current">
+                        {article.title}
+                      </li>
+                    </ul>
+                  </li>
+                  {article.runbook && (
+                    <li>
+                      {article.runbook.folder}
+                      <ul>
+                        <li>{article.runbook.title}</li>
+                      </ul>
+                    </li>
+                  )}
+                </ul>
+              </nav>
+              <div class="wf-body np-article">
+                <p class="text-xs text-fg-2">
+                  {article.kind} · Published to project members · {article.author}, {article.published}
+                </p>
+                <h3 class="wf-title">{article.title}</h3>
+                <p class="np-tags" aria-label="Tags">
+                  {article.tags.map(tag => (
+                    <span class="np-tag">{tag}</span>
+                  ))}
+                </p>
+                <div class="wf-md">
+                  <p>
+                    Invitation links expire after seven days. An expired link must say so and offer a new one; a blank
+                    page is a bug.
+                  </p>
+                  <p>
+                    First seen in <s class="key">{FLOW.key}</s>, now resolved, so its key is struck through.
+                  </p>
+                </div>
+                <dl class="fields">
+                  <dt>Page</dt>
+                  <dd class="mono text-xs np-break">{article.path}</dd>
+                  <dt>For agents</dt>
+                  <dd class="mono text-xs np-break">{article.uri}</dd>
+                </dl>
+              </div>
+            </div>
+            <div class="wf-body np-note">
+              <p>
+                Only {FLOW.project}’s members can read it. There is no public page and no anonymous access. Runbooks and
+                post-incident write-ups live in the same tree.
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="sr-only" aria-live="polite" data-np-status></p>
+        <p class="mt-4 text-xs text-fg-3">
+          Hand-drawn product views with fictional data. More on{' '}
+          <a class="link font-normal" href={SPRINTS_FEATURE_PATH}>
+            sprints and boards
+          </a>{' '}
+          and the{' '}
+          <a class="link font-normal" href={KB_FEATURE_PATH}>
+            project knowledge base
+          </a>
+          .
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import '@scripts/compare/notion-projects-alternative';
+</script>
+
+<style>
+  .np-cap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .np-n {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text);
+    flex: none;
+  }
+  .np-wrap {
+    flex-wrap: wrap;
+  }
+  .np-meter {
+    display: block;
+    width: 96px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--border);
+    overflow: hidden;
+  }
+  .np-meter span {
+    display: block;
+    height: 100%;
+    background: var(--text);
+  }
+  .np-refs .ref p + p {
+    margin-top: 4px;
+  }
+  .np-ref-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .np-ellipsis {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .np-doc {
+    width: 10px;
+    height: 12px;
+    flex: none;
+    border: 1.5px solid var(--text-secondary);
+    border-radius: 2px;
+  }
+  .np-sprint-head {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .np-sprint-head p + p {
+    margin-top: 2px;
+  }
+  .np-sprint-head .text-fg {
+    font-size: 13.5px;
+    line-height: 20px;
+  }
+  .np-more {
+    margin-top: 6px;
+    padding: 0 2px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .np-note {
+    padding-top: 14px;
+    padding-bottom: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .np-note code {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg-inset);
+    padding: 0 4px;
+    border-radius: var(--radius-xs);
+  }
+  .np-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    font-size: 12.5px;
+    line-height: 18px;
+  }
+  .np-choices > span {
+    display: inline-flex;
+    gap: 6px;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .np-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .np-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .np-line {
+    width: 18px;
+    height: 0;
+    border-top: 2px solid var(--text);
+  }
+  .np-line.np-ideal {
+    border-top: 2px dashed var(--chart-ideal);
+  }
+  .np-line.np-added {
+    border-top-color: var(--chart-2);
+  }
+  .np-chart {
+    padding-left: 26px;
+  }
+  .np-plot {
+    position: relative;
+    height: 200px;
+  }
+  @media (min-width: 768px) {
+    .np-plot {
+      height: 230px;
+    }
+  }
+  .np-plot svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .np-plot polyline {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .np-l-remaining {
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  .np-l-ideal {
+    stroke: var(--chart-ideal);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 4;
+  }
+  .np-l-added {
+    stroke: var(--chart-2);
+    stroke-width: 2;
+  }
+  .np-weekend {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--bg-inset);
+  }
+  .np-grid {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 1px solid var(--chart-grid);
+  }
+  .np-y {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: -9px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .np-today {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow:
+      0 0 0 2px var(--bg-surface),
+      0 0 0 3px var(--text);
+  }
+  .np-x {
+    position: relative;
+    height: 22px;
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  .np-x span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .np-x .first {
+    transform: none;
+  }
+  .np-x .end {
+    transform: translateX(-100%);
+  }
+  .np-figures summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    width: fit-content;
+  }
+  .np-figures summary:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-xs);
+  }
+  .np-table-wrap {
+    margin-top: 8px;
+    overflow-x: auto;
+  }
+  .np-figures table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    line-height: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .np-figures th,
+  .np-figures td {
+    padding: 5px 0 5px 8px;
+    border-top: 1px solid var(--border-subtle);
+    text-align: right;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .np-figures th:first-child {
+    text-align: left;
+    padding-left: 0;
+  }
+  .np-figures thead th {
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .np-figures td {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+  }
+  .np-figures td:nth-child(2) {
+    color: var(--text);
+  }
+  .np-crumbs {
+    min-width: 0;
+  }
+  .np-last {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 640px) {
+    .np-mid {
+      display: none;
+    }
+  }
+  .np-kb {
+    display: grid;
+  }
+  @media (min-width: 768px) {
+    .np-kb {
+      grid-template-columns: 190px minmax(0, 1fr);
+    }
+  }
+  .np-tree {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+    font-size: 12.5px;
+    line-height: 18px;
+    color: var(--text-secondary);
+  }
+  @media (min-width: 768px) {
+    .np-tree {
+      border-bottom: 0;
+      border-right: 1px solid var(--border);
+    }
+  }
+  .np-tree li + li {
+    margin-top: 10px;
+  }
+  .np-tree ul ul {
+    margin-top: 4px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border);
+  }
+  .np-tree ul ul li {
+    margin-top: 0;
+    padding: 3px 0 3px 8px;
+  }
+  .np-current {
+    color: var(--text);
+    font-weight: 500;
+  }
+  .np-article {
+    min-width: 0;
+  }
+  .np-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .np-tag {
+    font-size: 12px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: var(--radius-full);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .np-break {
+    overflow-wrap: anywhere;
+  }
+</style>
