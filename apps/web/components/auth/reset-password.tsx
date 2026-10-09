@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RequestPasswordResetSchema, ResetPasswordSchema } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -93,7 +92,7 @@ function ChooseNewPassword({ token }: { token: string }) {
 
       {form.summary ? (
         <FormAlert title={form.summary}>
-          Reset links last one hour and work once. <Link href="/reset-password">Request a new one</Link>.
+          Reset links last one hour and work once. <TextLink href="/reset-password">Request a new one</TextLink>.
         </FormAlert>
       ) : null}
 

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import type { Route } from 'next';
 import { useCallback, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -120,9 +119,9 @@ export function SignInForm() {
           value={form.values.password}
           error={form.errors.password}
           trailing={
-            <Link href="/reset-password" className="text-xs text-text-secondary underline-offset-4 hover:underline">
+            <TextLink href="/reset-password" quiet className="text-xs">
               Forgot?
-            </Link>
+            </TextLink>
           }
           onChange={e => form.set('password', e.target.value)}
         />

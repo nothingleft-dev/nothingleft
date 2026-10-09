@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { SignUpSchema, type Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { AuthHeading, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
+import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -42,7 +42,7 @@ export function SignUpForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AuthHeading title="Create your account" lede="Free for twenty people per organisation, forever. No card." />
+      <AuthHeading title="Create your account" lede="Free for 20 people per organisation, forever. No card." />
 
       <ProviderButtons verb="sign up" />
 
@@ -87,9 +87,9 @@ export function SignUpForm() {
           {form.isPending ? 'Creating your account…' : 'Create account'}
         </Button>
         <FinePrint>
-          By continuing you agree to the <a href="https://nothingleft.dev/terms">terms</a> and{' '}
-          <a href="https://nothingleft.dev/privacy">privacy policy</a>. Until you opt in, we only email you about your
-          account.
+          By continuing you agree to the <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}
+          <ExternalLink href="https://nothingleft.dev/privacy">privacy policy</ExternalLink>. Until you opt in, we only
+          email you about your account.
         </FinePrint>
       </form>
 

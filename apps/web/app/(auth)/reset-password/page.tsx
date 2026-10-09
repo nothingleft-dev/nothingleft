@@ -7,7 +7,7 @@ export const metadata: Metadata = authPageMetadata('reset-password');
 
 export default function Page() {
   return (
-    <AuthSplit>
+    <AuthSplit panel="reset">
       <ResetPassword />
     </AuthSplit>
   );

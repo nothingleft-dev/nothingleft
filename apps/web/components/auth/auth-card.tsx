@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import type { ReactNode } from 'react';
+import { cn } from '@lib/utils';
 
 export function AuthHeading({ title, lede }: { title: string; lede?: string }) {
   return (
@@ -12,20 +13,44 @@ export function AuthHeading({ title, lede }: { title: string; lede?: string }) {
 }
 
 export function FinePrint({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-sm leading-relaxed text-text-secondary [&_a]:underline [&_a]:underline-offset-4">{children}</p>
-  );
+  return <p className="text-sm leading-relaxed text-text-secondary">{children}</p>;
 }
 
 export function Swap({ children }: { children: ReactNode }) {
   return <p className="text-sm text-text-secondary">{children}</p>;
 }
 
-/** The one link style on these pages: ink, underlined on hover. Never an accent fill. */
-export function TextLink({ href, children }: { href: string; children: ReactNode }) {
+/** The one link style on these pages: ink, with an underline that draws in from the left on hover. */
+export function TextLink({
+  href,
+  quiet,
+  className,
+  children,
+}: {
+  href: string;
+  quiet?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <Link href={href as Route} className="font-medium text-text underline-offset-4 hover:underline">
+    <Link href={href as Route} className={cn(quiet ? 'auth-link-quiet' : 'auth-link', className)}>
       {children}
+      {quiet ? null : (
+        <span className="auth-arr" aria-hidden="true">
+          {'\u2060'}→
+        </span>
+      )}
     </Link>
+  );
+}
+
+export function ExternalLink({ href, quiet, children }: { href: string; quiet?: boolean; children: ReactNode }) {
+  return (
+    <a className={quiet ? 'auth-link-quiet' : 'auth-link'} href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+      <span className="auth-arr auth-arr-ext" aria-hidden="true">
+        {'\u2060'}↗
+      </span>
+    </a>
   );
 }

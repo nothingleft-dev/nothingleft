@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandMark, Wordmark } from '@components/shell/brand';
+import { ExternalLink } from '@components/auth/auth-card';
 import { AuthPanel, type PanelVariant } from '@components/auth/auth-panel';
 
 /**
@@ -17,12 +18,15 @@ export function AuthSplit({ panel = 'default', children }: { panel?: PanelVarian
             <Wordmark />
           </Link>
           <nav className="flex gap-4 text-xs text-text-secondary">
-            <a className="hover:text-text" href="https://docs.nothingleft.dev">
+            <ExternalLink quiet href="https://nothingleft.dev/docs">
               Docs
-            </a>
-            <a className="hover:text-text" href="https://github.com/nothingleft">
+            </ExternalLink>
+            <ExternalLink quiet href="https://nothingleft.dev/solutions/self-hosting">
               Self-host
-            </a>
+            </ExternalLink>
+            <ExternalLink quiet href="https://github.com/nothingleft-dev/nothingleft">
+              GitHub
+            </ExternalLink>
           </nav>
         </header>
 
