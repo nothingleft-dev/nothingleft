@@ -32,6 +32,9 @@ UI_KEYS = {'NEXT_PUBLIC_API_BASE_URL', 'NEXT_PUBLIC_GA_MEASUREMENT_ID', 'NEXT_PU
 UI_TRANSPORT = {'VERCEL_TOKEN', 'VERCEL_ORG_ID', 'VERCEL_PROJECT_ID', 'VERCEL_CLI_VERSION'}
 UI_DEFAULTS = {'NEXT_PUBLIC_API_BASE_URL': 'https://api.nothingleft.dev',
                'NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT': 'false'}
+MARKETING_BUILD_KEYS = {'PUBLIC_GA_MEASUREMENT_ID', 'PUBLIC_CLARITY_PROJECT_ID'}
+MARKETING_WORKER_SECRETS = {'TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN'}
+MARKETING_TRANSPORT = {'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'}
 
 
 def validate_api(values):
@@ -62,7 +65,8 @@ def collect(service, variables, secrets):
     elif service == 'UI':
         keys, transport, defaults, sensitive = UI_KEYS, UI_TRANSPORT, UI_DEFAULTS, set()
     elif service == 'MARKETING':
-        keys, transport, defaults, sensitive = UI_KEYS, UI_TRANSPORT, {}, set()
+        keys = MARKETING_BUILD_KEYS | MARKETING_WORKER_SECRETS
+        transport, defaults, sensitive = MARKETING_TRANSPORT, {}, MARKETING_WORKER_SECRETS
     else:
         raise ValueError('Unknown deployment service')
     values = dict(defaults)
@@ -82,7 +86,7 @@ def collect(service, variables, secrets):
                 raise ValueError(f'Configure {name} in either Secrets or Variables, not both')
             if key in sensitive and not private:
                 raise ValueError(f'{name} must be a GitHub Secret')
-            if key.startswith('NEXT_PUBLIC_') and private:
+            if key.startswith(('NEXT_PUBLIC_', 'PUBLIC_')) and private:
                 raise ValueError(f'{name} is browser-visible; configure it as a Variable')
             if any(char in value for char in ('\0', '\r', '\n')):
                 raise ValueError(f'{name} must be a single-line value')
@@ -92,7 +96,7 @@ def collect(service, variables, secrets):
     if service == 'API':
         values.pop('PORT', None)
         validate_api(values)
-    elif not values.get('NEXT_PUBLIC_API_BASE_URL'):
+    elif service == 'UI' and not values.get('NEXT_PUBLIC_API_BASE_URL'):
         raise ValueError(f'{service}_NEXT_PUBLIC_API_BASE_URL is required')
     return {'values': values, 'secret_names': sorted(secret_names)}
 

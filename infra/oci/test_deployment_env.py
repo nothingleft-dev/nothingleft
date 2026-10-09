@@ -124,5 +124,57 @@ class VercelConfiguration(unittest.TestCase):
             self.assertEqual(run.call_args.kwargs['stderr'].name, os.devnull)
 
 
+class MarketingConfiguration(unittest.TestCase):
+    def test_build_values_are_variables_and_worker_values_are_secrets(self):
+        variables = {'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'G-TEST', 'MARKETING_CLOUDFLARE_ACCOUNT_ID': 'account',
+                     'UI_NEXT_PUBLIC_API_BASE_URL': 'https://example.invalid'}
+        secrets = {'MARKETING_TURSO_AUTH_TOKEN': 'token', 'MARKETING_CLOUDFLARE_API_TOKEN': 'cf-token'}
+        payload = collect('MARKETING', variables, secrets)
+        self.assertEqual(payload['values'], {'PUBLIC_GA_MEASUREMENT_ID': 'G-TEST', 'TURSO_AUTH_TOKEN': 'token'})
+        self.assertEqual(payload['secret_names'], ['TURSO_AUTH_TOKEN'])
+        for variables, secrets in (({}, {'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'do-not-log'}),
+                                   ({'MARKETING_TURSO_AUTH_TOKEN': 'do-not-log'}, {}),
+                                   ({'MARKETING_UNKNOWN': 'do-not-log'}, {})):
+            with self.subTest(variables=list(variables), secrets=list(secrets)), self.assertRaises(ValueError) as caught:
+                collect('MARKETING', variables, secrets)
+            self.assertNotIn('do-not-log', str(caught.exception))
+
+    def test_worker_name_comes_from_wrangler_config(self):
+        module = load('cloudflare-deploy')
+        self.assertEqual(module.worker_name((module.APP / 'wrangler.jsonc').read_text()), 'nothingleft-marketing')
+
+    def test_build_never_receives_cloudflare_credentials(self):
+        module = load('cloudflare-deploy')
+        payload = {'values': {'PUBLIC_GA_MEASUREMENT_ID': 'G-TEST', 'TURSO_AUTH_TOKEN': 'token'},
+                   'secret_names': ['TURSO_AUTH_TOKEN']}
+        with patch.dict(os.environ, CLOUDFLARE_API_TOKEN='hidden'), contextlib.redirect_stdout(io.StringIO()), \
+                patch.object(module.subprocess, 'run', return_value=type('Result', (), {'returncode': 0})()) as run:
+            module.build(payload)
+        environment = run.call_args.kwargs['env']
+        self.assertNotIn('CLOUDFLARE_API_TOKEN', environment)
+        self.assertNotIn('TURSO_AUTH_TOKEN', environment)
+        self.assertEqual(environment['PUBLIC_GA_MEASUREMENT_ID'], 'G-TEST')
+
+    def test_secret_sync_removes_only_owned_secrets(self):
+        module = load('cloudflare-deploy')
+        client = module.Cloudflare('hidden-token', 'account', 'worker')
+        calls = []
+        def request(method, path='', body=None):
+            calls.append((method, path, body))
+            return [{'name': 'TURSO_DATABASE_URL'}, {'name': 'UNRELATED'}] if method == 'GET' else None
+        with patch.object(client, 'request', side_effect=request), contextlib.redirect_stdout(io.StringIO()) as output:
+            client.sync({'TURSO_AUTH_TOKEN': 'secret-value'})
+        self.assertEqual([call[2]['name'] for call in calls if call[0] == 'PUT'], ['TURSO_AUTH_TOKEN'])
+        self.assertEqual([call[1] for call in calls if call[0] == 'DELETE'], ['/TURSO_DATABASE_URL'])
+        self.assertNotIn('secret-value', output.getvalue())
+
+    def test_http_body_does_not_reach_logs(self):
+        module = load('cloudflare-deploy')
+        error = module.urllib.error.HTTPError('https://api.cloudflare.com', 400, 'secret-body', {}, io.BytesIO(b'secret-body'))
+        with patch.object(module.urllib.request, 'urlopen', side_effect=error), self.assertRaises(RuntimeError) as caught:
+            module.Cloudflare('hidden-token', 'account', 'worker').request('GET')
+        self.assertNotIn('secret-body', str(caught.exception))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -244,6 +244,7 @@ PR and every push to `main`; the nightly schedule runs only the report jobs.
 | Outdated dependencies | nightly, manual | `bun outdated --recursive`, report only |
 | Deploy API | CI green on `main`, or manual | `.github/workflows/deploy-oci.yml`: builds a release on the runner and hands it to the host's deployment controller (`infra/oci/`) |
 | Deploy web | CI green on `main`, or manual | `.github/workflows/deploy-vercel.yml` |
+| Deploy marketing | CI green on `main`, or manual | `.github/workflows/deploy-marketing.yml`: builds `apps/marketing` on the runner, runs `wrangler deploy` and sets the Worker's secrets through the Cloudflare API |
 
 Every run gets a fresh database, which the tests rely on: they leave rows
 behind by design (`users` are never deleted; each run uses unique emails).

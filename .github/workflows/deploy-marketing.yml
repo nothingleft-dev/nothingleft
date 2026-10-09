@@ -1,0 +1,64 @@
+name: Deploy marketing site
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-production-marketing
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.id == github.repository_id)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      TURBO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - name: Require successful CI for current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 infra/oci/check-deploy-ci.py
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Install Wrangler outside the deployment source
+        run: |
+          mkdir -p "$RUNNER_TEMP/wrangler-cli"
+          cd "$RUNNER_TEMP/wrangler-cli"
+          bun init -y > /dev/null
+          bun add wrangler@latest
+      - name: Prepare marketing configuration from GitHub
+        env:
+          DEPLOY_VARS_JSON: ${{ toJson(vars) }}
+          DEPLOY_SECRETS_JSON: ${{ toJson(secrets) }}
+        run: python3 infra/oci/render-deploy-env.py MARKETING "$RUNNER_TEMP/marketing-env.json"
+      - name: Build the static site
+        run: python3 infra/oci/cloudflare-deploy.py build "$RUNNER_TEMP/marketing-env.json"
+      - name: Deploy the Worker and synchronize its secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.MARKETING_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.MARKETING_CLOUDFLARE_ACCOUNT_ID }}
+        run: python3 infra/oci/cloudflare-deploy.py deploy "$RUNNER_TEMP/marketing-env.json" --cli "$RUNNER_TEMP/wrangler-cli/node_modules/.bin/wrangler"
+      - name: Remove temporary configuration
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/marketing-env.json"

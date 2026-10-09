@@ -1,7 +1,8 @@
 # Application deployment tools
 
 Runner-side tooling for the GitHub Actions API and frontend deployments
-(`.github/workflows/deploy-oci.yml`, `.github/workflows/deploy-vercel.yml`). Hosting
+(`.github/workflows/deploy-oci.yml`, `.github/workflows/deploy-vercel.yml`,
+`.github/workflows/deploy-marketing.yml`). Hosting
 requirements and configuration are in [docs/infrastructure.md](../../docs/infrastructure.md).
 
 The destination host must have its deployment controller installed before the
@@ -19,6 +20,7 @@ through a pinned, restricted SSH identity.
 | `env_contract.py` | Preserve runtime key names and validate environment configuration |
 | `release_lib.py` | Validate artifacts and migration/runtime compatibility |
 | `vercel-deploy.py` | Synchronize UI production configuration and deploy Next.js |
+| `cloudflare-deploy.py` | Build the marketing site, deploy its Worker and synchronize Worker secrets |
 | `api.env.example`, `ui.env.example` | Credential-free configuration templates |
 | `test_release.py`, `test_deployment_env.py` | Public runner and configuration safety tests |
 
