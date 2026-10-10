@@ -39,6 +39,7 @@ const SECTIONS: Record<string, string> = {
   reports: 'Reports',
   articles: 'Knowledge base',
   settings: 'Settings',
+  import: 'Import',
 };
 
 type Crumb = { label: string; href?: Route; mono?: boolean; copy?: boolean };

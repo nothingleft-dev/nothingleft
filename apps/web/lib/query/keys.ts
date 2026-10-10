@@ -30,6 +30,7 @@ export const queryKeys = {
   storageOverview: (slug: string) => ['organizations', slug, 'storage', 'overview'] as const,
   storageFiles: (slug: string, query: StorageFilesFilter = {}) =>
     ['organizations', slug, 'storage', 'files', query] as const,
+  exports: (slug: string) => ['organizations', slug, 'exports'] as const,
   transferPreview: (token: string) => ['ownership-transfers', token] as const,
 
   projects: (query: ProjectQuery = {}) => ['projects', query] as const,
@@ -41,6 +42,8 @@ export const queryKeys = {
   customFields: (key: string) => ['projects', key, 'custom-fields'] as const,
   workItemAttributes: (key: string) => ['projects', key, 'work-item-attributes'] as const,
   deletedIssues: (key: string, offset: number) => ['projects', key, 'deleted-issues', offset] as const,
+  imports: (key: string) => ['projects', key, 'imports'] as const,
+  importJob: (key: string, id: number | null) => ['projects', key, 'imports', id] as const,
 
   issue: (key: string) => ['issues', key] as const,
   issueWatchers: (key: string) => ['issues', key, 'watchers'] as const,
@@ -56,6 +59,8 @@ export const queryKeys = {
   issueRefs: (keys: readonly string[]) => ['issue-refs', 'keys', ...keys] as const,
   issueRefSearch: (q: string, project: string | null) => ['issue-refs', 'search', q, project] as const,
   tags: (q: string, context?: TagContext) => ['tags', q, context ?? null] as const,
+  // Under 'tags' too, so a rename, merge or delete refreshes the pickers with the list.
+  managedTags: (q: string) => ['tags', 'manage', q] as const,
 
   // Every search result shares the 'issues', 'search' prefix so one invalidation refreshes all lists.
   issueSearches: () => ['issues', 'search'] as const,

@@ -14,4 +14,6 @@ export const POLL = {
   // A job the user started and is watching, such as moving files to their own bucket: it
   // moves 50 files per batch, so a faster poll would mostly redraw the same figures.
   progress: every(5_000),
+  // An import or an export running in the background (owner, 10 Oct 2026).
+  job: every(10_000),
 } as const;

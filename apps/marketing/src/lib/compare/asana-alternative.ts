@@ -475,8 +475,8 @@ export const SWITCH_STEPS: SwitchStep[] = [
     source: { label: 'Export to CSV', href: ASANA.csvExport },
   },
   {
-    title: 'Import the CSV at launch',
-    body: 'Generic CSV import ships with launch and is the dependable bulk path. There is no native Asana importer.',
+    title: 'Import the CSV',
+    body: 'Generic CSV import is the dependable bulk path. There is no native Asana importer.',
   },
   {
     title: 'Or let an agent carry it across',
@@ -524,7 +524,7 @@ export const ASANA_FAQ: FaqEntry[] = [
   {
     question: 'How do we move our work from Asana?',
     answer: [
-      'Generic CSV import ships with launch. An agent connected to both tools can also carry open tasks across through MCP, with you reviewing the mapping. There is no native Asana importer.',
+      'Use the generic CSV import. An agent connected to both tools can also carry open tasks across through MCP, with you reviewing the mapping. There is no native Asana importer.',
     ],
   },
   {

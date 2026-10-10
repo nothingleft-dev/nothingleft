@@ -24,12 +24,14 @@ import { ActiveSprintPanel, backlogHref } from '@components/agile/active-sprint'
 import { useRecordProjectVisit } from '@hooks/use-project-visit';
 import { CREATED_7D, OVERDUE, RESOLVED_7D, UNASSIGNED, listHref } from '@lib/issue-list/links';
 import { PROJECT_ROLE_LABELS } from '@lib/roles';
+import { useProjectRoles } from '@hooks/use-project-roles';
 
 export function ProjectDashboard({ projectKey }: { projectKey: string }) {
   const project = useProject(projectKey);
   const members = useProjectMembers(projectKey);
   const figures = useIssueFigures({ project: projectKey });
   const sprints = useSprints(projectKey);
+  const roles = useProjectRoles();
   useRecordProjectVisit(project.data && !project.data.is_archived ? projectKey : null);
 
   if (project.isPending) return <PageSkeleton rows={4} />;
@@ -110,7 +112,12 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
       {figures.isError ? <FormAlert title="The figures could not be loaded." /> : null}
 
       {total === 0 && !figures.isPending ? (
-        <FirstProjectEmptyState projectName={data.name} canCreate={canCreate} />
+        <FirstProjectEmptyState
+          projectKey={data.key}
+          projectName={data.name}
+          canCreate={canCreate}
+          canImport={roles.canAdmin(data.key)}
+        />
       ) : (
         <StatRow stats={stats} state={figures.isPending ? 'loading' : 'ready'} />
       )}

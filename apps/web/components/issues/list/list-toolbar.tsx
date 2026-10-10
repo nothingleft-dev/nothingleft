@@ -1,6 +1,8 @@
 'use client';
 
-import { ChevronDown, Download } from 'lucide-react';
+import Link from 'next/link';
+import type { Route } from 'next';
+import { ChevronDown, Download, Upload } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import {
   DropdownMenu,
@@ -31,6 +33,8 @@ interface ListToolbarProps {
   columnsFromView: boolean;
   onExport: () => void;
   exporting: boolean;
+  /** Only for a Project Admin on a project's own list. */
+  importHref?: string | undefined;
   leading?: React.ReactNode;
 }
 
@@ -45,6 +49,7 @@ export function ListToolbar({
   groupFields,
   onExport,
   exporting,
+  importHref,
   leading,
 }: ListToolbarProps) {
   const groupLabel = group.startsWith('custom:')
@@ -136,6 +141,19 @@ export function ListToolbar({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {importHref ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button asChild variant="outline" size="icon-xs">
+              <Link href={importHref as Route} aria-label="Import issues from CSV">
+                <Upload className="size-3.5" />
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Import issues from CSV</TooltipContent>
+        </Tooltip>
+      ) : null}
 
       <Tooltip>
         <TooltipTrigger asChild>

@@ -55,7 +55,7 @@ export const HOME_FAQ: FaqEntry[] = [
   {
     question: 'Which integrations exist today?',
     answer: [
-      'MCP for any agent client, over HTTP or locally over stdio. Google and GitHub sign-in. CSV export now, and generic CSV import at launch.',
+      'MCP for any agent client, over HTTP or locally over stdio. Google and GitHub sign-in. CSV export and generic CSV import.',
       'Not built yet: pull-request or deployment status on issues, outgoing webhooks, native importers from other trackers, and workflow automation. An agent connected to both your old tracker and this one can help carry issues across, with you reviewing the mapping.',
     ],
   },

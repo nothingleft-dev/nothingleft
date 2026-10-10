@@ -1,23 +1,23 @@
 'use client';
 
+import Link from 'next/link';
+import type { Route } from 'next';
 import { FileSpreadsheet, KeyRound, Plus } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Kbd } from '@components/kbd';
 import { useCreateIssueDialog } from '@components/issues/create-issue-provider';
 import { ConnectAgentDialog } from '@components/projects/connect-agent-dialog';
 import { useNeedsVerification, VerifyEmailNotice } from '@components/settings/verify-email-notice';
-import { cn } from '@lib/utils';
 
 interface FirstProjectEmptyStateProps {
+  projectKey: string;
   projectName: string;
   canCreate: boolean;
+  canImport: boolean;
 }
 
-/**
- * onboarding.md § The first empty state: three equal actions, the MCP one level with the
- * first. The CSV card is a placeholder until import lands.
- */
-export function FirstProjectEmptyState({ projectName, canCreate }: FirstProjectEmptyStateProps) {
+/** onboarding.md § The first empty state: three equal actions, the MCP one level with the first. */
+export function FirstProjectEmptyState({ projectKey, projectName, canCreate, canImport }: FirstProjectEmptyStateProps) {
   const { openCreateIssue } = useCreateIssueDialog();
   const unverified = useNeedsVerification();
 
@@ -62,13 +62,16 @@ export function FirstProjectEmptyState({ projectName, canCreate }: FirstProjectE
         <Card
           icon={<FileSpreadsheet />}
           title="Import from CSV"
-          body="Bring existing work across with a column-mapping preview before anything is written."
+          body="Bring existing work across from any spreadsheet: map the columns and check every row in a dry run before anything is written."
           action={
-            <Button variant="outline" disabled aria-disabled title="CSV import arrives in a later release">
-              Coming soon
-            </Button>
+            canImport ? (
+              <Button asChild variant="outline">
+                <Link href={`/projects/${projectKey}/import` as Route}>Import from CSV</Link>
+              </Button>
+            ) : (
+              <p className="text-xs text-text-secondary">A Project Admin of {projectName} imports existing work.</p>
+            )
           }
-          muted
         />
       </div>
     </section>
@@ -80,16 +83,14 @@ function Card({
   title,
   body,
   action,
-  muted = false,
 }: {
   icon: React.ReactNode;
   title: string;
   body: string;
   action: React.ReactNode;
-  muted?: boolean;
 }) {
   return (
-    <div className={cn('flex flex-col gap-3 rounded-md border bg-surface p-4', muted && 'border-dashed')}>
+    <div className="flex flex-col gap-3 rounded-md border bg-surface p-4">
       <span className="grid size-8 place-items-center rounded-md bg-inset text-text-secondary [&_svg]:size-4">
         {icon}
       </span>

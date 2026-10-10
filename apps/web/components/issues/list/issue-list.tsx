@@ -169,6 +169,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
         groupFields={groupFields}
         onExport={exportCsv}
         exporting={exporter.isPending}
+        importHref={project && roles.canAdmin(project) ? `/projects/${project}/import` : undefined}
       />
 
       {search.isPending && !search.data ? (
@@ -183,7 +184,12 @@ export function IssueList({ project, base = '', title, views: withViews = true }
           description="The message above names the part at fault. Valid values, where there are any, are one click away."
         />
       ) : projectEmpty ? (
-        <FirstProjectEmptyState projectName={projectQuery.data.name} canCreate={roles.canEdit(project)} />
+        <FirstProjectEmptyState
+          projectKey={project}
+          projectName={projectQuery.data.name}
+          canCreate={roles.canEdit(project)}
+          canImport={roles.canAdmin(project)}
+        />
       ) : total === 0 ? (
         <EmptyState
           title={fullQuery ? 'No issues match this search.' : 'No issues yet.'}

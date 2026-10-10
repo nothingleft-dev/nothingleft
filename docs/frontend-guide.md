@@ -75,7 +75,8 @@ apps/web/
 │   │                         one file per path-C step · welcome-flow (the step router)
 │   ├── invite/               invite-flow (the path A/B state machine) · invitation-card · invite-sign-up ·
 │   │                         accept-card · invite-profile-step · invite-intent (sessionStorage)
-│   ├── organization/         one file per ?tab= panel (danger-tab: transfer and deletion; storage/ for the storage tab, 6c), plus activity-labels · remove-member-dialog (the removal
+│   ├── organization/         one file per ?tab= panel (danger-tab: transfer and deletion; storage/ for the storage tab, 6c;
+│   │                         tags/ for the tag manager and its dialogs, exports-tab, 6d), plus activity-labels · remove-member-dialog (the removal
 │   │                         preview and its two choices) · member-picker (a person, by name, in a Popover) ·
 │   │                         organization-mark (the DiceBear blobs mark; switcher, landing)
 │   ├── shortcuts/            shortcuts-table (the `?` list, from lib/shortcuts) · shell-shortcuts (`?` dialog, `g` sequences)
@@ -133,6 +134,9 @@ apps/web/
 │   │                         (hatch, swatch, tooltip body, legend, category tick, duration ticks)
 │   ├── notifications/        inbox-page (URL filters, the states, mark all) · inbox-entry (the row, its lines,
 │   │                         Show all, skeletons) · inbox-preview (the dashboard rail) · unsubscribe (the page)
+│   ├── imports/              import-page (/projects/PROJ/import) · csv-import-flow (file → columns → dry run → import) ·
+│   │                         column-mapping · import-results (figures, unknown values, the failed-rows table, progress) ·
+│   │                         recent-imports (rows that open in place)
 │   ├── invitations/          email-chips · invite-emails-form · share-links · seat-notice
 │   ├── settings/             one file per ?tab= panel, plus SettingsSection and the timezone picker; security-tab
 │   │                         composes two-factor-section (setup, QR), recovery-codes and deactivate-section
@@ -144,6 +148,7 @@ apps/web/
 │   │                           which every person's name goes through
 │   ├── step-up-dialog.tsx    the password + code confirmation for destructive account and organisation actions
 │   ├── confirm-dialog.tsx    irreversible or other-people-affecting actions only
+│   ├── job-status.tsx        a background job's state as a dot and a word (imports, exports)
 │   ├── avatar-picker.tsx     the upload / remove pair, shared by settings and onboarding
 │   ├── site-scripts.tsx      third-party tags for every page, env-gated (see Page metadata)
 │   ├── page-header.tsx       title + date/meta + right-hand actions; segmented.tsx = the tab pills
@@ -173,13 +178,16 @@ apps/web/
 │                             use-account-security (two-factor, deactivate), use-organization-lifecycle (deletion,
 │                             the pending transfer, the /transfer page's preview, accept and decline),
 │                         use-organization-storage (the storage overview and file list, delete, connect, the
-│                         browser check, the migration, disconnect)
+│                         browser check, the migration, disconnect), use-imports (the list, one import, upload,
+│                         dry run, start), use-exports (the list, request); use-tags also holds the tag manager's
+│                         list, rename / recolour, merge and delete
 ├── lib/
 │   ├── api/                  client.ts (the only fetch) · errors.ts · server.ts · storage.ts (presigned PUT;
 │   │                         putUpload is XMLHttpRequest, for upload progress) · attachments.ts ·
 │   │                         csv.ts (the envelope-less download) · security.ts (two-factor, deactivate) ·
 │   │                         ownership-transfers.ts (deletion and transfer) · organization-storage.ts (the storage
-│   │                         tab and bring-your-own bucket) · one file per resource
+│   │                         tab and bring-your-own bucket) · imports.ts · exports.ts (exportDownloadHref) ·
+│   │                         one file per resource
 │   ├── reports/              registry (the nine: title, description, section) · url (parameters, defaults, the
 │   │                         burndown's PROJ/<sprint>) · colors (markPaint: series, label, category, Other)
 │   ├── articles/             tree (subtree, canDrop, dropBody, applyDrop, visibleRows) · starters (the four templates)
@@ -197,6 +205,7 @@ apps/web/
 │   ├── files.ts              SHA-256 (base64) and image dimensions before presign; the markdown a file is stored as;
 │   │                         saveDownload, the one way a blob is handed to the browser (CSV, recovery codes)
 │   ├── issue-path.ts         issuePath(issue) → /issue/KEY/<slug>: the one place an issue URL is built
+│   ├── numbers.ts            formatCount: `10,000`, grouped the same in every locale
 │   └── utils.ts              cn()
 ├── scripts/sync-tokens.ts    `bun run tokens:sync` — recopies design/tokens.css into globals.css
 ├── AGENTS.md, CLAUDE.md      written by `next dev`: point at node_modules/next/dist/docs. Read them; Next 16 differs from older training data.
@@ -235,8 +244,9 @@ organisations, articles, boards and sprints by slug, users by username.
 | `/projects/PROJ/reports`                                                                | Report index for a project                                                                                                                                                                                                        |
 | `/reports`, `/reports/<report>?…`                                                       | Report index; one report with its parameters in the query string, e.g. `/reports/burndown?sprint=PROJ/september-2026`                                                                                                             |
 | `/timesheets`                                                                           | The timesheet report, defaulting to the current user and week                                                                                                                                                                     |
+| `/projects/PROJ/import`                                                                 | CSV import into the project: the flow and *Recent imports*, whose rows open in place (an import has no address of its own). Project Admin and up; others get a sentence saying who can (6d, 10 Oct 2026) |
 | `/projects/PROJ/settings?tab=`                                                          | `general` · `statuses` · `priorities` · `types` · `fields` · `time-tracking` · `boards` · `people` · `invites` · `deleted` (Project Admin only: deleted issues within the 14-day restore window; decided 24 Sep 2026)             |
-| `/organization?tab=`                                                                    | `general` · `members` · `invites` · `audit` · `storage` · `plan` · `danger` (Owner only; `&confirm=transfer&to=<username>` or `&confirm=delete` reopens its dialog after a provider sign-in, 6b). `storage` (Org Admins and the Owner, 6c) keeps the list in `&sort=created`, `&where=platform\|byo`, `&project=PROJ`, `&offset=`; `&setup=provider\|permissions\|cors\|credentials\|check\|connected` is the bring-your-own wizard's step, `&setup=update` the key form, `&confirm=disconnect` reopens that dialog |
+| `/organization?tab=`                                                                    | `general` · `members` · `invites` · `tags` · `audit` · `storage` · `exports` · `plan` · `danger` (Owner only; `&confirm=transfer&to=<username>` or `&confirm=delete` reopens its dialog after a provider sign-in, 6b). `storage` (Org Admins and the Owner, 6c) keeps the list in `&sort=created`, `&where=platform\|byo`, `&project=PROJ`, `&offset=`; `&setup=provider\|permissions\|cors\|credentials\|check\|connected` is the bring-your-own wizard's step, `&setup=update` the key form, `&confirm=disconnect` reopens that dialog. `tags` (6d) is open to a Project Admin of any project as well; `exports` (6d) to Org Admins and the Owner, and is where the export-ready email links |
 | `/settings?tab=`                                                                        | Account: `profile` · `security` · `sessions` · `tokens` · `notifications`. On `security`, `&confirm=disable-two-factor`, `recovery-codes` or `deactivate` reopens that dialog after a provider sign-in (6b)                        |
 | `/sign-in`, `/sign-up`, `/verify-email`, `/reset-password`, `/auth/<provider>/callback` | `(auth)` group, 400px column                                                                                                                                                                                                      |
 | `/invite/<token>`                                                                       | Invite landing (Path A) and accept card (Path B)                                                                                                                                                                                  |
@@ -350,7 +360,8 @@ for figures and the admin lists (members, invitations, audit log, sessions, toke
 (`waiting`) only while a dialog waits on something the user does elsewhere — the Connect an
 LLM dialog until the new token's first call — stopping once it happens. `progress` (5s) is for a
 job the user started and is watching: the storage overview while files move to the customer's
-bucket, back to `admin` once the move is done or failed.
+bucket, back to `admin` once the move is done or failed. `job` (10s, owner, 10 Oct 2026) is a CSV import
+or an organisation export while it is queued or running.
 Every mutation is optimistic (`onMutate` → `setQueryData`, roll back in `onError`,
 invalidate in `onSettled`); a list mutation spreads `optimisticList(client, key, apply)`,
 which draws the change in every cached query under the key and restores them on a
@@ -678,6 +689,37 @@ file-storage.md § Bring your own storage. How the pieces fit:
   `ByoFailingBanner` sits above an issue's attachments and on the tab; only admins get _Update
   key_ and the bucket's name. While the organisation's own bucket is verified the quota banners
   stay away and the dashboard meter reads _Your own bucket_.
+
+## Import, export and tags
+
+Built in 6d; the product rules are [manual/import-export.md](./manual/import-export.md) and
+[manual/tags.md](./manual/tags.md), the flow file-storage.md § CSV imports. How the pieces fit:
+
+- **Import is a page, its jobs are not.** `/projects/PROJ/import` holds the flow and *Recent
+  imports*. A job has only an internal id, which never goes in a route, so a row of the list opens
+  in place: progress while it runs, the failed rows once done, *Map the columns* for an upload never
+  started (it calls `…/complete` again and the flow picks it up). The entry points are the issue
+  list's upload arrow and the first empty state's *Import from CSV*, both for `canAdmin` only.
+- **Upload** is the attachment path without an attachment: the size check against
+  `CSV_IMPORT_MAX_BYTES` first, `sha256Base64`, `POST …/imports`, `putUpload` with every
+  `upload_headers` entry and a Cancel, then `…/complete`, which reads the file (a longer timeout).
+  Refusals of the file (`import.not_utf8`, `too_many_rows`, `too_large`) return to the file step with
+  the API's sentence.
+- **Mapping** keeps the API's direction, field → header, and draws it per header. A field takes one
+  column, so choosing it again moves it. Changing any column sets the dry run aside: *Import N
+  issues* appears only for a dry run of the mapping on screen. A started import is followed with
+  `useImport` at `POLL.job`; finishing invalidates issues, tags and the agile caches once.
+- **Exports** list at `POLL.job` while one is queued or running, else `POLL.admin`. *Export
+  organisation* puts the answer first in the list by id; when the id was already there (one pending
+  per organisation) the tab says so. **Download** is a plain link to `download_url` on the API's
+  origin (`exportDownloadHref`), because the API answers with a 302 to a presigned URL and only a
+  navigation follows it with the session cookie.
+- **Tags** read `GET /v1/tags/manage` (one page of 200, alphabetical; search narrows past that).
+  Rename, recolour, merge and delete are drawn early with `optimisticList` under `['tags', 'manage']`
+  and settle by invalidating tags, issues, articles and saved views, which all show tag names. The
+  dialogs mount per opening, keyed by tag, so their state starts from the tag. `409 tag.slug_taken`
+  names the existing tag in `valid_values`; Org Admins get *Merge … into …* from it, which opens the
+  merge dialog with both filled in. Merge and delete are hidden below Org Admin.
 
 ## Removal and shortcuts
 

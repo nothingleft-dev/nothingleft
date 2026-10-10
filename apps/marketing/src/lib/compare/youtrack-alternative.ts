@@ -499,7 +499,7 @@ export const YOUTRACK_FAQ: FaqEntry[] = [
     question: 'Can we bring our YouTrack issues across?',
     answer: [
       'Yes, with review. An agent connected to both can read your unresolved issues and recreate projects, members, tags and issues through MCP once you approve the mapping. Issues are created by you, now; their full history stays in YouTrack.',
-      'Generic CSV import arrives at launch as the bulk fallback. There is no native YouTrack importer.',
+      'Generic CSV import is the bulk fallback. There is no native YouTrack importer.',
     ],
   },
   {

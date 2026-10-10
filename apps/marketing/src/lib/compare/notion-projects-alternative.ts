@@ -381,7 +381,7 @@ export const NOTION_PROJECTS_FAQ: FaqEntry[] = [
   {
     question: 'How do we move tasks across from Notion?',
     answer: [
-      'There is no native Notion importer. Notion can export a database as CSV, and Nothing Left’s generic CSV import arrives at launch. You can also connect one agent to both through their MCP servers and have it carry tasks across, with you reviewing the field mapping, duplicates, attachments and people before anything is created.',
+      'There is no native Notion importer. Notion can export a database as CSV, and Nothing Left’s generic CSV import takes it, with a dry run first. You can also connect one agent to both through their MCP servers and have it carry tasks across, with you reviewing the field mapping, duplicates, attachments and people before anything is created.',
     ],
     link: { href: NOTION.export, label: 'Notion’s export guide', external: true },
   },

@@ -288,7 +288,7 @@ export const ISSUE_TRACKING_FAQ: FaqEntry[] = [
   {
     question: 'Can we bring our existing issues across?',
     answer: [
-      'Issues export to CSV today, with the columns you choose. Generic CSV import arrives at launch. There is no native importer from another tracker; an agent connected to both trackers can help carry issues across, with you reviewing how people and fields map.',
+      'Issues export to CSV today, with the columns you choose. Issues come in from any CSV through a column mapping and a dry run. There is no native importer from another tracker; an agent connected to both trackers can help carry issues across, with you reviewing how people and fields map.',
     ],
     link: { href: '/features/mcp-ai-agents', label: 'Moving with an agent' },
   },

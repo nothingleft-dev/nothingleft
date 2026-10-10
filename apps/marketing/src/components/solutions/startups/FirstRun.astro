@@ -223,10 +223,13 @@ const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:wri
                   </span>
                   <span class="su-btn self-start">Connect an agent</span>
                 </div>
-                <div class="su-card soon">
+                <div class="su-card">
                   <b>Import from CSV</b>
-                  <span>Bring existing work across with a column-mapping preview before anything is written.</span>
-                  <span class="su-btn muted self-start">Coming soon</span>
+                  <span>
+                    Bring existing work across from any spreadsheet: map the columns and check every row in a dry run
+                    before anything is written.
+                  </span>
+                  <span class="su-btn self-start">Import from CSV</span>
                 </div>
               </div>
             </div>
@@ -543,11 +546,6 @@ const AGENT_SCOPES = ['issues:read', 'issues:write', 'comments:write', 'time:wri
   }
   .su-card > span:not(.su-btn) {
     margin-bottom: 6px;
-  }
-  .su-card.soon {
-    box-shadow: none;
-    outline: 1px dashed var(--border-strong);
-    outline-offset: -1px;
   }
   .su-card.picked {
     box-shadow:

@@ -215,7 +215,7 @@ export const STARTUPS_FAQ: FaqEntry[] = [
   {
     question: 'Can we bring issues from the tracker we use now?',
     answer: [
-      'Generic CSV import arrives at launch; the empty project already shows where it will be. There are no native importers from other trackers. An agent connected to both your old tracker and this one can help carry issues across, with you reviewing the mapping.',
+      'Generic CSV import is one of the three ways in on the empty project: map the columns, dry-run every row, then import. There are no native importers from other trackers. An agent connected to both your old tracker and this one can help carry issues across, with you reviewing the mapping.',
     ],
   },
   {

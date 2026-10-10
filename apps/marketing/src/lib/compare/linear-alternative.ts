@@ -415,7 +415,7 @@ export const LINEAR_FAQ: FaqEntry[] = [
   {
     question: 'Can we import our Linear workspace directly?',
     answer: [
-      'There is no native Linear importer. At launch, export your issues to CSV from Linear and import them with the generic CSV importer, mapping columns and reviewing before anything is written. If you connect one agent to both trackers, it can carry unresolved issues across with you reviewing the mapping.',
+      'There is no native Linear importer. Export your issues to CSV from Linear and import them with the generic CSV importer, mapping columns and reviewing before anything is written. If you connect one agent to both trackers, it can carry unresolved issues across with you reviewing the mapping.',
     ],
     link: { href: MCP_MANUAL, label: 'Connecting an agent' },
   },

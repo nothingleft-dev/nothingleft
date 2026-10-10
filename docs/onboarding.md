@@ -113,6 +113,9 @@ token's `last_used_at` and flips from *Waiting for the first call* to *Connected
 arrives, so the person sees it work without leaving the page. The token is shown only
 there; Settings → Access tokens revokes it.
 
+The third went live in 6d (10 Oct 2026): **Import from CSV** opens the project's import page
+(`/projects/PROJ/import`) for a Project Admin; anyone else reads that a Project Admin imports.
+
 The second one is deliberately placed level with the first. For an MCP-first
 product, this is the moment the difference becomes visible, and burying it in
 settings means most users never find the reason the product exists.

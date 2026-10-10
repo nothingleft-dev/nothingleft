@@ -456,7 +456,7 @@ export const JIRA_FAQ: FaqEntry[] = [
   {
     question: 'Can we import our Jira issues?',
     answer: [
-      'Generic CSV import arrives at launch. Export your work items from a Jira search as CSV, map its columns to issue fields in Nothing Left, run a dry run, and read the per-row errors before anything is created. There is no native Jira importer, and none is built today.',
+      'Use the generic CSV import. Export your work items from a Jira search as CSV, map its columns to issue fields in Nothing Left, run a dry run, and read the per-row errors before anything is created. There is no native Jira importer, and none is built today.',
     ],
     link: { href: JIRA.csvExport, label: 'Export search results in Jira', external: true },
   },

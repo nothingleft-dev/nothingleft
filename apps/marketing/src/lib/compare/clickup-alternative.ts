@@ -484,7 +484,7 @@ export const CLICKUP_FAQ: FaqEntry[] = [
   {
     question: 'Can we bring our ClickUp tasks across?',
     answer: [
-      'At launch, the dependable route is a generic CSV import: you map the columns, review the rows it could not read and import. There is no ClickUp importer.',
+      'The dependable route is a generic CSV import: you map the columns, review the rows it could not read and import. There is no ClickUp importer.',
       'If your agent can reach both ClickUp’s MCP server and Nothing Left’s, it can read your unresolved tasks and recreate them as issues with tags and assignees. That is a guided migration, not a one-click transfer: you check the field mapping, duplicates, attachments and who each person becomes before it runs.',
     ],
   },

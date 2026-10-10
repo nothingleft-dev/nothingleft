@@ -9,9 +9,10 @@ This page is about looking after the vocabulary itself.
 
 ## Seeing every tag
 
-The tag list counts each tag across the whole organisation, split by kind:
-`rca — 3 issues · 12 articles`. Tags nobody uses any more are listed too, with nothing beside
-them, so they can be tidied away. Search by name narrows the list.
+**Organisation → Tags** lists every tag in alphabetical order and counts each across the whole
+organisation, split by kind: `rca — 3 issues · 12 articles`. Tags nobody uses any more are
+listed too, marked *Unused*, so they can be tidied away. **Search tags** narrows the list by
+name.
 
 Project Admins of any project, Org Admins and the Owner can open it. Everyone else still sees
 tags, with counts over what they can read, wherever they pick one.
@@ -25,12 +26,14 @@ updated to the new name, so they keep finding the same issues. A view that only 
 `#Needs-Review` is left as written, because that shorthand also matches statuses, priorities,
 types and sprints of that name.
 
-A name another tag already has is refused, since two tags cannot share one address: merge
-them instead.
+Choose **Edit** on the tag, type the new name and **Save**. A name another tag already has is
+refused, since two tags cannot share one address: merge them instead. Org Admins get a link
+under the name to do exactly that.
 
 ## Recolouring
 
-Pick a colour from the same grid statuses and types use. The tag changes colour everywhere.
+In the same **Edit** dialog, pick a colour from the grid statuses and types use; the preview
+shows the tag as it will look. The tag changes colour everywhere.
 
 ## Merging
 
@@ -39,12 +42,15 @@ has the one you keep — once, even if it had several — and the others are del
 that searched for a merged tag search for the one you kept.
 
 Use it when the same idea has grown two names: `ui-bug`, `bug-ui` and `frontend-bug` become
-`ui-bug`. A merge cannot be undone.
+`ui-bug`. Choose **Merge into…** from a tag's **⋯** menu, add any other tags to fold in under
+**Merge**, and pick the one to keep under **into**. The dialog lists each tag with how many issues
+and articles carry it, and which are deleted. A merge cannot be undone.
 
 ## Deleting
 
-Deleting a tag takes it off every issue and article in the organisation and removes it. The
-issues and articles are otherwise untouched. A saved view that searched for it is left as
+Deleting a tag (**Delete…** in its **⋯** menu) takes it off every issue and article in the
+organisation and removes it; the confirmation says how many of each. The issues and articles
+are otherwise untouched. A saved view that searched for it is left as
 written and will say the tag no longer exists, so you can edit it. A delete cannot be undone.
 
 ## Who can do what

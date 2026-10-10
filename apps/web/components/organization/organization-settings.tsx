@@ -18,16 +18,21 @@ import { AuditTab } from '@components/organization/audit-tab';
 import { PlanTab } from '@components/organization/plan-tab';
 import { StorageTab } from '@components/organization/storage/storage-tab';
 import { DangerTab } from '@components/organization/danger-tab';
+import { TagsTab } from '@components/organization/tags/tags-tab';
+import { ExportsTab } from '@components/organization/exports-tab';
 import { useOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
+import { useProjectRoles } from '@hooks/use-project-roles';
 import { cn } from '@lib/utils';
 
 const TABS = [
   { value: 'general', label: 'General' },
   { value: 'members', label: 'Members' },
   { value: 'invites', label: 'Invites' },
+  { value: 'tags', label: 'Tags' },
   { value: 'audit', label: 'Audit log' },
   { value: 'storage', label: 'Storage' },
+  { value: 'exports', label: 'Exports' },
   { value: 'plan', label: 'Plan' },
   { value: 'danger', label: 'Danger zone' },
 ] as const;
@@ -51,7 +56,12 @@ export function OrganizationSettings() {
   const isAdmin =
     organization.data?.membership.org_role === 'org_admin' || organization.data?.membership.is_owner === true;
   const isOwner = organization.data?.membership.is_owner === true;
-  const allowed = (t: Tab) => (t === 'danger' ? isOwner : isAdmin || t === 'general' || t === 'members');
+  // Tags open to a Project Admin of any project too (permissions.md § Tags).
+  const roles = useProjectRoles();
+  const projectAdmin = roles.isAdmin;
+  const awaitingRoles = tab === 'tags' && !isAdmin && roles.isPending;
+  const allowed = (t: Tab) =>
+    t === 'danger' ? isOwner : isAdmin || t === 'general' || t === 'members' || (t === 'tags' && projectAdmin);
   const visible = TABS.filter(t => allowed(t.value));
 
   return (
@@ -68,13 +78,15 @@ export function OrganizationSettings() {
         }
       />
 
-      {session.status === 'loading' || (slug !== null && organization.isPending) ? <PageSkeleton rows={5} /> : null}
+      {session.status === 'loading' || (slug !== null && organization.isPending) || awaitingRoles ? (
+        <PageSkeleton rows={5} />
+      ) : null}
 
       {slug === null && session.status === 'signed-in' ? <NoOrganization /> : null}
 
       {organization.isError ? <FormAlert title="This organisation could not be loaded." /> : null}
 
-      {organization.data && user ? (
+      {organization.data && user && !awaitingRoles ? (
         <OrganizationTabs
           organization={organization.data}
           user={user}
@@ -104,7 +116,9 @@ function OrganizationTabs({ organization, user, tab, isAdmin }: OrganizationTabs
       {tab === 'members' ? <MembersTab organization={organization} isAdmin={isAdmin} /> : null}
       {tab === 'invites' ? <InvitesTab organization={organization} /> : null}
       {tab === 'audit' ? <AuditTab organization={organization} /> : null}
+      {tab === 'tags' ? <TagsTab orgAdmin={isAdmin} /> : null}
       {tab === 'storage' ? <StorageTab organization={organization} user={user} /> : null}
+      {tab === 'exports' ? <ExportsTab organization={organization} /> : null}
       {tab === 'plan' ? <PlanTab organization={organization} /> : null}
       {tab === 'danger' ? <DangerTab organization={organization} user={user} /> : null}
     </div>
