@@ -8,8 +8,8 @@ agree, do not use the service.
 
 ## 1. The agreement
 
-These terms are an agreement between you and [Full legal name], an individual in India operating
-as Nothing Left ("we", "us"), of [Postal address].
+These terms are an agreement between you and Raunak Gupta, an individual in India operating as
+Nothing Left ("we", "us").
 
 "The service" means the web app at work.nothingleft.dev, the REST API at api.nothingleft.dev, the
 MCP server at api.nothingleft.dev/mcp, the emails we send, and this website.
@@ -35,9 +35,9 @@ Nothing Left is in beta. It is ready for real work and it is still changing.
 - **There is no subscription charge during the beta**, for a team of any size. The product has no
   payment flow and does not ask for payment details.
 - **The first 20 members of every organisation stay free**, also after billing arrives.
-- **Before any charge for seats beyond the first 20 takes effect, you get advance notice.** [Owner
-  to decide: minimum notice period before seat charges.] Paid terms, when they exist, will be
-  offered separately, and nothing is charged without them.
+- **Before any charge for seats beyond the first 20 takes effect, you get advance notice.** We give
+  at least 30 days' notice. Paid terms, when they exist, will be offered separately, and nothing is
+  charged without them.
 - **Limits apply.** File storage, file size, request rates and other limits are listed in
   [Limits and billing](/docs/limits-and-billing). The storage limit applies during the beta.
 
@@ -118,23 +118,26 @@ for its security and for the data in it. These terms and our Privacy Policy do n
 - **We can suspend or deactivate an account or organisation** if you break these terms, if the law
   requires it, or to protect the service or other people. Where it is reasonable and safe, we tell
   you first and say why.
-- **We can end the service.** If we do, we give notice so you can export your data. [Owner to
-  decide: notice period if the hosted service shuts down.]
+- **We can end the service.** If we do, we give at least 90 days' notice so you can export your
+  data.
 
 ## 10. Your data when things end
 
 - **Export.** Issues and reports export as CSV. Org Admins can export the audit log as CSV, and
   the whole organisation — every project, issue, article and file — as one download, kept for 7
   days. Everything you can see is also available through the REST API and MCP.
-- **Deactivation** keeps your memberships and your work, under your name.
+- **Deactivation** keeps your memberships and your work, under your name. A deactivated account is
+  erased six months after deactivation, as the [Privacy Policy](/privacy#10-how-long-we-keep-it)
+  describes.
 - **Deleted issues and articles** can be restored for 14 days, then they are deleted for good.
 - **Deleting an organisation** is scheduled 14 days ahead, and the Owner can cancel at any time in
   between. After that, its projects, issues, comments, articles and files are deleted. A record that
   the organisation existed and its audit log stay, and its address stays reserved. Files in its own
   bucket are not touched. See [Account security](/docs/account-security#deleting-an-organisation).
 - **Backups** keep deleted data until they rotate out, about two to three weeks.
-- [Owner to decide: what happens to the data of an account or organisation we suspend or
-  terminate, and for how long it is kept.]
+- **Suspended or terminated accounts and organisations** keep their data for six months after the
+  suspension or termination. After that, their content and files are deleted, as for a deleted
+  organisation.
 
 ## 11. Disclaimers
 
@@ -152,7 +155,7 @@ To the extent the law allows:
 - we are not liable for indirect, incidental, special, consequential or punitive loss, or for loss
   of profits, revenue, data or goodwill;
 - our total liability for all claims about the service is limited to the greater of the amounts
-  you paid us for the service in the 12 months before the claim, and [Owner to confirm: amount].
+  you paid us for the service in the 12 months before the claim, and ₹1,000.
 
 These limits do not apply to liability that the law does not allow us to limit, such as for fraud.
 
@@ -166,10 +169,9 @@ including by an agent you connected.
 
 - **To the service.** The service changes during the beta, as [section 3](#3-the-beta) describes.
 - **To these terms.** When we change them, we update this page and the date at the top. If a change
-  is significant, we tell account holders by email or in the app before it takes effect. [Owner to
-  decide: notice period for significant changes to these terms.] If you keep using the service
-  after a change takes effect, you accept it. If you do not, stop using the service and deactivate
-  your account.
+  is significant, we tell account holders by email or in the app at least 30 days before it takes
+  effect. If you keep using the service after a change takes effect, you accept it. If you do not,
+  stop using the service and deactivate your account.
 
 ## 15. Governing law and courts
 
@@ -188,5 +190,5 @@ jurisdiction over any dispute about them or the service.
 
 ## 17. Contact
 
-[Full legal name], operating as Nothing Left, [Postal address].
+Raunak Gupta, operating as Nothing Left.
 Email: [admin@nothingleft.dev](mailto:admin@nothingleft.dev).

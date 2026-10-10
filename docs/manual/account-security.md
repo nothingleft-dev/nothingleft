@@ -75,18 +75,21 @@ handing over an organisation all ask you to confirm:
   working;
 - keeps your memberships and everything you wrote, under your real name. Colleagues see your
   name greyed out, and you are no longer offered as an assignee or in mentions;
-- sends you a confirmation email.
+- sends you a confirmation email;
+- starts a six-month clock. After six months your personal data is erased, as described under
+  [Erasing your data](#erasing-your-data), and the account cannot be reactivated.
 
 If you own an organisation, you cannot deactivate your account until you **transfer ownership**
 or the organisation is **deleted** — someone has to be able to look after it.
 
-To reactivate, email us from the address on the account. Your memberships come back as they
+To reactivate, email us from the address on the account within six months of deactivating. Your memberships come back as they
 were; sign in again and create new access tokens.
 
-**Erasing your data.** Deactivation keeps your name on your work. If you need your personal data
-erased, email us — you, or an Org Admin of your organisation on your behalf. Erasure is done by
-hand, replaces your name with *Deleted user* and removes your email address and photo; what you
-wrote in issues and comments is not rewritten.
+**Erasing your data.** Deactivation keeps your name on your work. Six months after you deactivate,
+your personal data is erased automatically. To have it erased sooner, email us — you, or an Org
+Admin of your organisation on your behalf. Erasure replaces your name with *Deleted user*, and
+removes your email address, photo, password, sign-in links, last sign-in IP address and recent
+searches. What you wrote in issues and comments is not rewritten.
 
 ## Transferring ownership
 

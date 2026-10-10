@@ -26,11 +26,11 @@ did the day it was written.
 | Action | Who can do it | Scope | Effect |
 |---|---|---|---|
 | **Remove from organisation** | Org Admin, Org Owner | One organisation | `org_members.removed_at` set. No access to that org. **Account untouched.** Name and avatar still render everywhere, forever. |
-| **Deactivate account** | The user; the platform operator | Global | Cannot sign in anywhere. Row intact, attribution intact. |
-| **Erase account** | The platform operator, on an emailed request from the person or their Org Admin (GDPR) | Global | Row **kept**. PII scrubbed: name → `Deleted user`, email → hashed, avatar → null. Rare, and manual — there is no route. |
+| **Deactivate account** | The user; the platform operator | Global | Cannot sign in anywhere. Row intact, attribution intact, until erased six months later. |
+| **Erase account** | The platform operator, on an emailed request from the person or their Org Admin (GDPR); automatic six months after a deactivation | Global | Row **kept**. PII scrubbed: name → `Deleted user`, email → hashed, avatar → null. Requests are rare and done by hand. The automatic run is a nightly job. |
 
 The unpleasant "Deleted user" label that other trackers show everywhere
-appears **only in case 3**, which almost never happens. Case 1 is the everyday
+appears **only in case 3**. Case 3 happens on request, or six months after a deactivation. Case 1 is the everyday
 action, and it keeps the person's real name permanently.
 
 There is deliberately **no org-level "deactivate" or "suspend"** state. Large
@@ -199,7 +199,7 @@ asserts the email is verified. See
 Performed by the user in their profile, or by the platform operator.
 
 - Cannot sign in. All sessions and tokens revoked.
-- Memberships retained, so reactivation restores everything.
+- Memberships retained, so reactivation restores everything, until the account is erased.
 - Attribution unchanged — the name still renders.
 - Org admins see the member as *Inactive* and may remove them normally.
 
@@ -218,6 +218,10 @@ Performed by the user in their profile, or by the platform operator.
   or from it. Then a confirmation email. Memberships, project roles, assignments, watches,
   notifications and preferences are untouched; the fan-out and the digests already skip a
   deactivated recipient, and the storage and deletion emails to admins skip one too.
+- **Six-month erasure** (owner, 10 Oct 2026): six months after `deactivated_at`, the account is erased
+  by the erasure rules below. Reactivation is possible only before that; once erased, the email is
+  hashed and the account cannot come back. A nightly job, `accounts.erase`, runs
+  it, as `issues.purge` does for deleted issues.
 - **Rendering.** Every `MemberRef` carries `deactivated`: the real name and avatar, greyed
   out — never *Deleted user*. A deactivated member is offered in no assignee, watcher, mention
   or reassign picker, and cannot be newly assigned; what they already hold stays.
@@ -233,9 +237,9 @@ Performed by the user in their profile, or by the platform operator.
 On an explicit erasure request.
 
 **Manual, and not built in v1** (owner, 27 Sep 2026). The person — or an Org Admin on their
-behalf — emails the platform operator, who performs the erasure by hand. There is no route, no
-button and no script yet; how the operator carries it out is decided after v1. What an erasure
-must do, once it is done, is below.
+behalf — emails the platform operator, who performs the erasure by hand. There is no route and no
+button; the operator runs it by script. A deactivated account is erased the same way six months
+after deactivation, by the nightly job above. What an erasure must do, once it is done, is below.
 
 - The `users` row is **kept**, so every foreign key still resolves.
 - `name` → `Deleted user`, `email` → an irreversible hash (so the address
@@ -247,6 +251,7 @@ must do, once it is done, is below.
   "anonymise authored content" means the attribution, not the text — owner, 27 Sep 2026.)
 - `org_activity` is not rewritten either: an old entry naming their email stays, as the audit
   trail (owner, 27 Sep 2026).
+- The last sign-in IP address and country, invitation IP addresses and recent searches are cleared.
 - `deleted_at` is stamped so the state is explicit rather than inferred.
 
 ## What happens to their work

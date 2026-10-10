@@ -9,8 +9,8 @@ yet, it says so.
 
 ## 1. Who we are
 
-Nothing Left is run by [Full legal name], an individual in India operating as Nothing Left ("we",
-"us"). Our postal address is [Postal address].
+Nothing Left is run by Raunak Gupta, an individual in India operating as Nothing Left ("we",
+"us").
 
 For privacy questions and requests, email [admin@nothingleft.dev](mailto:admin@nothingleft.dev).
 
@@ -115,9 +115,8 @@ the log, including the IP addresses, and export it as CSV.
 
 ### Product analytics and error reports
 
-Nothing Left can send product analytics and error reports to PostHog. This is off by default.
-[Owner to confirm: whether PostHog analytics and error reporting are on at launch.] When it is on,
-our server sends it, not your browser. It sends event names, a pseudonymous ID for you and your
+Nothing Left sends product analytics and error reports to PostHog. Session replay is not used. Our
+server sends it, not your browser. It sends event names, a pseudonymous ID for you and your
 organisation, and allow-listed counts and categories. Error reports carry the error, the route,
 the request ID and the status. The events are designed to carry IDs and counts, not your content.
 
@@ -136,8 +135,7 @@ unsubscribe. We do not send marketing email.
 When you use the support form, we store the request type, your name, your email address, the
 subject, your message, the product area and the time it arrived. The form does not store your IP
 address. Cloudflare, which runs this website, handles your request on the way to us. If you
-email us instead, we keep the email. [Owner to confirm: the provider that hosts the
-admin@nothingleft.dev mailbox.]
+email us instead, we keep the email.
 
 ### Docs reactions
 
@@ -200,9 +198,9 @@ consent by deactivating your account and asking us to erase your data
   Members' email addresses are visible only to Org Admins, the Owner and the member.
 - **Our access.** Nothing Left is run by one person, who has technical access to the servers,
   database and logs to operate the service. There is no admin console and no way to sign in as
-  you. [Owner to decide: a written policy on when we access customer content.]
-- **Agreements with organisations.** We do not offer a data processing agreement yet. [Owner to
-  decide: data processing agreement for organisations.]
+  you. We open customer content only to fix a reported fault, investigate abuse or a security
+  incident, or meet a legal requirement, and only as far as that needs.
+- **Agreements with organisations.** We do not offer a data processing agreement yet.
 - **Images from other sites.** A member can embed an image hosted elsewhere in an issue or article.
   When you view it, your browser fetches it from that site, which sees your IP address.
 
@@ -211,20 +209,23 @@ consent by deactivating your account and asking us to erase your data
 These providers process personal data for us. "Active" means in use now. "Only if enabled" means
 built but switched off.
 
-| Provider                            | What for                                                                                                                      | What they receive                                                                                               | Where                                                                     | Status                          |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------- |
-| Oracle Cloud Infrastructure         | Hosting the API, the MCP server, the database, the cache and logs; encrypted backups; monitoring                              | Everything the service stores                                                                                   | United States (Ashburn, Virginia)                                         | Active                          |
-| Cloudflare                          | DNS and secure connections for the API and files; hosting this website and the support form; storing files and profile photos | Traffic on its way to us, including IP addresses, cookies and request content; every file and profile photo     | Global network. [Owner to confirm: storage location of files and photos.] | Active                          |
-| Resend                              | Sending email                                                                                                                 | Your email address and name, and the full message                                                               | [Owner to confirm: Resend region.]                                        | Active                          |
-| Turso                               | Storing support requests and docs reaction counts                                                                             | Name, email address, subject, message and product area from the support form                                    | [Owner to confirm: Turso region.]                                         | Active                          |
-| Gravatar (Automattic)               | Profile photo when you have not set one                                                                                       | A SHA-256 hash of your email address; viewers' IP addresses when the photo loads                                | United States                                                             | Active                          |
-| Have I Been Pwned (Pwned Passwords) | Checking new passwords against known breaches                                                                                 | The first five characters of the password's SHA-1 hash, and our server's IP address                             | Served through Cloudflare's global network                                | Active                          |
-| Google                              | Sign-in, if you choose it                                                                                                     | Google sends us your account ID, email address, name and picture, and learns that you signed in to Nothing Left | Google                                                                    | Active when you use it          |
-| GitHub                              | Sign-in, if you choose it; private security reports                                                                           | GitHub sends us your account ID, username, name, avatar URL and email addresses, and learns that you signed in  | GitHub                                                                    | Active when you use it          |
-| jsDelivr                            | Delivering the viewer for the API reference on this website                                                                   | Your IP address, browser and the page you came from                                                             | Global network                                                            | Active                          |
-| Vercel                              | Hosting the web app at work.nothingleft.dev                                                                                   | Web app traffic, including IP addresses, page addresses and the session cookie                                  | [Owner to confirm: Vercel region.]                                        | Planned; not yet in use         |
-| PostHog (US Cloud)                  | Product analytics and error reports                                                                                           | Pseudonymous IDs, event names, counts and categories, error details                                             | United States                                                             | Only if enabled; off by default |
-| Google Analytics                    | Web app traffic                                                                                                               | Page addresses with IDs removed, a cookie ID, IP address and device details                                     | United States                                                             | Only if enabled; off            |
+| Provider                            | What for                                                                                                                      | What they receive                                                                                               | Status                          |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Oracle Cloud Infrastructure         | Hosting the API, the MCP server, the database, the cache and logs; encrypted backups; monitoring                              | Everything the service stores                                                                                   | Active                          |
+| Cloudflare                          | DNS and secure connections for the API and files; hosting this website and the support form; storing files and profile photos | Traffic on its way to us, including IP addresses, cookies and request content; every file and profile photo     | Active                          |
+| Resend                              | Sending email                                                                                                                 | Your email address and name, and the full message                                                               | Active                          |
+| Turso                               | Storing support requests and docs reaction counts                                                                             | Name, email address, subject, message and product area from the support form                                    | Active                          |
+| Gravatar (Automattic)               | Profile photo when you have not set one                                                                                       | A SHA-256 hash of your email address; viewers' IP addresses when the photo loads                                | Active                          |
+| Have I Been Pwned (Pwned Passwords) | Checking new passwords against known breaches                                                                                 | The first five characters of the password's SHA-1 hash, and our server's IP address                             | Active                          |
+| Google                              | Sign-in, if you choose it                                                                                                     | Google sends us your account ID, email address, name and picture, and learns that you signed in to Nothing Left | Active when you use it          |
+| GitHub                              | Sign-in, if you choose it; private security reports                                                                           | GitHub sends us your account ID, username, name, avatar URL and email addresses, and learns that you signed in  | Active when you use it          |
+| jsDelivr                            | Delivering the viewer for the API reference on this website                                                                   | Your IP address, browser and the page you came from                                                             | Active                          |
+| Vercel                              | Hosting the web app at work.nothingleft.dev                                                                                   | Web app traffic, including IP addresses, page addresses and the session cookie                                  | Active                          |
+| PostHog (US Cloud)                  | Product analytics and error reports                                                                                           | Pseudonymous IDs, event names, counts and categories, error details                                             | Active |
+| Google Analytics                    | Web app traffic                                                                                                               | Page addresses with IDs removed, a cookie ID, IP address and device details                                     | Only if enabled; off            |
+
+**Email.** The admin@nothingleft.dev mailbox is hosted by Google (Gmail). Google receives the emails
+you send us and our replies to them.
 
 **Your organisation's own bucket.** An Org Admin can connect the organisation's own Cloudflare R2
 or AWS S3 bucket for attachments. Files then go to that bucket, whose region and security the
@@ -235,11 +236,10 @@ us to.
 
 ## 8. Where your data is stored
 
-The service runs in the United States, in Oracle Cloud Infrastructure's Ashburn region, and so do
-its backups. If you use Nothing Left from India, the European Union, the United Kingdom or anywhere
+The service runs in the United States, and so do its backups. If you use Nothing Left from India, the European Union, the United Kingdom or anywhere
 else, your data is transferred to the United States and to the providers in
-[section 7](#7-who-receives-data). [Owner to decide: transfer safeguard for users in the European
-Union and the United Kingdom, such as standard contractual clauses.]
+[section 7](#7-who-receives-data). We do not target people in the European Union or the United Kingdom, and we do not offer transfer
+safeguards for them.
 
 ## 9. Cookies and browser storage
 
@@ -286,10 +286,10 @@ None today. Google Analytics would set `_ga` cookies in the web app, and it is s
 
 | Data                                                                  | How long                                                                                                                                                                            |
 | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Your account record                                                   | Never deleted, so work stays attributed. Erasure replaces your personal details ([section 11](#11-your-rights)). [Owner to decide: retention for deactivated accounts.]             |
+| Your account record                                                   | Never deleted, so work stays attributed. Erasure replaces your personal details ([section 11](#11-your-rights)). A deactivated account is erased six months after deactivation.     |
 | Sessions                                                              | Deleted within an hour of expiring, 30 days after last use                                                                                                                          |
 | One-time links                                                        | Deleted when they expire                                                                                                                                                            |
-| Personal access tokens                                                | Kept, marked revoked, after you revoke them. [Owner to decide: retention for revoked tokens.]                                                                                       |
+| Personal access tokens                                                | Kept, marked revoked, after you revoke them. Deleted six months after revocation.                                                                                                   |
 | API request logs                                                      | 7 days                                                                                                                                                                              |
 | Rate-limit counters, repeated-request records, cached reports         | 60 seconds, 24 hours and 5 minutes                                                                                                                                                  |
 | Issues and articles in the trash                                      | 14 days, then deleted with their comments, time entries, files and history                                                                                                          |
@@ -297,14 +297,15 @@ None today. Google Analytics would set `_ga` cookies in the web app, and it is s
 | CSV import files                                                      | Deleted when the import has run, or after a day if it is never started                                                                                                              |
 | Organisation exports                                                  | 7 days after they are built, then deleted. They hold what the organisation holds, including members' email addresses                                                                |
 | Notifications                                                         | 30 days after you read them; 90 days if unread                                                                                                                                      |
-| Recent searches, saved views, history of issues that still exist      | Kept. [Owner to decide: retention for recent searches.]                                                                                                                             |
+| Saved views, history of issues that still exist                       | Kept while the issues exist                                                                                                                                                         |
+| Recent searches                                                       | Deleted 90 days after they are made                                                                                                                                                 |
 | A deleted organisation                                                | 14 days to cancel, then its content and files are deleted. A record that it existed and its audit log stay, and its address stays reserved. Files in its own bucket are not touched |
-| Organisation audit log, including IP addresses and email addresses    | Kept, including after the organisation is deleted or a member's data is erased. [Owner to decide: retention for the audit log.]                                                     |
-| Last sign-in IP address and country; IP addresses of invitation links | Kept. [Owner to decide: retention for sign-in and invitation IP addresses.]                                                                                                         |
-| Invitations never accepted                                            | Kept. [Owner to decide: retention for unaccepted invitations.]                                                                                                                      |
-| Support requests                                                      | [Owner to decide: retention for support requests.]                                                                                                                                  |
+| Organisation audit log, including IP addresses and email addresses    | Kept while the organisation exists and for two years after it is deleted, including after a member's data is erased.                                                               |
+| Last sign-in IP address and country; IP addresses of invitation links | The last sign-in is replaced at your next sign-in. Invitation IP addresses are deleted after one year.                                                                              |
+| Invitations never accepted                                            | Deleted 30 days after they expire or are cancelled                                                                                                                                  |
+| Support requests                                                      | Two years after they arrive, then deleted                                                                                                                                           |
 | Backups                                                               | The two latest weekly full backups and the changes since, about two to three weeks. Deleted data stays in backups until they rotate out                                             |
-| Records held by Resend, and by PostHog if enabled                     | Set by those providers. [Owner to decide: retention settings with Resend and PostHog.]                                                                                              |
+| Records held by Resend and PostHog                                    | Set by each provider. Its own terms say how long it keeps data.                                                                                             |
 | Docs reaction counts                                                  | Kept. They contain no personal data                                                                                                                                                 |
 
 ## 11. Your rights
@@ -328,7 +329,9 @@ exercise your rights if you die or cannot act.
 - **Deactivate your account** in **Settings → Security → Danger zone**. This signs you out
   everywhere and revokes your access tokens. Your memberships and your work stay, under your name.
   If you own an organisation, transfer it or delete it first. To reactivate, email us from the
-  address on the account. See [Account security](/docs/account-security#deactivating-your-account).
+  address on the account within six months of deactivating it. After six months your personal data
+  is erased and the account cannot be reactivated. See
+  [Account security](/docs/account-security#deactivating-your-account).
 
 ### What you ask us for by email
 
@@ -336,16 +339,15 @@ Email [admin@nothingleft.dev](mailto:admin@nothingleft.dev) from the address on 
 
 - **Erasure.** You, or an Org Admin of your organisation on your behalf, can ask us to erase your
   personal data. We do it by hand. Your name becomes _Deleted user_, your email address is replaced
-  by an irreversible hash, and your photo, password and Google or GitHub links are removed. What
+  by an irreversible hash, and your photo, password and Google or GitHub links are removed. Erasure
+  also clears your sign-in IP address and country, invitation IP addresses and recent searches. What
   you wrote in issues and comments is not rewritten. Ask separately if you need specific text
   removed. Audit log entries that name your email address stay, and backups keep the old data until
-  they rotate out. [Owner to decide: whether erasure also clears sign-in IP addresses, session
-  records, recent searches and the other records in section 10.]
+  they rotate out.
 - **Access, a copy, or any other right** above.
 - **Leaving an organisation.** An Org Admin removes members. Ask one, or ask us.
 
-We may ask you to confirm the request from the address on the account. [Owner to decide: response
-time for privacy requests.]
+We may ask you to confirm the request from the address on the account. We answer within 30 days.
 
 If you are not satisfied, contact our Grievance Officer ([section 14](#14-grievance-officer)). In
 India you can then complain to the Data Protection Board of India. In the European Union or the
@@ -378,12 +380,10 @@ Do not send it to the support form.
 Under Indian law you can raise a complaint about how we handle your personal data with our
 Grievance Officer.
 
-- **Name:** [Grievance Officer name]
-- **Email:** [admin@nothingleft.dev](mailto:admin@nothingleft.dev) [Owner to confirm: a dedicated
-  grievance address, if any.]
-- **Post:** [Postal address]
+- **Name:** Raunak Gupta
+- **Email:** [admin@nothingleft.dev](mailto:admin@nothingleft.dev)
 
-[Owner to decide: time to acknowledge and to resolve a grievance.]
+We acknowledge a grievance within 24 hours of receiving it and resolve it within 15 days.
 
 ## 15. Changes to this policy
 
@@ -393,5 +393,5 @@ takes effect.
 
 ## 16. Contact
 
-[Full legal name], operating as Nothing Left, [Postal address].
+Raunak Gupta, operating as Nothing Left.
 Email: [admin@nothingleft.dev](mailto:admin@nothingleft.dev).
