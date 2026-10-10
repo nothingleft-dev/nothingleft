@@ -75,6 +75,11 @@ export function savedViewsRepository(db: Queryable) {
       return row;
     },
 
+    /** Every view in the organisation, private ones included: a tag rename rewrites them all. */
+    async listAll(ctx: TenantContext): Promise<SavedViewRow[]> {
+      return db.select().from(saved_views).where(inOrg(ctx)).orderBy(saved_views.id);
+    },
+
     async listOwnedBy(ctx: TenantContext, ownerId: number): Promise<SavedViewRow[]> {
       return db
         .select()

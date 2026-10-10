@@ -3,6 +3,7 @@ import type { Queryable } from '../client.ts';
 import {
   attachments,
   comments,
+  export_jobs,
   invitations,
   issues,
   mentions,
@@ -51,6 +52,7 @@ export function organizationPurgeRepository(db: Queryable) {
         tags,
         saved_views,
         recent_searches,
+        export_jobs,
         invitations,
         one_time_tokens,
         org_storage_configs,

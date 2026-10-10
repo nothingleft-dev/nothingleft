@@ -172,6 +172,12 @@ export const EMAIL_SAMPLES: EmailSample[] = [
     bucket: 'acme-files',
   }),
   transactional('Bring your own storage', 'storage_byo_failed', { ...org, bucket: 'acme-files' }),
+  transactional('Organisation export', 'export_ready', {
+    ...org,
+    url: `${APP}/organization?tab=exports`,
+    size: '48.2 MB',
+    date: '17 Oct 2026',
+  }),
 
   {
     id: 'email.notification',

@@ -66,6 +66,9 @@ export const ORG_ACTIVITY_KINDS = [
   'deletion_scheduled',
   'deletion_cancelled',
   'storage_updated',
+  'tag_renamed',
+  'tag_merged',
+  'tag_deleted',
 ] as const;
 export type OrgActivityKind = (typeof ORG_ACTIVITY_KINDS)[number];
 
@@ -478,3 +481,47 @@ export const RECOVERY_CODE_COUNT = 10;
 export const STEP_UP_RECENT_SIGN_IN_SECONDS = 10 * 60;
 
 export const ORG_DELETION_GRACE_DAYS = 14;
+
+export const IMPORT_SOURCES = ['csv'] as const;
+export const IMPORT_STATUSES = [
+  'awaiting_upload',
+  'ready',
+  'queued',
+  'running',
+  'completed',
+  'failed',
+  'expired',
+] as const;
+export type ImportStatus = (typeof IMPORT_STATUSES)[number];
+export const IMPORT_FIELDS = [
+  'title',
+  'description',
+  'status',
+  'priority',
+  'type',
+  'assignees',
+  'estimate',
+  'story_points',
+  'start_date',
+  'due_date',
+  'tags',
+  'sprint',
+  'parent',
+] as const;
+export type ImportField = (typeof IMPORT_FIELDS)[number];
+export const CSV_IMPORT_MAX_ROWS = 10_000;
+export const CSV_IMPORT_MAX_BYTES = 100 * 1024 * 1024;
+export const CSV_IMPORT_SAMPLE_ROWS = 5;
+// Beyond this the job keeps counting failed rows but stops listing them.
+export const CSV_IMPORT_ERRORS_KEPT = 1_000;
+// An upload never completed, or a file never run, is swept after this long.
+export const CSV_IMPORT_ABANDONED_HOURS = 24;
+
+export const EXPORT_SCOPES = ['org'] as const;
+export const EXPORT_FORMATS = ['json'] as const;
+export const EXPORT_STATUSES = ['queued', 'running', 'completed', 'failed', 'expired'] as const;
+export type ExportStatus = (typeof EXPORT_STATUSES)[number];
+export const ORG_EXPORT_TTL_DAYS = 7;
+export const ORG_EXPORT_FORMAT_VERSION = 1;
+
+export const TAG_MERGE_MAX_SOURCES = 50;

@@ -15,6 +15,9 @@ import {
   reportsRepository,
   commentsRepository,
   createDb,
+  exportJobsRepository,
+  importJobsRepository,
+  orgExportRepository,
   invitationsRepository,
   issueActivityRepository,
   issueLinksRepository,
@@ -103,6 +106,8 @@ import boardsRoutes from '@routes/boards';
 import notificationsRoutes from '@routes/notifications';
 import ownershipTransfersRoutes from '@routes/ownership-transfers';
 import storageRoutes from '@routes/storage';
+import importsRoutes from '@routes/imports';
+import exportsRoutes from '@routes/exports';
 import { accessService } from '@services/access';
 import { activityService } from '@services/activity.service';
 import { invitationsService } from '@services/invitations.service';
@@ -137,6 +142,8 @@ import { avatarMirror, type AvatarMirrorDeps } from '@services/avatar-mirror';
 import { organizationLifecycleService } from '@services/organization-lifecycle.service';
 import { objectStores } from '@services/object-stores';
 import { storageService } from '@services/storage.service';
+import { importsService } from '@services/imports.service';
+import { exportsService } from '@services/exports.service';
 import { twoFactorService } from '@services/two-factor.service';
 import { authService } from '@services/auth.service';
 import { meService } from '@services/me.service';
@@ -230,6 +237,9 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     recoveryCodes: totpRecoveryCodesRepository(db),
     storageConfigs: orgStorageConfigsRepository(db),
     storageLocations: orgStorageLocationsRepository(db),
+    importJobs: importJobsRepository(db),
+    exportJobs: exportJobsRepository(db),
+    orgExport: orgExportRepository(db),
   };
 
   const tenantRepos = (q: Queryable): TenantRepos => ({
@@ -255,6 +265,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     articles: articlesRepository(q),
     oneTimeTokens: oneTimeTokensRepository(q),
     organizationPurge: organizationPurgeRepository(q),
+    importJobs: importJobsRepository(q),
+    exportJobs: exportJobsRepository(q),
   });
   const inTenantTransaction = <T>(body: (r: TenantRepos) => Promise<T>) => db.transaction(tx => body(tenantRepos(tx)));
 
@@ -544,6 +556,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     sessions: repos.sessions,
     tokens: repos.patTokens,
     attachments: repos.attachments,
+    importJobs: repos.importJobs,
+    exportJobs: repos.exportJobs,
     inTransaction: inTenantTransaction,
     toDto: org => organizations.toDto(org),
     twoFactor,
@@ -573,6 +587,31 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     appBaseUrl: env.APP_BASE_URL,
     filesBaseUrl: filesBaseUrl(env),
     allowAnyEndpoint: env.BYO_ALLOW_ANY_ENDPOINT,
+  });
+  const imports = importsService({
+    access,
+    issues,
+    importJobs: repos.importJobs,
+    organizations: repos.organizations,
+    customFields: repos.customFields,
+    storage,
+    queue: () => queue,
+    analytics,
+  });
+  const exports = exportsService({
+    access,
+    exportJobs: repos.exportJobs,
+    orgExport: repos.orgExport,
+    organizations: repos.organizations,
+    projects: repos.projects,
+    issues,
+    storage,
+    stores,
+    inTransaction: inTenantTransaction,
+    queue: () => queue,
+    mailer: bestEffort(mailer, error => analytics.captureException(error)),
+    analytics,
+    appBaseUrl: env.APP_BASE_URL,
   });
   const services = {
     auth: authSvc,
@@ -656,6 +695,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
       tags: repos.tags,
       articles,
       articleSearch: repos.articleSearch,
+      projects: repos.projects,
+      customFields: repos.customFields,
       inTransaction: inTenantTransaction,
       analytics,
     }),
@@ -738,6 +779,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   await app.register(organizationsRoutes, { organizations: services.organizations, lifecycle: organizationLifecycle });
   await app.register(ownershipTransfersRoutes, { lifecycle: organizationLifecycle });
   await app.register(storageRoutes, { storage: storageSvc });
+  await app.register(importsRoutes, { imports });
+  await app.register(exportsRoutes, { exports });
   await app.register(membersRoutes, { members: services.members });
   await app.register(activityRoutes, { activity: services.activity });
   await app.register(projectsRoutes, { projects: services.projects });
@@ -793,11 +836,14 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'org.deletion_reminder': now => organizationLifecycle.remindDeletions(now),
     'org.delete': now => organizationLifecycle.deleteDue(now),
     'storage.reconcile': now => storageSvc.reconcile(now),
+    'transfers.sweep': async now => (await imports.sweep(now)) + (await exports.sweep(now)),
   };
   const queuedHandlers: QueuedHandlers = {
     'notify.fanout': (job, now) => fanout.fanout(job, now),
     'avatar.mirror': job => avatars.run(job.user_id),
     'storage.migrate': (job, now) => storageSvc.migrate(job, now),
+    'import.csv': (job, now) => imports.run(job, now),
+    'export.org': (job, now) => exports.run(job, now),
   };
   // Route tests run a job the way the schedule would, without pg-boss.
   app.decorate('jobHandlers', jobHandlers);

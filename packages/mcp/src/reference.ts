@@ -29,7 +29,7 @@ export const TOOL_GROUPS: Record<string, readonly ToolName[]> = {
   ],
   Links: ['link_issues', 'unlink_issues'],
   Comments: ['list_comments', 'add_comment', 'update_comment', 'delete_comment'],
-  Tags: ['list_tags'],
+  Tags: ['list_tags', 'rename_tag', 'recolor_tag', 'merge_tags', 'delete_tag'],
   'Time tracking': ['log_time', 'list_work_items', 'update_work_item', 'delete_work_item'],
   Files: [
     'list_attachments',
@@ -81,6 +81,7 @@ export const TOOL_GROUPS: Record<string, readonly ToolName[]> = {
     'get_org_activity',
     'update_profile',
   ],
+  'Import and export': ['start_csv_import', 'get_import_status', 'request_org_export', 'get_export_status'],
   People: [
     'list_members',
     'get_member',

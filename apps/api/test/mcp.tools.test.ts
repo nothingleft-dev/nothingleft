@@ -30,10 +30,11 @@ async function injectFetch(request: Request): Promise<Response> {
   const url = new URL(request.url);
   if (url.hostname === 's3.test.local') {
     const body = new Uint8Array(await request.arrayBuffer());
-    bucket.upload(
-      url.pathname.split('/').slice(2).join('/'),
-      body.byteLength,
+    bucket.uploadBytes(
+      request.url,
+      body,
       request.headers.get('x-amz-checksum-sha256') ?? undefined,
+      request.headers.get('content-type') ?? 'application/octet-stream',
     );
     return new Response(null, { status: 200 });
   }
@@ -1439,6 +1440,8 @@ describe('destructive tools ask the person, every time', () => {
       who: 'admin',
       args: () => ({ project: KEY, list: 'priority', action: 'add', name: 'Keep priority' }),
     },
+    { name: 'merge_tags', who: 'admin', args: () => ({ tags: ['keep-tag-a'], into: 'keep-tag-b' }) },
+    { name: 'delete_tag', who: 'admin', args: () => ({ tag: 'keep-tag-c' }) },
   ];
 
   beforeAll(async () => {
@@ -1446,7 +1449,7 @@ describe('destructive tools ask the person, every time', () => {
     tokens.admin = await pat(w.admin, ALL);
     tokens.contributor = await pat(w.contributor, ALL);
     tokens.projectAdmin = await pat(w.projectAdmin, ALL);
-    f.issue = await newIssue({ title: 'Confirm me' });
+    f.issue = await newIssue({ title: 'Confirm me', tags: ['keep-tag-a', 'keep-tag-b', 'keep-tag-c'] });
     f.comment = Number(
       /\*\*Comment (\d+)\*\*/.exec(await ok(t.contributor, 'add_comment', { issue: f.issue, body: 'keep' }))![1],
     );
@@ -1685,6 +1688,84 @@ describe('contributor content is framed as data', () => {
         expect(embedded.join('\n'), name).toContain(`Content written by @${w.admin.username} on `);
       }
     }
+  });
+});
+
+describe('tag management', () => {
+  test('rename_tag and recolor_tag as a Project Admin; merge_tags and delete_tag once confirmed', async () => {
+    const key = await newIssue({ tags: ['mcp-old', 'mcp-dup', 'mcp-gone'] });
+    expect(await ok(t.projectAdmin, 'rename_tag', { tag: 'mcp-old', name: 'MCP New' })).toContain(
+      '**MCP New** (`mcp-new`',
+    );
+    expect(await ok(t.projectAdmin, 'recolor_tag', { tag: 'mcp-new', color: 'teal-3' })).toContain('teal-3');
+    expect((await tool(t.contributor, 'rename_tag', { tag: 'mcp-new', name: 'x' })).code).toBe('forbidden');
+
+    const asked = await tool(t.admin, 'merge_tags', { tags: ['mcp-dup'], into: 'mcp-new' }, 'declines');
+    expect(asked.code).toBe('mcp.confirm_declined');
+    expect(asked.asked).toContain('merge `mcp-dup` into “MCP New”: 1 issues and 0 articles');
+    expect(await ok(t.admin, 'merge_tags', { tags: ['mcp-dup'], into: 'mcp-new' })).toContain('Merged');
+    expect((await tool(t.projectAdmin, 'merge_tags', { tags: ['mcp-gone'], into: 'mcp-new' })).code).toBe('forbidden');
+    expect(await ok(t.admin, 'delete_tag', { tag: 'mcp-gone' })).toContain('came off 1 issues');
+    const tags = (await w.call(w.admin, 'GET', `/v1/issues/${key}`))
+      .json()
+      .data.tags.map((x: { slug: string }) => x.slug);
+    expect(tags).toEqual(['mcp-new']);
+  });
+});
+
+describe('import and export', () => {
+  test('start_csv_import previews, dry-runs, then imports; get_import_status reports the rows', async () => {
+    const preview = await ok(t.admin, 'start_csv_import', {
+      project: KEY,
+      filename: 'backlog.csv',
+      content: 'Summary,State\nFrom MCP one,Open\nFrom MCP two,Nope\n',
+    });
+    const id = Number(/\*\*Import (\d+)\*\*/.exec(preview)![1]);
+    expect(preview).toContain('Suggested mapping: `{"title":"Summary","status":"State"}`');
+
+    const mapping = { title: 'Summary', status: 'State' };
+    const dry = await ok(t.admin, 'start_csv_import', { project: KEY, import: id, mapping });
+    expect(dry).toContain('1 of 2 rows would be created; 1 would be skipped. Nothing was written.');
+    expect(dry).toContain('Values the project lacks: status `Nope` (1 rows).');
+
+    const started = await ok(t.admin, 'start_csv_import', { project: KEY, import: id, mapping, dry_run: false });
+    expect(started).toContain(`**Import ${id}**`);
+    const queue = w.app.jobQueue as RecordingQueue;
+    for (const job of queue.pending.splice(0).filter(j => j.name === 'import.csv'))
+      await runQueued(w.app.queuedHandlers, job);
+    const status = await ok(t.admin, 'get_import_status', { project: KEY, import: id });
+    expect(status).toContain('— completed');
+    expect(status).toContain('| Created | 1 |');
+    expect(status).toContain('| 3 | State |');
+    expect(await ok(t.admin, 'get_import_status', { project: KEY })).toContain(`| ${id} | backlog.csv | completed |`);
+    expect((await tool(t.contributor, 'start_csv_import', { project: KEY, content: 'Title\nA\n' })).code).toBe(
+      'forbidden',
+    );
+  });
+
+  test('a file on disk gets a curl command and the import id to continue with', async () => {
+    const text = await ok(t.admin, 'start_csv_import', {
+      project: KEY,
+      filename: 'big.csv',
+      size_bytes: 2048,
+      sha256: Buffer.alloc(32, 3).toString('base64'),
+    });
+    expect(text).toContain("curl --fail -X PUT --data-binary @'big.csv'");
+    expect(text).toMatch(/call start_csv_import with project: "MT" and import: \d+/);
+  });
+
+  test('request_org_export queues one; get_export_status gives the link once it is built', async () => {
+    const requested = await ok(t.admin, 'request_org_export');
+    const id = Number(/\*\*Export (\d+)\*\*/.exec(requested)![1]);
+    expect(requested).toContain('— queued');
+    const queue = w.app.jobQueue as RecordingQueue;
+    for (const job of queue.pending.splice(0).filter(j => j.name === 'export.org'))
+      await runQueued(w.app.queuedHandlers, job);
+    const status = await ok(t.admin, 'get_export_status', { export: id });
+    expect(status).toContain('— completed');
+    expect(status).toContain('Download link, valid for five minutes:\nhttps://s3.test.local/');
+    expect(await ok(t.admin, 'get_export_status')).toContain(`| ${id} | completed |`);
+    expect((await tool(t.projectAdmin, 'request_org_export')).code).toBe('forbidden');
   });
 });
 

@@ -25,6 +25,7 @@ export const DOC_GROUPS: DocGroup[] = [
     docs: [
       { slug: 'issues', label: 'Issues' },
       { slug: 'custom-fields', label: 'Custom fields' },
+      { slug: 'tags', label: 'Tags' },
       { slug: 'search', label: 'Search and saved views' },
       { slug: 'agile', label: 'Sprints, backlog and boards' },
       { slug: 'reports', label: 'Reports' },
@@ -45,12 +46,13 @@ export const DOC_GROUPS: DocGroup[] = [
   },
   {
     title: 'Account and admin',
-    description: 'Sign-in and two-factor, roles, notifications and file storage.',
+    description: 'Sign-in and two-factor, roles, notifications, file storage, import and export.',
     docs: [
       { slug: 'account-security', label: 'Account security' },
       { slug: 'permissions', label: 'Roles and permissions' },
       { slug: 'notifications', label: 'Notifications' },
       { slug: 'storage', label: 'Files and storage' },
+      { slug: 'import-export', label: 'Import and export' },
     ],
   },
   {

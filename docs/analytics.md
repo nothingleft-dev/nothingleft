@@ -189,6 +189,17 @@ reason), `byo_storage_disconnected` (provider, files and bytes left in the bucke
 connected) and `storage_reconciled` (the drift in bytes, only when there was one). Never a
 bucket name, an endpoint, an account ID, an access key, a secret or a filename.
 
+### Import, export and tags
+
+Built in 6d (10 Oct 2026). `csv_import_started` (UI, PAT or MCP; whether it is a dry run; the
+row count; how many fields were mapped), `csv_import_finished` (rows, issues created, rows
+failed, duration), `org_export_requested` (UI, PAT or MCP), `org_export_finished` (whether it
+succeeded; issues, files, files missing, bytes, duration) and `tag_managed` (renamed,
+recoloured, merged or deleted; UI, PAT or MCP; how many tags were folded in, issues and
+articles affected, saved views rewritten). Adoption is ever-used and weekly-used per event, as
+for every feature (20.11). Never a filename, a header, a cell, a mapping, a tag name or an
+organisation name.
+
 ## MCP — the metrics that matter most
 
 One `mcp_tool_called` event per call — `tool`, `ok`, `error_code`, `duration_ms`,

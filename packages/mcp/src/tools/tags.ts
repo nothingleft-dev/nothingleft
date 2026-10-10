@@ -1,8 +1,26 @@
 import { z } from 'zod';
-import type { Tag } from '@nothingleft/types';
+import { t } from '@nothingleft/i18n';
+import { LABEL_COLORS, type Tag } from '@nothingleft/types';
 import * as arg from '../args.ts';
-import { defineTool } from '../tool.ts';
-import { join, more, table } from '../render.ts';
+import { path } from '../api.ts';
+import { ToolError } from '../errors.ts';
+import { defineTool, type ToolContext } from '../tool.ts';
+import { join, list, more, table } from '../render.ts';
+
+const scope = (org: string | undefined) => (org ? { org } : {});
+const tagName = z.string().trim().min(1).max(100).describe('A tag by name or slug, e.g. "needs-review".');
+const counted = (tag: Tag) =>
+  `**${tag.name}** (\`${tag.slug}\`, ${tag.color}) — ${tag.issue_count} issues · ${tag.article_count} articles`;
+
+/** A tag with its uses across the whole organisation, as the management screen counts them. */
+async function managed(ctx: ToolContext, name: string, org: string | undefined): Promise<Tag> {
+  const { data } = await ctx.api.get<Tag[]>('/v1/tags/manage', { ...scope(org), query: { q: name, limit: 50 } });
+  const slug = name.trim().toLowerCase();
+  const found = data.find(tag => tag.slug === slug || tag.name.toLowerCase() === slug);
+  if (!found)
+    throw ToolError.local('tag.not_found', { tag: name }, { field: 'tag', valid_values: data.map(d => d.name) });
+  return found;
+}
 
 export const listTags = defineTool({
   name: 'list_tags',
@@ -43,6 +61,99 @@ export const listTags = defineTool({
           : null,
         more(res.pagination, res.data.length),
       ),
+    };
+  },
+});
+
+export const renameTag = defineTool({
+  name: 'rename_tag',
+  title: 'Rename a tag',
+  description:
+    'Renames a tag everywhere it is used — every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.',
+  input: z.strictObject({
+    tag: tagName,
+    name: z.string().trim().min(1).max(100).describe('The new name.'),
+    org: arg.org,
+  }),
+  kind: 'write',
+  endpoints: ['PATCH /v1/tags/{tag}'],
+  async run(ctx, args) {
+    const { data } = await ctx.api.send<Tag>('PATCH', path`/v1/tags/${args.tag}`, {
+      ...scope(args.org),
+      body: { name: args.name },
+    });
+    return { markdown: `Renamed ${args.tag} to ${counted(data)}.` };
+  },
+});
+
+export const recolorTag = defineTool({
+  name: 'recolor_tag',
+  title: 'Recolour a tag',
+  description:
+    'Changes the colour a tag is drawn in, from the 40-name label grid ("red-1" … "gray-5"). Needs a Project Admin of any project and a token with admin:project.',
+  input: z.strictObject({
+    tag: tagName,
+    color: z.enum(LABEL_COLORS).describe('A label colour, e.g. "teal-3".'),
+    org: arg.org,
+  }),
+  kind: 'write',
+  endpoints: ['PATCH /v1/tags/{tag}'],
+  async run(ctx, args) {
+    const { data } = await ctx.api.send<Tag>('PATCH', path`/v1/tags/${args.tag}`, {
+      ...scope(args.org),
+      body: { color: args.color },
+    });
+    return { markdown: `Recoloured ${counted(data)}.` };
+  },
+});
+
+export const mergeTags = defineTool({
+  name: 'merge_tags',
+  title: 'Merge tags',
+  description:
+    'Moves every issue and article tagged with any of `tags` onto `into`, then deletes `tags`; saved views follow. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.',
+  input: z.strictObject({
+    tags: z.array(tagName).min(1).max(50).describe('The tags to fold in and delete.'),
+    into: tagName.describe('The tag they become.'),
+    org: arg.org,
+  }),
+  kind: 'destructive',
+  endpoints: ['GET /v1/tags/manage', 'POST /v1/tags/merge'],
+  async describeAction(ctx, args) {
+    const sources = await Promise.all(args.tags.map(name => managed(ctx, name, args.org)));
+    const into = await managed(ctx, args.into, args.org);
+    return t('mcp.action.tag_merge', {
+      tags: list(sources.map(s => s.name)),
+      into: into.name,
+      issues: sources.reduce((n, s) => n + s.issue_count, 0),
+      articles: sources.reduce((n, s) => n + s.article_count, 0),
+    });
+  },
+  async run(ctx, args) {
+    const { data } = await ctx.api.send<Tag>('POST', '/v1/tags/merge', {
+      ...scope(args.org),
+      body: { tags: args.tags, into: args.into },
+    });
+    return { markdown: `Merged ${list(args.tags)} into ${counted(data)}.` };
+  },
+});
+
+export const deleteTag = defineTool({
+  name: 'delete_tag',
+  title: 'Delete a tag',
+  description:
+    'Removes a tag from every issue and article in the organisation and deletes it. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.',
+  input: z.strictObject({ tag: tagName, org: arg.org }),
+  kind: 'destructive',
+  endpoints: ['GET /v1/tags/manage', 'DELETE /v1/tags/{tag}'],
+  async describeAction(ctx, args) {
+    const tag = await managed(ctx, args.tag, args.org);
+    return t('mcp.action.tag_delete', { tag: tag.name, issues: tag.issue_count, articles: tag.article_count });
+  },
+  async run(ctx, args) {
+    const { data } = await ctx.api.send<Tag>('DELETE', path`/v1/tags/${args.tag}`, scope(args.org));
+    return {
+      markdown: `Deleted the tag **${data.name}**; it came off ${data.issue_count} issues and ${data.article_count} articles.`,
     };
   },
 });

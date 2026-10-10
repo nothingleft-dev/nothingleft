@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy
-updated: '2026-10-08'
+updated: '2026-10-10'
 ---
 
 This policy explains what personal data Nothing Left collects, why, who receives it, how long we
@@ -87,7 +87,7 @@ invitation goes to that address.
 ### Files
 
 Attachments and CSV imports: the file itself, its name, type, size, checksum, image dimensions and
-who uploaded it.
+who uploaded it. A CSV import's file is deleted once the import has run.
 
 ### Time entries
 
@@ -294,6 +294,8 @@ None today. Google Analytics would set `_ga` cookies in the web app, and it is s
 | Rate-limit counters, repeated-request records, cached reports         | 60 seconds, 24 hours and 5 minutes                                                                                                                                                  |
 | Issues and articles in the trash                                      | 14 days, then deleted with their comments, time entries, files and history                                                                                                          |
 | Deleted files                                                         | Removed within the hour. Uploads never finished go after 1 hour, and uploads never attached after 2 days                                                                            |
+| CSV import files                                                      | Deleted when the import has run, or after a day if it is never started                                                                                                              |
+| Organisation exports                                                  | 7 days after they are built, then deleted. They hold what the organisation holds, including members' email addresses                                                                |
 | Notifications                                                         | 30 days after you read them; 90 days if unread                                                                                                                                      |
 | Recent searches, saved views, history of issues that still exist      | Kept. [Owner to decide: retention for recent searches.]                                                                                                                             |
 | A deleted organisation                                                | 14 days to cancel, then its content and files are deleted. A record that it existed and its audit log stay, and its address stays reserved. Files in its own bucket are not touched |
@@ -318,7 +320,8 @@ exercise your rights if you die or cannot act.
 - **Correct it.** Change your name, timezone, photo and your username in each organisation. Change
   your email address after verifying the new one; the old address is told.
 - **Take a copy.** Export issues and reports as CSV, or read your data through the REST API and MCP.
-  There is no single "download all my data" yet.
+  An Org Admin can export the whole organisation as one download. There is no single "download
+  all my data" for one person yet.
 - **Stop notification emails.** They are off until you turn them on, and every one can be
   unsubscribed with one click.
 - **Sign out devices and revoke tokens** in **Settings**.

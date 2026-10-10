@@ -299,6 +299,35 @@ export const EventCatalogue = {
   storage_reconciled: z.object({
     drift_bytes: z.number().int(),
   }),
+  csv_import_started: z.object({
+    via: z.enum(['session', 'pat', 'mcp']),
+    dry_run: z.boolean(),
+    rows: z.number().int().nonnegative(),
+    mapped_fields: z.number().int().nonnegative(),
+  }),
+  csv_import_finished: z.object({
+    rows: z.number().int().nonnegative(),
+    created: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    duration_ms: z.number().nonnegative(),
+  }),
+  org_export_requested: z.object({ via: z.enum(['session', 'pat', 'mcp']) }),
+  org_export_finished: z.object({
+    ok: z.boolean(),
+    issues: z.number().int().nonnegative(),
+    files: z.number().int().nonnegative(),
+    missing_files: z.number().int().nonnegative(),
+    bytes: z.number().int().nonnegative(),
+    duration_ms: z.number().nonnegative(),
+  }),
+  tag_managed: z.object({
+    action: z.enum(['renamed', 'recolored', 'merged', 'deleted']),
+    via: z.enum(['session', 'pat', 'mcp']),
+    sources: z.number().int().nonnegative(),
+    issues: z.number().int().nonnegative(),
+    articles: z.number().int().nonnegative(),
+    views_rewritten: z.number().int().nonnegative(),
+  }),
   mcp_tool_called: z.object({
     tool: z.string().regex(/^[a-z_]{1,64}$/),
     ok: z.boolean(),

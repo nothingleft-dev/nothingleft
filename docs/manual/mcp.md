@@ -119,7 +119,7 @@ argument, is the [tool reference](./mcp-tools.md).
 | Links | `link_issues`, `unlink_issues` |
 | Knowledge base | `list_articles`, `get_article`, `search_articles`, `create_article`, `update_article`, `delete_article`, `restore_article` |
 | Comments | `list_comments`, `add_comment`, `update_comment`, `delete_comment` — on an issue or an article |
-| Tags | `list_tags`, with how many issues and articles carry each; tags are added and removed with `create_issue`, `update_issue`, `create_article` and `update_article` |
+| Tags | `list_tags`, with how many issues and articles carry each; tags are added and removed with `create_issue`, `update_issue`, `create_article` and `update_article`; `rename_tag` and `recolor_tag` for a Project Admin, `merge_tags` and `delete_tag` for an Org Admin ([Tags](./tags.md)) |
 | Time | `log_time`, `list_work_items`, `update_work_item`, `delete_work_item` |
 | Files | `list_attachments`, `get_attachment_url`, `upload_attachment`, `complete_upload`, `delete_attachment` — on an issue or an article; `list_files` — the organisation's files by size, for an Org Admin |
 | Saved views | `list_views`, `get_view`, `create_view`, `update_view`, `delete_view` |
@@ -128,6 +128,7 @@ argument, is the [tool reference](./mcp-tools.md).
 | Boards | `get_board`, `create_board`, `update_board`, `delete_board` |
 | Reports | `run_report` — any of the nine [reports](./reports.md), with the table and series its chart is drawn from; time logged by work type, person, issue or project is `report: time` |
 | Notifications | `list_notifications` (your inbox, one row per issue), `mark_notifications_read`, `get_notification_preferences`, `set_notification_preferences`; see [Notifications](./notifications.md) |
+| Import and export | `start_csv_import`, `get_import_status` — issues from a CSV file, with a dry run first; `request_org_export`, `get_export_status` — the whole organisation as one download ([Import and export](./import-export.md)) |
 | Settings | `create_project`, `update_project`, `update_project_schema`, `create_org`, `update_org_settings`, `get_org_activity`, `update_profile` |
 | People | `list_members`, `get_member`, `invite_member`, `create_invite_link`, `manage_roles`, `remove_member`, `list_invitations`, `get_invitation`, `revoke_invitation`, `rotate_invite_link` |
 
@@ -216,6 +217,16 @@ An Org Admin can ask what takes up the organisation's storage: `list_files` list
 file largest first, with the issue or article it belongs to, and `delete_attachment`
 removes one. Connecting your own storage bucket stays in the web app — an agent never
 handles its keys ([Storage](./storage.md)).
+
+### Importing a spreadsheet
+
+Ask *"import backlog.csv into ACME"* and the agent hands the file to `start_csv_import` —
+as text when it is small, or with the same `curl` step as other files. It answers with the
+columns it found and a suggested mapping, then a **dry run**: how many rows would become
+issues and, for each one that would not, the row number and why (*"Unknown status Doing"*,
+with the statuses ACME has). Nothing is created until the agent calls it again with
+`dry_run: false`; `get_import_status` follows the import and lists the rows it skipped.
+Importing needs a Project Admin of the project.
 
 ## Good to know
 

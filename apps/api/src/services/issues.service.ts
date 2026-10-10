@@ -74,7 +74,7 @@ import {
 } from '@services/issue-link-writer';
 import { claimDrafts, releaseStorage } from '@services/attachment-writer';
 import { isByoUnavailable, type ObjectStores } from '@services/object-stores';
-import { applyTags, wantedTags } from '@services/issue-tag-writer';
+import { applyTags, wantedTags, type WantedTag } from '@services/issue-tag-writer';
 import {
   appliesTo,
   checkApplicable,
@@ -182,6 +182,39 @@ interface Resolved {
   parent?: IssueRow | null | undefined;
   story_points?: number | null | undefined;
   sprint?: SprintRow | null | undefined;
+}
+
+/** Lookups shared by many creates in one project: an import checks thousands of rows against the same lists. */
+export interface CreateMemo {
+  readonly cache: Map<string, Promise<unknown>>;
+}
+
+export const createMemo = (): CreateMemo => ({ cache: new Map() });
+
+function remember<T>(memo: CreateMemo | undefined, key: string, load: () => Promise<T>): Promise<T> {
+  if (!memo) return load();
+  let hit = memo.cache.get(key) as Promise<T> | undefined;
+  if (!hit) {
+    hit = load();
+    // A refusal is cached too, and rethrown to every row that asks again; nobody awaits the original.
+    hit.catch(() => undefined);
+    memo.cache.set(key, hit);
+  }
+  return hit;
+}
+
+/** A create checked against everything that can be checked before the transaction. */
+export interface PlannedCreate {
+  input: CreateIssue;
+  resolved: Resolved;
+  status: WorkflowStatusRow;
+  priority: PriorityRow;
+  type: IssueTypeRow;
+  assignees: { id: number; username: string }[];
+  wanted: Map<string, WantedTag> | undefined;
+  links: { plan: { link: LinkName; targets: IssueRow[] }[]; keyOf: ReturnType<typeof keyer> } | undefined;
+  catalogue: FieldCatalogue;
+  custom: { plan: Awaited<ReturnType<typeof planInput>>; redirected: boolean };
 }
 
 const DAY_MS = 86_400_000;
@@ -292,7 +325,11 @@ export function issuesService(deps: IssuesDeps) {
     if (project.project.is_archived) throw new AppError('project.archived', 409, { key: project.project.key });
   }
 
-  async function valuesOf(project: ProjectAccess): Promise<ProjectValues> {
+  async function valuesOf(project: ProjectAccess, memo?: CreateMemo): Promise<ProjectValues> {
+    return remember(memo, 'values', () => loadValues(project));
+  }
+
+  async function loadValues(project: ProjectAccess): Promise<ProjectValues> {
     const [statuses, priorities, types] = await Promise.all([
       schema.list(project.ctx, 'statuses', project.project.id),
       schema.list(project.ctx, 'priorities', project.project.id),
@@ -637,10 +674,11 @@ export function issuesService(deps: IssuesDeps) {
     project: ProjectAccess,
     input: CreateIssue | UpdateIssue,
     current?: IssueRow,
+    memo?: CreateMemo,
   ): Promise<Resolved> {
     checkDescription(input.description_md);
     const needsValues = input.status !== undefined || input.priority !== undefined || input.type !== undefined;
-    const values = needsValues ? await valuesOf(project) : undefined;
+    const values = needsValues ? await valuesOf(project, memo) : undefined;
     return {
       title: input.title,
       description_md: input.description_md,
@@ -657,13 +695,21 @@ export function issuesService(deps: IssuesDeps) {
       assignees:
         input.assignees === undefined
           ? undefined
-          : await eligiblePeople(project, input.assignees, 'issue.unknown_assignee', 'assignees'),
+          : await remember(memo, `people:${[...input.assignees].sort().join(' ')}`, () =>
+              eligiblePeople(project, input.assignees!, 'issue.unknown_assignee', 'assignees'),
+            ),
       estimate_minutes: input.estimate === undefined ? undefined : parseEstimate(project, input.estimate),
       start_date: input.start_date,
       due_date: input.due_date,
-      parent: input.parent === undefined ? undefined : await parentOf(project, input.parent),
+      parent:
+        input.parent === undefined
+          ? undefined
+          : await remember(memo, `parent:${input.parent}`, () => parentOf(project, input.parent!)),
       story_points: input.story_points,
-      sprint: input.sprint === undefined ? undefined : await sprintOf(project, input.sprint, current?.sprint_id),
+      sprint:
+        input.sprint === undefined
+          ? undefined
+          : await remember(memo, `sprint:${input.sprint}`, () => sprintOf(project, input.sprint!, current?.sprint_id)),
     };
   }
 
@@ -708,6 +754,145 @@ export function issuesService(deps: IssuesDeps) {
     ...memberRef(w),
     source: w.source as WatcherSource,
   });
+
+  /** Every check a create makes before its transaction. Nothing is written. */
+  async function planCreate(
+    principal: Principal,
+    project: ProjectAccess,
+    input: CreateIssue,
+    memo?: CreateMemo,
+  ): Promise<PlannedCreate> {
+    requireWritable(principal, project, 'issue.create');
+    if (input.assignees?.length) access.require(principal, 'issue.assign', project.scope);
+    if (input.parent) access.require(principal, 'issue.parent_set', project.scope);
+    if (input.attachment_ids?.length) access.require(principal, 'attachment.upload', project.scope);
+    const resolved = await resolve(project, input, undefined, memo);
+    const values = await valuesOf(project, memo);
+    const status = resolved.status ?? values.statuses.find(s => s.is_default)!;
+    const priority = resolved.priority ?? values.priorities.find(p => p.is_default)!;
+    const type = resolved.type ?? values.types.find(t => t.is_default)!;
+    checkDates(resolved.start_date ?? null, resolved.due_date ?? null);
+    const assignees = resolved.assignees ?? [];
+    const wanted = input.tags?.length ? wantedTags(input.tags, undefined, 'tags') : undefined;
+    if (wanted) access.require(principal, 'tag.apply', project.scope);
+    const links = await planLinks(principal, project, input);
+    const catalogue = await remember(memo, 'catalogue', () =>
+      loadCatalogue(deps.customFields, project.ctx, [project.project.id]),
+    );
+    const custom = await planCustomFields(project, catalogue, input, type, []);
+    await completeRequired(valueDeps, custom.vc, catalogue, custom.plan, {
+      typeId: type.id,
+      currentValues: [],
+      candidates: () => true,
+    });
+    return {
+      input,
+      resolved,
+      status,
+      priority,
+      type,
+      assignees,
+      wanted,
+      links,
+      catalogue,
+      custom: { plan: custom.plan, redirected: custom.redirected },
+    };
+  }
+
+  /**
+   * Writes a planned create in one transaction. `watch: false` leaves the creator off the
+   * watchers (an import does not subscribe its importer to every row); `also` joins the
+   * transaction, so a job's progress commits with the issue it counts.
+   */
+  async function insertPlanned(
+    principal: Principal,
+    project: ProjectAccess,
+    planned: PlannedCreate,
+    options: { watch: boolean; also?: (repos: TenantRepos) => Promise<void> },
+  ): Promise<IssueRow> {
+    const { input, resolved, status, priority, type, assignees, wanted, links, catalogue, custom } = planned;
+    const at = now();
+
+    return inTransaction(async repos => {
+      const keyNumber = await repos.projects.claimIssueNumber(project.ctx, project.project.id);
+      const issue = await repos.issues.insert(project.ctx, {
+        project_id: project.project.id,
+        key_number: keyNumber,
+        title: resolved.title!,
+        description_md: resolved.description_md ?? null,
+        status_id: status.id,
+        priority_id: priority.id,
+        type_id: type.id,
+        created_by: principal.userId,
+        updated_by: principal.userId,
+        estimate_minutes: custom.redirected ? null : (resolved.estimate_minutes ?? null),
+        story_points: resolved.story_points ?? null,
+        // Unranked sorts last in its container, which is where a new issue belongs.
+        sprint_id: resolved.sprint?.id ?? null,
+        start_date: resolved.start_date ?? null,
+        due_date: resolved.due_date ?? null,
+        resolved_at: isResolvedCategory(status.category) ? at : null,
+        parent_id: resolved.parent?.id ?? null,
+        created_at: at,
+        updated_at: at,
+      });
+      if (resolved.parent) {
+        await checkParent(repos, { ctx: project.ctx, child: issue, parent: resolved.parent, keyOf: keyIn(project) });
+        await recordIssueEvent(
+          repos.issueActivity,
+          {
+            ctx: project.ctx,
+            issueId: resolved.parent.id,
+            actorId: principal.userId,
+            changeGroupId: Bun.randomUUIDv7(),
+            at,
+          },
+          'linked',
+          { new_value: { link: 'parent for', issue: keyIn(project)(issue) } satisfies IssueLinkSnapshot },
+        );
+      }
+      await repos.issues.addAssignees(
+        project.ctx,
+        issue.id,
+        assignees.map(a => a.id),
+      );
+      const watchers = [...(options.watch ? [principal.userId] : []), ...assignees.map(a => a.id)];
+      await repos.issues.watch(project.ctx, issue.id, watchers, 'auto');
+      await writePlanned(
+        repos.customFields,
+        { ctx: project.ctx, projectId: project.project.id, issueId: issue.id, at },
+        catalogue,
+        custom.plan,
+        [],
+        new Map(),
+      );
+      await writeMentions(repos, project, issue.id, issue.description_md);
+      const created = {
+        ctx: project.ctx,
+        issueId: issue.id,
+        actorId: principal.userId,
+        changeGroupId: Bun.randomUUIDv7(),
+        at,
+      };
+      await recordIssueEvent(repos.issueActivity, created, 'created');
+      await claimDrafts(repos, { change: created, key: keyIn(project)(issue) }, input.attachment_ids);
+      if (wanted) {
+        const onCreate = () => access.require(principal, 'tag.create', project.scope);
+        await applyTags(
+          repos,
+          { ctx: project.ctx, issueId: issue.id, actorId: principal.userId, at, onCreate },
+          wanted,
+        );
+      }
+      for (const { link, targets } of links?.plan ?? []) {
+        const w = { ctx: project.ctx, actorId: principal.userId, keyOf: links!.keyOf, at, field: 'links' };
+        await writeLinks(repos, w, link, issue, targets);
+      }
+      await options.also?.(repos);
+      // A `subtask of` link moved parent_id after the insert.
+      return (await repos.issues.findById(project.ctx, issue.id))!;
+    });
+  }
 
   return {
     async list(
@@ -926,108 +1111,9 @@ export function issuesService(deps: IssuesDeps) {
 
     async create(principal: Principal, input: CreateIssue, hints: OrgHints = {}): Promise<Issue> {
       const project = await access.project(principal, input.project, hints);
-      requireWritable(principal, project, 'issue.create');
-      if (input.assignees?.length) access.require(principal, 'issue.assign', project.scope);
-      if (input.parent) access.require(principal, 'issue.parent_set', project.scope);
-      if (input.attachment_ids?.length) access.require(principal, 'attachment.upload', project.scope);
-      const resolved = await resolve(project, input);
-      const values = await valuesOf(project);
-      const status = resolved.status ?? values.statuses.find(s => s.is_default)!;
-      const priority = resolved.priority ?? values.priorities.find(p => p.is_default)!;
-      const type = resolved.type ?? values.types.find(t => t.is_default)!;
-      checkDates(resolved.start_date ?? null, resolved.due_date ?? null);
-      const assignees = resolved.assignees ?? [];
-      const wanted = input.tags?.length ? wantedTags(input.tags, undefined, 'tags') : undefined;
-      if (wanted) access.require(principal, 'tag.apply', project.scope);
-      const links = await planLinks(principal, project, input);
-      const catalogue = await loadCatalogue(deps.customFields, project.ctx, [project.project.id]);
-      const custom = await planCustomFields(project, catalogue, input, type, []);
-      await completeRequired(valueDeps, custom.vc, catalogue, custom.plan, {
-        typeId: type.id,
-        currentValues: [],
-        candidates: () => true,
-      });
-      const at = now();
-
-      const row = await inTransaction(async repos => {
-        const keyNumber = await repos.projects.claimIssueNumber(project.ctx, project.project.id);
-        const issue = await repos.issues.insert(project.ctx, {
-          project_id: project.project.id,
-          key_number: keyNumber,
-          title: resolved.title!,
-          description_md: resolved.description_md ?? null,
-          status_id: status.id,
-          priority_id: priority.id,
-          type_id: type.id,
-          created_by: principal.userId,
-          updated_by: principal.userId,
-          estimate_minutes: custom.redirected ? null : (resolved.estimate_minutes ?? null),
-          story_points: resolved.story_points ?? null,
-          // Unranked sorts last in its container, which is where a new issue belongs.
-          sprint_id: resolved.sprint?.id ?? null,
-          start_date: resolved.start_date ?? null,
-          due_date: resolved.due_date ?? null,
-          resolved_at: isResolvedCategory(status.category) ? at : null,
-          parent_id: resolved.parent?.id ?? null,
-          created_at: at,
-          updated_at: at,
-        });
-        if (resolved.parent) {
-          await checkParent(repos, { ctx: project.ctx, child: issue, parent: resolved.parent, keyOf: keyIn(project) });
-          await recordIssueEvent(
-            repos.issueActivity,
-            {
-              ctx: project.ctx,
-              issueId: resolved.parent.id,
-              actorId: principal.userId,
-              changeGroupId: Bun.randomUUIDv7(),
-              at,
-            },
-            'linked',
-            { new_value: { link: 'parent for', issue: keyIn(project)(issue) } satisfies IssueLinkSnapshot },
-          );
-        }
-        await repos.issues.addAssignees(
-          project.ctx,
-          issue.id,
-          assignees.map(a => a.id),
-        );
-        await repos.issues.watch(project.ctx, issue.id, [principal.userId, ...assignees.map(a => a.id)], 'auto');
-        await writePlanned(
-          repos.customFields,
-          { ctx: project.ctx, projectId: project.project.id, issueId: issue.id, at },
-          catalogue,
-          custom.plan,
-          [],
-          new Map(),
-        );
-        await writeMentions(repos, project, issue.id, issue.description_md);
-        const created = {
-          ctx: project.ctx,
-          issueId: issue.id,
-          actorId: principal.userId,
-          changeGroupId: Bun.randomUUIDv7(),
-          at,
-        };
-        await recordIssueEvent(repos.issueActivity, created, 'created');
-        await claimDrafts(repos, { change: created, key: keyIn(project)(issue) }, input.attachment_ids);
-        if (wanted) {
-          const onCreate = () => access.require(principal, 'tag.create', project.scope);
-          await applyTags(
-            repos,
-            { ctx: project.ctx, issueId: issue.id, actorId: principal.userId, at, onCreate },
-            wanted,
-          );
-        }
-        for (const { link, targets } of links?.plan ?? []) {
-          const w = { ctx: project.ctx, actorId: principal.userId, keyOf: links!.keyOf, at, field: 'links' };
-          await writeLinks(repos, w, link, issue, targets);
-        }
-        // A `subtask of` link moved parent_id after the insert.
-        return (await repos.issues.findById(project.ctx, issue.id))!;
-      });
-
-      const valuedFields = [...custom.plan.values()].filter(p => p.rows.length > 0).length;
+      const planned = await planCreate(principal, project, input);
+      const row = await insertPlanned(principal, project, planned, { watch: true });
+      const valuedFields = [...planned.custom.plan.values()].filter(p => p.rows.length > 0).length;
       if (valuedFields > 0) {
         analytics.capture(
           'custom_field_values_set',
@@ -1037,11 +1123,20 @@ export function issuesService(deps: IssuesDeps) {
       }
       analytics.capture(
         'issue_created',
-        { via: viaOf(principal), has_description: Boolean(row.description_md), assignee_count: assignees.length },
+        {
+          via: viaOf(principal),
+          has_description: Boolean(row.description_md),
+          assignee_count: planned.assignees.length,
+        },
         { userId: principal.userId, orgId: project.organization.id },
       );
       return one(principal, project, row);
     },
+
+    planCreate,
+    insertPlanned,
+    /** Rows of any readable projects of one organisation as the API's Issue, in the order given. */
+    dtosFor: hydrateMany,
 
     async update(
       principal: Principal,

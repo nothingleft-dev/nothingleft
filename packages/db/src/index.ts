@@ -37,3 +37,6 @@ export * from './repositories/totp-recovery-codes.repository.ts';
 export * from './repositories/organization-purge.repository.ts';
 export * from './repositories/org-storage-configs.repository.ts';
 export * from './repositories/org-storage-locations.repository.ts';
+export * from './repositories/import-jobs.repository.ts';
+export * from './repositories/export-jobs.repository.ts';
+export * from './repositories/org-export.repository.ts';

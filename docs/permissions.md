@@ -42,6 +42,10 @@ Legend: ✅ allowed · **own** only own records · ❌ denied
 
 Creating an organisation requires only an authenticated account.
 
+*Export organisation data* (6d) is requesting, listing and downloading full exports. A token
+needs `admin:org`; no step-up, so an agent can ask for one. Any Org Admin or the Owner may
+download any of the organisation's exports while they last (7 days).
+
 How the storage rows apply (decided 28 Sep 2026, 6c):
 
 - *View storage usage* is the storage screen and `list_files`: the organisation's figures
@@ -96,6 +100,7 @@ tracking rows. Nothing is writable in an archived project.
 | Link and unlink issues | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Set parent / subtask | ❌ | ✅ | ✅ | ✅ | ✅ |
 | Bulk update | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Import issues from CSV | ❌ | ❌ | ✅ | ✅ | ✅ |
 | Move issue to another project | ❌ | ❌ | ✅ | ✅ | ✅ |
 | Delete issue | ❌ | ❌ | ✅ | ✅ | ✅ |
 | Star, watch, vote | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -109,6 +114,12 @@ A link is checked on the issue it is made from; the other end needs only
 *Read issue* for the caller, and may be in another project (decided 24 Sep
 2026, 1d). A subtask link is *Set parent / subtask*, since it writes
 `parent_id`.
+
+*Import issues from CSV* (owner, 10 Oct 2026, 6d) is uploading the file, reading it, the
+dry run, starting the import and reading its status, in the project it imports into. A token
+needs `admin:project`. Each row is then created as the importer, with every check a create
+makes; the job runs them again when it starts, so an importer who lost the role by then gets
+a failed import, not issues.
 
 ### Comments
 
@@ -186,6 +197,11 @@ Tags are organisation-level and shared by issues **and** knowledge base
 articles, so destructive tag operations affect every project and both entity
 types, and sit at org level. Creating one is deliberately open — an agent
 tagging freely is a feature, and the slug rule prevents near-duplicates.
+
+How the management rows apply (decided 10 Oct 2026, 6d): *Rename or recolour a tag* is held by
+a Project Admin of **any** project, since the tag is not in one; it also opens the management
+list (`GET /v1/tags/manage`, counts across the whole organisation). A token needs
+`admin:project`. *Merge or delete a tag* needs `admin:org`, and the MCP tools ask first.
 
 ### Knowledge base
 

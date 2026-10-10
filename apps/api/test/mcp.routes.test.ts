@@ -245,8 +245,8 @@ describe('tools/list', () => {
       'decimals',
     ]);
     // Comments and work items have no human name, so they are named by the number every
-    // listing shows (owner, 26 Sep 2026); an upload by the id upload_attachment just gave.
-    const numbered = new Set(['comment', 'work_item', 'upload']);
+    // listing shows (owner, 26 Sep 2026); an upload, import or export by the id its tool just gave.
+    const numbered = new Set(['comment', 'work_item', 'upload', 'import', 'export']);
     const offenders: string[] = [];
     const walk = (tool: string, props: Record<string, { type?: string; properties?: object; items?: object }>) => {
       for (const [name, schema] of Object.entries(props)) {

@@ -229,7 +229,7 @@ worthwhile only under load).
 | `sprint.snapshot` | Cron, nightly | Write `sprint_snapshots` so burndowns are exact and instant |
 | `storage.migrate` | BYO storage connected | Stream existing objects to the org's own bucket, with progress |
 | `avatar.mirror` | First OAuth login | Copy the provider avatar into the public bucket |
-| `import.csv` | CSV import started | Parse, validate, create issues, report per-row errors |
+| `import.csv` | CSV import started | Parse, validate, create issues, report per-row errors; one transaction per row with the job's progress, so a run that stops resumes; a run longer than 5 minutes queues its own continuation (6d) |
 | `session.gc` | Cron, hourly | Delete expired sessions |
 | `tokens.gc` | Cron, hourly | Delete expired `one_time_tokens` |
 | `attachments.sweep` | Cron, hourly | Remove attachment rows whose upload never completed |
@@ -239,7 +239,8 @@ worthwhile only under load).
 | `notifications.purge` | Cron, nightly | Delete read notifications after 30 days, unread after 90 |
 | `webhooks.purge` | Cron, nightly (v2) | Delete `webhook_deliveries` after 30 days |
 | `org.delete` | Grace period elapsed | Delete an organisation whose deletion was scheduled |
-| `export.org` | Export requested | Produce the JSON + files archive for a full org export |
+| `export.org` | Export requested | Produce the JSON + files archive for a full org export: a temporary file, then one checked upload to the platform bucket; may run for hours, so its queue expires jobs after 6 (6d) |
+| `transfers.sweep` | Cron, hourly at :50 | Delete export archives past their 7 days and import files whose job ended or was never run within a day (6d) |
 
 There is **no search reindex job.** `issues.search_tsv` and
 `articles.search_tsv` are generated columns, so they cannot be stale — see

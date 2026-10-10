@@ -52,6 +52,7 @@ case, not an `eslint-disable`.
 | Email | **Resend**, Zoho CPaaS or SMTP (`nodemailer`) | Transactional only by default; Resend is the default provider; see [notifications.md](./notifications.md) for the email policy |
 | Password hashing | **argon2id** | Current OWASP recommendation |
 | Secret encryption | **AES-256-GCM** | For BYO storage credentials and TOTP secrets, under a server master key from env |
+| Export archives | **yazl** | Streams a zip entry by entry to disk, with zip64 for archives past 4 GB, so an organisation export never has to fit in memory; one small dependency, and a `.zip` opens anywhere without tools (6d) |
 | Two-factor | **otplib** | Standard TOTP; works with Google Authenticator, 1Password, Authy |
 | Avatars | Upload (public bucket) → provider URL → **Gravatar** → generated initials; organisations always a generated blob | Marks are rendered by the API with `@dicebear/core` and `@dicebear/styles` (MIT, CC0 styles), so no name leaves for a hosted service — `file-storage.md#avatars` |
 

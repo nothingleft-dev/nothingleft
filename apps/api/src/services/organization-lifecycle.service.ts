@@ -12,6 +12,8 @@ import {
   systemContext,
   tenantContext,
   type AttachmentsRepository,
+  type ExportJobsRepository,
+  type ImportJobsRepository,
   type MemberWithUser,
   type OneTimeTokenRow,
   type OneTimeTokensRepository,
@@ -44,6 +46,8 @@ export interface OrganizationLifecycleDeps {
   sessions: SessionsRepository;
   tokens: PersonalAccessTokensRepository;
   attachments: AttachmentsRepository;
+  importJobs: ImportJobsRepository;
+  exportJobs: ExportJobsRepository;
   inTransaction: InTenantTransaction;
   toDto: (org: OrgAccess) => Promise<Organization>;
   twoFactor: TwoFactorService;
@@ -271,6 +275,12 @@ export function organizationLifecycleService(deps: OrganizationLifecycleDeps) {
               batch.map(row => row.id),
             );
           }
+          const transferKeys = [...(await deps.importJobs.objectKeys(ctx)), ...(await deps.exportJobs.objectKeys(ctx))];
+          await stores.deleteObjects(
+            ctx,
+            transferKeys.map(object_key => ({ storage_target: 'platform', storage_location_id: null, object_key })),
+          );
+          objects += transferKeys.length;
           const counts = await inTransaction(repos => repos.organizationPurge.purgeContents(ctx));
 
           await mailAdmins(ctx, due, 'email.org_deleted.subject', 'email.org_deleted.body', {}, recipients);

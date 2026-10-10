@@ -1,6 +1,6 @@
 ---
 title: Terms of Service
-updated: '2026-10-08'
+updated: '2026-10-10'
 ---
 
 These terms govern your use of the hosted Nothing Left service. Please read them. If you do not
@@ -123,9 +123,9 @@ for its security and for the data in it. These terms and our Privacy Policy do n
 
 ## 10. Your data when things end
 
-- **Export.** Issues and reports export as CSV. Org Admins can export the audit log as CSV.
-  Everything you can see is also available through the REST API and MCP. A full export of an
-  organisation is not available yet.
+- **Export.** Issues and reports export as CSV. Org Admins can export the audit log as CSV, and
+  the whole organisation — every project, issue, article and file — as one download, kept for 7
+  days. Everything you can see is also available through the REST API and MCP.
 - **Deactivation** keeps your memberships and your work, under your name.
 - **Deleted issues and articles** can be restored for 14 days, then they are deleted for good.
 - **Deleting an organisation** is scheduled 14 days ahead, and the Owner can cancel at any time in

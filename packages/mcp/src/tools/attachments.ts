@@ -281,12 +281,12 @@ function attached(f: Attachment, key: string) {
   );
 }
 
-async function digest(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+export async function digest(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
   const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
   return btoa(String.fromCharCode(...hash));
 }
 
-const shellQuote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+export const shellQuote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 const MIME: Record<string, string> = {
   png: 'image/png',

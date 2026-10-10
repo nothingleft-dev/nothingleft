@@ -146,6 +146,11 @@ export function memoryStorage() {
       const [, bucket, ...key] = new URL(url).pathname.split('/');
       put(buckets.get(bucket!)!, key.join('/'), size, sha256);
     },
+    /** A PUT of real bytes, for a file the API reads back (an import). */
+    uploadBytes(url: string, body: Uint8Array, sha256?: string, contentType = 'text/csv') {
+      const [, bucket, ...key] = new URL(url).pathname.split('/');
+      buckets.get(bucket!)!.objects.set(key.join('/'), { size: body.length, content_type: contentType, sha256, body });
+    },
     /** A customer's bucket, reachable with exactly these credentials at this endpoint. */
     createBucket(name: string, accessKeyId: string, secret: string, endpoint = BYO_TEST_ENDPOINT): MemoryBucket {
       return makeBucket(bucketId(endpoint, name), name, { accessKeyId, secret });

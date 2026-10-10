@@ -1572,6 +1572,94 @@ paths:
           description: '`storage.not_verified` or `storage.migration_running`.'
           content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
 
+  /v1/organizations/{slug}/exports:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+    post:
+      summary: Export the whole organisation
+      description: |
+        Queues `export.org`, which writes one `.zip` to the platform's private bucket (never a
+        customer's own, never counted toward the quota): `organization.json`, `members.json`,
+        `issues.json` (each live issue as `Issue`), `tables/<table>.json` (every organisation table
+        as stored, as `docs/data-model.md` describes it: projects and their value lists, custom
+        fields, sprints, boards, issues and what hangs off them, comments, work items, articles,
+        shared saved views, tags and the audit log — never secrets, notifications, preferences,
+        private saved views or anything deleted), `files/<id>/<filename>` for every file, wherever
+        it is stored, `files.json` naming each, and `manifest.json` with the counts and any file
+        that could not be read. Kept for 7 days; the requester is emailed when it is ready.
+        One export is queued or running at a time: asking again answers that one. Records
+        `export_requested`. Org Admins and the Owner; a token needs `admin:org`.
+      tags: [exports]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: The export, `queued` (or the one already pending).
+          content: { application/json: { schema: { $ref: '#/components/schemas/ExportJobEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrganizationNotFound' }
+        '503':
+          description: '`storage.not_configured`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    get:
+      summary: Recent exports
+      description: The 20 newest, newest first; not paged. Org Admins and the Owner; a token needs `admin:org`.
+      tags: [exports]
+      responses:
+        '200':
+          description: The exports.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/ExportJob' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrganizationNotFound' }
+
+  /v1/organizations/{slug}/exports/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      summary: One export
+      description: Its state, size and file counts; `download_url` while it is completed and unexpired.
+      tags: [exports]
+      responses:
+        '200':
+          description: The export.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ExportJobEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`export.not_found` or `organization.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  /v1/organizations/{slug}/exports/{id}/download:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    get:
+      summary: Download an export
+      description: |
+        A `302` to a presigned link valid for five minutes, named
+        `nothingleft-<slug>-<date>.zip`. `get_export_status` hands an agent the link.
+      tags: [exports]
+      responses:
+        '302':
+          description: The presigned archive URL in `Location`.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`export.not_found` or `organization.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '409':
+          description: '`export.not_ready` — queued, running, failed or expired.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
   /v1/organizations/{slug}/ownership-transfer:
     parameters:
       - $ref: '#/components/parameters/OrganizationSlug'
@@ -2968,6 +3056,178 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
         '409':
           description: '`config.in_use`, `config.default_not_deletable`, `config.last_value` or `project.archived`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  /v1/projects/{key}/imports:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - $ref: '#/components/parameters/XOrganization'
+    post:
+      summary: Start a CSV import
+      description: |
+        Reserves an import and presigns the upload, like an attachment: `PUT` the file to
+        `upload_url` with every `upload_headers` entry within 15 minutes, then
+        `POST …/imports/{id}/complete`. UTF-8, a header row, at most 100 MB and 10,000 rows. The
+        file lives in the platform's private bucket until its import ends, and never counts toward
+        the quota. Project Admins and up (*Import issues from CSV*); a token needs `admin:project`.
+      tags: [imports]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateImportRequest' } } }
+      responses:
+        '201':
+          description: The import, `awaiting_upload`, and where to put the file.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportUploadEnvelope' } } }
+        '400':
+          description: '`import.too_large`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/ProjectNotFound' }
+        '409':
+          description: '`project.archived`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '503':
+          description: '`storage.not_configured`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    get:
+      summary: Recent imports into a project
+      description: The 20 newest, newest first; not paged. Project Admins and up.
+      tags: [imports]
+      responses:
+        '200':
+          description: The imports.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/ImportJob' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/ProjectNotFound' }
+
+  /v1/projects/{key}/imports/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - { name: id, in: path, required: true, schema: { type: integer } }
+      - $ref: '#/components/parameters/XOrganization'
+    get:
+      summary: One import
+      description: Its state and progress, the issues created and up to 1,000 failed rows, each with its reason.
+      tags: [imports]
+      responses:
+        '200':
+          description: The import.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportJobEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`import.not_found` or `project.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  /v1/projects/{key}/imports/{id}/complete:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - { name: id, in: path, required: true, schema: { type: integer } }
+      - $ref: '#/components/parameters/XOrganization'
+    post:
+      summary: Read the uploaded file
+      description: |
+        After the `PUT`: checks the stored file against the announced size and checksum, reads
+        its header row and moves the import to `ready`. Answers the headers, the first five rows
+        and a suggested mapping (headers matched to issue fields and custom fields by name, without
+        case or punctuation: `Summary` → `title`, `Labels` → `tags`). Repeatable while `ready`.
+        The delimiter is a comma, or a semicolon when the header row has more of those.
+      tags: [imports]
+      responses:
+        '200':
+          description: The preview.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportPreviewEnvelope' } } }
+        '400':
+          description: '`import.upload_missing`, `import.upload_mismatch`, `import.not_utf8`, `import.empty` or `import.too_many_rows`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`import.not_found` or `project.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '409':
+          description: '`import.not_ready` — already queued, running, finished or expired.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  /v1/projects/{key}/imports/{id}/dry-run:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - { name: id, in: path, required: true, schema: { type: integer } }
+      - $ref: '#/components/parameters/XOrganization'
+    post:
+      summary: Check every row without creating anything
+      description: |
+        Each row is checked exactly as creating the issue would check it, as the importer, and
+        nothing is written. A row that would fail is listed with its line in the file (the header
+        is row 1), the column, the reason and `valid_values` where there are some; status,
+        priority, type, sprint and assignee values the project lacks are summarised in
+        `unknown_values`, most frequent first. Values in cells: names for status, priority, type
+        and sprint; `@username` or an email for assignees; dates as `YYYY-MM-DD`; durations as
+        `1d 2h`; several assignees, tags or multi-value custom field entries separated by commas
+        or semicolons. Tags are created on first use.
+      tags: [imports]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RunImportRequest' } } }
+      responses:
+        '200':
+          description: What the import would do.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportDryRunEnvelope' } } }
+        '400':
+          description: '`import.title_required`, `import.unknown_header` (with `valid_values`), `import.header_ambiguous` or `import.unknown_field` (with `valid_values`).'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`import.not_found` or `project.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '409':
+          description: '`import.not_ready`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  /v1/projects/{key}/imports/{id}/start:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - { name: id, in: path, required: true, schema: { type: integer } }
+      - $ref: '#/components/parameters/XOrganization'
+    post:
+      summary: Import the rows
+      description: |
+        Queues `import.csv` with the mapping. The job creates each valid row as an issue in its
+        own transaction, as the importer, and skips and lists each row that fails; a run cut short
+        resumes at the first row it had not written. Imported issues get a `created` history row
+        and are not watched by the importer, and no notification is sent for them. The file is
+        deleted when the import ends.
+      tags: [imports]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RunImportRequest' } } }
+      responses:
+        '202':
+          description: The import, `queued`.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ImportJobEnvelope' } } }
+        '400':
+          description: As the dry run.
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`import.not_found` or `project.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '409':
+          description: '`import.not_ready` or `project.archived`.'
           content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
 
   /v1/projects/{key}/custom-fields:
@@ -5246,7 +5506,8 @@ paths:
         what the caller can open. `context` ranks tags used on that kind of thing first and never
         hides the rest; with `in_use`, only tags with such a use (either kind without a context).
         `project` narrows the counts to one project. `q` matches name or slug; ties order by slug.
-        Rename, recolour, merge and delete come with tag management (6d).
+        Rename, recolour, merge and delete: `PATCH` / `DELETE /v1/tags/{tag}`, `POST /v1/tags/merge`;
+        the management screen's counts across the whole organisation: `GET /v1/tags/manage`.
       tags: [tags]
       parameters:
         - $ref: '#/components/parameters/XOrganization'
@@ -5268,6 +5529,122 @@ paths:
                       data: { type: array, items: { $ref: '#/components/schemas/Tag' } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/ProjectNotFound' }
+
+  /v1/tags/manage:
+    get:
+      summary: Every tag of the organisation, for the management screen
+      description: |
+        Unlike `GET /v1/tags`, counts every live issue and article in the organisation, whoever
+        can read them, and lists unused tags too, ordered by slug. Project Admins of any project,
+        Org Admins and the Owner; a token needs `admin:project`.
+      tags: [tags]
+      parameters:
+        - $ref: '#/components/parameters/XOrganization'
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: Matches name or slug. }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: One page of tags.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Tag' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/tags/merge:
+    post:
+      summary: Merge tags into one
+      description: |
+        Every issue and article tagged with any of `tags` is tagged `into` (once), then `tags` are
+        deleted. Saved views naming a merged tag in `tag:` name `into` instead. No issue or article
+        history is written; the audit log records `tag_merged`. Org Admins and the Owner; a token
+        needs `admin:org`.
+      tags: [tags]
+      parameters:
+        - $ref: '#/components/parameters/XOrganization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tags, into]
+              properties:
+                tags: { type: array, minItems: 1, maxItems: 50, items: { type: string }, description: Names or slugs. }
+                into: { type: string, description: Name or slug. }
+      responses:
+        '200':
+          description: The target tag, counted across the organisation.
+          content: { application/json: { schema: { $ref: '#/components/schemas/TagEnvelope' } } }
+        '400':
+          description: '`tag.merge_into_self`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`tag.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  /v1/tags/{tag}:
+    parameters:
+      - { name: tag, in: path, required: true, description: 'Name or slug, URL-encoded.', schema: { type: string, example: needs-review } }
+      - $ref: '#/components/parameters/XOrganization'
+    patch:
+      summary: Rename or recolour a tag
+      description: |
+        A new `name` moves the slug with it (`Needs QA` → `needs-qa`), everywhere the tag is used;
+        saved views naming it in `tag:` are rewritten to the new name (a bare `#word` is left
+        alone, since it also matches statuses and other values). Records `tag_renamed`; a recolour
+        alone records nothing. Project Admins of any project, Org Admins and the Owner; a token
+        needs `admin:project`.
+      tags: [tags]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name: { type: string, maxLength: 100 }
+                color: { $ref: '#/components/schemas/LabelColor' }
+      responses:
+        '200':
+          description: The tag, counted across the organisation.
+          content: { application/json: { schema: { $ref: '#/components/schemas/TagEnvelope' } } }
+        '400':
+          description: '`tag.invalid`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`tag.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+        '409':
+          description: '`tag.slug_taken` — another tag has that name; merge them instead. `valid_values` holds that tag''s name, the one to merge into.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    delete:
+      summary: Delete a tag
+      description: |
+        Removes the tag from every issue and article and deletes it. Saved views naming it are
+        left as written. Records `tag_deleted` with the counts. Org Admins and the Owner; a token
+        needs `admin:org`.
+      tags: [tags]
+      responses:
+        '200':
+          description: The tag as it was, with the counts it had.
+          content: { application/json: { schema: { $ref: '#/components/schemas/TagEnvelope' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`tag.not_found`.'
+          content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
 
   /v1/search:
     get:
@@ -7679,6 +8056,146 @@ components:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - properties:
             data: { type: array, items: { $ref: '#/components/schemas/StorageFile' } }
+    TagEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/Tag' }
+    CreateImportRequest:
+      type: object
+      required: [filename, size, sha256]
+      properties:
+        filename: { type: string, maxLength: 255, example: backlog.csv }
+        size: { type: integer, minimum: 1, description: Bytes; at most 100 MB. }
+        sha256: { type: string, description: Base64 SHA-256 of the file, signed into the upload. }
+    ImportMapping:
+      type: object
+      minProperties: 1
+      description: |
+        Issue field → the CSV header whose column fills it. Fields: `title` (required),
+        `description`, `status`, `priority`, `type`, `assignees`, `estimate`, `story_points`,
+        `start_date`, `due_date`, `tags`, `sprint`, `parent`, and `custom:<slug>` for a custom field.
+        Headers left out are ignored.
+      additionalProperties: { type: string }
+      example: { title: Summary, status: State, tags: Labels, 'custom:severity': Severity }
+    RunImportRequest:
+      type: object
+      required: [column_mapping]
+      properties:
+        column_mapping: { $ref: '#/components/schemas/ImportMapping' }
+    ImportRowError:
+      type: object
+      required: [row, column, field, code, message]
+      properties:
+        row: { type: integer, description: The line a spreadsheet shows; the header is row 1. }
+        column: { type: [string, 'null'], description: The CSV header, when the problem is in one cell. }
+        field: { type: [string, 'null'], example: status }
+        code: { type: string, example: issue.unknown_status }
+        message: { type: string }
+        valid_values: { type: array, items: { type: string } }
+    ImportJob:
+      type: object
+      required: [id, project, source, filename, size_bytes, status, headers, column_mapping, total_rows, processed_rows, created_issues, failed_rows, errors, error, created_by, created_at, started_at, completed_at]
+      properties:
+        id: { type: integer }
+        project: { type: string, example: PMS }
+        source: { type: string, enum: [csv] }
+        filename: { type: string }
+        size_bytes: { type: integer }
+        status: { type: string, enum: [awaiting_upload, ready, queued, running, completed, failed, expired], description: 'An upload never completed, or a file never started, expires after a day.' }
+        headers: { type: [array, 'null'], items: { type: string } }
+        column_mapping: { oneOf: [{ $ref: '#/components/schemas/ImportMapping' }, { type: 'null' }] }
+        total_rows: { type: [integer, 'null'] }
+        processed_rows: { type: integer }
+        created_issues: { type: integer }
+        failed_rows: { type: integer }
+        errors: { type: array, maxItems: 1000, items: { $ref: '#/components/schemas/ImportRowError' }, description: The first 1,000 failed rows; `failed_rows` counts them all. }
+        error:
+          type: [object, 'null']
+          description: Why the whole import stopped (`import.failed`, `import.upload_missing`, or `forbidden` when the importer lost the right).
+          properties:
+            code: { type: string }
+            message: { type: string }
+        created_by: { $ref: '#/components/schemas/MemberRef' }
+        created_at: { type: string, format: date-time }
+        started_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+    ImportJobEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/ImportJob' }
+    ImportUploadEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data:
+              type: object
+              required: [job, upload_url, upload_headers, expires_in]
+              properties:
+                job: { $ref: '#/components/schemas/ImportJob' }
+                upload_url: { type: string, format: uri }
+                upload_headers: { type: object, additionalProperties: { type: string }, description: Send every one on the PUT. }
+                expires_in: { type: integer, description: Seconds the upload URL stays valid. }
+    ImportPreviewEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data:
+              type: object
+              required: [job, sample, suggested_mapping]
+              properties:
+                job: { $ref: '#/components/schemas/ImportJob' }
+                sample: { type: array, maxItems: 5, items: { type: array, items: { type: string } } }
+                suggested_mapping: { type: object, additionalProperties: { type: string } }
+    ImportDryRunEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data:
+              type: object
+              required: [total_rows, valid_rows, failed_rows, errors, unknown_values]
+              properties:
+                total_rows: { type: integer }
+                valid_rows: { type: integer }
+                failed_rows: { type: integer }
+                errors: { type: array, maxItems: 1000, items: { $ref: '#/components/schemas/ImportRowError' } }
+                unknown_values:
+                  type: array
+                  items:
+                    type: object
+                    required: [field, value, rows]
+                    properties:
+                      field: { type: string, enum: [status, priority, type, sprint, assignees] }
+                      value: { type: string }
+                      rows: { type: integer }
+    ExportJob:
+      type: object
+      required: [id, scope, format, status, size_bytes, file_count, missing_file_count, download_url, expires_at, error, created_by, created_at, started_at, completed_at]
+      properties:
+        id: { type: integer }
+        scope: { type: string, enum: [org] }
+        format: { type: string, enum: [json], description: JSON files plus the attachments, in one .zip. }
+        status: { type: string, enum: [queued, running, completed, failed, expired], description: '`expired` from the moment `expires_at` passes; the archive itself is deleted within the hour.' }
+        size_bytes: { type: [integer, 'null'] }
+        file_count: { type: [integer, 'null'] }
+        missing_file_count: { type: [integer, 'null'], description: 'Files the archive could not include: gone, or in an own bucket that did not answer. `manifest.json` names them.' }
+        download_url: { type: [string, 'null'], description: The API path that redirects to the archive, while completed and unexpired. }
+        expires_at: { type: [string, 'null'], format: date-time }
+        error:
+          type: [object, 'null']
+          properties:
+            code: { type: string, example: export.failed }
+            message: { type: string }
+        created_by: { $ref: '#/components/schemas/MemberRef' }
+        created_at: { type: string, format: date-time }
+        started_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+    ExportJobEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/ExportJob' }
     ConnectStorageRequest:
       allOf:
         - $ref: '#/components/schemas/StepUp'

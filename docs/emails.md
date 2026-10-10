@@ -74,6 +74,14 @@ the organisation uploads, so each change to it is announced the way a new access
 | `email.storage_disconnected` | Your storage bucket was disconnected from {org} | `name`, `org`, `actor`, `bucket`, `url` | Its files stay in the bucket and stop opening until the same bucket (same account or region, same name) is connected again; uploads use the built-in storage again. |
 | `email.storage_byo_failed` | Fix the storage connection for {org} | `name`, `org`, `bucket`, `url` | The bucket refused its key (revoked, or a permission removed). Sent once, by the request that found out; files there and uploads stop until the key is updated. |
 
+## Organisation export
+
+Transactional, to the Org Admin or Owner who asked for it (6d).
+
+| Key | Subject | Tokens | Purpose |
+|---|---|---|---|
+| `email.export_ready` | Your export of {org} is ready | `name`, `org`, `size`, `date`, `url` | The full export finished. `size` is the archive's, `date` the day it is deleted (7 days on); `url` is the organisation's exports tab, never the file, which needs a signed-in download. Not sent when the export fails, or to a requester deactivated since. |
+
 ## Activity notifications
 
 Opt-in per kind ([notifications.md § Preferences](./notifications.md#preferences)); each carries

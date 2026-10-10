@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { ISSUE_TAGS_MAX_PER_REQUEST, LABEL_COLORS, TAG_CONTEXTS, TAG_NAME_MAX_LENGTH } from './constants.ts';
+import {
+  ISSUE_TAGS_MAX_PER_REQUEST,
+  LABEL_COLORS,
+  TAG_CONTEXTS,
+  TAG_MERGE_MAX_SOURCES,
+  TAG_NAME_MAX_LENGTH,
+} from './constants.ts';
 
 export const TagRefSchema = z.object({
   name: z.string(),
@@ -45,3 +51,23 @@ export const ApplyTagsSchema = z.object({
   color: z.enum(LABEL_COLORS).optional(),
 });
 export type ApplyTags = z.infer<typeof ApplyTagsSchema>;
+
+// The management screen counts across the whole organisation, unused tags included.
+export const ManageTagsQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+});
+
+export const UpdateTagSchema = z
+  .object({
+    name: TagNameSchema.optional(),
+    color: z.enum(LABEL_COLORS).optional(),
+  })
+  .refine(v => v.name !== undefined || v.color !== undefined);
+export type UpdateTag = z.infer<typeof UpdateTagSchema>;
+
+// Every issue and article tagged with any of `tags` ends up tagged `into`, and `tags` are deleted.
+export const MergeTagsSchema = z.object({
+  tags: z.array(TagNameSchema).min(1).max(TAG_MERGE_MAX_SOURCES),
+  into: TagNameSchema,
+});
+export type MergeTags = z.infer<typeof MergeTagsSchema>;

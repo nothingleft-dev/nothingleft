@@ -30,7 +30,8 @@ Private-bucket keys, by module: `api/1/issues/2/<public_id>` for an issue
 attachment, `api/1/comments/9/…`, `api/1/work-items/4/…`, `api/1/articles/7/…` (3.5: a file on
 an article, 50 at most per article; one on a comment of an article uses the comment's key),
 `api/1/export/2/…` for an export archive, `api/1/import/3/…` for an uploaded
-CSV. Rules:
+CSV (both always on the platform and outside the quota — [§ CSV imports](#csv-imports),
+[§ Organisation export](#organisation-export)). Rules:
 
 - **No project segment.** Issues move between projects; a key that named the
   project would lie after the move. `org_id` is enough for tenant grouping,
@@ -414,3 +415,35 @@ nothing in the customer's bucket counts, `storage_used_bytes` keeps counting onl
 still on the platform, the level stays `ok` and no storage email goes out. The usage screen
 still shows how much the organisation holds in its own bucket (files and bytes, summed on
 read) so the owner can keep an eye on it.
+
+## CSV imports
+
+Decided 10 Oct 2026 (6d). An import file is uploaded the way an attachment is — reserved with
+its size and SHA-256 (`POST /v1/projects/{key}/imports`), `PUT` straight to a presigned URL,
+then checked (`…/complete`) — but it is not an attachment: no `attachments` row, never in the
+quota, and always in the **platform's** private bucket, even for an organisation with its own,
+at `api/{org_id}/import/{import_id}/{uuid}`. At most 100 MB. It is deleted when its import
+completes or fails, or by the hourly `transfers.sweep` once a day has passed with the import
+never started.
+
+## Organisation export
+
+Decided 10 Oct 2026 (6d). `export.org` writes one `.zip` to a temporary file on the API host,
+then stores it in the **platform's** private bucket at `api/{org_id}/export/{export_id}/{uuid}`
+with its SHA-256 — outside the quota, and never in an organisation's own bucket, whose key it
+could lose. The archive holds:
+
+| Path | What |
+|---|---|
+| `manifest.json` | Format version, when, which organisation, a count per file, and every file that could not be included with why (`gone`, or `unreachable` for an own bucket that did not answer) |
+| `organization.json` | Name, slug, plan, working day and week |
+| `members.json` | Every member, past and present: username, name, email, role, joined, removed, deactivated, erased |
+| `issues.json` | Every live issue as the API's `Issue`: keys, names, usernames, custom field values, tags |
+| `tables/<table>.json` | Every organisation table as stored ([data-model.md](./data-model.md)), live rows only: projects and their members, statuses, priorities, types and work types, custom fields with options and scoping, work item attributes, tags, sprints and snapshots, boards and columns, issues with assignees, watchers, tags, links, field values and history, comments and reactions, work items and their values, articles and their tags, shared saved views, the audit log. Search vectors, secrets, sessions, tokens, storage credentials, notifications, preferences, recent searches and private saved views are never written |
+| `files.json` | Every file of a live issue, comment, work item or article, with where it sits in the archive (`path`, null when missing) |
+| `files/<id>/<filename>` | The files themselves, stored uncompressed, read one at a time from wherever they live — the platform or the organisation's own bucket |
+
+The platform bucket failing fails the export (pg-boss retries it); an own bucket failing only
+lists its files as missing. The archive is downloaded through `GET …/exports/{id}/download`, a
+`302` to a five-minute presigned link, and deleted by `transfers.sweep` 7 days after it was
+built. `org.delete` deletes archives and import files before the organisation's rows.

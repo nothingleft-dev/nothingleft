@@ -440,6 +440,53 @@ The organisation's tags, shared by every project and by issues and knowledge bas
 | `limit` | number |  | Rows per page, 1–50. Default 20. |
 | `offset` | number |  | Rows to skip, from the previous page. Default 0. |
 
+### `rename_tag`
+
+Renames a tag everywhere it is used — every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `tag` | string | yes | A tag by name or slug, e.g. "needs-review". |
+| `name` | string | yes | The new name. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `recolor_tag`
+
+Changes the colour a tag is drawn in, from the 40-name label grid ("red-1" … "gray-5"). Needs a Project Admin of any project and a token with admin:project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `tag` | string | yes | A tag by name or slug, e.g. "needs-review". |
+| `color` | `gray-1` · `gray-2` · `gray-3` · `gray-4` · `gray-5` · `red-1` · `red-2` · `red-3` · `red-4` · `red-5` · `orange-1` · `orange-2` · `orange-3` · `orange-4` · `orange-5` · `yellow-1` · `yellow-2` · `yellow-3` · `yellow-4` · `yellow-5` · `green-1` · `green-2` · `green-3` · `green-4` · `green-5` · `teal-1` · `teal-2` · `teal-3` · `teal-4` · `teal-5` · `blue-1` · `blue-2` · `blue-3` · `blue-4` · `blue-5` · `pink-1` · `pink-2` · `pink-3` · `pink-4` · `pink-5` | yes | A label colour, e.g. "teal-3". |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `merge_tags`
+
+Moves every issue and article tagged with any of `tags` onto `into`, then deletes `tags`; saved views follow. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.
+
+*Changes data; asks you to confirm in your MCP client first.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `tags` | list of string | yes | The tags to fold in and delete. |
+| `into` | string | yes | The tag they become. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `delete_tag`
+
+Removes a tag from every issue and article in the organisation and deletes it. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.
+
+*Changes data; asks you to confirm in your MCP client first.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `tag` | string | yes | A tag by name or slug, e.g. "needs-review". |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
 ## Time tracking
 
 ### `log_time`
@@ -1158,7 +1205,7 @@ The organisation's audit log, newest first: invitations, joins, removals, role c
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `actor` | string |  | Only what this member did. |
-| `kinds` | list of `member_invited` · `member_joined` · `member_removed` · `role_changed` · `invite_created` · `invite_revoked` · `project_created` · `project_archived` · `project_deleted` · `schema_changed` · `custom_field_changed` · `storage_connected` · `storage_disconnected` · `ownership_transferred` · `org_settings_changed` · `export_requested` · `token_created` · `token_revoked` · `project_updated` · `project_unarchived` · `invite_rotated` · `username_changed` · `deletion_scheduled` · `deletion_cancelled` · `storage_updated` |  |  |
+| `kinds` | list of `member_invited` · `member_joined` · `member_removed` · `role_changed` · `invite_created` · `invite_revoked` · `project_created` · `project_archived` · `project_deleted` · `schema_changed` · `custom_field_changed` · `storage_connected` · `storage_disconnected` · `ownership_transferred` · `org_settings_changed` · `export_requested` · `token_created` · `token_revoked` · `project_updated` · `project_unarchived` · `invite_rotated` · `username_changed` · `deletion_scheduled` · `deletion_cancelled` · `storage_updated` · `tag_renamed` · `tag_merged` · `tag_deleted` |  |  |
 | `from` | string |  | A calendar date, YYYY-MM-DD. |
 | `to` | string |  | A calendar date, YYYY-MM-DD. |
 | `limit` | number |  | Rows per page, 1–50. Default 20. |
@@ -1174,6 +1221,59 @@ Changes your own name or timezone (an IANA name such as "Europe/London"), which 
 |---|---|---|---|
 | `name` | string |  |  |
 | `timezone` | string |  |  |
+
+## Import and export
+
+### `start_csv_import`
+
+Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000 rows and 100 MB). First call: give the CSV as `content` (text up to 1 MB), or `size_bytes` and `sha256` of a file on disk and run the curl command the answer gives. That answers the columns, a sample and a suggested mapping. Then call again with `import` and a `mapping`: a dry run (the default) lists each row that would fail and why; `dry_run: false` creates the issues in the background. Rows that fail are skipped and listed. Needs a Project Admin and a token with admin:project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `import` | number |  | The import id an earlier call gave, to map and run it. |
+| `filename` | string |  | The file name, e.g. "backlog.csv". First call only. |
+| `content` | string |  | The CSV text, up to 1 MB. First call only. |
+| `size_bytes` | number |  | A file on disk: its exact size. |
+| `sha256` | string |  | A file on disk: its SHA-256, base64 (`openssl dgst -sha256 -binary FILE \| base64`). |
+| `mapping` | object |  | Issue field → the CSV column that fills it, e.g. {"title": "Summary", "status": "State", "custom:severity": "Severity"}. Fields: title (required), description, status, priority, type, assignees, estimate, story_points, start_date, due_date, tags, sprint, parent, custom:<slug>. Columns left out are ignored. |
+| `dry_run` | boolean |  | Check every row without creating anything. Default true. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `get_import_status`
+
+An import's progress, how many issues it created and each row that failed with the reason — or, without `import`, the project's recent imports.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `import` | number |  | The import id; omit to list recent imports. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `request_org_export`
+
+Starts a full export of the organisation: one .zip with every project, issue, comment, article, sprint and custom field as JSON, plus the files. It is built in the background and kept for 7 days; the person asking is emailed when it is ready, and get_export_status gives a download link. One runs at a time, so asking again while one is pending answers that one. Needs an Org Admin and a token with admin:org.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `get_export_status`
+
+An export of the organisation: its state, size and, once ready, a download link valid for five minutes — or, without `export`, the recent exports.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `export` | number |  | The export id; omit to list recent exports. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
 ## People
 

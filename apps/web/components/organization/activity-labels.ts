@@ -25,11 +25,14 @@ export const ACTIVITY_LABELS: Record<OrgActivityKind, string> = {
   storage_updated: 'changed the storage key',
   ownership_transferred: 'transferred ownership',
   org_settings_changed: 'changed organisation settings',
-  export_requested: 'exported the audit log',
+  export_requested: 'requested an export',
   token_created: 'created an access token',
   token_revoked: 'revoked an access token',
   deletion_scheduled: 'scheduled the organisation for deletion',
   deletion_cancelled: 'cancelled the organisation’s deletion',
+  tag_renamed: 'renamed a tag',
+  tag_merged: 'merged tags',
+  tag_deleted: 'deleted a tag',
 };
 
 // Internal ids carry no meaning to a reader, so the values that do - usernames, keys,

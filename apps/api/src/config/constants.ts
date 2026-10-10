@@ -96,3 +96,12 @@ export const MIGRATION_BATCH = 50;
 // One storage.migrate run moves at most this much, then queues the next: pg-boss expires a job after 15 minutes.
 export const MIGRATION_RUN_FILES = 500;
 export const MIGRATION_RUN_MS = 5 * 60 * 1000;
+// One import.csv run stops after this long and queues the next, which resumes at the first unwritten row.
+export const IMPORT_RUN_MS = 5 * 60 * 1000;
+export const IMPORT_JOBS_LISTED = 20;
+export const EXPORT_JOBS_LISTED = 20;
+export const EXPORT_PAGE_SIZE = 500;
+// export.org streams every file of an organisation, which can take far longer than pg-boss's 15 minutes.
+export const EXPORT_JOB_EXPIRE_SECONDS = 6 * 60 * 60;
+export const JOB_TRANSFER_SWEEP_CRON = '50 * * * *'; // hourly: transfers.sweep, expired exports and spent import files
+export const TRANSFER_SWEEP_BATCH = 200;

@@ -108,6 +108,7 @@ the organisation.
 | Link and unlink issues           |    ❌    |     ✅      |      ✅       |    ✅     |    ✅     |
 | Set a parent or subtask          |    ❌    |     ✅      |      ✅       |    ✅     |    ✅     |
 | Change many issues at once       |    ❌    |     ✅      |      ✅       |    ✅     |    ✅     |
+| Import issues from a CSV file    |    ❌    |     ❌      |      ✅       |    ✅     |    ✅     |
 | Move an issue to another project |    ❌    |     ❌      |      ✅       |    ✅     |    ✅     |
 | Delete an issue                  |    ❌    |     ❌      |      ✅       |    ✅     |    ✅     |
 | Star, watch, vote                |    ✅    |     ✅      |      ✅       |    ✅     |    ✅     |
@@ -177,8 +178,9 @@ the organisation.
 | Rename or recolour a tag      |    ❌    |     ❌      |      ✅       |    ✅     |    ✅     |
 | Merge or delete a tag         |    ❌    |     ❌      |      ❌       |    ✅     |    ✅     |
 
-Tags belong to the whole organisation and are shared by issues and articles. Merging or
-deleting one changes every project, so it is for Org Admins. Creating a tag is open to
+Tags belong to the whole organisation and are shared by issues and articles. A Project Admin
+of any project may rename or recolour one. Merging or deleting one changes every project, so
+it is for Org Admins ([Tags](./tags.md)). Creating a tag is open to
 Contributors, so an agent can tag freely; `Needs Review` and `needs-review` are the same tag,
 so this does not breed near-duplicates.
 

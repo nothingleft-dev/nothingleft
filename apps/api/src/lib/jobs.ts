@@ -11,6 +11,8 @@ import {
   JOB_RECONCILE_CRON,
   JOB_SNAPSHOT_CRON,
   JOB_SWEEP_CRON,
+  JOB_TRANSFER_SWEEP_CRON,
+  EXPORT_JOB_EXPIRE_SECONDS,
 } from '@config/constants';
 
 export interface JobHandlers {
@@ -25,6 +27,7 @@ export interface JobHandlers {
   'org.deletion_reminder': (now?: Date) => Promise<number>;
   'org.delete': (now?: Date) => Promise<number>;
   'storage.reconcile': (now?: Date) => Promise<number>;
+  'transfers.sweep': (now?: Date) => Promise<number>;
 }
 
 export type FanoutJob =
@@ -49,11 +52,23 @@ export interface StorageMigrateJob {
   after_id?: number;
 }
 
+export interface ImportCsvJob {
+  org_id: number;
+  job_id: number;
+}
+
+export interface ExportOrgJob {
+  org_id: number;
+  job_id: number;
+}
+
 /** Jobs sent with data by a write, rather than run on a schedule. */
 export interface QueuedHandlers {
   'notify.fanout': (data: FanoutJob, now?: Date) => Promise<number>;
   'avatar.mirror': (data: AvatarMirrorJob) => Promise<number>;
   'storage.migrate': (data: StorageMigrateJob, now?: Date) => Promise<number>;
+  'import.csv': (data: ImportCsvJob, now?: Date) => Promise<number>;
+  'export.org': (data: ExportOrgJob, now?: Date) => Promise<number>;
 }
 
 export type QueuedJob = {
@@ -86,6 +101,10 @@ export function runQueued(handlers: QueuedHandlers, job: QueuedJob, now?: Date):
       return handlers[job.name](job.data, now);
     case 'storage.migrate':
       return handlers[job.name](job.data, now);
+    case 'import.csv':
+      return handlers[job.name](job.data, now);
+    case 'export.org':
+      return handlers[job.name](job.data, now);
     case 'avatar.mirror':
       return handlers[job.name](job.data);
   }
@@ -114,6 +133,11 @@ const SCHEDULES: Record<keyof JobHandlers, string> = {
   'org.deletion_reminder': JOB_ORG_DELETION_REMINDER_CRON,
   'org.delete': JOB_ORG_DELETE_CRON,
   'storage.reconcile': JOB_RECONCILE_CRON,
+  'transfers.sweep': JOB_TRANSFER_SWEEP_CRON,
+};
+
+const QUEUE_OPTIONS: Partial<Record<keyof QueuedHandlers, { expireInSeconds: number }>> = {
+  'export.org': { expireInSeconds: EXPORT_JOB_EXPIRE_SECONDS },
 };
 
 declare module 'fastify' {
@@ -151,7 +175,7 @@ export async function startJobs(
 
   for (const name of Object.keys(queued) as (keyof QueuedHandlers)[]) {
     // stately: one queued and one active per key, so writes inside the window share one run.
-    await boss.createQueue(name, { policy: 'stately' });
+    await boss.createQueue(name, { policy: 'stately', ...QUEUE_OPTIONS[name] });
     const handler = queued[name] as (data: unknown) => Promise<number>;
     await boss.work(name, async jobs => {
       for (const job of jobs) {

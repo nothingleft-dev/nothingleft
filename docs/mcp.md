@@ -179,6 +179,8 @@ five prompts. The per-argument reference is generated: [manual/mcp-tools.md](./m
   `mcp.file_ambiguous` with their ids to choose from.
 - **An invitation by its email or its share link.**
 - **An upload by the id `upload_attachment` just returned**, for `complete_upload`.
+- **An import or an export by the number its tool just gave** (`Import 12`, `Export 3`), which
+  `get_import_status` and `get_export_status` also list: a job has no human name (6d).
 
 ### Uploads
 
@@ -365,6 +367,29 @@ bucket is failing. Connecting, rotating, the browser check, verifying, migrating
 disconnecting are UI-only, exempt as the new **`byo_storage`** category: they carry the
 bucket's secret or act on it, all are session only, and three confirm with step-up. 87 tools.
 
+## Built in 6d
+
+10 Oct 2026 (API half). Eight tools; 95 in all.
+
+- **`start_csv_import` is one tool for the whole flow**, called up to three times. First with
+  the CSV as `content` (up to 1 MB) or, for a file on disk, `size_bytes` and `sha256` and the
+  same `curl` step as `upload_attachment`: it answers the columns, a sample and a suggested
+  mapping. Then with `import` and `mapping` (issue field → CSV column): a **dry run by
+  default**, listing each failing row with its line, column, reason and valid values, and the
+  values the project lacks. Only `dry_run: false` queues the job. Importing is the new
+  *Import issues from CSV* row — Project Admin and up, token `admin:project` (owner,
+  10 Oct 2026; this section said `admin:org` before).
+- **`get_import_status`** shows one import's progress and up to 50 failed rows (the API keeps
+  1,000), or the project's recent imports.
+- **`request_org_export` / `get_export_status`**: one export at a time per organisation, so a
+  second request answers the pending one; the status hands the agent the five-minute link the
+  download route redirects to, as `get_attachment_url` does. `admin:org`.
+- **`rename_tag` / `recolor_tag`** take the tag by name or slug; a rename to a name another
+  tag has is refused with `tag.slug_taken`, pointing at `merge_tags`. A Project Admin of any
+  project may call them (`admin:project`).
+- **`merge_tags` and `delete_tag` ask first**, naming how many issues and articles change, from
+  `GET /v1/tags/manage`'s organisation-wide counts. `admin:org`.
+
 ## Authentication
 
 Personal Access Tokens, `Authorization: Bearer nl_pat_…`. See
@@ -520,7 +545,8 @@ bodies; `@username` mentions resolve and notify exactly as they do from the UI.
 
 `list_tags`. Tags are applied and removed through `create_issue` / `update_issue`, accepted
 by name or slug, matched by slug, and **created on first use** so an agent can tag freely
-without a separate creation step.
+without a separate creation step. Managing the vocabulary: `rename_tag`, `recolor_tag`,
+`merge_tags`, `delete_tag` ([§ Tags, managed](#tags-managed)).
 
 ### Time tracking
 
@@ -607,19 +633,24 @@ series, for every report in [reports.md](./reports.md). The agent gets exactly t
 chart is drawn from; `report: time` is the time summary grouped by user, work type, issue,
 project or attribute.
 
-### Planned with later phases
+### Tags, managed
 
-**Tags, managed (6d):** `rename_tag`, `recolor_tag` (`admin:project`), `merge_tags`,
-`delete_tag` (`admin:org`, confirmation).
+Built in 6d — [§ Built in 6d](#built-in-6d). `rename_tag`, `recolor_tag` (`admin:project`),
+`merge_tags`, `delete_tag` (`admin:org`, confirmation).
+
+### Import and export
+
+Built in 6d — [§ Built in 6d](#built-in-6d). `start_csv_import` (CSV text or a file on disk,
+then a column mapping; a dry run unless `dry_run: false`), `get_import_status` (per-row
+errors) — `admin:project`; `request_org_export`, `get_export_status` (a five-minute download
+link when ready) — `admin:org`.
+
+### Planned with later phases
 
 **Webhooks (v2, moved out of 6a by the owner on 27 Sep 2026):** `list_webhooks`,
 `create_webhook`, `update_webhook`, `delete_webhook` (confirmation),
 `list_webhook_deliveries`, `replay_webhook_delivery` (`admin:org`). The notification tools
 shipped in 6a — [§ Built in 6a](#built-in-6a).
-
-**Import and export (6d):** `start_csv_import` (an uploaded file plus a column mapping,
-`dry_run` flag), `get_import_status` (per-row errors), `request_org_export`,
-`get_export_status` (a time-limited download URL when ready). `admin:org`.
 
 ### Deliberately UI-only
 

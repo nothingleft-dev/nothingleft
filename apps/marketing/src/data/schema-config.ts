@@ -336,6 +336,26 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Notifications', path: '/docs/notifications' }],
   },
+  '/docs/tags': {
+    title: 'Tags | Nothing Left Docs',
+    headline: 'Tags',
+    description:
+      'One tag vocabulary for every project, shared by issues and articles: counts by kind, renaming with saved views kept in step, recolouring, merging and deleting.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Tags', path: '/docs/tags' }],
+  },
+  '/docs/import-export': {
+    title: 'Import and export | Nothing Left Docs',
+    headline: 'Import and export',
+    description:
+      'Import issues from any CSV file with a column mapping, a dry run and per-row errors, and export a whole organisation, files included, as one download.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [
+      HOME_CRUMB,
+      { name: 'Docs', path: '/docs' },
+      { name: 'Import and export', path: '/docs/import-export' },
+    ],
+  },
   '/docs/storage': {
     title: 'Storage | Nothing Left Docs',
     headline: 'Storage',

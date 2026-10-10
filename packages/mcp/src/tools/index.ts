@@ -26,7 +26,8 @@ import {
 } from './issues.ts';
 import { linkIssues, unlinkIssues } from './links.ts';
 import { addComment, deleteComment, listComments, updateComment } from './comments.ts';
-import { listTags } from './tags.ts';
+import { deleteTag, listTags, mergeTags, recolorTag, renameTag } from './tags.ts';
+import { getExportStatus, getImportStatus, requestOrgExport, startCsvImport } from './import-export.ts';
 import { deleteWorkItem, listWorkItems, logTime, updateWorkItem } from './time.ts';
 import {
   completeUpload,
@@ -113,6 +114,10 @@ export const TOOLS = [
   updateComment,
   deleteComment,
   listTags,
+  renameTag,
+  recolorTag,
+  mergeTags,
+  deleteTag,
   logTime,
   listWorkItems,
   updateWorkItem,
@@ -171,4 +176,8 @@ export const TOOLS = [
   markNotificationsRead,
   getNotificationPreferences,
   setNotificationPreferences,
+  startCsvImport,
+  getImportStatus,
+  requestOrgExport,
+  getExportStatus,
 ] as const;

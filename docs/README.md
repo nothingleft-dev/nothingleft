@@ -52,6 +52,8 @@ names only — never real ones.
 | [manual/notifications.md](./manual/notifications.md) | The inbox, what each kind tells you and when, the ten-minute wait, email per kind (instant, daily or weekly digest), unsubscribing, asking an agent |
 | [manual/account-security.md](./manual/account-security.md) | Two-factor authentication and recovery codes, confirming important changes, deactivating your account, erasure on request, transferring ownership, deleting an organisation |
 | [manual/storage.md](./manual/storage.md) | Storage: what counts, the file list by size, bringing your own R2 or S3 bucket (the key's permissions, CORS, the two checks, moving files), a key that stops working, disconnecting, what is ever deleted there |
+| [manual/tags.md](./manual/tags.md) | The organisation's tags: the list with counts by issues and articles, renaming (saved views follow), recolouring, merging, deleting, who may, asking an agent |
+| [manual/import-export.md](./manual/import-export.md) | Importing issues from CSV (the file, mapping columns, the dry run and per-row errors, the import), exporting the whole organisation, asking an agent |
 | [manual/members.md](./manual/members.md) | Members, and removing someone: what the dialog counts, reassigning open issues, moving saved views, what stays |
 | [manual/keyboard-shortcuts.md](./manual/keyboard-shortcuts.md) | Every keyboard shortcut and where it works |
 

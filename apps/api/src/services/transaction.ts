@@ -5,6 +5,8 @@ import type {
   CommentsRepository,
   CustomFieldsRepository,
   InvitationsRepository,
+  ExportJobsRepository,
+  ImportJobsRepository,
   IssueActivityRepository,
   IssueLinksRepository,
   IssuesRepository,
@@ -47,6 +49,8 @@ export interface TenantRepos {
   articles: ArticlesRepository;
   oneTimeTokens: OneTimeTokensRepository;
   organizationPurge: OrganizationPurgeRepository;
+  importJobs: ImportJobsRepository;
+  exportJobs: ExportJobsRepository;
 }
 
 export type InTenantTransaction = <T>(body: (repos: TenantRepos) => Promise<T>) => Promise<T>;

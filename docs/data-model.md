@@ -2012,7 +2012,7 @@ org_activity(
         'export_requested' | 'token_created' | 'token_revoked' |
         'project_updated' | 'project_unarchived' | 'invite_rotated' |
         'username_changed' | 'deletion_scheduled' | 'deletion_cancelled' |
-        'storage_updated',
+        'storage_updated' | 'tag_renamed' | 'tag_merged' | 'tag_deleted',
   target_type, target_id,
   old_value jsonb NULL, new_value jsonb NULL,
   ip inet, created_at
@@ -2049,11 +2049,12 @@ what the log says.
 
 | `target_type` | `target_id` | Kinds |
 |---|---|---|
-| `organization` | org id | `org_settings_changed`, `export_requested`, `deletion_scheduled` and `deletion_cancelled` (6b: `slug` and `deletes_at`), `ownership_transferred` (6b: `owner` username on each side; the actor is the new Owner), `storage_connected` / `storage_updated` / `storage_disconnected` (6c: `provider`, `bucket`, `access_key_id` on the side that has them — the connection after, before, or both for a key rotation; never the secret) |
+| `organization` | org id | `org_settings_changed`, `export_requested` (`export: 'org_activity'` and the filter for the audit log's CSV; 6d: `export: 'org'` and `export_id` for a full export), `deletion_scheduled` and `deletion_cancelled` (6b: `slug` and `deletes_at`), `ownership_transferred` (6b: `owner` username on each side; the actor is the new Owner), `storage_connected` / `storage_updated` / `storage_disconnected` (6c: `provider`, `bucket`, `access_key_id` on the side that has them — the connection after, before, or both for a key rotation; never the secret) |
 | `member` | user id | `member_joined`, `member_removed`, `role_changed`, `username_changed` |
 | `project_member` | `<project id>:<user id>` | `member_joined`, `member_removed`, `role_changed` |
 | `project` | project id | `project_created`, `project_updated`, `project_archived`, `project_unarchived` |
 | `invitation` | invitation id | `member_invited` (email), `invite_created` (link), `invite_rotated`, `invite_revoked` |
+| `tag` | tag id | `tag_renamed` (`name` on each side), `tag_merged` (the target; `names` of the merged tags before, `name` of the target after), `tag_deleted` (`name`, `issue_count`, `article_count` before; nothing after). A recolour is not logged (6d) |
 | `custom_field` | field id | `custom_field_changed` — a field or one of its options created, changed, archived or deleted; each side carries `project_key`, `slug`, `name`, `action` and the changed keys (Phase 4) |
 
 Work item attributes and their values record `schema_changed` with `table:
@@ -2177,27 +2178,67 @@ no anonymous access, no share-with-anyone link.
 
 ## Import and export
 
+Built in 6d (migration `0022`, 10 Oct 2026).
+
 ```
-import_jobs(id, org_id, project_id, created_by,
-            source: 'csv', filename, status,
-            total_rows, processed_rows, created_issues,
-            column_mapping jsonb, errors jsonb, created_at, completed_at)
+import_jobs(
+  id bigint PK,
+  org_id bigint NOT NULL → organizations ON DELETE CASCADE,
+  project_id bigint NOT NULL,          -- (project_id, org_id) → projects ON DELETE CASCADE
+  created_by bigint NOT NULL → users,  -- the importer; every row is created as them
+  source text NOT NULL DEFAULT 'csv'   CHECK in ('csv'),
+  filename text NOT NULL,
+  size_bytes bigint NOT NULL,          -- announced at upload; at most 100 MB
+  sha256 text NOT NULL,                -- base64, signed into the upload
+  object_key text NULL,                -- api/{org_id}/import/{id}/{uuid}; null once the file is deleted
+  status text NOT NULL DEFAULT 'awaiting_upload'
+        CHECK in ('awaiting_upload','ready','queued','running','completed','failed','expired'),
+  headers text[] NULL,                 -- the header row, once read
+  column_mapping jsonb NULL,           -- issue field or custom:<slug> → header, set at start
+  total_rows integer NULL,             -- at most 10,000
+  processed_rows integer NOT NULL DEFAULT 0,   -- rows up to and including the last one written
+  created_issues integer NOT NULL DEFAULT 0,
+  failed_rows integer NOT NULL DEFAULT 0,
+  errors jsonb NOT NULL DEFAULT '[]',  -- the first 1,000 failed rows: row, column, field, code, message, valid_values
+  error text NULL,                     -- why the whole job stopped: a catalogue code
+  created_at, updated_at timestamptz NOT NULL DEFAULT now(),
+  started_at, completed_at timestamptz NULL
+)
 
-export_jobs(id, org_id, created_by,
-            scope: 'org',
-            format: 'json',            -- JSON plus the attachment objects
-            status,
-            object_key NULL,           -- the produced archive, in platform storage
-            expires_at,                -- how long the download stays available
-            error NULL, created_at, completed_at)
+export_jobs(
+  id bigint PK,
+  org_id bigint NOT NULL → organizations ON DELETE CASCADE,
+  created_by bigint NOT NULL → users,
+  scope text NOT NULL DEFAULT 'org'    CHECK in ('org'),
+  format text NOT NULL DEFAULT 'json'  CHECK in ('json'),   -- JSON plus the attachment objects, one .zip
+  status text NOT NULL DEFAULT 'queued'
+        CHECK in ('queued','running','completed','failed','expired'),
+  object_key text NULL,                -- the archive, api/{org_id}/export/{id}/{uuid}, always in platform storage
+  size_bytes bigint NULL,
+  file_count integer NULL,
+  missing_file_count integer NULL,     -- files whose objects were gone or whose own bucket did not answer
+  expires_at timestamptz NULL,         -- completed_at + 7 days; then the archive is deleted
+  error text NULL,
+  created_at, updated_at timestamptz NOT NULL DEFAULT now(),
+  started_at, completed_at timestamptz NULL
+)
+UNIQUE (org_id) WHERE status in ('queued', 'running')   -- export_jobs_one_pending_per_org
 ```
 
-CSV only in v1. Column-mapping UI, dry-run preview, per-row error reporting.
-Anything more complex is handled by pointing an agent at the MCP server.
+CSV only in v1. Column mapping, a dry run, per-row errors. Anything more complex is handled by
+pointing an agent at the MCP server.
 
-A full organisation export is produced by a job and downloaded once it is
-ready, rather than streamed from the request.
-`org_activity.export_requested` records who asked for it.
+- **An import** is reserved with the file's size and checksum, uploaded straight to the
+  platform's private bucket like an attachment, read (`ready`), dry-run as often as wanted,
+  then started (`queued` → `running` → `completed` or `failed`). Each row is created in its own
+  transaction together with `processed_rows`, so a run that stops resumes after the last row
+  written. The file is deleted when the job ends, or after a day if nobody ran it (`expired`).
+  Neither the file nor the archive counts toward the storage quota.
+- **A full organisation export** is produced by `export.org` and downloaded once it is ready,
+  rather than streamed from the request. `org_activity.export_requested` records who asked
+  for it. The archive's layout is [file-storage.md § Organisation export](./file-storage.md#organisation-export).
+- Both tables' objects are deleted by `org.delete` before the rows go; `import_jobs` cascade
+  with their project.
 
 ---
 
@@ -2270,6 +2311,7 @@ loudly, which is the point.
 | Exactly one parent is set | `comments` (issue XOR article), `mentions` (3.5) | — the one deliberate omission, below |
 | An attached file names its issue or its article, never both; `comment_id` with either, `work_item_id` only with `issue_id`; a draft names none of them | `attachments` (1f, 25 Sep 2026; articles 3.5) | `attachments_parent_shape_check`; that the comment or work item belongs to the named issue stays here |
 | Names are unique per project, case-insensitively | `workflow_statuses`, `priorities`, `issue_types`, `work_types`, `sprints`, `boards`, `custom_fields`, `work_item_attributes`; per field `custom_field_options`, per attribute `work_item_attribute_values` | `<table>_project_lower_name_unique`, `custom_field_options_field_lower_name_unique`, `work_item_attribute_values_attribute_lower_name_unique`; a violation answers the table's `*.name_taken` |
+| An organisation has at most one export queued or running | `export_jobs` (6d, 10 Oct 2026) | `export_jobs_one_pending_per_org`, a partial unique index; a second request answers the pending export |
 | A value row uses the column its field's type names, and a single-value field has one row | `issue_field_values` (0011) | the one-column CHECK only |
 | A custom field slug means one kind of value across the organisation; at most 50 live fields per project | `custom_fields` (0011) | — the registry is deferred; creating a field takes a transaction-scoped advisory lock on (organisation, slug) before the check, so two projects cannot claim one new slug with different kinds at once |
 | The Estimation and Spent time fields are two different `duration` fields | `projects.estimation_field_id`, `spent_time_field_id` (0011) | `projects_time_fields_distinct_check` (different); the type is the service's |

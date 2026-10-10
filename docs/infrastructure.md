@@ -104,7 +104,7 @@ DATABASE_URL_POOLED           postgres://…   pooled — application queries
 REDIS_URL                     rediss://…
 S3_ENDPOINT                   https://<account>.r2.cloudflarestorage.com
 S3_REGION                     auto
-S3_PRIVATE_BUCKET             nl-private    attachments, exports, imports — quota-counted, BYO-replaceable
+S3_PRIVATE_BUCKET             nl-private    attachments (quota-counted, BYO-replaceable); export archives and import files (neither)
 BYO_ALLOW_ANY_ENDPOINT        false         development and tests only: a BYO connection may name its own endpoint; production refuses to boot with it
 S3_PUBLIC_BUCKET              nl-public     avatars only — public read, never BYO
 S3_PUBLIC_BUCKET_BASE_URL     https://static.nothingleft.dev

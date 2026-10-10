@@ -257,6 +257,9 @@ You can tag a new issue while creating it, with the tag icon beside its title. O
 full-page form the link icon next to it adds links too; if one of them cannot be made,
 the issue is not created and the form says why.
 
+Renaming, recolouring, merging and deleting tags for the whole organisation is
+[Tags](./tags.md).
+
 ## Attachments
 
 Attach files to an issue, to a comment or to a time entry. Drag files onto the editor,
