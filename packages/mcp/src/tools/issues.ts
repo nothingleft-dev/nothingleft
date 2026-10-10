@@ -93,6 +93,13 @@ export const searchIssues = defineTool({
       .describe(
         `Adds per-group counts over the whole result: ${ISSUE_GROUP_FIELDS.join(', ')}, or ${CUSTOM_GROUP_PREFIX}<slug> for a select, multi-select, user, multi-user or checkbox field.`,
       ),
+    group_limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(200)
+      .optional()
+      .describe('With group_by: at most this many issues from each group, e.g. 5 for a preview of every group.'),
     deleted: z.boolean().optional().describe('true lists soft-deleted issues still restorable (Project Admins).'),
     org: arg.org,
     limit: arg.limit,
@@ -108,6 +115,7 @@ export const searchIssues = defineTool({
         project: args.project?.toUpperCase(),
         sort: args.sort,
         group_by: args.group_by?.toLowerCase(),
+        group_limit: args.group_limit,
         deleted: args.deleted,
         limit: args.limit ?? arg.DEFAULT_LIMIT,
         offset: args.offset ?? 0,

@@ -53,3 +53,20 @@ export function activityDetail(row: OrgActivity): string | null {
   if (from !== null && to !== null) return `${from} → ${to}`;
   return to ?? from;
 }
+
+const field = (value: unknown, key: string): string | null => {
+  if (typeof value !== 'object' || value === null) return null;
+  const v = (value as Record<string, unknown>)[key];
+  return typeof v === 'string' && v !== '' ? v : null;
+};
+
+/** What a row acted on, by the names its values carry: a person, a field, a project to open. */
+export function activitySubject(row: OrgActivity): { text: string | null; projectKey: string | null } {
+  const pick = (key: string) => field(row.new_value, key) ?? field(row.old_value, key);
+  const username = pick('username');
+  const projectKey = pick('project_key') ?? pick('key');
+  const name = pick('name') ?? pick('email');
+  const self = username !== null && username === row.actor?.username;
+  const text = username ? (self ? null : `@${username}`) : name;
+  return { text, projectKey };
+}

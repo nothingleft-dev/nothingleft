@@ -15,6 +15,7 @@ export interface IssueSearchQuery {
   q?: string;
   project?: string;
   group_by?: IssueGroupBy;
+  group_limit?: number;
   sort?: string;
   limit?: number;
   offset?: number;
@@ -26,6 +27,7 @@ export const searchIssues = (query: IssueSearchQuery, signal?: AbortSignal) =>
       q: query.q || undefined,
       project: query.project,
       group_by: query.group_by,
+      group_limit: query.group_limit,
       sort: query.sort || undefined,
       limit: query.limit,
       offset: query.offset,

@@ -185,6 +185,17 @@ describe('search', () => {
     expect(text).toContain('Groups: Open');
   });
 
+  test('search_issues passes group_limit through', async () => {
+    const text = await ok(t.contributor, 'search_issues', {
+      query: `project: ${KEY}`,
+      group_by: 'priority',
+      group_limit: 1,
+    });
+    const rows = text.split('\n').filter(line => line.startsWith(`| ${KEY}-`));
+    const groups = text.match(/^Groups: (.*)$/m)![1]!.split(' · ');
+    expect(rows).toHaveLength(groups.length);
+  });
+
   test('a bad value is an error listing the valid ones, not an empty list', async () => {
     const r = await tool(t.contributor, 'search_issues', { query: `project: ${KEY} status: Done` });
     expect(r.isError).toBe(true);

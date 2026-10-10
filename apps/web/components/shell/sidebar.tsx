@@ -113,11 +113,19 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
         <SectionHead
           collapsed={collapsed}
           action={
-            <Button asChild variant="ghost" size="icon-xs" aria-label="New project" className="size-5 text-text-muted">
-              <Link href={'/projects?new=1' as Route}>
-                <Plus className="size-icon-sm" />
-              </Link>
-            </Button>
+            data.canCreateProject ? (
+              <Button
+                asChild
+                variant="ghost"
+                size="icon-xs"
+                aria-label="New project"
+                className="size-5 text-text-muted"
+              >
+                <Link href={'/projects?new=1' as Route}>
+                  <Plus className="size-icon-sm" />
+                </Link>
+              </Button>
+            ) : undefined
           }
         >
           Projects

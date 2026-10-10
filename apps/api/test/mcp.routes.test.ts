@@ -229,6 +229,7 @@ describe('tools/list', () => {
     const numeric = new Set([
       'limit',
       'offset',
+      'group_limit',
       'max_uses',
       'comments',
       'length',

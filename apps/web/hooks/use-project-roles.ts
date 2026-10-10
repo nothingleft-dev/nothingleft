@@ -14,7 +14,8 @@ export function useProjectRoles() {
   const session = useSession();
   const user = session.status === 'signed-in' ? session.user : null;
   const organizations = useOrganizations(user !== null);
-  const projects = useProjects({ archived: 'false' }, user !== null && user.current_organization_slug !== null);
+  const inOrg = user !== null && user.current_organization_slug !== null;
+  const projects = useProjects({ archived: 'false' }, inOrg);
   const org = organizations.data?.find(o => o.slug === user?.current_organization_slug) ?? null;
   const orgAdmin = org ? org.membership.is_owner || org.membership.org_role === 'org_admin' : false;
   const list = useMemo(() => projects.data ?? [], [projects.data]);
@@ -40,5 +41,20 @@ export function useProjectRoles() {
   const isAdmin = orgAdmin || list.some(p => p.my_role === 'project_admin');
   const writable = list.filter(p => !p.is_archived && (orgAdmin || p.my_role !== 'observer'));
 
-  return { canEdit, canAdmin, isAdmin, orgAdmin, writable, projects: list, isPending: projects.isPending, org };
+  return {
+    canEdit,
+    canAdmin,
+    isAdmin,
+    orgAdmin,
+    writable,
+    projects: list,
+    // A disabled query stays pending, so projects only count while there is an organisation to read.
+    isPending: organizations.isPending || (inOrg && projects.isPending),
+    failed: (organizations.isError && !organizations.data) || (projects.isError && !projects.data),
+    retry: () => {
+      void organizations.refetch();
+      void projects.refetch();
+    },
+    org,
+  };
 }

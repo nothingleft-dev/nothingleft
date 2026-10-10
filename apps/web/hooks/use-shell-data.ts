@@ -16,6 +16,7 @@ export interface ShellData {
   organizations: Organization[];
   org: Organization | null;
   projects: ProjectNav[];
+  canCreateProject: boolean;
   savedViews: SavedView[];
   counts: { inboxUnread: number; myIssues: number };
   isPending: boolean;
@@ -35,10 +36,11 @@ export function useShellData(user: Me | null): ShellData {
   // The inbox spans every organisation, so it counts even for someone in none right now.
   const unread = useUnreadCount(signedIn);
   const list = organizations.data ?? [];
+  const org = list.find(o => o.slug === slug) ?? null;
 
   return {
     organizations: list,
-    org: list.find(o => o.slug === slug) ?? null,
+    org,
     projects: (projects.data ?? []).map(p => ({
       key: p.key,
       name: p.name,
@@ -47,6 +49,7 @@ export function useShellData(user: Me | null): ShellData {
       avatar_initials: p.avatar_initials,
       canAdmin: p.my_role === 'project_admin',
     })),
+    canCreateProject: org !== null && (org.membership.is_owner || org.membership.org_role === 'org_admin'),
     savedViews: savedViews.data ?? [],
     counts: { inboxUnread: unread.data?.count ?? 0, myIssues: myIssues.data ?? 0 },
     // A disabled query stays `pending` forever, so only the queries that actually run

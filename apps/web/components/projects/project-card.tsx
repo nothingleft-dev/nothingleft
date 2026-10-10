@@ -9,12 +9,7 @@ import { MemberAvatar } from '@components/issues/member-avatar';
 
 export function ProjectCard({ project, actions }: { project: Project; actions?: React.ReactNode }) {
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-3 rounded-md border bg-surface p-4 transition-colors hover:border-border-strong',
-        project.is_archived && 'opacity-70',
-      )}
-    >
+    <div className={cn('flex flex-col gap-3 rounded-md border bg-surface p-4', project.is_archived && 'opacity-70')}>
       <div className="flex items-start gap-3">
         <ProjectMark project={project} />
 

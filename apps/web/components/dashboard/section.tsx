@@ -45,3 +45,29 @@ export function SectionEmpty({ children }: { children: ReactNode }) {
     </p>
   );
 }
+
+function RetryButton({ onRetry }: { onRetry: () => void }) {
+  return (
+    <button type="button" onClick={onRetry} className="font-medium text-text underline hover:no-underline">
+      Retry
+    </button>
+  );
+}
+
+/** Nothing loaded: says so in place of the section, never an empty list or a zero. */
+export function SectionError({ children, onRetry }: { children: ReactNode; onRetry: () => void }) {
+  return (
+    <p role="alert" className="px-2 py-4 text-xs leading-[18px] text-danger-fg">
+      {children} <RetryButton onRetry={onRetry} />
+    </p>
+  );
+}
+
+/** A refresh failed: what loaded earlier stays, marked as possibly out of date. */
+export function StaleNotice({ children, onRetry }: { children: ReactNode; onRetry: () => void }) {
+  return (
+    <p role="status" className="px-2 py-1 text-2xs text-warning-fg">
+      {children} <RetryButton onRetry={onRetry} />
+    </p>
+  );
+}

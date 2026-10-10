@@ -61,7 +61,10 @@ import { cn } from '@lib/utils';
 export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; variant?: 'page' | 'modal' }) {
   const modal = variant === 'modal';
   const issue = useIssue(issueKey);
-  useRecordRecentlyViewed(issue.data);
+  useRecordRecentlyViewed(issue.data, {
+    key: issueKey,
+    gone: issue.isError && isApiError(issue.error) && issue.error.isNotFound,
+  });
   const project = useProject(issue.data?.project.key ?? null);
   const session = useSession();
   const timeZone = session.status === 'signed-in' ? session.user.timezone : undefined;

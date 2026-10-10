@@ -340,6 +340,7 @@ export function searchService(deps: SearchDeps) {
         q?: string | undefined;
         sort?: string | undefined;
         groupBy?: IssueGroupBy | undefined;
+        groupLimit?: number | undefined;
         container?: IssueContainer | undefined;
         limit: number;
         offset: number;
@@ -352,6 +353,7 @@ export function searchService(deps: SearchDeps) {
       const result = await issueSearch.search(sc.ctx, sc.scope, compiled.query, {
         sort: compiled.sort,
         groupBy: input.groupBy,
+        groupLimit: input.groupLimit,
         container: input.container,
         limit: input.limit,
         offset: input.offset,

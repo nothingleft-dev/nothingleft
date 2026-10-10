@@ -356,6 +356,12 @@ invalidate in `onSettled`); a list mutation spreads `optimisticList(client, key,
 which draws the change in every cached query under the key and restores them on a
 refusal. What only the server can know (a new row's id, a create) is not drawn early.
 
+**Switching organisation resets every organisation-scoped query** (`useSwitchOrganization`).
+Most keys carry no slug, because the server resolves them against the session's organisation,
+so the switch cancels them in flight and resets them rather than invalidating: an invalidated
+query keeps the old organisation's rows on screen until it answers. Account-wide reads (`me`,
+`organizations`, the inbox, notification preferences) survive.
+
 **Only a tab someone is looking at polls** (decided 25 Sep 2026, 1g — cheap hosting,
 many open tabs). `lib/query/provider.tsx` points TanStack's `focusManager` at
 `visibilitychange` plus the window's `focus` and `blur`, so a hidden tab or a window that
@@ -985,10 +991,13 @@ Built in 1c; the visual rules are design § 8 and § 8a. How the pieces fit:
 - **Dashboards** are figures from `GET /v1/issues/figures` (`per=project` for the cards and
   for My work's _across N projects_), short lists from `GET /v1/issues?limit=`, and every
   number is a `listHref()` to the query that produced it (`lib/issue-list/links.ts`).
-  Role decides the composition (`useProjectRoles().isAdmin`); the connected-LLM figures
-  render their empty state until their phase lands, and My work's rail shows the inbox's
-  newest five entries (6a). Active sprints come from
-  `GET /v1/sprints?state=active` (Phase 3).
+  Role decides the composition (`useProjectRoles().isAdmin`); organisation-level pieces
+  (the audit feed, limits, _New project_ here and in the sidebar) go by `orgAdmin`, never
+  `isAdmin`. My work's rail shows the inbox's newest five entries (6a). Active sprints come
+  from `GET /v1/sprints?state=active` (Phase 3). Assigned to me is one
+  `group_by=due&group_limit=10` search; Logged this week is `GET /v1/issues/figures` with no
+  query. A section tells _failed_ from _empty_ with `isError && !data`, and keeps stale data
+  under a notice when only a refresh failed (`SectionError`, `StaleNotice`).
 - **The landing** (`/`) asks `GET /v1/me/landing` once per visit and either navigates or
   renders the organisation chooser / no-organisation state. Sign-in with no `?next=` and
   the signed-in bounce from the auth pages both go to `/`, so the server's answer is what

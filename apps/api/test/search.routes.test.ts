@@ -88,6 +88,20 @@ describe('GET /v1/issues?q=', () => {
     expect(assignee.meta.groups.every((g: object) => !('category' in g))).toBe(true);
   });
 
+  test('group_limit caps the rows of each group, never the counts', async () => {
+    const res = await list(w.admin, { q: `project: ${KEY}`, group_by: 'assignee', group_limit: '1', sort: 'key' });
+    const body = res.json();
+    expect(body.data.map((i: { group: string | null }) => i.group)).toEqual([w.contributor.username, null]);
+    expect(keysOf(res)).toEqual([`${KEY}-2`, `${KEY}-1`]);
+    expect(body.meta.groups.at(-1)).toMatchObject({ value: null, count: 2 });
+    expect(body.meta.pagination).toMatchObject({ total: 3, has_more: false });
+
+    const paged = (
+      await list(w.admin, { q: `project: ${KEY}`, group_by: 'assignee', group_limit: '1', sort: 'key', limit: '1' })
+    ).json();
+    expect(paged.meta.pagination).toMatchObject({ total: 3, has_more: true });
+  });
+
   test('a session search is remembered for autocomplete; a token search is not', async () => {
     await list(w.observer, { q: 'redirect' });
     const suggest = await w.call(w.observer, 'GET', '/v1/search/suggest?q=');

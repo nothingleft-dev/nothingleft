@@ -6,8 +6,9 @@ import { saveDownload } from '@lib/files';
 import { POLL } from '@lib/query/poll';
 import { queryKeys } from '@lib/query/keys';
 
-export function useActivity(slug: string, filters: ActivityFilters) {
+export function useActivity(slug: string, filters: ActivityFilters, enabled = true) {
   return useInfiniteQuery({
+    enabled,
     queryKey: queryKeys.activity(slug, filters),
     refetchInterval: POLL.admin,
     queryFn: ({ pageParam }) => listActivity(slug, { ...filters, cursor: pageParam ?? undefined }),

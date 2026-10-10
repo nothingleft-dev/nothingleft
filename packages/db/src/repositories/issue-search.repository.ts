@@ -44,6 +44,8 @@ export interface IssueContainer {
 export interface IssueSearchOptions {
   sort: readonly SortKey[];
   groupBy?: IssueGroupBy | undefined;
+  /** With `groupBy`: at most this many rows from each group, so a large group cannot crowd out the rest. */
+  groupLimit?: number | undefined;
   container?: IssueContainer | undefined;
   limit: number;
   offset: number;
@@ -52,6 +54,8 @@ export interface IssueSearchOptions {
 export interface IssueSearchResult {
   entries: { row: IssueRow; group: string | null }[];
   total: number;
+  /** Rows a page can reach: `total`, or less under a group limit. */
+  reachable: number;
   groups: IssueGroupRow[] | null;
 }
 
@@ -141,6 +145,7 @@ export function issueSearchRepository(db: Queryable) {
         return {
           entries: ids.map(id => ({ row: rows.get(id)!, group: null })),
           total: Number(totals.rows[0]?.n ?? 0),
+          reachable: Number(totals.rows[0]?.n ?? 0),
           groups: null,
         };
       }
@@ -170,9 +175,18 @@ export function issueSearchRepository(db: Queryable) {
         groups.map(g => sql`${g.key}`),
         sql`, `,
       );
+      const groupOrder = sql`array_position(array[${keys}]::text[], coalesce(g.k, ''))`;
       const page = (await db.execute(
-        sql`select ${issues.id} as id, g.v as grp from ${issues} left join lateral ${source} g on true where ${where}
-            order by array_position(array[${keys}]::text[], coalesce(g.k, '')), ${order} limit ${options.limit} offset ${options.offset}`,
+        options.groupLimit
+          ? sql`select id, grp from (
+                  select ${issues.id} as id, g.v as grp,
+                    row_number() over (partition by coalesce(g.k, '') order by ${order}) as in_group,
+                    row_number() over (order by ${groupOrder}, ${order}) as position
+                  from ${issues} left join lateral ${source} g on true where ${where}
+                ) ranked where in_group <= ${options.groupLimit}
+                order by position limit ${options.limit} offset ${options.offset}`
+          : sql`select ${issues.id} as id, g.v as grp from ${issues} left join lateral ${source} g on true where ${where}
+                order by ${groupOrder}, ${order} limit ${options.limit} offset ${options.offset}`,
       )) as Rows<{ id: string | number; grp: string | null }>;
       const rows = await loadRows(
         ctx,
@@ -181,6 +195,7 @@ export function issueSearchRepository(db: Queryable) {
       return {
         entries: page.rows.map(r => ({ row: rows.get(Number(r.id))!, group: r.grp })),
         total: groups.reduce((sum, g) => sum + g.count, 0),
+        reachable: groups.reduce((sum, g) => sum + Math.min(g.count, options.groupLimit ?? g.count), 0),
         groups,
       };
     },

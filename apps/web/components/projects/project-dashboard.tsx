@@ -11,7 +11,7 @@ import { PageSkeleton } from '@components/skeletons';
 import { RelativeTime } from '@components/relative-time';
 import { FormAlert } from '@components/auth/form-alert';
 import { Section, SectionEmpty } from '@components/dashboard/section';
-import { StatRow, type Stat } from '@components/dashboard/stat-row';
+import { StatRow, weekDelta, type Stat } from '@components/dashboard/stat-row';
 import { StatusStrip } from '@components/dashboard/status-strip';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { FirstProjectEmptyState } from '@components/projects/first-project-empty-state';
@@ -51,7 +51,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
         {
           label: 'Resolved in the last 7 days',
           value: fig.resolved_7d,
-          delta: { text: `${delta >= 0 ? '+' : ''}${delta} vs last week`, good: delta >= 0 },
+          delta: weekDelta(delta),
           href: href(RESOLVED_7D),
         },
         { label: 'Created in the last 7 days', value: fig.created_7d, href: href(CREATED_7D) },
@@ -112,7 +112,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
       {total === 0 && !figures.isPending ? (
         <FirstProjectEmptyState projectName={data.name} canCreate={canCreate} />
       ) : (
-        <StatRow stats={stats} loading={figures.isPending} />
+        <StatRow stats={stats} state={figures.isPending ? 'loading' : 'ready'} />
       )}
 
       <div className="grid items-start gap-8 min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]">

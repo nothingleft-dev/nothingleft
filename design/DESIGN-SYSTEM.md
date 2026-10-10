@@ -454,25 +454,51 @@ and land on Projects.
 
 ### My work
 1. Stat row: Overdue (alert) · Due today · Open assigned to me (with project count) ·
-   Logged this week (with meter vs the org workweek).
-2. **Assigned to me**, grouped Overdue / Today / This week / Later with filter-aware
-   counts; ten rows then "Show N more"; header link "Open as list" goes to the issue
-   list with `assignee: me #Unresolved sort by: due date asc` in the URL.
+   Logged this week (with meter vs the org workweek, the week's make-up on hover of the
+   unit). Logged time is the user's own time on any issue they can read, whoever it is
+   assigned to now, and links to their timesheet.
+2. **Assigned to me**, grouped Overdue / Today / This week / Later / No due date with
+   filter-aware counts. Ten rows in all, never more: every non-empty group first gets an
+   equal share (at most three), the rest goes to the earliest groups. Each group fetches
+   its own rows (`group_limit`), so a long Overdue never empties the later groups. A group
+   with more says _View all 13 overdue_ and opens that group's own query; the header link
+   _View all assigned issues_ goes to the issue list with
+   `assignee: me #Unresolved sort by: due date asc` grouped by due date.
 3. **Starred**.
 4. Rail: **Inbox** (grouped by issue, unread dot, "Mark all read"), **Active sprints**
    the user has issues in (days left, red under 3 days, personal strip), **Recently
-   viewed**.
+   viewed** (this device, one list per account and organisation; an issue that no longer
+   opens drops out).
+5. Empty states name a destination the user can reach: _Open the Mobile app backlog_
+   with one writable project, _Browse projects_ otherwise; _press c to create one_ only
+   for someone who can create.
 
 ### Projects
-1. Org banners when relevant.
-2. Stat row: Open · Overdue · Unassigned · Resolved 7d (with delta) · Created 7d.
-3. **Project cards**, 2-up: avatar, name, key, lead → active sprint line with dates,
+1. Org banners when relevant (Org Admin and Owner).
+2. Toolbar: _Show_ Active | All, _Sort_ Needs attention | A–Z, the count, and _New
+   project_ (outline, small) for those who may create one. **Active** is the default and
+   governs the stat row, the cards and every drill-down: the archived projects' keys are
+   negated in each list link, since a search reads archived projects too. **All** adds
+   archived cards, marked _Archived_, after the active ones. **Needs attention** orders by
+   overdue, then unassigned, then open, so an empty project sinks to the end.
+3. Stat row: Open · Overdue · Unassigned · Resolved 7d (with delta; no change is neutral
+   `±0`) · Created 7d.
+4. **Project cards**, 2-up: avatar, name, key, lead → active sprint line with dates,
    days left, strip + legend (or the no-sprint empty state) → five figures → team load
-   (avatar + first name + open count; over-loaded members in danger colour) → footer
-   links and "Updated N ago" with the absolute tooltip.
-4. Rail: **Members and limits** (seat meter with the free-seat promise stated plainly,
-   storage meter, connected LLM tokens + MCP creation ratio), **Activity** (org-level
-   audit feed, including MCP agent actions with a distinct mark).
+   (avatar + first name + open count; more than 15 open is danger ink with a tooltip that
+   says only that) → footer links and "Updated N ago" with the absolute tooltip. The card
+   is not a link, so it has no hover state; its links do.
+5. Rail, Org Admin and Owner only: **Members and limits** (seat meter, storage meter; a
+   sentence appears under a meter only once it passes 80% — pricing lives in settings),
+   **Activity** (org-level audit feed; each line names its subject — `@username`, a
+   field's name — and links the project key it carries). A Project Admin sees the same
+   cards across the full width, without the rail: the audit feed and project creation are
+   an Org Admin's.
+
+A section whose data failed to load says so with _Retry_ in its place — never a zero or an
+empty list. A refresh that fails keeps what loaded before under a one-line notice; a failed
+stat row shows `–`, not `0`. Each figure's link wraps the number and its label, so its
+name reads _100 Overdue_.
 
 Every number is a link to the filtered list that produced it.
 

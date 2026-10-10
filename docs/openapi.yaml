@@ -3805,6 +3805,10 @@ paths:
         sum of the group counts. `due` groups by Overdue / Today / This week / Later / No due
         date in the caller's timezone.
 
+        `group_limit` keeps at most that many rows of each group, so one large group cannot
+        push the others off the first page; `meta.groups` and `pagination.total` still count
+        the whole filtered set, and `has_more` only the rows the cap leaves reachable.
+
         A session's non-empty query is remembered for autocomplete (the newest 20); a personal
         access token's is not.
 
@@ -3816,6 +3820,7 @@ paths:
         - $ref: '#/components/parameters/SearchQuery'
         - { name: project, in: query, schema: { type: string, example: PMS }, description: 'Only this project. Required with `deleted=true`.' }
         - { name: group_by, in: query, schema: { type: string, example: 'custom:severity' }, description: 'project, status, priority, type, assignee, tag, sprint, due, or `custom:<slug>` for a select, multi-select, user, multi-user or checkbox field in scope (otherwise `400 search.not_groupable` with the groupable ones in `valid_values`). A custom group''s empty label is the field''s; a checkbox groups as Yes and No.' }
+        - { name: group_limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, example: 10 }, description: 'Only with `group_by`: at most this many rows from each group. Ignored without `group_by`.' }
         - $ref: '#/components/parameters/SearchSort'
         - { name: deleted, in: query, schema: { type: string, enum: ['true', 'false'], default: 'false' } }
         - $ref: '#/components/parameters/Limit'

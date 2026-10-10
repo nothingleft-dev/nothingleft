@@ -18,6 +18,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { ProjectCard } from '@components/projects/project-card';
 import { CreateProjectDialog } from '@components/projects/project-dialog';
 import { useArchiveProject, useProjects } from '@hooks/use-projects';
+import { useProjectRoles } from '@hooks/use-project-roles';
 import { useSession } from '@hooks/use-session';
 
 const FILTERS = [
@@ -35,7 +36,8 @@ export function ProjectList() {
 
   // The sidebar's + links here with ?new=1, so the URL is what opens the dialog and no
   // effect has to mirror it into state.
-  const creating = params.get('new') === '1';
+  const { orgAdmin } = useProjectRoles();
+  const creating = orgAdmin && params.get('new') === '1';
   const setCreating = (open: boolean) => router.replace((open ? '/projects?new=1' : '/projects') as Route);
 
   const session = useSession();
@@ -52,9 +54,11 @@ export function ProjectList() {
         actions={
           <>
             <Segmented ariaLabel="Project filter" value={filter} options={FILTERS} onChange={setFilter} />
-            <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus className="size-icon-sm" /> New project
-            </Button>
+            {orgAdmin ? (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus className="size-icon-sm" /> New project
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -82,9 +86,15 @@ export function ProjectList() {
           description={
             filter === 'archived'
               ? 'Archived projects keep everything in them; they just stop appearing in the sidebar.'
-              : 'A project holds issues, boards and documents. Create the first one and you can start filing work.'
+              : orgAdmin
+                ? 'A project holds issues, boards and documents. Create the first one and you can start filing work.'
+                : 'A project holds issues, boards and documents. An Org Admin creates projects and adds you to them.'
           }
-          action={filter === 'active' ? <Button onClick={() => setCreating(true)}>Create a project</Button> : undefined}
+          action={
+            filter === 'active' && orgAdmin ? (
+              <Button onClick={() => setCreating(true)}>Create a project</Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">

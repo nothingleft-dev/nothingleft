@@ -94,6 +94,7 @@ Finds issues with the query language the search bar uses, e.g. `project: PP #Unr
 | `project` | string |  | Limit to one project key, e.g. "PP". |
 | `sort` | string |  | Overrides `sort by:` in the query, e.g. "priority, updated desc". |
 | `group_by` | string |  | Adds per-group counts over the whole result: project, status, priority, type, assignee, tag, sprint, due, or custom:<slug> for a select, multi-select, user, multi-user or checkbox field. |
+| `group_limit` | number |  | With group_by: at most this many issues from each group, e.g. 5 for a preview of every group. |
 | `deleted` | boolean |  | true lists soft-deleted issues still restorable (Project Admins). |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `limit` | number |  | Rows per page, 1–50. Default 20. |

@@ -122,6 +122,7 @@ export interface IssueListQuery {
   project?: string | undefined;
   q?: string | undefined;
   group_by?: IssueGroupBy | undefined;
+  group_limit?: number | undefined;
   sort?: string | undefined;
   deleted: boolean;
   limit: number;
@@ -732,6 +733,7 @@ export function issuesService(deps: IssuesDeps) {
         q: query.q,
         sort: query.sort,
         groupBy: query.group_by,
+        groupLimit: query.group_limit,
         limit: query.limit,
         offset: query.offset,
       });
@@ -754,7 +756,10 @@ export function issuesService(deps: IssuesDeps) {
       );
       return {
         data: dtos.map((dto, i) => (query.group_by ? { ...dto, group: result.entries[i]!.group } : dto)),
-        pagination: page(query, dtos.length, result.total),
+        pagination: {
+          ...page(query, dtos.length, result.total),
+          has_more: query.offset + dtos.length < result.reachable,
+        },
         groups: result.groupsDto,
       };
     },
