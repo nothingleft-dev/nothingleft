@@ -49,11 +49,12 @@ Set-Cookie: sid=<32 random bytes, base64url>;
 ```
 sessions(
   id,
-  token_hash,          -- SHA-256 of the cookie value; the raw value is never stored
+  token_hash UNIQUE,   -- SHA-256 of the cookie value; the raw value is never stored
   user_id,
-  user_agent,
-  ip,
-  country_code,
+  current_org_id NULL, -- → organizations, ON DELETE SET NULL
+  user_agent NULL,
+  ip NULL,
+  country_code NULL,
   created_at,
   last_seen_at,
   expires_at
@@ -99,14 +100,14 @@ control of an email address.
 
 ```
 users(
-  id, email UNIQUE, email_verified_at,
-  name, avatar_url,
+  id, email UNIQUE, email_verified_at NULL,
+  name, avatar_url NULL,
   password_hash NULL,     -- argon2id; null for OAuth-only accounts
   google_id NULL UNIQUE,
   github_id NULL UNIQUE,
-  timezone,               -- IANA, e.g. Asia/Kolkata
-  country_code,           -- ISO 3166-1 alpha-2
-  last_login_at, last_login_ip,
+  timezone,               -- IANA, e.g. Asia/Kolkata; default 'UTC'
+  country_code NULL,      -- ISO 3166-1 alpha-2
+  last_login_at NULL, last_login_ip NULL,
   deactivated_at NULL, deleted_at NULL,
   created_at, updated_at
 )
@@ -345,13 +346,13 @@ For MCP clients, scripts and CI.
 ```
 personal_access_tokens(
   id, user_id, name,
-  token_hash,             -- SHA-256; the raw token is shown exactly once
+  token_hash UNIQUE,      -- SHA-256; the raw token is shown exactly once
   token_prefix,           -- first 8 chars, for display: nl_pat_a1b2…
   scopes[],
   restricted,             -- false = all projects the user can access
   expires_at NULL,        -- null = no expiry
-  last_used_at,
-  created_at, revoked_at
+  last_used_at NULL,
+  created_at, revoked_at NULL
 )
 
 personal_access_token_projects(   -- the projects a restricted token may reach
@@ -382,7 +383,7 @@ personal_access_token_projects(   -- the projects a restricted token may reach
 - **A restricted token stays restricted.** `restricted` is the mode and the junction is the
   list, so deleting a token's last project leaves it reaching no project — the API lists it with
   `project_keys: []` — and it never becomes unrestricted. `project_keys` omitted, null or empty at
-  creation makes an unrestricted token (migration `0018`, 1 Oct 2026;
+  creation makes an unrestricted token (1 Oct 2026;
   [data-model.md § Tables defined in other documents](./data-model.md#tables-defined-in-other-documents)).
 
 OAuth 2.1 for remote MCP (per the MCP specification) is a post-v1 addition.
@@ -433,14 +434,14 @@ invitations(
   email NULL,                 -- set for kind='email'
   token_hash,
   token NULL,                 -- share links only; see data-model.md#invitations
-  org_role, project_role,     -- the roles granted on acceptance
+  org_role, project_role NULL, -- the roles granted on acceptance
   max_uses NULL,              -- null = unlimited
   use_count,
   expires_at NULL,            -- null = never expires
   allowed_email_domain NULL,  -- e.g. 'nothingleft.dev'
-  created_by, created_at, revoked_at
+  created_by, created_at, revoked_at NULL
 )
-invitation_uses(invitation_id, user_id, used_at, ip)
+invitation_uses(invitation_id, user_id, used_at, ip NULL)
 ```
 
 ### Email invite

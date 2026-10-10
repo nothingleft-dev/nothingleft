@@ -232,9 +232,9 @@ One route per report, each with its CSV twin, all `GET` and all *View reports* /
   it is net, not added and removed separately), `completed`, and `ideal` — a straight line from
   the first snapshot's remaining to 0 on the planned end date, falling only on working days.
   Days with no snapshot are null, never interpolated. The axis runs from the start (or
-  `started_at`) to the end or completion, at most 366 days. Migration `0013` added
-  `sprint_snapshots.total_estimate_minutes` so the remaining-estimate measure has a scope line;
-  rows written before it have none. A burndown takes no query: snapshots are whole-sprint.
+  `started_at`) to the end or completion, at most 366 days.
+  `sprint_snapshots.total_estimate_minutes` gives the remaining-estimate measure its scope line.
+  A burndown takes no query: snapshots are whole-sprint.
 
 ### Cache
 

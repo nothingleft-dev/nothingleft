@@ -151,7 +151,7 @@ the API makes. The audit log is immutable only against the application role,
 so that role must not be a superuser, must not own any table, and must not be a
 member of the owner role or of any role that does.
 
-Create the role before the first migration runs. Migration `0001` revokes
+Create the role before the first migration runs. The initial migration revokes
 `UPDATE` and `DELETE` on `org_activity` only if the role already exists, and
 creating it afterwards does not re-run that statement. If the role was created
 late, or a broad grant was issued after the migration, run the grant script

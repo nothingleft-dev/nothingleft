@@ -1,4 +1,0 @@
-ALTER TABLE "org_activity" DROP CONSTRAINT "org_activity_kind_check";--> statement-breakpoint
-ALTER TABLE "invitations" ADD COLUMN "token" text;--> statement-breakpoint
-ALTER TABLE "org_activity" ADD CONSTRAINT "org_activity_kind_check" CHECK ("org_activity"."kind" in ('member_invited','member_joined','member_removed','role_changed','invite_created','invite_revoked','project_created','project_archived','project_deleted','schema_changed','custom_field_changed','storage_connected','storage_disconnected','ownership_transferred','org_settings_changed','export_requested','token_created','token_revoked','project_updated','project_unarchived','invite_rotated','username_changed'));--> statement-breakpoint
-ALTER TABLE "invitations" ADD CONSTRAINT "invitations_token_kind_check" CHECK (("invitations"."kind" = 'link') = ("invitations"."token" is not null));
