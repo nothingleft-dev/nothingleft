@@ -65,6 +65,49 @@ export function summaryOf(view: NotificationView): string {
   });
 }
 
+export interface Change {
+  label: string;
+  from: string;
+  to: string;
+  value: string;
+}
+
+export function changeOf(view: NotificationView): Change {
+  const kind = view.notification.kind as NotificationKind;
+  const detail = view.notification.payload as NotificationDetail;
+  const change = (label: MessageKey, rest: Partial<Omit<Change, 'label'>>): Change => ({
+    label: t(label),
+    from: '',
+    to: '',
+    value: '',
+    ...rest,
+  });
+  switch (kind) {
+    case 'status_changed':
+    case 'resolved':
+      return change('email.notification.field.status', { from: detail.from ?? '', to: detail.to ?? '' });
+    case 'assigned':
+    case 'unassigned':
+      return detail.from || detail.to
+        ? change('email.notification.field.assignees', { from: detail.from ?? '', to: detail.to ?? '' })
+        : change('email.notification.field.assignees', { value: t(`email.notification.value.${kind}`) });
+    case 'commented':
+      return change('email.notification.field.comment', { value: t('email.notification.value.commented') });
+    case 'time_logged':
+      return change('email.notification.field.time', {
+        to: detail.minutes === undefined ? '' : formatDuration(detail.minutes),
+      });
+    case 'due_soon':
+      return change('email.notification.field.due', { value: t('email.notification.value.due_soon') });
+    case 'overdue':
+      return change('email.notification.field.due', {
+        value: detail.due_date ? formatCalendarDate(detail.due_date) : '',
+      });
+    default:
+      return { label: t(`notification.kind.${kind}`), from: '', to: '', value: summaryOf(view) };
+  }
+}
+
 export function toNotification(
   view: NotificationView,
   memberRef: (actor: NonNullable<NotificationView['actor']>) => MemberRef,

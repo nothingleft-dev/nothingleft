@@ -1,10 +1,11 @@
 import { t } from '@nothingleft/i18n';
 import type { NotificationView } from '@nothingleft/db';
 import { DIGEST_CADENCES, NOTIFICATION_KINDS, type DigestCadence, type NotificationKind } from '@nothingleft/types';
+import { formatUtcInstant } from '@nothingleft/format';
 import { DIGEST_ISSUES_PER_LINE } from '@config/constants';
 import { signLink, verifyLink } from '@lib/crypto';
 import type { Line, Message } from '@lib/email';
-import { issueKeyOf, subjectOf, subjectPath, summaryOf } from '@services/notification-render';
+import { changeOf, issueKeyOf, subjectOf, subjectPath, summaryOf } from '@services/notification-render';
 
 export interface MailLinks {
   appBaseUrl: string;
@@ -64,6 +65,16 @@ const subjectText = (view: NotificationView) => {
   return s.type === 'issue' ? `${s.key} ${s.title}` : s.type === 'article' ? s.title : s.name;
 };
 
+function lineParams(view: NotificationView): Record<string, string> {
+  return {
+    summary: summaryOf(view),
+    ...changeOf(view),
+    actor: view.actor?.user.name ?? '',
+    project: view.project.name,
+    at: formatUtcInstant(view.notification.created_at),
+  };
+}
+
 /** One email for what one fan-out run told one person about, grouped by what it is about. */
 export function instantMessage(links: MailLinks, to: MailRecipient, views: NotificationView[]): Message {
   const kinds = [...new Set(views.map(v => v.notification.kind as NotificationKind))];
@@ -73,7 +84,7 @@ export function instantMessage(links: MailLinks, to: MailRecipient, views: Notif
 
   const lines: Line[] = [{ key: 'email.notification.greeting', params: { name: to.name } }];
   for (const group of bySubject.values()) {
-    for (const v of group) lines.push({ key: 'email.notification.line', params: { summary: summaryOf(v) } });
+    for (const v of group) lines.push({ key: 'email.notification.line', params: lineParams(v) });
     lines.push({
       key: 'email.notification.open',
       params: { subject: subjectText(group[0]!), url: `${links.appBaseUrl}${subjectPath(subjectOf(group[0]!))}` },

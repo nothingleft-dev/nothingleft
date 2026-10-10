@@ -10,3 +10,11 @@ export function formatCalendarDate(date: string): string {
 export function addCalendarDays(date: string, days: number): string {
   return new Date(Date.parse(`${date.slice(0, 10)}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 }
+
+/** `8 Oct 2026, 1:24pm UTC` from an instant. */
+export function formatUtcInstant(instant: Date): string {
+  const hours = instant.getUTCHours();
+  const minutes = String(instant.getUTCMinutes()).padStart(2, '0');
+  const date = formatCalendarDate(instant.toISOString());
+  return `${date}, ${hours % 12 || 12}:${minutes}${hours < 12 ? 'am' : 'pm'} UTC`;
+}

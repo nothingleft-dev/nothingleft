@@ -49,9 +49,15 @@ describe('email html', () => {
     expect(render('email.storage_connected')).not.toContain('width="96%"');
   });
 
-  test('a single change is a sentence, several changes get a heading and rows', () => {
-    expect(render('email.notification')).not.toContain('<h1');
-    expect(render('email.notification_many')).toContain('<h1');
+  test('activity mail shows who and when once, then a label and old to new row per change', () => {
+    const one = render('email.notification');
+    const many = render('email.notification_many');
+    expect(one).toContain('Casey Morgan made a change in Website relaunch · 8 Oct 2026, 1:24pm UTC');
+    expect(many).toContain('Casey Morgan made 3 changes in Website relaunch');
+    expect(many).toContain('>Status</td>');
+    expect(many).toContain('Open<span');
+    expect(many).toContain('>Closed</span>');
+    expect(many).not.toContain('<h1');
   });
 
   test('activity mail links its unsubscribe and preferences footer', () => {

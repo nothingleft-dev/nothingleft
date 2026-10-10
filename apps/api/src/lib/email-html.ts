@@ -25,6 +25,7 @@ const LIGHT = {
   secondary: '#585b5f',
   muted: '#696c71',
   accent: '#f3b621',
+  highlight: '#fff4d1',
   link: '#584109',
   ink: '#151618',
   inkText: '#ffffff',
@@ -41,6 +42,7 @@ const DARK = {
   secondary: '#a5a8ad',
   muted: '#8f9298',
   accent: '#f9bc2c',
+  highlight: '#3a3015',
   link: '#f7c662',
   ink: '#e9ebee',
   inkText: '#151618',
@@ -61,6 +63,8 @@ const darkRules = `
   .txm{color:${DARK.muted}!important}
   .lnk{color:${DARK.link}!important}
   .ac{color:${DARK.accent}!important}
+  .hl{background-color:${DARK.highlight}!important}
+  .banner{background-color:${DARK.inset}!important}
   .btn{background-color:${DARK.ink}!important;color:${DARK.inkText}!important;border-color:${DARK.buttonEdge}!important}
   .logo-uni{display:none!important}
   .logo-dark{display:block!important}`;
@@ -118,24 +122,71 @@ const rows = (items: string[]) =>
 
 const ISSUE_SUBJECT = /^([A-Z][A-Z0-9]*-\d+)\s+(.+)$/;
 
-function subjectBlock(subject: string): string {
+function subjectBanner(subject: string): string {
   const match = ISSUE_SUBJECT.exec(subject);
   const title = match ? match[2]! : subject;
   const key = match
-    ? `<span class="txm" style="font:13px/22px ${MONO};color:${LIGHT.muted}">${escape(match[1]!)}</span><br>`
+    ? `<span class="txm" style="font:13px/22px ${MONO};color:${LIGHT.muted}">${escape(match[1]!)}</span>&nbsp; `
     : '';
-  return `<p class="tx" style="margin:18px 0 8px;font:600 16px/22px ${SANS};color:${LIGHT.text}">${key}${escape(title)}</p>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px"><tr><td class="banner tx" style="padding:12px 14px;border-radius:6px;background-color:${LIGHT.inset};font:600 16px/22px ${SANS};color:${LIGHT.text}">${key}${escape(title)}</td></tr></table>`;
 }
 
-const timeline = (items: string[]) =>
-  items.length === 0
-    ? ''
-    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px">${items
-        .map(
-          html =>
-            `<tr><td class="bd tx" style="padding:5px 0 5px 14px;border-left:2px solid ${LIGHT.border};font:15px/22px ${SANS};color:${LIGHT.text}">${html}</td></tr>`,
-        )
-        .join('')}</table>`;
+interface Change {
+  label: string;
+  value: string;
+  actor: string;
+  project: string;
+  at: string;
+}
+
+function changeValue(params: Params): string {
+  const text = (name: string) => String(params[name] ?? '');
+  const from = text('from');
+  const to = text('to');
+  const highlighted = (value: string) =>
+    `<span class="hl" style="background-color:${LIGHT.highlight};padding:1px 6px;border-radius:3px;font-weight:600">${escape(value)}</span>`;
+  if (to !== '') {
+    const before =
+      from === '' ? '' : `${escape(from)}<span class="txm" style="color:${LIGHT.muted}">&nbsp;→&nbsp;</span>`;
+    return before + highlighted(to);
+  }
+  return escape(text('value') || text('summary'));
+}
+
+function changeOf(params: Params): Change {
+  const text = (name: string) => String(params[name] ?? '');
+  return {
+    label: text('label'),
+    value: changeValue(params),
+    actor: text('actor'),
+    project: text('project'),
+    at: text('at'),
+  };
+}
+
+function changeTable(changes: Change[], mixedActors: boolean): string {
+  const cell = 'padding:11px 0;vertical-align:top;font:14px/20px ' + SANS;
+  const body = changes
+    .map((change, i) => {
+      const border = i === 0 ? '' : `border-top:1px solid ${LIGHT.sub};`;
+      const by =
+        mixedActors && change.actor !== ''
+          ? `<br><span class="txm" style="font-size:12px;color:${LIGHT.muted}">${escape(t('email.notification.by', { actor: change.actor }))}</span>`
+          : '';
+      return `<tr><td class="txm bd-sub" width="110" style="${border}${cell};color:${LIGHT.muted}">${escape(change.label)}</td><td class="tx bd-sub" style="${border}${cell};color:${LIGHT.text}">${change.value}${by}</td></tr>`;
+    })
+    .join('');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px">${body}</table>`;
+}
+
+function changeHeader(changes: Change[], mixedActors: boolean): string {
+  const first = changes[0]!;
+  const params = { actor: first.actor, count: changes.length, project: first.project, at: first.at };
+  const named = first.actor !== '' && !mixedActors;
+  const key =
+    `email.notification.header_${named ? 'actor' : 'plain'}_${changes.length === 1 ? 'one' : 'many'}` as MessageKey;
+  return `<p class="tx" style="margin:0 0 16px;font:15px/22px ${SANS};color:${LIGHT.text}">${escape(t(key, params))}</p>`;
+}
 
 function storageFigure(params: Params): string {
   const percent = Math.min(100, Math.max(0, Number(params.percent ?? 100)));
@@ -193,13 +244,12 @@ function footerHtml(text: string): string {
 function activityContent(email: HtmlEmail, lines: readonly HtmlLine[]): { content: string; footer: string } {
   const render = (line: HtmlLine) => t(line.key, line.params);
   const digest = lines[0]?.key.startsWith('email.digest.') ?? false;
-  const summaries = lines.filter(l => l.key === 'email.notification.line');
-  const single = !digest && summaries.length === 1;
 
   const parts: string[] = [];
-  if (digest || !single) parts.push(heading(subjectHeading(t(email.subject, email.params))));
+  if (digest) parts.push(heading(subjectHeading(t(email.subject, email.params))));
   let footer = '';
   let pending: string[] = [];
+  let changes: Change[] = [];
 
   const flushRows = () => {
     parts.push(rows(pending));
@@ -213,23 +263,14 @@ function activityContent(email: HtmlEmail, lines: readonly HtmlLine[]): { conten
         parts.push(paragraph(escape(render(line).trim())));
         break;
       case 'email.notification.line':
-        if (single) {
-          parts.push(
-            `<p class="tx" style="margin:0 0 4px;font:600 15px/22px ${SANS};color:${LIGHT.text}">${escape(render(line).trim())}</p>`,
-          );
-        } else pending.push(escape(render(line).trim()));
+        changes.push(changeOf(params));
         break;
       case 'email.notification.open': {
-        const subject = String(params.subject);
-        if (single) {
-          parts.push(
-            `<p class="tx2" style="margin:0 0 8px;font:13px/18px ${SANS};color:${LIGHT.secondary}">${escape(subject)}</p>`,
-          );
-        } else {
-          parts.push(subjectBlock(subject));
-          parts.push(timeline(pending));
-          pending = [];
-        }
+        const mixedActors = new Set(changes.map(c => c.actor)).size > 1;
+        if (changes.length > 0) parts.push(changeHeader(changes, mixedActors));
+        parts.push(subjectBanner(String(params.subject)));
+        parts.push(changeTable(changes, mixedActors));
+        changes = [];
         parts.push(button(String(params.url), t('email.notification.action')));
         break;
       }

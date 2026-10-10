@@ -40,12 +40,21 @@ const footer = {
 const notificationLines = (count: number): HtmlLine[] => [
   { key: 'email.notification.greeting', params: { name: 'Alex' } },
   ...[
-    'Casey Morgan changed the status of WEB-142 to Closed',
-    'Casey Morgan changed the priority of WEB-142 to Critical',
-    'Casey Morgan commented on WEB-142',
+    {
+      summary: 'Casey Morgan changed WEB-142 from Open to Closed',
+      label: 'Status',
+      from: 'Open',
+      to: 'Closed',
+      value: '',
+    },
+    { summary: 'Casey Morgan logged 1h 30m on WEB-142', label: 'Spent time', from: '', to: '1h 30m', value: '' },
+    { summary: 'Casey Morgan commented on WEB-142', label: 'Comment', from: '', to: '', value: 'Added a comment' },
   ]
     .slice(0, count)
-    .map((summary): HtmlLine => ({ key: 'email.notification.line', params: { summary } })),
+    .map((change): HtmlLine => ({
+      key: 'email.notification.line',
+      params: { ...change, actor: 'Casey Morgan', project: 'Website relaunch', at: '8 Oct 2026, 1:24pm UTC' },
+    })),
   {
     key: 'email.notification.open',
     params: { subject: 'WEB-142 Checkout button is hidden on small screens', url: `${APP}/issues/WEB-142` },
