@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ASSET_BASE_URL, ZOHO_EMAIL_ENDPOINT } from './constants';
 
 const csv = <T extends readonly [string, ...string[]]>(values: T) =>
   z
@@ -74,7 +75,18 @@ const EnvSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
 
+  EMAIL_PROVIDER: z.enum(['resend', 'zoho', 'smtp']).default('resend'),
   RESEND_API_KEY: z.string().optional(),
+  ZOHO_EMAIL_API_KEY: z.string().optional(),
+  ZOHO_EMAIL_ENDPOINT: z.string().url().default(ZOHO_EMAIL_ENDPOINT),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  // Unset: implicit TLS on port 465, STARTTLS otherwise.
+  SMTP_SECURE: bool.optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  // Public static host for assets the API links to, such as the logo images in email.
+  ASSET_BASE_URL: z.string().url().default(ASSET_BASE_URL),
   EMAIL_FROM: z.string().default('Nothing Left <noreply@notifications.nothingleft.dev>'),
   // Signs unsubscribe links. Required in production; changing it breaks every link already sent.
   EMAIL_LINK_SECRET: z.string().min(32).optional(),
@@ -103,9 +115,21 @@ const CheckedEnvSchema = EnvSchema.refine(e => e.NODE_ENV !== 'production' || e.
     path: ['ENCRYPTION_MASTER_KEY'],
     message: 'required in production: it seals two-factor and storage secrets',
   })
-  .refine(e => e.NODE_ENV !== 'production' || e.RESEND_API_KEY !== undefined, {
+  .refine(e => e.NODE_ENV !== 'production' || e.EMAIL_PROVIDER !== 'resend' || e.RESEND_API_KEY !== undefined, {
     path: ['RESEND_API_KEY'],
     message: 'required in production: without it, mail would be logged instead of sent',
+  })
+  .refine(e => e.NODE_ENV !== 'production' || e.EMAIL_PROVIDER !== 'zoho' || e.ZOHO_EMAIL_API_KEY !== undefined, {
+    path: ['ZOHO_EMAIL_API_KEY'],
+    message: 'required in production: without it, mail would be logged instead of sent',
+  })
+  .refine(e => e.NODE_ENV !== 'production' || e.EMAIL_PROVIDER !== 'smtp' || e.SMTP_HOST !== undefined, {
+    path: ['SMTP_HOST'],
+    message: 'required in production: without it, mail would be logged instead of sent',
+  })
+  .refine(e => (e.SMTP_USER === undefined) === (e.SMTP_PASSWORD === undefined), {
+    path: ['SMTP_PASSWORD'],
+    message: 'SMTP_USER and SMTP_PASSWORD are set together or not at all',
   })
   .refine(e => e.NODE_ENV !== 'production' || !e.BYO_ALLOW_ANY_ENDPOINT, {
     path: ['BYO_ALLOW_ANY_ENDPOINT'],

@@ -65,6 +65,39 @@ describe('RESEND_API_KEY', () => {
   });
 });
 
+describe('EMAIL_PROVIDER', () => {
+  const production = {
+    ...source,
+    REDIS_URL: 'redis://localhost:6379',
+    NODE_ENV: 'production',
+    EMAIL_LINK_SECRET: 'x'.repeat(32),
+    ENCRYPTION_MASTER_KEY: Buffer.alloc(32, 1).toString('base64'),
+  };
+
+  test('defaults to resend', () => {
+    expect(loadEnv({ ...production, RESEND_API_KEY: 're_test' }).EMAIL_PROVIDER).toBe('resend');
+  });
+
+  test('production needs the chosen provider’s credentials, and only those', () => {
+    expect(() => loadEnv({ ...production, EMAIL_PROVIDER: 'zoho', RESEND_API_KEY: 're_test' })).toThrow(
+      'ZOHO_EMAIL_API_KEY',
+    );
+    expect(() => loadEnv({ ...production, EMAIL_PROVIDER: 'smtp', RESEND_API_KEY: 're_test' })).toThrow('SMTP_HOST');
+    expect(loadEnv({ ...production, EMAIL_PROVIDER: 'zoho', ZOHO_EMAIL_API_KEY: 'k' }).EMAIL_PROVIDER).toBe('zoho');
+    expect(loadEnv({ ...production, EMAIL_PROVIDER: 'smtp', SMTP_HOST: 'smtp.example.com' }).SMTP_PORT).toBe(587);
+  });
+
+  test('an unknown provider is refused', () => {
+    expect(() => loadEnv({ ...production, EMAIL_PROVIDER: 'sendgrid' })).toThrow('EMAIL_PROVIDER');
+  });
+
+  test('SMTP user and password come as a pair', () => {
+    expect(() => loadEnv({ ...production, EMAIL_PROVIDER: 'smtp', SMTP_HOST: 'h', SMTP_USER: 'u' })).toThrow(
+      'SMTP_PASSWORD',
+    );
+  });
+});
+
 describe('TRUST_PROXY', () => {
   const base = { ...source, REDIS_URL: 'redis://localhost:6379' };
   const cases: [string | undefined, Env['NODE_ENV'], TrustProxy][] = [

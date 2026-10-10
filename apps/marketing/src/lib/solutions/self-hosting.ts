@@ -127,6 +127,8 @@ export const API_ENV: EnvLine[] = [
   { comment: 'Required in production' },
   { name: 'ENCRYPTION_MASTER_KEY', value: 'BASE64_OF_32_BYTES' },
   { name: 'EMAIL_LINK_SECRET', value: 'AT_LEAST_32_CHARACTERS' },
+  { comment: 'Mail provider: resend (default), zoho or smtp, with that provider’s credentials' },
+  { name: 'EMAIL_PROVIDER', value: 'resend' },
   { name: 'RESEND_API_KEY', value: 're_xxxxxxxx' },
   { name: 'EMAIL_FROM', value: '"Nothing Left <noreply@example.com>"' },
   {},
@@ -238,7 +240,7 @@ export const RESPONSIBILITIES: Responsibility[] = [
   {
     area: 'Email',
     hosted: 'Account, security, invitation and storage email is sent for you.',
-    self: 'You supply a mail provider key (RESEND_API_KEY) and EMAIL_FROM. Without a key, mail is logged, not sent.',
+    self: 'You pick a mail provider (Resend, Zoho CPaaS or any SMTP server), supply its credentials and set EMAIL_FROM. Without credentials, mail is logged, not sent.',
   },
   {
     area: 'File storage',

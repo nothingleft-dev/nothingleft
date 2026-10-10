@@ -1,11 +1,11 @@
 # Emails
 
 Every email the system sends, in one list, so the templates can be written and reviewed in
-one place. The wording lives in `packages/i18n/en.json` under the keys named here
+one place. Layout lives in `apps/api/src/lib/email-html.ts` and the wording lives in `packages/i18n/en.json` under the keys named here
 (`<key>.subject`, `<key>.body`); this page holds only what each email is for and what it is
 given. Policy — which mail is transactional, subject style, sender, unsubscribe — is
-[notifications.md](./notifications.md#transactional-email). Today's bodies are deliberately
-plain; rewriting them against this page is part of launch polish.
+[notifications.md](./notifications.md#transactional-email). A body keeps its link alone in
+its own paragraph, and the matching `<key>.action` message is the button label.
 
 Every email is plain text with an HTML copy generated from it, and every subject ends
 `· Nothing Left`. **Tokens** are the `{placeholders}` the sender fills; a template may use
@@ -83,6 +83,30 @@ Opt-in per kind ([notifications.md § Preferences](./notifications.md#preference
 |---|---|---|---|
 | `email.notification` | {summary} | `summary`; lines: `email.notification.greeting` (`name`), `.line` (`summary`), `.open` (`subject`, `url`), `.footer` (`kinds`, `unsubscribe_url`, `preferences_url`) | An instant email with one change. |
 | `email.notification_many` | {count} updates on {subject} | `count`, `subject`; the same lines | An instant email with several changes to one issue or article. |
-| `email.notification_due` | {count} of your issues need attention | `count`; the same lines | The due-date producer's batch: due soon and overdue. |
-| `email.digest.daily` | Your day in {org} | `org`; lines: `email.digest.daily.heading` (`org`), `.project` (`project`), `.kind` (`label`, `count`), `.issue` (`key`, `title`), `.more` (`count`, `url`), `.count` (`label`, `count`, `url`), `.watched` (`count`, `url`), `.footer.daily` (`kinds`, `unsubscribe_url`, `preferences_url`) | The 9am daily digest per organisation, unread only, never empty. |
-| `email.digest.weekly` | Your week in {org} | as daily, with `email.digest.weekly.heading` and `.footer.weekly` | The Monday 9am weekly digest. |
+| `email.notification_due` | {count} of your issues need attention | `count`, `subject`; the same lines | An instant email whose changes span two or more issues (`count` is the number of issues), including the due-date producer's batch: due soon and overdue. The subject is not specific to due dates. |
+| `email.digest.daily` | Your day in {org} | `org`; lines: `email.digest.daily.heading` (`org`), `.project` (`project`), `.kind` (`label`, `count`), `.issue` (`key`, `title`), `.more` (`count`, `url`), `.count` (`label`, `count`, `url`), `.watched` (`count`, `url`), `.footer.daily` (`kinds`, `unsubscribe_url`, `preferences_url`) | The 9am (recipient's local time) daily digest per organisation, unread only, never empty. At most 5 issues are listed per kind line, the rest collapse into `.more`. |
+| `email.digest.weekly` | Your week in {org} | as daily, with `email.digest.weekly.heading` and `.footer.weekly` | The Monday 9am (local) weekly digest. |
+
+## Notes for the template work
+
+- Every send goes through one function, `createMailer` in `apps/api/src/lib/email.ts`, which hands
+  the message to Resend, Zoho CPaaS or SMTP (`EMAIL_PROVIDER`, [infrastructure.md](./infrastructure.md)).
+- The HTML copy is built by `renderHtml` from the same catalogue text: a heading from the subject, one
+  paragraph per blank-line block, a button where a link stands alone, and a footer. Both themes ship in
+  one file (`prefers-color-scheme`), and the logo is three PNGs served from `ASSET_BASE_URL` (`email/logo.png` in a neutral grey that reads on
+  either background, for clients such as Gmail that recolour the page and ignore the colour scheme, plus
+  `email/logo-light.png` and `email/logo-dark.png` for clients that honour it; `design/emails/build-logo.mjs`
+  draws them). Run `bun run scripts/preview-emails.ts` in `apps/api` to write
+  `design/emails/all.html`, which shows every email with sample values.
+- Delivery is best-effort except `email.verify` on resend and `email.email_change_verify`,
+  which fail the request (502) when the send fails.
+- `email.invitation_project` has no subject key of its own; it reuses `email.invitation.subject`.
+  The sender also passes `project` to `email.invitation`, which does not use it.
+- `email.org_deleted` is given `date` and `url`, but its current body uses only `name` and `org`.
+  `email.storage_full` is likewise given `percent` and does not use it.
+- `email.org_deletion_*` and `email.storage_*` are sent once per Org Admin and Owner, each with
+  their own `name`. `email.org_deleted` goes to the admins snapshotted before the purge.
+- Activity mail and digests carry `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`;
+  no other email sets headers.
+- Digests and instant mail are assembled from line keys rather than one body key, so a template
+  must lay out lines, not a single string.

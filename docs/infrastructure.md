@@ -60,13 +60,13 @@ runnable on a laptop with `docker compose up`.
 | Cloudflare R2 | S3 API via `@aws-sdk/client-s3` | R2 Workers bindings, R2-only APIs. Endpoint, bucket and credentials are env vars. |
 | Upstash | Standard Redis commands | Upstash REST-only features, QStash. Any Redis 6+ works. |
 | Vercel | Next.js build output | Vercel KV, Blob, Postgres, Edge Config. The geo headers are used but strictly as a fallback. |
-| Resend | SMTP-equivalent send API behind a one-file adapter | Resend-specific templating or audiences |
+| Resend, Zoho CPaaS, or any SMTP server | One send function, three providers chosen by `EMAIL_PROVIDER` | Provider-specific templating, audiences or webhooks |
 | PostHog | Standard SDK behind a one-file adapter | — |
 
 A self-hoster substitutes: any Postgres, any S3-compatible store, any Redis.
-Mail is the exception today: the adapter sends only through Resend's HTTP API
-(`RESEND_API_KEY`), and without a key mail is logged instead of sent. SMTP support
-is planned, not built. The `docker-compose.yml` shipped in the repo does exactly
+Mail follows the same rule: `EMAIL_PROVIDER` picks Resend's HTTP API (default), Zoho
+CPaaS's HTTP API, or any SMTP server, and without that provider's credentials mail is
+logged instead of sent. The `docker-compose.yml` shipped in the repo does exactly
 this with Postgres + Redis + an S3-compatible store. That store is **RustFS**
 (`rustfs/rustfs`, Apache-2.0) since 25 Sep 2026: MinIO stopped publishing its images,
 and RustFS speaks the same S3 API, presigned URLs and SHA-256 checksums included.
@@ -115,7 +115,14 @@ SESSION_COOKIE_DOMAIN         .nothingleft.dev
 TRUST_PROXY                   1             proxy hops in front of the API, or their IPs / CIDRs (comma-separated); false trusts none. Unset: 1 in production, false elsewhere
 GOOGLE_CLIENT_ID / _SECRET
 GITHUB_CLIENT_ID / _SECRET
-RESEND_API_KEY                required in production; unset elsewhere, mail is logged instead of sent (with its body only in development)
+EMAIL_PROVIDER                resend (default) | zoho | smtp — how mail is sent
+RESEND_API_KEY                provider resend: required in production; unset elsewhere, mail is logged instead of sent (with its body only in development)
+ZOHO_EMAIL_API_KEY            provider zoho: the Send Mail token, with or without its `Zoho-enczapikey ` prefix; required in production
+ZOHO_EMAIL_ENDPOINT           https://cpaas.zoho.com/v1.1/email — change it for another Zoho data centre
+SMTP_HOST / SMTP_PORT         provider smtp: host (required in production) and port (587)
+SMTP_SECURE                   true|false — implicit TLS; unset: on for port 465, STARTTLS otherwise
+SMTP_USER / SMTP_PASSWORD     set together, or both unset for a relay that needs no login
+ASSET_BASE_URL                https://static.nothingleft.dev — public static host; email logos load from `email/logo-light.png` and `email/logo-dark.png` under it
 EMAIL_FROM                    "Nothing Left <noreply@notifications.nothingleft.dev>"
 EMAIL_LINK_SECRET             32+ characters — signs unsubscribe links; required in production, never rotated casually
 POSTHOG_KEY / POSTHOG_HOST

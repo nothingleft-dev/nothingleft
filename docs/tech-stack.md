@@ -49,7 +49,7 @@ case, not an `eslint-disable`.
 | Background jobs | **pg-boss** | Postgres-backed queue. No second service, no Redis command-quota pressure, survives restarts, transactional with the data it operates on |
 | Cache / rate limit | **Upstash Redis** | Session lookup cache, rate-limit counters, short-TTL report caches. **Not** used for the job queue. |
 | Object storage | **Cloudflare R2** (S3-compatible) | Zero egress fees. Accessed via `@aws-sdk/client-s3`, so AWS S3 and any S3-compatible store work unchanged — which is exactly what BYO storage requires. |
-| Email | **Resend** | Transactional only by default; see [notifications.md](./notifications.md) for the email policy |
+| Email | **Resend**, Zoho CPaaS or SMTP (`nodemailer`) | Transactional only by default; Resend is the default provider; see [notifications.md](./notifications.md) for the email policy |
 | Password hashing | **argon2id** | Current OWASP recommendation |
 | Secret encryption | **AES-256-GCM** | For BYO storage credentials and TOTP secrets, under a server master key from env |
 | Two-factor | **otplib** | Standard TOTP; works with Google Authenticator, 1Password, Authy |

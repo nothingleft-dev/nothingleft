@@ -267,9 +267,10 @@ meaning.
 - Transactional mail carries no unsubscribe link, because it cannot be
   unsubscribed from.
 - As built: the plain text is the source and the HTML is generated from it, so every
-  sentence has one copy, in `en.json`. With `RESEND_API_KEY` unset, every email is logged
-  instead of sent: in development with its body and headers, elsewhere by subject key only,
-  since bodies carry sign-in links. Production refuses to boot without the key.
+  sentence has one copy, in `en.json`. With the chosen provider's credentials unset
+  (`EMAIL_PROVIDER`: Resend, Zoho CPaaS or SMTP), every email is logged instead of sent:
+  in development with its body and headers, elsewhere by subject key only, since bodies carry
+  sign-in links. Production refuses to boot without them.
 
 ## Webhooks — v2
 
