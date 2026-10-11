@@ -25,7 +25,8 @@ const longest = Math.max(...TIME_ROWS.map(row => row.minutes));
         </h2>
         <p class="prose mt-5 max-w-[60ch]">
           A time report adds up the time entries themselves, so a subtask’s time is never counted twice through its
-          parent. The timesheet opens any cell to the entries behind it, on any issue you can open, whoever logged them.
+          parent. In the app, the timesheet opens any cell to the entries behind it, on any issue you can open, whoever
+          logged them.
         </p>
       </div>
       <p class="lg:col-span-5 lg:text-right text-sm">
@@ -188,7 +189,7 @@ const longest = Math.max(...TIME_ROWS.map(row => row.minutes));
             ))}
           </ul>
           <p class="note entries-note">
-            The highlighted cell, opened: its entries add up to the {DRILL_TOTAL} in the grid.
+            A still of the highlighted cell, opened: its entries add up to the {DRILL_TOTAL} in the grid.
           </p>
         </div>
       </figure>

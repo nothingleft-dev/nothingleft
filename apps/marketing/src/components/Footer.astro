@@ -50,58 +50,47 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { href: '/support', label: 'Support' },
       { href: GITHUB_URL, label: 'GitHub', external: true },
       { href: LICENSE_URL, label: 'Licence', external: true },
+      { href: '/terms', label: 'Terms' },
+      { href: '/privacy', label: 'Privacy' },
     ],
   },
-];
-const LEGAL_LINKS: FooterLink[] = [
-  { href: '/terms', label: 'Terms' },
-  { href: '/privacy', label: 'Privacy' },
 ];
 const path = normalizePath(Astro.url.pathname);
 ---
 
 <footer class="border-t border-line">
-  <div class="wrap py-12 md:py-14 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-8 gap-y-10">
-    <div class="col-span-2 md:col-span-4 lg:col-span-2">
-      <div class="flex items-center gap-2">
-        <Brand size={18} />
-        <span class="text-sm font-medium">Nothing Left</span>
-      </div>
+  <div class="wrap py-12 md:py-14 flex flex-col lg:flex-row lg:justify-between gap-x-16 gap-y-10">
+    <div class="lg:max-w-[280px]">
+      <a href="/" class="inline-flex items-center gap-2" aria-label="Nothing Left home">
+        <Brand size={22} />
+        <span class="text-[17px] leading-none font-semibold tracking-[-0.02em]" aria-hidden="true">
+          nothing left<span class="period">.</span>
+        </span>
+      </a>
       <p class="mt-3 text-sm text-fg-2 max-w-[30ch]">Project tracking for people and AI agents.</p>
       <p class="mt-6 text-xs text-fg-3">© 2026 Nothing Left</p>
     </div>
-    {COLUMNS.map(column => (
-      <nav aria-label={column.title}>
-        <p class="footer-title">{column.title}</p>
-        <ul class="mt-4 flex flex-col items-start gap-2.5 text-sm">
-          {column.links.map(link => (
-            <li>
-              <a class="nav-link" href={link.href} aria-current={link.href === path ? 'page' : undefined}>
-                {link.label}
-                {link.external && (
-                  <span class="arr ext" aria-hidden="true">
-                    ↗
-                  </span>
-                )}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    ))}
-  </div>
-  <div class="wrap border-t border-line py-5">
-    <nav aria-label="Legal">
-      <ul class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        {LEGAL_LINKS.map(link => (
-          <li>
-            <a class="nav-link" href={link.href} aria-current={link.href === path ? 'page' : undefined}>
-              {link.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-[repeat(4,auto)] gap-x-8 lg:gap-x-12 xl:gap-x-20 gap-y-10 lg:whitespace-nowrap">
+      {COLUMNS.map(column => (
+        <nav aria-label={column.title}>
+          <p class="footer-title">{column.title}</p>
+          <ul class="mt-4 flex flex-col items-start gap-2.5 text-sm">
+            {column.links.map(link => (
+              <li>
+                <a class="nav-link" href={link.href} aria-current={link.href === path ? 'page' : undefined}>
+                  {link.label}
+                  {link.external && (
+                    <span class="arr ext" aria-hidden="true">
+                      ↗
+                    </span>
+                  )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ))}
+    </div>
   </div>
 </footer>
 

@@ -39,6 +39,7 @@ function initTimesheet(): void {
   };
 
   cells.forEach(cell => {
+    cell.disabled = false;
     cell.addEventListener('click', () => show(cell.getAttribute('aria-expanded') === 'true' ? undefined : cell));
   });
 }

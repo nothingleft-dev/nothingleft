@@ -134,6 +134,7 @@ const CHECKS = [
                           type="button"
                           class="cell"
                           data-ts-cell
+                          disabled
                           aria-expanded={open ? 'true' : 'false'}
                           aria-controls={`${cellId(who.id, candidate.date)}-entries`}
                           aria-label={`${who.name}, ${candidate.weekday} ${candidate.long}: ${formatDuration(total)}`}
@@ -149,6 +150,7 @@ const CHECKS = [
                     type="button"
                     class="cell"
                     data-ts-cell
+                    disabled
                     aria-expanded="false"
                     aria-controls={`ts-${who.id}-period-entries`}
                     aria-label={`${who.name}, ${PERIOD_LABEL}: ${formatDuration(personTotal(who.id))}`}
@@ -314,7 +316,11 @@ const CHECKS = [
       background var(--dur-fast) var(--ease-out),
       box-shadow var(--dur-fast) var(--ease-out);
   }
-  .cell:hover {
+  /* Disabled until the script wires them, so without it the grid reads as figures, not dead buttons. */
+  .cell:disabled {
+    cursor: default;
+  }
+  .cell:not(:disabled):hover {
     background: var(--bg-hover);
     box-shadow: inset 0 0 0 1px var(--border-strong);
   }

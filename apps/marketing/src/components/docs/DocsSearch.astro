@@ -31,8 +31,22 @@ const { size = 'compact', id } = Astro.props;
       spellcheck="false"
       placeholder={size === 'large' ? 'Search tokens, sprints, two-factor…' : 'Search the docs'}
       aria-controls={`${id}-results`}
+      aria-expanded="false"
       data-search-input
     />
+    <button type="button" class="docs-search-clear" aria-label="Clear the search" data-search-clear hidden>
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 12 12"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        aria-hidden="true"
+      >
+        <path d="m3 3 6 6M9 3l-6 6"></path>
+      </svg>
+    </button>
     {size === 'compact' && (
       <kbd class="docs-kbd" aria-hidden="true">
         /
@@ -68,6 +82,26 @@ const { size = 'compact', id } = Astro.props;
   }
   .docs-search input::-webkit-search-cancel-button {
     appearance: none;
+  }
+  .docs-search-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+  }
+  .docs-search-clear[hidden] {
+    display: none;
+  }
+  .docs-search-clear:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .docs-search-box:has(.docs-search-clear:not([hidden])) .docs-kbd {
+    display: none;
   }
   .docs-search-results {
     position: absolute;
@@ -114,5 +148,11 @@ const { size = 'compact', id } = Astro.props;
     padding: 10px 12px;
     font-size: 13px;
     color: var(--text-secondary);
+  }
+  .docs-search-results :global(.result-retry) {
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 </style>

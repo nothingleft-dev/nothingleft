@@ -6,4 +6,4 @@ export const GITHUB_URL = 'https://github.com/nothingleft-dev/nothingleft';
 export const SUPPORT_EMAIL = 'admin@nothingleft.dev';
 export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
 export const SITE_DESCRIPTION =
-  'Nothing left hanging. Open-source project tracking for product and engineering teams: issues, sprints and project knowledge your team and AI agents can both use. Join the beta.';
+  'Open-source project tracking for product and engineering teams: issues, sprints and project knowledge your team and AI agents can both use.';

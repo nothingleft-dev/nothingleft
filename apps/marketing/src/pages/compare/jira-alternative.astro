@@ -46,12 +46,13 @@ import { SIGN_UP_URL } from '@lib/site';
   <Calculator
     preselect="jira"
     title="Compare what Jira costs you now."
-    intro="Enter what your team pays for Jira today and see what the beta takes off the bill. Your figure only: no list price is filled in, and nothing you type leaves this page."
+    intro="Jira is selected, starting from its lowest paid plan. Replace that with what your team pays today and see what the beta takes off the bill. Nothing you type leaves this page."
   />
   <Faq
     entries={JIRA_FAQ}
     title="Questions about moving from Jira."
     intro={`Import, agents and what needs a person to check it. Answers checked on ${FAQ_CHECKED}.`}
+    signup={false}
   />
   <CallToAction
     title="Run one sprint here before you decide."

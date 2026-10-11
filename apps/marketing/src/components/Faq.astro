@@ -7,6 +7,8 @@ interface Props {
   title?: string;
   intro?: string;
   askHref?: string;
+  /** Off on pages that close with their own call to action, so the page has one ending. */
+  signup?: boolean;
 }
 
 const {
@@ -14,6 +16,7 @@ const {
   title = 'Before you bring your team.',
   intro = 'The questions that decide whether a trial is worth your week. Short answers here, details in the docs.',
   askHref = '/support',
+  signup = true,
 } = Astro.props;
 ---
 
@@ -27,7 +30,7 @@ const {
     </div>
     <div class="lg:col-span-7 lg:col-start-6 faq">
       {entries.map(entry => (
-        <details>
+        <details name="faq">
           <summary>
             {entry.question}
             <span class="plus" aria-hidden="true" />
@@ -53,12 +56,14 @@ const {
         </details>
       ))}
       <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
-        <a class="btn" href={SIGN_UP_URL}>
-          Join the beta
-          <span class="arr" aria-hidden="true">
-            →
-          </span>
-        </a>
+        {signup && (
+          <a class="btn" href={SIGN_UP_URL}>
+            Join the beta
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        )}
         <a class="link text-sm" href={askHref}>
           Ask something else
           <span class="arr" aria-hidden="true">

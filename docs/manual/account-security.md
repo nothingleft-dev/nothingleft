@@ -85,7 +85,9 @@ or the organisation is **deleted** — someone has to be able to look after it.
 To reactivate, email us from the address on the account within six months of deactivating. Your memberships come back as they
 were; sign in again and create new access tokens.
 
-**Erasing your data.** Deactivation keeps your name on your work. Six months after you deactivate,
+### Erasing your data
+
+Deactivation keeps your name on your work. Six months after you deactivate,
 your personal data is erased automatically. To have it erased sooner, email us — you, or an Org
 Admin of your organisation on your behalf. Erasure replaces your name with *Deleted user*, and
 removes your email address, photo, password, sign-in links, last sign-in IP address and recent

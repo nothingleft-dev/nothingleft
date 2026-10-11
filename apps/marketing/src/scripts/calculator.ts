@@ -1,4 +1,4 @@
-import { TEAM_SIZE } from '@lib/pricing';
+import { TEAM_SIZE, formatListPrice } from '@lib/pricing';
 import { initSegmented } from './segmented';
 
 type Mode = 'seat' | 'total';
@@ -18,21 +18,51 @@ const LOG_SPAN = Math.log(TEAM_SIZE.max / TEAM_SIZE.min);
 const sizeToRatio = (size: number) => Math.log(size / TEAM_SIZE.min) / LOG_SPAN;
 const ratioToSize = (ratio: number) => clampSize(TEAM_SIZE.min * Math.exp(ratio * LOG_SPAN));
 
-// "1,250.50" and "12,50" are both read as people type them: a comma followed by one or two
-// final digits is a decimal mark, any other comma groups thousands.
-export function parseAmount(raw: string): number | null {
-  let text = raw.replace(/[\s'’]/g, '').replace(/[^\d.,]/g, '');
-  if (text === '') return null;
-  if (/,\d{1,2}$/.test(text) && !text.includes('.')) text = text.replace(/\./g, '').replace(',', '.');
-  else text = text.replace(/,/g, '');
-  const value = Number(text);
-  return Number.isFinite(value) ? value : null;
+const MAX_AMOUNT = 100_000_000;
+
+export type ParsedAmount = { kind: 'empty' } | { kind: 'invalid' } | { kind: 'amount'; value: number };
+
+const GROUPED: Record<string, RegExp> = {
+  ',': /^(\d{1,3}(,\d{3})*|\d{1,2}(,\d{2})*,\d{3})$/,
+  '.': /^\d{1,3}(\.\d{3})*$/,
+};
+
+// "1,250.50", "1.250,50" and "12,50" are read as people write them: the last separator is the decimal
+// mark when both appear, and a lone comma before one or two final digits is one too. Anything that
+// is not a well-grouped figure is rejected rather than reinterpreted.
+export function parseAmount(raw: string): ParsedAmount {
+  const text = raw.replace(/[\s'’]/g, '');
+  if (text === '') return { kind: 'empty' };
+  if (!/^\d[\d.,]*$/.test(text)) return { kind: 'invalid' };
+
+  const dot = text.lastIndexOf('.');
+  const comma = text.lastIndexOf(',');
+  let decimal: '.' | ',' | undefined;
+  if (dot >= 0 && comma >= 0) decimal = dot > comma ? '.' : ',';
+  else if (comma >= 0) decimal = /^\d+,\d{1,2}$/.test(text) ? ',' : undefined;
+  else if (dot >= 0) decimal = text.indexOf('.') === dot ? '.' : undefined;
+
+  const [whole = '', fraction = '', ...extra] = decimal ? text.split(decimal) : [text];
+  if (extra.length > 0 || (decimal && !/^\d+$/.test(fraction))) return { kind: 'invalid' };
+  const group = decimal === '.' ? ',' : decimal === ',' ? '.' : comma >= 0 ? ',' : '.';
+  if (/[.,]/.test(whole) && !GROUPED[group]?.test(whole)) return { kind: 'invalid' };
+
+  const value = Number(`${whole.replace(/[.,]/g, '')}.${fraction || '0'}`);
+  return Number.isFinite(value) && value <= MAX_AMOUNT ? { kind: 'amount', value } : { kind: 'invalid' };
 }
 
 export function initCalculator(): void {
   const root = document.getElementById('calculator');
   if (!root) return;
+  try {
+    wireCalculator(root);
+  } catch (error) {
+    root.closest('section')?.classList.add('calc-failed');
+    throw error;
+  }
+}
 
+function wireCalculator(root: HTMLElement): void {
   const slider = el(root, '[role="slider"]');
   const fill = el(root, '[data-slider-fill]');
   const thumb = el(root, '[data-slider-thumb]');
@@ -40,6 +70,9 @@ export function initCalculator(): void {
   const amountInput = el<HTMLInputElement>(root, '#calc-amount');
   const amountLabel = el(root, '[data-amount-label]');
   const amountPrefix = el(root, '[data-amount-prefix]');
+  const amountHint = el(root, '[data-amount-hint]');
+  const listNote = el(root, '[data-list-note]');
+  const listTool = el(root, '[data-list-tool]');
   const toolLink = el<HTMLAnchorElement>(root, '[data-tool-link]');
   const toolLinkName = el(root, '[data-tool-name]');
   const toolNote = el(root, '[data-tool-note]');
@@ -52,6 +85,16 @@ export function initCalculator(): void {
   let size: number = TEAM_SIZE.initial;
   let mode: Mode = 'seat';
   let currency = 'USD';
+  let tool = root.querySelector<HTMLElement>('[data-group="tool"] [aria-checked="true"]');
+  let filledAmount: string | null = amountInput.value || null;
+
+  // A figure the visitor typed is theirs: only an empty field or our own last fill is replaced.
+  const fillListPrice = () => {
+    if (amountInput.value !== '' && amountInput.value !== filledAmount) return;
+    const price = Number(tool?.dataset.listPrice);
+    filledAmount = currency === 'USD' && mode === 'seat' && price > 0 ? formatListPrice(price) : null;
+    amountInput.value = filledAmount ?? '';
+  };
 
   const money = (value: number) =>
     new Intl.NumberFormat('en', {
@@ -75,14 +118,27 @@ export function initCalculator(): void {
     amountPrefix.textContent = symbol();
     ours.textContent = money(0);
 
-    const amount = parseAmount(amountInput.value);
-    if (amount === null) {
+    const filled = filledAmount !== null && amountInput.value === filledAmount;
+    listNote.hidden = !filled;
+    if (filled) listTool.textContent = tool?.dataset.name ?? '';
+
+    const parsed = parseAmount(amountInput.value);
+    const invalid = parsed.kind === 'invalid';
+    amountInput.setAttribute('aria-invalid', String(invalid));
+    amountHint.classList.toggle('calc-hint-error', invalid);
+    amountHint.textContent = invalid
+      ? 'That is not an amount we can read. Use digits only, such as 1250, 1,250.50 or 1.250,50.'
+      : 'Digits only, such as 1250, 1,250.50 or 1.250,50.';
+    if (parsed.kind !== 'amount') {
       current.textContent = '—';
       currentBasis.textContent = '';
       avoided.textContent = '—';
-      message.textContent = 'Enter what you pay today to see the comparison.';
+      message.textContent = invalid
+        ? 'Fix the amount to see the comparison.'
+        : 'Enter what you pay today to see the comparison.';
       return;
     }
+    const amount = parsed.value;
     const spend = mode === 'seat' ? amount * size : amount;
     current.textContent = `${money(spend)} / month`;
     currentBasis.textContent = mode === 'seat' ? `${money(amount)} × ${size} members` : `${size} members`;
@@ -139,14 +195,19 @@ export function initCalculator(): void {
 
   initSegmented(el(root, '[data-group="mode"]'), value => {
     mode = value === 'total' ? 'total' : 'seat';
+    fillListPrice();
     render();
   });
   initSegmented(el(root, '[data-group="currency"]'), value => {
     currency = value;
+    fillListPrice();
     render();
   });
   initSegmented(el(root, '[data-group="tool"]'), value => {
     const option = root.querySelector<HTMLElement>(`[data-group="tool"] [data-value="${value}"]`);
+    tool = option;
+    fillListPrice();
+    render();
     const url = option?.dataset.pricingUrl;
     toolLink.hidden = !url;
     toolNote.hidden = Boolean(url);
