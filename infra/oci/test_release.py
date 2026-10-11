@@ -120,6 +120,12 @@ class GitHubGate(unittest.TestCase):
 
 
 class NetworkCleanup(unittest.TestCase):
+    def test_key_files_end_with_one_newline(self):
+        transport = load('ci-connection')
+        for value in ('KEY', 'KEY\n', 'KEY\r\n', '\nKEY\n\n'):
+            self.assertEqual(transport.key_text(value), 'KEY\n')
+        self.assertEqual(transport.key_text('A\r\nB'), 'A\nB\n')
+
     def test_preserves_every_preexisting_rule_even_when_add_returns_them(self):
         transport = load('ci-connection')
         client = SimpleNamespace(

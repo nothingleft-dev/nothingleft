@@ -16,11 +16,16 @@ def folder():
     return directory
 
 
+def key_text(value):
+    """OpenSSH rejects a key without its final newline, which pasted and CLI-set secrets lose."""
+    return value.replace('\r\n', '\n').strip() + '\n'
+
+
 def network():
     import oci
     directory = folder()
     key = directory / 'oci-key.pem'
-    key.write_text(os.environ['OCI_API_PRIVATE_KEY'])
+    key.write_text(key_text(os.environ['OCI_API_PRIVATE_KEY']))
     key.chmod(0o600)
     parser = configparser.ConfigParser(interpolation=None)
     parser.read_string(os.environ['OCI_CONFIG'])
@@ -74,7 +79,7 @@ def ssh(command, archive=None):
     from release_lib import validate_id
     directory = folder()
     key = directory / 'ssh-key'
-    key.write_text(os.environ['OCI_DEPLOY_SSH_KEY'])
+    key.write_text(key_text(os.environ['OCI_DEPLOY_SSH_KEY']))
     key.chmod(0o600)
     known = directory / 'known_hosts'
     known.write_text(os.environ['OCI_DEPLOY_KNOWN_HOSTS'] + '\n')
