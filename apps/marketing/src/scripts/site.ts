@@ -1,14 +1,25 @@
 import { initCalculator } from './calculator';
 import { initComparisonMatrix } from './compare-matrix';
 import { initDemo } from './demo';
+import { initFaq } from './faq';
 import { initMenu } from './menu';
 import { initCopyButtons, initTabs } from './tabs';
 import { initWorkflow } from './workflow';
 
-initMenu();
-initCalculator();
-initComparisonMatrix();
-initDemo();
-initWorkflow();
-initTabs();
-initCopyButtons();
+// One component that fails to start must not stop the others.
+for (const init of [
+  initMenu,
+  initCalculator,
+  initComparisonMatrix,
+  initDemo,
+  initFaq,
+  initWorkflow,
+  initTabs,
+  initCopyButtons,
+]) {
+  try {
+    init();
+  } catch (error) {
+    console.error(error);
+  }
+}

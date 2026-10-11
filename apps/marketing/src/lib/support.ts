@@ -4,6 +4,8 @@ import type { RequestType } from '@lib/support-contract';
 
 export const SECURITY_REPORT_URL = `${GITHUB_URL}/security`;
 export const SECURITY_POLICY_URL = `${GITHUB_URL}/blob/main/SECURITY.md`;
+export const ISSUES_URL = `${GITHUB_URL}/issues`;
+export const NEW_ISSUE_URL = `${GITHUB_URL}/issues/new`;
 export const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 
 export interface SupportLink {

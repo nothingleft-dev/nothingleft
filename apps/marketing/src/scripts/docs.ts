@@ -32,82 +32,138 @@ function writeStored(key: string, value: string | null): void {
   }
 }
 
-let pagefind: Promise<Pagefind | null> | undefined;
-function loadPagefind(): Promise<Pagefind | null> {
+let pagefind: Promise<Pagefind> | undefined;
+let failedLoads = 0;
+function loadPagefind(): Promise<Pagefind> {
   // The index exists only in a build: Pagefind writes it into dist after Astro finishes.
-  pagefind ??= import(/* @vite-ignore */ `${'/pagefind/'}pagefind.js`).then(
-    module => module as Pagefind,
-    () => null,
-  );
+  // Browsers remember a failed import, so a retry asks for a fresh URL.
+  const retry = failedLoads > 0 ? `?attempt=${failedLoads}` : '';
+  pagefind ??= import(/* @vite-ignore */ `${'/pagefind/'}pagefind.js${retry}`).then(module => module as Pagefind);
+  pagefind.catch(() => {
+    pagefind = undefined;
+    failedLoads++;
+  });
   return pagefind;
 }
 
 const cleanUrl = (url: string) => url.replace(/\.html$/, '').replace(/\/index$/, '') || '/';
+
+const MIN_QUERY = 2;
+const MAX_RESULTS = 8;
+
+function message(text: string, retry?: () => void): HTMLLIElement {
+  const item = document.createElement('li');
+  item.className = 'result-empty';
+  item.textContent = text;
+  if (retry) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'result-retry';
+    button.textContent = 'Try again';
+    button.addEventListener('click', retry);
+    item.append(' ', button);
+  }
+  return item;
+}
+
+function resultItem(result: Awaited<ReturnType<PagefindResult['data']>>): HTMLLIElement {
+  const item = document.createElement('li');
+  const link = document.createElement('a');
+  link.href = cleanUrl(result.url);
+  const title = document.createElement('span');
+  title.className = 'result-title';
+  title.textContent = result.meta.title ?? link.href;
+  const excerpt = document.createElement('span');
+  excerpt.className = 'result-excerpt';
+  // Pagefind escapes the page text and adds only <mark> around matches.
+  excerpt.innerHTML = result.excerpt;
+  link.append(title, excerpt);
+  item.append(link);
+  return item;
+}
 
 function initSearch(): void {
   document.querySelectorAll<HTMLElement>('[data-docs-search]').forEach(root => {
     const input = root.querySelector<HTMLInputElement>('[data-search-input]');
     const list = root.querySelector<HTMLUListElement>('[data-search-results]');
     const status = root.querySelector<HTMLElement>('[data-search-status]');
-    if (!input || !list || !status) return;
+    const clear = root.querySelector<HTMLButtonElement>('[data-search-clear]');
+    if (!input || !list || !status || !clear) return;
     root.hidden = false;
     let latest = 0;
+    let dismissed = false;
 
+    const active = () => root.contains(document.activeElement);
+    const show = (...items: HTMLLIElement[]) => {
+      list.replaceChildren(...items);
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    };
     const close = () => {
+      latest++;
       list.hidden = true;
+      list.removeAttribute('aria-busy');
       input.setAttribute('aria-expanded', 'false');
     };
+
     const render = async () => {
       const query = input.value.trim();
       const ticket = ++latest;
-      if (query.length < 2) {
-        list.replaceChildren();
-        close();
+      clear.hidden = input.value === '';
+      list.removeAttribute('aria-busy');
+      if (query.length < MIN_QUERY) {
         status.textContent = '';
+        show(message('Results appear as you type, from two characters. Enter opens the first one.'));
         return;
       }
-      const engine = await loadPagefind();
-      if (ticket !== latest) return;
-      if (!engine) {
-        list.innerHTML = '<li class="result-empty">Search works on the published site.</li>';
-        list.hidden = false;
-        return;
+      list.setAttribute('aria-busy', 'true');
+      show(message('Searching…'));
+      status.textContent = 'Searching…';
+      try {
+        const engine = await loadPagefind();
+        const found = await engine.search(query);
+        const top = await Promise.all(found.results.slice(0, MAX_RESULTS).map(result => result.data()));
+        if (ticket !== latest || !active()) return;
+        list.removeAttribute('aria-busy');
+        if (top.length === 0) show(message(`No guide matches “${query}” yet.`));
+        else show(...top.map(resultItem));
+        status.textContent = `${top.length} ${top.length === 1 ? 'result' : 'results'}`;
+      } catch {
+        if (ticket !== latest || !active()) return;
+        list.removeAttribute('aria-busy');
+        const retry = () => {
+          input.focus();
+          void render();
+        };
+        show(
+          import.meta.env.DEV
+            ? message('Search needs a build: run bun run build, then bun run preview.')
+            : message('Search could not load. Check your connection.', retry),
+        );
+        status.textContent = 'Search could not load.';
       }
-      const found = await engine.search(query);
-      const top = await Promise.all(found.results.slice(0, 8).map(result => result.data()));
-      if (ticket !== latest) return;
-      list.replaceChildren(
-        ...top.map(result => {
-          const item = document.createElement('li');
-          const link = document.createElement('a');
-          link.href = cleanUrl(result.url);
-          const title = document.createElement('span');
-          title.className = 'result-title';
-          title.textContent = result.meta.title ?? link.href;
-          const excerpt = document.createElement('span');
-          excerpt.className = 'result-excerpt';
-          // Pagefind escapes the page text and adds only <mark> around matches.
-          excerpt.innerHTML = result.excerpt;
-          link.append(title, excerpt);
-          item.append(link);
-          return item;
-        }),
-      );
-      if (top.length === 0) list.innerHTML = '<li class="result-empty">No guide matches that yet.</li>';
-      list.hidden = false;
-      input.setAttribute('aria-expanded', 'true');
-      status.textContent = `${top.length} ${top.length === 1 ? 'result' : 'results'}`;
     };
 
-    input.addEventListener('focus', () => void loadPagefind(), { once: true });
+    input.addEventListener('focus', () => {
+      if (list.hidden && !dismissed) void render();
+      dismissed = false;
+    });
     input.addEventListener('input', () => void render());
     input.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
-        input.value = '';
-        void render();
-      }
-      if (event.key === 'ArrowDown') {
+        if (!list.hidden) close();
+        else {
+          input.value = '';
+          clear.hidden = true;
+        }
+        event.preventDefault();
+      } else if (event.key === 'ArrowDown') {
+        if (list.hidden) void render();
         list.querySelector<HTMLAnchorElement>('a')?.focus();
+        event.preventDefault();
+      } else if (event.key === 'Enter') {
+        const first = list.hidden ? null : list.querySelector<HTMLAnchorElement>('a');
+        if (first) window.location.assign(first.href);
         event.preventDefault();
       }
     });
@@ -116,9 +172,17 @@ function initSearch(): void {
       const index = links.indexOf(document.activeElement as HTMLAnchorElement);
       if (event.key === 'ArrowDown') links[Math.min(index + 1, links.length - 1)]?.focus();
       else if (event.key === 'ArrowUp') (index <= 0 ? input : links[index - 1])?.focus();
-      else if (event.key === 'Escape') input.focus();
-      else return;
+      else if (event.key === 'Escape') {
+        close();
+        dismissed = true;
+        input.focus();
+      } else return;
       event.preventDefault();
+    });
+    clear.addEventListener('click', () => {
+      input.value = '';
+      input.focus();
+      void render();
     });
     root.addEventListener('focusout', event => {
       if (!root.contains(event.relatedTarget as Node | null)) close();
@@ -154,7 +218,7 @@ function initToc(): void {
       const first = headings.find(heading => visible.has(heading.id));
       if (first) mark(first.id);
     },
-    { rootMargin: '-80px 0px -65% 0px' },
+    { rootMargin: '-24px 0px -65% 0px' },
   );
   headings.forEach(heading => observer.observe(heading));
   links.forEach(link =>

@@ -111,7 +111,7 @@ S3_PUBLIC_BUCKET_BASE_URL     https://static.nothingleft.dev
 S3_ACCESS_KEY_ID
 S3_SECRET_ACCESS_KEY
 ENCRYPTION_MASTER_KEY         32 bytes, base64 — seals two-factor secrets (6b) and BYO storage secrets (6c, purpose `byo_storage`, the connection's row as additional data), and signs MCP confirmation state (purpose `mcp-confirm`); required in production, never rotated (no rotation in v1)
-SESSION_COOKIE_DOMAIN         .nothingleft.dev
+SESSION_COOKIE_DOMAIN         .nothingleft.dev  required whenever the web app and the API are on different hosts: the web app's proxy reads the session cookie
 TRUST_PROXY                   1             proxy hops in front of the API, or their IPs / CIDRs (comma-separated); false trusts none. Unset: 1 in production, false elsewhere
 GOOGLE_CLIENT_ID / _SECRET
 GITHUB_CLIENT_ID / _SECRET

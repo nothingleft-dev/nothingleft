@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { issueWorld, type IssueWorld } from './issue-world.ts';
+import { signUp } from './people.ts';
 
 setDefaultTimeout(120_000);
 
@@ -313,6 +314,18 @@ describe('GET /v1/issues/figures', () => {
 });
 
 describe('landing and the last project', () => {
+  test('an account that never belonged anywhere is sent to the welcome flow; a removed one is told so', async () => {
+    const empty = { organization_slug: null, project_key: null };
+    const person = await signUp(w.app, w.box, 'Newcomer');
+    expect((await w.call(person, 'GET', '/v1/me/landing')).json().data).toEqual({ kind: 'welcome', ...empty });
+
+    const link = (await w.call(w.admin, 'POST', `/v1/organizations/${w.slug}/invitations/links`, {})).json().data;
+    await w.call(person, 'POST', '/v1/invitations/accept', { token: /\/invite\/(.+)$/.exec(link.url)![1] });
+    const username = (await w.call(person, 'GET', `/v1/organizations/${w.slug}`)).json().data.membership.username;
+    expect((await w.call(w.admin, 'DELETE', `/v1/organizations/${w.slug}/members/${username}`)).statusCode).toBe(200);
+    expect((await w.call(person, 'GET', '/v1/me/landing')).json().data).toEqual({ kind: 'no_org', ...empty });
+  });
+
   test('last project wins; clearing it falls back by project count', async () => {
     const set = await w.call(w.contributor, 'PATCH', '/v1/me/preferences', { last_project_key: KEY });
     expect(set.json().data.preferences.last_project_key).toBe(KEY);

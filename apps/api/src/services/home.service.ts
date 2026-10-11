@@ -23,7 +23,10 @@ export function homeService({ access, organizations, projects, preferences }: Ho
   return {
     async landing(principal: Principal): Promise<Landing> {
       const memberships = await organizations.listForUser(ctx, principal.userId);
-      if (memberships.length === 0) return { kind: 'no_org', organization_slug: null, project_key: null };
+      if (memberships.length === 0) {
+        const kind = (await organizations.hasEverBelonged(ctx, principal.userId)) ? 'no_org' : 'welcome';
+        return { kind, organization_slug: null, project_key: null };
+      }
 
       const stored = await preferences.findForUser(ctx, principal.userId);
       const lastId = stored?.preferences.last_project_id ?? null;

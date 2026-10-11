@@ -28,24 +28,50 @@ export function initTabs(): void {
   });
 }
 
+let announcer: HTMLElement | undefined;
+function announce(text: string): void {
+  if (!announcer) {
+    announcer = document.createElement('p');
+    announcer.className = 'sr-only';
+    announcer.setAttribute('aria-live', 'polite');
+    document.body.append(announcer);
+  }
+  announcer.textContent = text;
+}
+
+function selectContents(element: HTMLElement): void {
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
 export function initCopyButtons(): void {
   document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach(button => {
     const source = document.getElementById(button.dataset.copy ?? '');
-    if (!source || !navigator.clipboard) {
+    if (!source) {
       button.hidden = true;
       return;
     }
     const label = button.textContent ?? 'Copy';
     let reset: number | undefined;
     button.addEventListener('click', async () => {
+      let copied = false;
       try {
         await navigator.clipboard.writeText(source.textContent ?? '');
-        button.textContent = 'Copied';
+        copied = true;
       } catch {
-        button.textContent = 'Press Ctrl+C';
+        selectContents(source);
       }
+      button.textContent = copied ? 'Copied' : 'Text selected';
+      announce(
+        copied
+          ? 'Copied to the clipboard.'
+          : 'Could not copy automatically. The text is selected: copy it with your keyboard or the context menu.',
+      );
       window.clearTimeout(reset);
-      reset = window.setTimeout(() => (button.textContent = label), 1600);
+      reset = window.setTimeout(() => (button.textContent = label), copied ? 1600 : 6000);
     });
   });
 }

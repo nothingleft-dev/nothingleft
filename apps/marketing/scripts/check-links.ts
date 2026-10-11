@@ -1,6 +1,7 @@
 // Usage, after `astro build`: bun scripts/check-links.ts [--pending=/docs/a,/docs/b] — pending routes are reported, not failed.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { anchorHref, isExternalHref } from '../src/lib/external-links';
 
 const distDir = join(import.meta.dir, '..', 'dist');
 const pending = new Set(
@@ -73,7 +74,14 @@ let checked = 0;
 
 for (const file of files) {
   const page = routeOf(file);
-  const hrefs = new Set(attributeValues(markupOnly(readFileSync(file, 'utf8')), 'href').filter(isInternal));
+  const markup = markupOnly(readFileSync(file, 'utf8'));
+  for (const tag of markup.match(/<a\b[^>]*>/gi) ?? []) {
+    const href = anchorHref(tag);
+    if (href && isExternalHref(href) && !/\starget="_blank"/i.test(tag)) {
+      broken.push({ page, href, reason: 'external link opens in the same tab' });
+    }
+  }
+  const hrefs = new Set(attributeValues(markup, 'href').filter(isInternal));
   for (const href of hrefs) {
     if (href.startsWith('/api/')) continue;
     checked++;

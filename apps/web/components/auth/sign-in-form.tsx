@@ -17,7 +17,7 @@ import { signIn } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
 import { queryKeys } from '@lib/query/keys';
 import { viewerTimeZone } from '@lib/datetime';
-import { useRedirectWhenSignedIn } from '@hooks/use-redirect-when-signed-in';
+import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 export function SignInForm() {
   const router = useRouter();
@@ -25,14 +25,11 @@ export function SignInForm() {
   const params = useSearchParams();
   const next = params.get('next');
   const deactivated = params.get('deactivated') === '1';
-  // Off once this form has signed someone in, or the bounce to the landing beats ?next=.
-  const [leaving, setLeaving] = useState(false);
-  useRedirectWhenSignedIn(!leaving);
   const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const [expired, setExpired] = useState<string | null>(null);
 
   const finish = (me: Me) => {
-    setLeaving(true);
+    trackAuthConversion('login', 'email');
     client.setQueryData(queryKeys.me(), me);
     router.replace(safeNextPath(next) as Route);
   };

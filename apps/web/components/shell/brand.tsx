@@ -47,7 +47,7 @@ export function BrandMark({
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <svg viewBox="3.25 23.03 303.17 60.47" className={cn('h-[15px] w-auto flex-none text-text', className)} aria-hidden>
+    <svg viewBox="3.25 23.03 303.17 60.47" className={cn('h-[20px] w-auto flex-none text-text', className)} aria-hidden>
       <path className="fill-current" d={WORDMARK_LETTERS} />
       <circle className="fill-none stroke-brand" cx={51.73} cy={52.4} r={13.28} strokeWidth={8.64} />
       <rect className="fill-brand" x={213.96} y={46.64} width={92.46} height={8.32} rx={1.28} />

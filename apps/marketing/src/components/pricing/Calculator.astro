@@ -1,5 +1,13 @@
 ---
-import { CURRENCIES, CURRENT_TOOLS, TEAM_SIZE, type CurrentToolId } from '@lib/pricing';
+import { displayDate } from '@lib/compare';
+import {
+  CURRENCIES,
+  CURRENT_TOOLS,
+  LIST_PRICES_CHECKED,
+  TEAM_SIZE,
+  formatListPrice,
+  type CurrentToolId,
+} from '@lib/pricing';
 
 interface Props {
   /** The tool chosen when the page loads; a comparison page passes the product it compares. */
@@ -12,10 +20,12 @@ interface Props {
 const {
   preselect = 'jira',
   title = 'Compare what you pay now.',
-  intro = 'Enter your current subscription and see what the beta takes off the bill. Your figure only: no list price is filled in for you, and nothing you type leaves this page.',
+  intro = 'Pick the tool you pay for and see what the beta takes off the bill. We start from its lowest paid plan; replace that with the figure on your invoice. Nothing you type leaves this page.',
   id = 'compare',
 } = Astro.props;
 const selectedTool = CURRENT_TOOLS.find(tool => tool.id === preselect) ?? CURRENT_TOOLS[0];
+const initialPrice = selectedTool?.listPriceUsd;
+const checked = displayDate(LIST_PRICES_CHECKED);
 ---
 
 <section id={id} class="border-t border-line bg-app" aria-labelledby="calc-title">
@@ -26,14 +36,12 @@ const selectedTool = CURRENT_TOOLS.find(tool => tool.id === preselect) ?? CURREN
       </h2>
       <p class="prose mt-5">{intro}</p>
     </div>
-    <noscript>
-      <p class="prose mt-8 max-w-[640px]">
-        The calculator needs JavaScript. The short version: during beta the subscription is zero, whatever you pay
-        today.
-      </p>
-    </noscript>
+    <p class="calc-fallback prose mt-8 max-w-[640px]">
+      The calculator is not available in this browser right now. Reloading the page may bring it back. The short
+      version: during beta the subscription is zero, whatever you pay today.
+    </p>
 
-    <div id="calculator" class="calc mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
+    <div id="calculator" data-checked={checked} class="calc mt-10 md:mt-14 grid lg:grid-cols-12 gap-8 lg:gap-12">
       <div class="lg:col-span-7 panel panel-pad space-y-7">
         <div>
           <p class="calc-label" id="tool-label">
@@ -49,6 +57,7 @@ const selectedTool = CURRENT_TOOLS.find(tool => tool.id === preselect) ?? CURREN
                 data-value={tool.id}
                 data-name={tool.name}
                 data-pricing-url={tool.pricingUrl}
+                data-list-price={tool.listPriceUsd}
               >
                 {tool.name}
               </button>
@@ -160,8 +169,18 @@ const selectedTool = CURRENT_TOOLS.find(tool => tool.id === preselect) ?? CURREN
               inputmode="decimal"
               autocomplete="off"
               placeholder="0.00"
+              value={initialPrice === undefined ? undefined : formatListPrice(initialPrice)}
+              aria-describedby="calc-amount-hint calc-list-note"
             />
           </div>
+          <p class="mt-2 text-xs text-fg-2" id="calc-amount-hint" data-amount-hint>
+            Digits only, such as 1250, 1,250.50 or 1.250,50.
+          </p>
+          <p class="mt-1 text-xs text-fg-2" id="calc-list-note" data-list-note hidden={initialPrice === undefined}>
+            Filled in from <span data-list-tool>{selectedTool?.name}</span>'s lowest paid plan: US list price, billed
+            monthly, checked {checked}. Higher plans cost more, and annual or volume pricing differs. Replace it with
+            your invoice figure.
+          </p>
         </div>
       </div>
 
@@ -199,8 +218,10 @@ const selectedTool = CURRENT_TOOLS.find(tool => tool.id === preselect) ?? CURREN
           </p>
         </div>
         <p class="mt-4 text-xs text-fg-3 max-w-[52ch]">
-          Monthly subscription only, in the currency you chose, with no exchange conversion. Migration effort, add-ons,
-          storage and any future seat pricing are outside this comparison. Product names are trademarks of their owners.
+          Monthly subscription only, in the currency you chose, with no exchange conversion. Filled-in prices are US
+          list prices for each tool's lowest paid plan, billed monthly, checked {checked}; they apply in USD only.
+          Migration effort, add-ons, storage and any future seat pricing are outside this comparison. Product names are
+          trademarks of their owners.
         </p>
       </div>
     </div>

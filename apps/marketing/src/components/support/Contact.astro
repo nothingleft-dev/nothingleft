@@ -1,6 +1,6 @@
 ---
 import { SUPPORT_EMAIL } from '@lib/site';
-import { REQUEST_HELP, SECURITY_REPORT_URL, SUPPORT_MAILTO } from '@lib/support';
+import { ISSUES_URL, REQUEST_HELP, SECURITY_REPORT_URL, SUPPORT_MAILTO } from '@lib/support';
 import { LIMITS, PRODUCT_AREAS, REQUEST_TYPES } from '@lib/support-contract';
 ---
 
@@ -85,12 +85,20 @@ import { LIMITS, PRODUCT_AREAS, REQUEST_TYPES } from '@lib/support-contract';
         <div class="contact-fallback panel panel-pad">
           <h3 class="h3">Email us instead.</h3>
           <p class="prose mt-2 text-base">
-            The form needs JavaScript. Write to{' '}
+            The form is not available in this browser right now. Write to{' '}
             <a class="link" href={SUPPORT_MAILTO}>
               {SUPPORT_EMAIL}
             </a>{' '}
             with a subject, say whether it is a problem, beta feedback, account help or a question about fit, and
             describe what you need. Do not include passwords, recovery codes or access tokens.
+          </p>
+          <p class="mt-4 text-sm">
+            <a class="link" href={ISSUES_URL} rel="noopener">
+              Report a bug on GitHub
+              <span class="arr ext" aria-hidden="true">
+                ↗
+              </span>
+            </a>
           </p>
         </div>
 

@@ -614,7 +614,8 @@ paths:
         project viewed while it is still readable and not archived, or the only readable project
         of a single organisation; `project_list` — one organisation with none or several;
         `org_switcher` — several organisations, `organization_slug` the current (else most
-        recently joined) one; `no_org` — every membership is gone.
+        recently joined) one; `no_org` — every membership is gone; `welcome` — the account has
+        never belonged to an organisation, so it belongs in the welcome flow.
       tags: [me]
       responses:
         '200':
@@ -8831,7 +8832,7 @@ components:
       type: object
       required: [kind, organization_slug, project_key]
       properties:
-        kind: { type: string, enum: [project, project_list, org_switcher, no_org] }
+        kind: { type: string, enum: [project, project_list, org_switcher, no_org, welcome] }
         organization_slug: { type: [string, 'null'] }
         project_key: { type: [string, 'null'] }
     Suggestion:
@@ -8996,9 +8997,12 @@ components:
         - properties:
             data:
               type: object
-              required: [me, notice]
+              required: [me, created, notice]
               properties:
                 me: { $ref: '#/components/schemas/Me' }
+                created:
+                  type: boolean
+                  description: True when this sign-in created the account, the same fact as the 201 status.
                 notice:
                   description: Non-null only when this sign-in linked to an account whose address was never confirmed, removing its password. Shown to the user once.
                   oneOf:

@@ -29,7 +29,9 @@ API_DEFAULTS = dict(NODE_ENV='production', HOST='127.0.0.1', LOG_LEVEL='info', L
     EMAIL_FROM='Nothing Left <noreply@notifications.nothingleft.dev>',
     POSTHOG_ANALYTICS_ENABLED='false', POSTHOG_ERRORS_ENABLED='false', POSTHOG_SAMPLE_RATE='1',
     POSTHOG_HOST='https://us.i.posthog.com')
-UI_KEYS = {'NEXT_PUBLIC_API_BASE_URL', 'NEXT_PUBLIC_GA_MEASUREMENT_ID', 'NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT'}
+UI_KEYS = {'NEXT_PUBLIC_API_BASE_URL', 'NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT'}
+# One GA4 property for the marketing site and the app's auth pages, so a visit and its sign-up join up.
+UI_SHARED = {'NEXT_PUBLIC_GA_MEASUREMENT_ID': 'MARKETING_PUBLIC_GA_MEASUREMENT_ID'}
 UI_TRANSPORT = {'VERCEL_TOKEN', 'VERCEL_ORG_ID', 'VERCEL_PROJECT_ID', 'VERCEL_CLI_VERSION'}
 UI_DEFAULTS = {'NEXT_PUBLIC_API_BASE_URL': 'https://api.nothingleft.dev',
                'NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT': 'false'}
@@ -97,8 +99,17 @@ def collect(service, variables, secrets):
     if service == 'API':
         values.pop('PORT', None)
         validate_api(values)
-    elif service == 'UI' and not values.get('NEXT_PUBLIC_API_BASE_URL'):
-        raise ValueError(f'{service}_NEXT_PUBLIC_API_BASE_URL is required')
+    elif service == 'UI':
+        for key, name in UI_SHARED.items():
+            if secrets.get(name):
+                raise ValueError(f'{name} is browser-visible; configure it as a Variable')
+            value = variables.get(name, '')
+            if any(char in value for char in ('\0', '\r', '\n')):
+                raise ValueError(f'{name} must be a single-line value')
+            if value:
+                values[key] = value
+        if not values.get('NEXT_PUBLIC_API_BASE_URL'):
+            raise ValueError(f'{service}_NEXT_PUBLIC_API_BASE_URL is required')
     return {'values': values, 'secret_names': sorted(secret_names)}
 
 

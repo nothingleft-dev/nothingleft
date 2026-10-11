@@ -5,18 +5,25 @@ export interface CurrentTool {
   id: string;
   name: string;
   pricingUrl?: string;
+  /** US list price per seat per month, lowest paid plan, billed monthly. */
+  listPriceUsd?: number;
 }
 
+// Recheck every price against its pricing page when this date moves.
+export const LIST_PRICES_CHECKED = '2026-10-11';
+
 export const CURRENT_TOOLS: CurrentTool[] = [
-  { id: 'jira', name: 'Jira', pricingUrl: 'https://www.atlassian.com/software/jira/pricing' },
-  { id: 'linear', name: 'Linear', pricingUrl: 'https://linear.app/pricing' },
-  { id: 'youtrack', name: 'YouTrack', pricingUrl: 'https://www.jetbrains.com/youtrack/buy/' },
-  { id: 'clickup', name: 'ClickUp', pricingUrl: 'https://clickup.com/pricing' },
-  { id: 'asana', name: 'Asana', pricingUrl: 'https://asana.com/pricing' },
-  { id: 'notion', name: 'Notion', pricingUrl: 'https://www.notion.com/pricing' },
-  { id: 'monday', name: 'monday.com', pricingUrl: 'https://monday.com/pricing' },
+  { id: 'jira', name: 'Jira', pricingUrl: 'https://www.atlassian.com/software/jira/pricing', listPriceUsd: 9.05 },
+  { id: 'linear', name: 'Linear', pricingUrl: 'https://linear.app/pricing', listPriceUsd: 12 },
+  { id: 'youtrack', name: 'YouTrack', pricingUrl: 'https://www.jetbrains.com/youtrack/buy/', listPriceUsd: 5.4 },
+  { id: 'clickup', name: 'ClickUp', pricingUrl: 'https://clickup.com/pricing', listPriceUsd: 10 },
+  { id: 'asana', name: 'Asana', pricingUrl: 'https://asana.com/pricing', listPriceUsd: 13.49 },
+  { id: 'notion', name: 'Notion', pricingUrl: 'https://www.notion.com/pricing', listPriceUsd: 12 },
+  { id: 'monday', name: 'monday.com', pricingUrl: 'https://monday.com/pricing', listPriceUsd: 12 },
   { id: 'other', name: 'Another tool' },
 ];
+
+export const formatListPrice = (price: number) => (Number.isInteger(price) ? String(price) : price.toFixed(2));
 
 export type CurrentToolId = 'jira' | 'linear' | 'youtrack' | 'clickup' | 'asana' | 'notion' | 'monday' | 'other';
 

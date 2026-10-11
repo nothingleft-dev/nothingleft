@@ -92,6 +92,15 @@ export function organizationsRepository(db: Queryable) {
         .orderBy(org_members.joined_at);
     },
 
+    async hasEverBelonged(_ctx: SystemContext, userId: number): Promise<boolean> {
+      const [row] = await db
+        .select({ user_id: org_members.user_id })
+        .from(org_members)
+        .where(eq(org_members.user_id, userId))
+        .limit(1);
+      return row !== undefined;
+    },
+
     async addMember(ctx: TenantContext, input: Omit<NewOrgMemberRow, 'org_id'>): Promise<OrgMemberRow> {
       const [row] = await db
         .insert(org_members)

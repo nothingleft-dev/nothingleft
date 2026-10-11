@@ -13,6 +13,7 @@ import { useAuthForm } from '@components/auth/use-auth-form';
 import { StepPanel } from '@components/onboarding/step-panel';
 import { InvitationCard } from '@components/invite/invitation-card';
 import { rememberInviteIntent } from '@components/invite/invite-intent';
+import { trackAuthConversion } from '@lib/analytics/google-analytics';
 import { signUp } from '@lib/api/auth';
 import { viewerTimeZone } from '@lib/datetime';
 import { queryKeys } from '@lib/query/keys';
@@ -39,6 +40,7 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
     },
     submit: values => signUp({ ...values, timezone: viewerTimeZone() }).then(r => r.data),
     onSuccess: (me: Me) => {
+      trackAuthConversion('sign_up', 'email');
       client.setQueryData(queryKeys.me(), me);
       onSignedUp();
     },

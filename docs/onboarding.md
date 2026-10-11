@@ -134,9 +134,15 @@ After onboarding, signing in lands on the last project viewed, or:
 - **No organisations** (every membership removed) → *"You're not a member of
   any organisation"*, with options to create one or enter an invite link.
   Never a blank screen or an error.
+- **Never belonged to an organisation** → the welcome flow. This is a new
+  account whatever the sign-up method (Google, GitHub, email), and one whose
+  onboarding stopped before its first organisation. A removed membership still
+  counts as having belonged; an organisation's deletion erases its memberships
+  when it is purged, so an account whose every organisation was purged starts
+  the welcome flow again (decided 11 Oct 2026).
 
 The server decides: `GET /v1/me/landing` answers `project`, `project_list`,
-`org_switcher` or `no_org` with the slug and key to route to. The last project
+`org_switcher`, `no_org` or `welcome` with the slug and key to route to. The last project
 counts only while it is still readable and not archived; the web app records
 it with `PATCH /v1/me/preferences { last_project_key }` on every project
 visit. With several organisations the switcher defaults to the session's
@@ -147,6 +153,7 @@ and signing in with no `next=` goes there. `project` opens the project's issue
 list; `project_list` opens `/projects`. `org_switcher` renders a page listing
 the organisations with the preferred one marked; choosing one switches the
 session and opens `/dashboard`, the same place the sidebar switcher goes.
+`welcome` opens `/welcome`.
 `no_org` renders the sentence above inside the shell with two actions —
 *Create an organisation* (the welcome flow's organisation step) and a field for
 an invitation link. Every other route still sends a member of no organisation to

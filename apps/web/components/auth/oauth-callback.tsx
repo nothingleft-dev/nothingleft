@@ -15,6 +15,7 @@ import { completeOAuth } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
 import { queryKeys } from '@lib/query/keys';
 import { formatDate, viewerTimeZone } from '@lib/datetime';
+import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 const LABELS: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 
@@ -34,7 +35,8 @@ export function OAuthCallback({ provider: raw }: { provider: string }) {
       completeOAuth(input.provider, { code: input.code, state: input.state, timezone: viewerTimeZone() }).then(
         r => r.data,
       ),
-    onSuccess: ({ me, notice }: OAuthSignIn) => {
+    onSuccess: ({ me, created, notice }: OAuthSignIn, input) => {
+      trackAuthConversion(created ? 'sign_up' : 'login', input.provider);
       client.setQueryData(queryKeys.me(), me);
       const next = takeOAuthNext();
       // The notice is explained here, once, before moving on; it is not stored anywhere.

@@ -32,6 +32,7 @@ export function LandingPage() {
     const { kind, project_key } = landing.data;
     if (kind === 'project' && project_key) router.replace(`/projects/${project_key}/issues` as Route);
     if (kind === 'project_list') router.replace('/projects');
+    if (kind === 'welcome') router.replace('/welcome');
   }, [landing.data, router]);
 
   if (landing.isError)
@@ -40,7 +41,9 @@ export function LandingPage() {
         Open the dashboard from the sidebar instead.
       </FormAlert>
     );
-  if (!landing.data || kind === 'project' || kind === 'project_list') return <PageSkeleton rows={3} />;
+  if (!landing.data || kind === 'project' || kind === 'project_list' || kind === 'welcome') {
+    return <PageSkeleton rows={3} />;
+  }
   if (kind === 'no_org') return <NoOrganisation />;
   return <OrganisationSwitcher preferred={landing.data.organization_slug} />;
 }

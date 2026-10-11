@@ -12,7 +12,12 @@ import Footer from '@components/Footer.astro';
 import { OG_IMAGE, pageMeta } from '@lib/page-meta';
 import { SITE_NAME } from '@lib/site';
 
-const { path, schema, jsonLd, ogImage, ogImageAlt } = pageMeta(Astro.url.pathname);
+interface Props {
+  /** The metadata route, when it is not the requested URL: the 404 page answers for any missing path. */
+  metaPath?: string;
+}
+
+const { path, schema, jsonLd, ogImage, ogImageAlt } = pageMeta(Astro.props.metaPath ?? Astro.url.pathname);
 const { title, description, noindex } = schema;
 const canonical = new URL(path, Astro.site).href;
 const ogImageUrl = new URL(ogImage, Astro.site).href;
@@ -31,7 +36,7 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
     <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow'} />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE_NAME} />
-    <meta property="og:locale" content="en" />
+    <meta property="og:locale" content="en_GB" />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -51,11 +56,15 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
     <link rel="preload" href={inter600} as="font" type="font/woff2" crossorigin />
     <script is:inline>
       document.documentElement.classList.add('js');
-      // A page script that fails to load takes the enhanced layout with it, so the static markup shows.
+      // Only the site's own scripts count: a host-injected or third-party tag that fails to load must
+      // not switch working components to their static layout.
       addEventListener(
         'error',
         event => {
-          if (event.target instanceof HTMLScriptElement) document.documentElement.classList.remove('js');
+          const script = event.target;
+          if (script instanceof HTMLScriptElement && script.src && new URL(script.src).origin === location.origin) {
+            document.documentElement.classList.remove('js');
+          }
         },
         true,
       );

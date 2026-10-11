@@ -1,5 +1,5 @@
 ---
-import { SECURITY_POLICY_URL, SECURITY_REPORT_URL } from '@lib/support';
+import { ISSUES_URL, NEW_ISSUE_URL, SECURITY_POLICY_URL, SECURITY_REPORT_URL } from '@lib/support';
 ---
 
 <section class="border-t border-line" aria-labelledby="kinds-title">
@@ -10,7 +10,7 @@ import { SECURITY_POLICY_URL, SECURITY_REPORT_URL } from '@lib/support';
       </h2>
       <p class="prose mt-5 max-w-[46ch]">
         Choose the one that fits when you write. It changes the questions we suggest, not where the request goes or how
-        it is treated. Security reports take a separate, private route.
+        it is treated. Bugs can also be reported in public on GitHub. Security reports take a separate, private route.
       </p>
     </div>
     <div class="lg:col-span-6 lg:col-start-7 rule-list">
@@ -26,6 +26,25 @@ import { SECURITY_POLICY_URL, SECURITY_REPORT_URL } from '@lib/support';
         <p class="prose mt-2 text-base">
           Something broke, showed an error, or did not do what the docs say. Steps, the issue key and the exact message
           help most.
+        </p>
+        <p class="prose mt-3 text-base">
+          Found a bug? Check the existing GitHub issues, or open a new one with the page URL, the steps to reproduce,
+          what you expected and what happened. Your browser and a screenshot help. For account help or anything private,
+          use the form or email us.
+        </p>
+        <p class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <a class="link" href={ISSUES_URL} rel="noopener">
+            Browse reported bugs
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+          <a class="link" href={NEW_ISSUE_URL} rel="noopener">
+            Report a bug on GitHub
+            <span class="arr ext" aria-hidden="true">
+              ↗
+            </span>
+          </a>
         </p>
       </div>
       <div class="py-6">

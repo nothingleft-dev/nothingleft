@@ -75,7 +75,18 @@ proof.
 
 ### Google Analytics on the web app
 
-Off unless `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set at build time. When it is, the tag never
+Off unless `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set at build time; deploys copy it from the
+marketing site's ID, so one GA4 property sees a visit and the sign-up it led to.
+
+**Auth pages only.** It exists to measure sign-up conversion, so the tag loads only on the
+routes in `lib/auth-routes.ts` (sign-in, sign-up, reset, verify, the OAuth callback, unsubscribe
+and the invite page). Leaving them sets GA's own `ga-disable-<ID>` flag, queued through the
+data layer so an event sent just before is still processed, and a page opened anywhere else
+never loads the tag. Two events besides page views, GA4's recommended ones: `sign_up` when an
+account is created and `login` on sign-in, each with `method` (`email`, `google` or `github`)
+and nothing else. Mark `sign_up` as the key event in the property.
+
+When it is on, the tag never
 sees a real URL or title: `components/site-scripts.tsx` turns off the automatic page view and
 sends its own, built by `lib/analytics/page-context.ts`. The location keeps only the words of
 the route scheme, so `/issue/PP-847/fix-login` becomes `/issue/:id/:id` and

@@ -399,6 +399,12 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     breadcrumb: [HOME_CRUMB, { name: 'Privacy Policy', path: '/privacy' }],
     noindex: true,
   },
+  '/404': {
+    title: 'Page Not Found | Nothing Left',
+    description: 'This page does not exist. Start again from the Nothing Left home page, the docs or support.',
+    nodes: ['Organization', 'WebSite', 'WebPage'],
+    noindex: true,
+  },
 };
 
 for (const path of Object.keys(SITEMAP_PAGES)) {

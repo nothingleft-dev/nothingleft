@@ -17,12 +17,21 @@ declare module 'fastify' {
 
 export type PrincipalResolver = (credential: Credential) => Promise<Principal | null>;
 
-const authPlugin: FastifyPluginAsync<{ resolvePrincipal: PrincipalResolver }> = async (app, { resolvePrincipal }) => {
+interface AuthOptions {
+  resolvePrincipal: PrincipalResolver;
+  cookieDomain: string | undefined;
+}
+
+const authPlugin: FastifyPluginAsync<AuthOptions> = async (app, { resolvePrincipal, cookieDomain }) => {
   app.decorateRequest('principal', null);
 
-  app.addHook('onRequest', async request => {
+  app.addHook('onRequest', async (request, reply) => {
     const credential = extractCredential(request);
     const principal = credential ? await resolvePrincipal(credential) : null;
+    // The web app treats the cookie's presence as signed in, so a dead one must not outlive this answer.
+    if (credential?.kind === 'session' && !principal) {
+      reply.clearCookie(SESSION_COOKIE_NAME, { path: '/', ...(cookieDomain ? { domain: cookieDomain } : {}) });
+    }
     request.principal =
       principal?.via === 'pat' && request.headers[MCP_CLIENT_HEADER] === 'mcp'
         ? { ...principal, client: 'mcp' }

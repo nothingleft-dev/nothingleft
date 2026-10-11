@@ -2208,7 +2208,7 @@
       monospace;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--panel-ink-faint);
+    color: var(--panel-ink-muted);
   }
 }
 

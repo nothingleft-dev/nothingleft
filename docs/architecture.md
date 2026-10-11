@@ -38,7 +38,7 @@ repos that is five PRs and a version-bump dance.
 | App | Host | Build |
 |---|---|---|
 | `apps/web` | Vercel | Root Directory = `apps/web`; Vercel resolves workspace deps natively |
-| `apps/marketing` | Cloudflare Workers, static assets plus one small Worker | `astro build` to `dist/`; pages are served as assets without running Worker code, and only `/api/*` (the support form) runs `worker/index.ts`, so the free plan's 10 ms CPU limit only meets that handler, which spends its time awaiting Turso |
+| `apps/marketing` | Cloudflare Workers, static assets plus one small Worker | `astro build` to `dist/`; pages are served as assets without running Worker code, and only `/api/*` (the support form and docs reactions) runs `worker/index.ts`; an unknown page path gets the static `404.html` with a 404 status, so the free plan's 10 ms CPU limit only meets that handler, which spends its time awaiting Turso |
 | `apps/api` | Railway / Fly.io | Docker image built from `turbo prune --scope=api --docker` output, so the image contains only the API and its workspace dependencies |
 
 Shared packages are workspace dependencies resolved at build time. Nothing is

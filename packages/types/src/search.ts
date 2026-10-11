@@ -137,7 +137,7 @@ export const IssueFiguresSchema = z.object({
 });
 export type IssueFigures = z.infer<typeof IssueFiguresSchema>;
 
-export const LANDING_KINDS = ['project', 'project_list', 'org_switcher', 'no_org'] as const;
+export const LANDING_KINDS = ['project', 'project_list', 'org_switcher', 'no_org', 'welcome'] as const;
 export const LandingSchema = z.object({
   kind: z.enum(LANDING_KINDS),
   organization_slug: z.string().nullable(),

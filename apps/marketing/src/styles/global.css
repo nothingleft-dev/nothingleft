@@ -45,7 +45,7 @@
     font-family: var(--font-sans);
     font-feature-settings: var(--font-features-sans);
     -webkit-font-smoothing: antialiased;
-    scroll-padding-top: 80px;
+    scroll-padding-top: 24px;
     scroll-behavior: smooth;
   }
   body {
@@ -310,6 +310,9 @@
     background: var(--bg-surface);
   }
   html.js .menu-panel:not(.open) {
+    display: none;
+  }
+  html:not(.js) .menu-btn {
     display: none;
   }
   .menu-panel a {
@@ -921,6 +924,13 @@
   html:not(.js) .wf-panel [data-view] + [data-view] {
     border-top: 1px solid var(--border);
   }
+  html:not(.js) .wf-steps,
+  html:not(.js) .wf-hint {
+    display: none;
+  }
+  html:not(.js) .wf-panel {
+    grid-column: 1 / -1;
+  }
   @keyframes rise {
     from {
       opacity: 0;
@@ -1134,7 +1144,7 @@
     height: 14px;
     transform: translate(-50%, -50%);
   }
-  .faq details[open] summary .plus::after {
+  .faq details[open]:not([data-closing]) summary .plus::after {
     transform: translate(-50%, -50%) rotate(90deg);
   }
   .faq summary:hover {
@@ -1267,8 +1277,22 @@
   }
 
   /* !important: the grid utility on the same element sits in a later layer. */
-  html:not(.js) .calc {
+  html:not(.js) .calc,
+  .calc-failed .calc {
     display: none !important;
+  }
+  html.js .calc-fallback {
+    display: none;
+  }
+  html.js .calc-failed .calc-fallback {
+    display: block;
+  }
+  .calc .input-box:has([aria-invalid='true']) {
+    box-shadow: inset 0 0 0 1.5px var(--palette-red-solid);
+  }
+  .calc-hint-error {
+    font-weight: 500;
+    color: var(--palette-red-fg);
   }
   .calc-label {
     display: block;
