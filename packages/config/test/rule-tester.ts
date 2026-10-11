@@ -4,7 +4,8 @@ import tseslint from 'typescript-eslint';
 
 RuleTester.describe = describe;
 RuleTester.it = it;
-RuleTester.itOnly = it.only;
+// Bun throws on reading it.only when CI is set, so defer it to a case that asks for it.
+RuleTester.itOnly = (...args: Parameters<typeof it.only>) => it.only(...args);
 
 export const ruleTester = new RuleTester({
   languageOptions: {
