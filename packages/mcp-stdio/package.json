@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "description": "Connect a stdio MCP client (Claude Desktop, Claude Code) to Nothing Left.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nothingleft-dev/nothingleft.git",
+    "directory": "packages/mcp-stdio"
+  },
+  "homepage": "https://nothingleft.dev/docs/mcp",
   "type": "module",
   "bin": {
     "nothingleft-mcp": "dist/index.js"

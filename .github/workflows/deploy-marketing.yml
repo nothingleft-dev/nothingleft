@@ -50,7 +50,8 @@ jobs:
       - name: Prepare marketing configuration from GitHub
         env:
           DEPLOY_VARS_JSON: ${{ toJson(vars) }}
-          DEPLOY_SECRETS_JSON: ${{ toJson(secrets) }}
+          DEPLOY_SECRET_MARKETING_TURSO_AUTH_TOKEN: ${{ secrets.MARKETING_TURSO_AUTH_TOKEN }}
+          DEPLOY_SECRET_MARKETING_TURSO_DATABASE_URL: ${{ secrets.MARKETING_TURSO_DATABASE_URL }}
         run: python3 infra/oci/render-deploy-env.py MARKETING "$RUNNER_TEMP/marketing-env.json"
       - name: Build the static site
         run: python3 infra/oci/cloudflare-deploy.py build "$RUNNER_TEMP/marketing-env.json"

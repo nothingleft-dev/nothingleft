@@ -4,13 +4,15 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
-from env_contract import API_DEFAULTS, API_REQUIRED, API_SENSITIVE, collect, parse_env, systemd_env, write_private
+from env_contract import (API_DEFAULTS, API_REQUIRED, API_SENSITIVE, MARKETING_WORKER_SECRETS, UI_KEYS, collect,
+                          parse_env, systemd_env, write_private)
 from test_release import load
 
 
@@ -58,12 +60,32 @@ class EnvironmentContract(unittest.TestCase):
             result = subprocess.run([sys.executable, str(Path(__file__).with_name('render-deploy-env.py')),
                                      'API', folder + '/env.json'], capture_output=True, text=True,
                                     env={**os.environ, 'DEPLOY_VARS_JSON': json.dumps(variables),
-                                         'DEPLOY_SECRETS_JSON': json.dumps(secrets)})
+                                         **{'DEPLOY_SECRET_' + name: value for name, value in secrets.items()}})
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertNotIn('UNIQUE-SECRET', result.stdout + result.stderr)
             self.assertEqual(json.loads(Path(folder + '/env.json').read_text())['DATABASE_URL'],
                              'UNIQUE-SECRET-NOT-FOR-LOGS')
 
+
+class DeployWorkflows(unittest.TestCase):
+    WORKFLOWS = Path(__file__).resolve().parents[2] / '.github' / 'workflows'
+
+    def test_secrets_are_named_not_serialized(self):
+        for path in self.WORKFLOWS.glob('*.yml'):
+            with self.subTest(workflow=path.name):
+                self.assertNotRegex(path.read_text().replace(' ', '').lower(), r'tojson\(secrets\)')
+
+    def test_each_workflow_passes_every_sensitive_key_of_its_service(self):
+        expected = {'deploy-oci.yml': {'API_' + key for key in API_SENSITIVE},
+                    'deploy-marketing.yml': {'MARKETING_' + key for key in MARKETING_WORKER_SECRETS},
+                    'deploy-vercel.yml': set()}
+        for name, keys in expected.items():
+            text = (self.WORKFLOWS / name).read_text()
+            passed = set(re.findall(r'DEPLOY_SECRET_(\w+): \$\{\{ secrets\.(\w+) \}\}', text))
+            with self.subTest(workflow=name):
+                self.assertTrue(all(left == right for left, right in passed))
+                self.assertEqual({left for left, _ in passed}, keys)
+        self.assertTrue(all(key.startswith('NEXT_PUBLIC_') for key in UI_KEYS), 'a server-only UI key needs a named secret')
 
 class VercelConfiguration(unittest.TestCase):
     def test_sync_upserts_and_removes_only_owned_production_keys(self):

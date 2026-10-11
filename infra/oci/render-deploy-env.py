@@ -7,6 +7,9 @@ import sys
 
 from env_contract import collect, write_private
 
+# Workflows name each secret: GitHub holds runs that serialize the whole secrets context in a public repo.
+SECRET_PREFIX = 'DEPLOY_SECRET_'
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -15,7 +18,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     try:
         variables = json.loads(os.environ.get('DEPLOY_VARS_JSON', '{}'))
-        secrets = json.loads(os.environ.get('DEPLOY_SECRETS_JSON', '{}'))
+        secrets = {name.removeprefix(SECRET_PREFIX): value for name, value in os.environ.items()
+                   if name.startswith(SECRET_PREFIX)}
         payload = collect(args.service, variables, secrets)
         write_private(args.output, payload['values'] if args.service == 'API' else payload)
     except (ValueError, TypeError) as error:

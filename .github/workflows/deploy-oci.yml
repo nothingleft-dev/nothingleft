@@ -85,7 +85,19 @@ jobs:
         if: env.DEPLOY_ACTION == 'deploy'
         env:
           DEPLOY_VARS_JSON: ${{ toJson(vars) }}
-          DEPLOY_SECRETS_JSON: ${{ toJson(secrets) }}
+          DEPLOY_SECRET_API_DATABASE_URL: ${{ secrets.API_DATABASE_URL }}
+          DEPLOY_SECRET_API_DATABASE_URL_POOLED: ${{ secrets.API_DATABASE_URL_POOLED }}
+          DEPLOY_SECRET_API_EMAIL_LINK_SECRET: ${{ secrets.API_EMAIL_LINK_SECRET }}
+          DEPLOY_SECRET_API_ENCRYPTION_MASTER_KEY: ${{ secrets.API_ENCRYPTION_MASTER_KEY }}
+          DEPLOY_SECRET_API_GITHUB_CLIENT_SECRET: ${{ secrets.API_GITHUB_CLIENT_SECRET }}
+          DEPLOY_SECRET_API_GOOGLE_CLIENT_SECRET: ${{ secrets.API_GOOGLE_CLIENT_SECRET }}
+          DEPLOY_SECRET_API_POSTHOG_KEY: ${{ secrets.API_POSTHOG_KEY }}
+          DEPLOY_SECRET_API_REDIS_URL: ${{ secrets.API_REDIS_URL }}
+          DEPLOY_SECRET_API_RESEND_API_KEY: ${{ secrets.API_RESEND_API_KEY }}
+          DEPLOY_SECRET_API_S3_ACCESS_KEY_ID: ${{ secrets.API_S3_ACCESS_KEY_ID }}
+          DEPLOY_SECRET_API_S3_SECRET_ACCESS_KEY: ${{ secrets.API_S3_SECRET_ACCESS_KEY }}
+          DEPLOY_SECRET_API_SMTP_PASSWORD: ${{ secrets.API_SMTP_PASSWORD }}
+          DEPLOY_SECRET_API_ZOHO_EMAIL_API_KEY: ${{ secrets.API_ZOHO_EMAIL_API_KEY }}
         run: python3 infra/oci/render-deploy-env.py API "$RUNNER_TEMP/api-env.json"
       - name: Install OCI transport dependency
         run: |
