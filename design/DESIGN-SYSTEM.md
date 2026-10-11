@@ -574,6 +574,11 @@ each half the viewport.
 Below `lg` the panel is removed outright and the form takes the full width. A
 decorative half on a phone is just something to scroll past.
 
+**Always light.** The auth pages and the invite landing (`/invite/<token>`) ignore the
+visitor's theme: they continue the marketing site, which is light-only, and the dark
+panel only reads as a separate surface beside a light form. The account's theme takes over
+at `/welcome` (decided 11 Oct 2026).
+
 ### The form column
 
 400 px of content, vertically centred. Wordmark top-left, Docs / Self-host top-right,

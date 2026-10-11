@@ -70,6 +70,22 @@ describe('organizationsRepository tenant isolation', () => {
     });
   });
 
+  test('hasEverBelonged counts removed memberships and nothing but the user’s own', async () => {
+    await inRolledBackTx(async tx => {
+      const orgs = organizationsRepository(tx);
+      const users = usersRepository(tx);
+      const { alice, ctxA } = await seedTwoOrgs(tx);
+      const fresh = await users.create(sys, { email: `fresh-${Date.now()}@test.local`, name: 'Fresh' });
+      const gone = await users.create(sys, { email: `gone-${Date.now()}@test.local`, name: 'Gone' });
+      await orgs.addMember(ctxA, { user_id: gone.id, username: 'gone', role: 'member' });
+      await orgs.removeMember(ctxA, gone.id);
+
+      expect(await orgs.hasEverBelonged(sys, fresh.id)).toBe(false);
+      expect(await orgs.hasEverBelonged(sys, gone.id)).toBe(true);
+      expect(await orgs.hasEverBelonged(sys, alice)).toBe(true);
+    });
+  });
+
   test('listMembers searches username, name and email, and pages', async () => {
     await inRolledBackTx(async tx => {
       const orgs = organizationsRepository(tx);

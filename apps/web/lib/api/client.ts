@@ -1,4 +1,5 @@
 import { ErrorEnvelopeSchema, type SuccessEnvelope } from '@nothingleft/types';
+import { AUTH_ROUTES } from '@lib/auth-routes';
 import { env } from '@lib/env';
 import { ApiError, ApiNetworkError } from '@lib/api/errors';
 
@@ -7,18 +8,9 @@ const GET_RETRIES = 2;
 const RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const REQUEST_ID_HEADER = 'x-request-id';
 const SIGN_IN_PATH = '/sign-in';
-// Every route in the (auth) group. A 401 on one of these is the normal state, not a
-// reason to navigate - bouncing /sign-up to /sign-in would be actively wrong.
-const AUTH_PATHS = [
-  '/sign-in',
-  '/sign-up',
-  '/verify-email',
-  '/reset-password',
-  '/invite',
-  '/auth/',
-  '/unsubscribe',
-  '/transfer',
-];
+// A 401 on one of these is the normal state, not a reason to navigate - bouncing /sign-up to
+// /sign-in would be actively wrong.
+const ANONYMOUS_PATHS = [...AUTH_ROUTES, '/transfer'];
 
 export type QueryValue = string | number | boolean | null | undefined;
 /** An array repeats the parameter, which is how the API reads `kind` on the audit log. */
@@ -47,7 +39,7 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler) {
 export function redirectToSignIn() {
   if (typeof window === 'undefined') return;
   const here = window.location.pathname + window.location.search;
-  if (AUTH_PATHS.some(path => window.location.pathname.startsWith(path))) return;
+  if (ANONYMOUS_PATHS.some(path => window.location.pathname.startsWith(path))) return;
   const target = new URL(SIGN_IN_PATH, window.location.origin);
   target.searchParams.set('next', here);
   window.location.assign(target.toString());

@@ -443,7 +443,8 @@ copied components work untouched. The yellow brand accent is `brand`.
 Theme: `next-themes` writes `data-theme="light|dark"` on `<html>`, which is
 what `tokens.css` keys on; `dark:` utilities exist but are rarely needed
 because every token already switches. The `.c-<hue>` classes come from
-`tokens.css`.
+`tokens.css`. The routes in `lib/auth-routes.ts` are forced light through
+`forcedTheme` in `components/providers.tsx` (DESIGN-SYSTEM.md § Auth pages).
 
 Fonts are Inter and JetBrains Mono through `next/font/google`, which
 downloads at build time and self-hosts. Because `next/font` renames the
