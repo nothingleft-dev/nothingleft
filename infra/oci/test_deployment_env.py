@@ -99,6 +99,17 @@ class DeployWorkflows(unittest.TestCase):
         self.assertTrue(all(key.startswith('NEXT_PUBLIC_') for key in UI_KEYS), 'a server-only UI key needs a named secret')
 
 class VercelConfiguration(unittest.TestCase):
+    def test_sync_accepts_every_key_the_ui_contract_renders(self):
+        module = load('vercel-deploy')
+        variables = {'UI_NEXT_PUBLIC_API_BASE_URL': 'https://example.invalid',
+                     'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'G-TEST'}
+        rendered = collect('UI', variables, {})['values']
+        self.assertIn('NEXT_PUBLIC_GA_MEASUREMENT_ID', rendered)
+        vercel = module.Vercel('token', 'project', 'team')
+        responses = [{'rootDirectory': 'apps/web', 'framework': 'nextjs'}, {'envs': []}, []]
+        with patch.object(vercel, 'request', side_effect=responses), contextlib.redirect_stdout(io.StringIO()):
+            vercel.sync({'values': rendered, 'secret_names': []})
+
     def test_sync_upserts_and_removes_only_owned_production_keys(self):
         module = load('vercel-deploy')
         client = module.Vercel('hidden-token', 'project', 'team')

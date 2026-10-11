@@ -10,7 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from env_contract import UI_KEYS, write_private
+from env_contract import UI_KEYS, UI_SHARED, write_private
 
 MARKER = 'Managed by GitHub Actions: UI'
 
@@ -40,7 +40,7 @@ class Vercel:
     def sync(self, payload):
         """Update selected keys and prune only owned production entries, preserving other environments."""
         values, secret_names = payload['values'], set(payload['secret_names'])
-        if not isinstance(values, dict) or not set(values).issubset(UI_KEYS):
+        if not isinstance(values, dict) or not set(values).issubset(UI_KEYS | UI_SHARED.keys()):
             raise ValueError('Unsupported UI environment keys')
         if not secret_names.issubset(values) or any(key.startswith('NEXT_PUBLIC_') for key in secret_names):
             raise ValueError('Browser-visible UI configuration must use GitHub Variables')
