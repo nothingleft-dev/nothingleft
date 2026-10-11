@@ -2,40 +2,37 @@
 
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { env } from '@lib/env';
+import { isAuthRoute } from '@lib/auth-routes';
 import { pageContext } from '@lib/analytics/page-context';
-
-declare global {
-  interface Window {
-    dataLayer?: unknown[];
-  }
-}
-
-// gtag.js only reads Arguments objects from the data layer; a plain array is ignored.
-function gtag(..._args: unknown[]): void {
-  window.dataLayer = window.dataLayer ?? [];
-  // eslint-disable-next-line prefer-rest-params
-  window.dataLayer.push(arguments);
-}
+import { gtag, setGoogleAnalyticsEnabled } from '@lib/analytics/google-analytics';
 
 /**
- * The one place for third-party tags that must load on every page. Each tag is gated by its
- * own NEXT_PUBLIC_* variable, so an unset variable renders nothing. Product analytics stays
- * in packages/analytics (docs/analytics.md); anything added here still obeys rule 11 of
- * CLAUDE.md — IDs and counts only, never customer content.
+ * The one place for third-party tags. Each tag is gated by its own NEXT_PUBLIC_* variable, so
+ * an unset variable renders nothing. Product analytics stays in packages/analytics
+ * (docs/analytics.md); anything added here still obeys rule 11 of CLAUDE.md — IDs and counts
+ * only, never customer content.
  */
 export function SiteScripts() {
   return env.gaMeasurementId ? <GoogleAnalytics id={env.gaMeasurementId} /> : null;
 }
 
-// Page views are sent by hand with a redacted location, and `set` makes every other event,
-// enhanced measurement included, report that location instead of the real URL.
+// Conversion tracking only: the tag loads on the auth pages and is switched off everywhere
+// else, so a tab that signs in and stays in the app reports nothing from inside it. Page views
+// are sent by hand with a redacted location, and `set` makes every other event report it too.
 function GoogleAnalytics({ id }: { id: string }) {
   const pathname = usePathname();
+  const tracked = isAuthRoute(pathname);
+  const [loaded, setLoaded] = useState(tracked);
+  if (tracked && !loaded) setLoaded(true);
   const configured = useRef(false);
 
   useEffect(() => {
+    if (!tracked && !configured.current) return;
+    setGoogleAnalyticsEnabled(id, tracked);
+    if (!tracked) return;
+
     const context = pageContext(window.location, configured.current ? '' : document.referrer);
     if (!configured.current) {
       gtag('js', new Date());
@@ -44,7 +41,9 @@ function GoogleAnalytics({ id }: { id: string }) {
     }
     gtag('set', context);
     gtag('event', 'page_view', context);
-  }, [id, pathname]);
+  }, [id, pathname, tracked]);
 
-  return <Script src={`https://www.googletagmanager.com/gtag/js?id=${id}`} strategy="afterInteractive" />;
+  return loaded ? (
+    <Script src={`https://www.googletagmanager.com/gtag/js?id=${id}`} strategy="afterInteractive" />
+  ) : null;
 }

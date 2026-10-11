@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy
-updated: '2026-10-10'
+updated: '2026-10-11'
 ---
 
 This policy explains what personal data Nothing Left collects, why, who receives it, how long we
@@ -121,7 +121,9 @@ organisation, and allow-listed counts and categories. Error reports carry the er
 the request ID and the status. The events are designed to carry IDs and counts, not your content.
 
 The web app can also load Google Analytics, but it is switched off. If we switch it on, we will
-update this policy first.
+update this policy first. It would run only on the sign-in, sign-up and invitation pages, never
+once you are inside the app, and record page addresses with IDs removed and whether you signed
+up or signed in, with email, Google or GitHub.
 
 ### Emails
 
@@ -222,7 +224,7 @@ built but switched off.
 | jsDelivr                            | Delivering the viewer for the API reference on this website                                                                   | Your IP address, browser and the page you came from                                                             | Active                          |
 | Vercel                              | Hosting the web app at work.nothingleft.dev                                                                                   | Web app traffic, including IP addresses, page addresses and the session cookie                                  | Active                          |
 | PostHog (US Cloud)                  | Product analytics and error reports                                                                                           | Pseudonymous IDs, event names, counts and categories, error details                                             | Active |
-| Google Analytics                    | Web app traffic                                                                                                               | Page addresses with IDs removed, a cookie ID, IP address and device details                                     | Only if enabled; off            |
+| Google Analytics                    | Web app sign-in and sign-up pages                                                                                             | Page addresses with IDs removed, a cookie ID, IP address and device details                                     | Only if enabled; off            |
 
 **Email.** The admin@nothingleft.dev mailbox is hosted by Google (Gmail). Google receives the emails
 you send us and our replies to them.

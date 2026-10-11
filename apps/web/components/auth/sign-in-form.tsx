@@ -17,6 +17,7 @@ import { signIn } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
 import { queryKeys } from '@lib/query/keys';
 import { viewerTimeZone } from '@lib/datetime';
+import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 export function SignInForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function SignInForm() {
   const [expired, setExpired] = useState<string | null>(null);
 
   const finish = (me: Me) => {
+    trackAuthConversion('login', 'email');
     client.setQueryData(queryKeys.me(), me);
     router.replace(safeNextPath(next) as Route);
   };

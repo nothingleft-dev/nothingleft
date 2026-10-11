@@ -13,6 +13,7 @@ import { useAuthForm } from '@components/auth/use-auth-form';
 import { signUp } from '@lib/api/auth';
 import { queryKeys } from '@lib/query/keys';
 import { viewerTimeZone } from '@lib/datetime';
+import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 export function SignUpForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function SignUpForm() {
     },
     submit: values => signUp({ ...values, timezone: viewerTimeZone() }).then(r => r.data),
     onSuccess: (me: Me) => {
+      trackAuthConversion('sign_up', 'email');
       client.setQueryData(queryKeys.me(), me);
       // Path C starts at the profile step, which is also where the verification gate
       // lives — onboarding.md § Path C.

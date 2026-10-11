@@ -84,6 +84,7 @@ describe('POST /v1/auth/oauth/:provider/callback', () => {
     const res = await callback(state, state, { timezone: 'Asia/Kolkata' });
 
     expect(res.statusCode).toBe(201);
+    expect(res.json().data.created).toBe(true);
     expect(res.json().data.notice).toBeNull();
     expect(res.json().data.me).toMatchObject({
       email,
@@ -123,6 +124,7 @@ describe('POST /v1/auth/oauth/:provider/callback', () => {
     const res = await callback(state, state);
 
     expect(res.statusCode).toBe(200);
+    expect(res.json().data.created).toBe(false);
     expect(res.json().data.me).toMatchObject({ email: squatted, has_password: false });
     expect(res.json().data.notice).toMatchObject({ kind: 'unverified_account_linked' });
     expect(Number.isNaN(Date.parse(res.json().data.notice.account_created_at))).toBe(false);

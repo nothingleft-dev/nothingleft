@@ -179,6 +179,7 @@ const authRoutes: FastifyPluginAsyncZod<Deps> = async (app, { accounts, me, oaut
             sessionId: session.sessionId,
             currentOrgId: session.currentOrgId,
           }),
+          created: session.created,
           notice,
         },
         { status: session.created ? 201 : 200 },

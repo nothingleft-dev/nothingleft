@@ -8997,9 +8997,12 @@ components:
         - properties:
             data:
               type: object
-              required: [me, notice]
+              required: [me, created, notice]
               properties:
                 me: { $ref: '#/components/schemas/Me' }
+                created:
+                  type: boolean
+                  description: True when this sign-in created the account, the same fact as the 201 status.
                 notice:
                   description: Non-null only when this sign-in linked to an account whose address was never confirmed, removing its password. Shown to the user once.
                   oneOf:

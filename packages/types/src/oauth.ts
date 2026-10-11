@@ -23,5 +23,9 @@ export const OAuthNoticeSchema = z.object({
 });
 export type OAuthNotice = z.infer<typeof OAuthNoticeSchema>;
 
-export const OAuthSignInSchema = z.object({ me: MeSchema, notice: OAuthNoticeSchema.nullable() });
+export const OAuthSignInSchema = z.object({
+  me: MeSchema,
+  created: z.boolean(),
+  notice: OAuthNoticeSchema.nullable(),
+});
 export type OAuthSignIn = z.infer<typeof OAuthSignInSchema>;
