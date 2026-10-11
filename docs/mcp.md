@@ -38,6 +38,12 @@ Decided with the owner on 25 Sep 2026.
   `@nothingleft/db`, `@nothingleft/analytics`, the API's aliases (`@services/*`,
   `@lib/*`, …) or a database driver in both packages, and a test pins each package's
   dependency list.
+- **Releasing the shim:** bump `version` in `packages/mcp-stdio/package.json`; that field
+  is the only copy (the shim's user agent reads it). After CI passes on `main`, the
+  [publish workflow](../.github/workflows/publish-mcp.yml) publishes any version npm does
+  not have yet and tags it `mcp-v<version>`. Commits that leave the version alone publish
+  nothing, so no manual tag is needed. It runs in the `npm` environment, which holds
+  `NPM_TOKEN`.
 
 ### Transport and authentication
 

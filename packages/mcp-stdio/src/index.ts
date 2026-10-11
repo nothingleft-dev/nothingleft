@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline';
+import { version } from '../package.json' with { type: 'json' };
 import { createProxy } from './proxy.ts';
 
-const VERSION = '0.1.0';
 const DEFAULT_URL = 'https://api.nothingleft.dev/mcp';
 
 const token = process.env['NOTHINGLEFT_TOKEN'];
@@ -18,7 +18,7 @@ const handle = createProxy({
   token,
   fetch: request => fetch(request),
   write: line => process.stdout.write(`${line}\n`),
-  version: VERSION,
+  version,
 });
 
 // Lines are handled concurrently: a client may send its next request before the last answer arrives.

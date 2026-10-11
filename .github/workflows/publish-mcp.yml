@@ -1,0 +1,89 @@
+name: Publish MCP package
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: npm-publish-mcp
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publish:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.id == github.repository_id)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      TURBO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+      - name: Require successful CI for current main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 infra/oci/check-deploy-ci.py
+      - name: Skip versions already on npm
+        id: version
+        working-directory: packages/mcp-stdio
+        run: |
+          name=$(jq -r .name package.json)
+          version=$(jq -r .version package.json)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if npm view "$name@$version" version > /dev/null 2>&1; then
+            echo "$name@$version is already published"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.publish == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - if: steps.version.outputs.publish == 'true'
+        run: bun install --frozen-lockfile
+      - if: steps.version.outputs.publish == 'true'
+        name: Build and test
+        working-directory: packages/mcp-stdio
+        run: bun run test
+      - if: steps.version.outputs.publish == 'true'
+        name: Publish
+        working-directory: packages/mcp-stdio
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/.npmrc
+          # npm only attests builds from public repositories.
+          NPM_CONFIG_PROVENANCE: ${{ !github.event.repository.private }}
+        run: |
+          # shellcheck disable=SC2016 # npm expands the token itself, so it never lands in the file.
+          printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' > "$NPM_CONFIG_USERCONFIG"
+          npx --yes npm@latest publish --access public
+      - if: steps.version.outputs.publish == 'true'
+        name: Tag the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: mcp-v${{ steps.version.outputs.version }}
+          PACKAGE: ${{ steps.version.outputs.name }}@${{ steps.version.outputs.version }}
+        run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$DEPLOY_SHA" --title "$PACKAGE" --notes "Published $PACKAGE to npm."
+      - name: Remove npm credentials
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/.npmrc"
