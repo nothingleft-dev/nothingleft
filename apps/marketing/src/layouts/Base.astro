@@ -7,6 +7,9 @@ import '@fontsource/jetbrains-mono/500.css';
 import '@styles/global.css';
 import inter400 from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
 import inter600 from '@fontsource/inter/files/inter-latin-600-normal.woff2?url';
+import { PUBLIC_GA_MEASUREMENT_ID } from 'astro:env/client';
+import CookieNotice from '@components/analytics/CookieNotice.astro';
+import GoogleAnalytics from '@components/analytics/GoogleAnalytics.astro';
 import Header from '@components/Header.astro';
 import Footer from '@components/Footer.astro';
 import { OG_IMAGE, pageMeta } from '@lib/page-meta';
@@ -70,6 +73,7 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
       );
     </script>
     <script type="application/ld+json" set:html={jsonLd} />
+    {PUBLIC_GA_MEASUREMENT_ID && <GoogleAnalytics id={PUBLIC_GA_MEASUREMENT_ID} />}
   </head>
   <body>
     <a class="skip" href="#main">
@@ -80,6 +84,7 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
       <slot />
     </main>
     <Footer />
+    {PUBLIC_GA_MEASUREMENT_ID && <CookieNotice />}
     <script>
       import '@scripts/site';
     </script>

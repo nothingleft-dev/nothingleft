@@ -100,6 +100,37 @@ know is redacted, so a new route leaks nothing until it is added.
 In the property's stream settings, turn off *Page changes based on browser history events*;
 the app sends its own page views on navigation, and leaving it on counts each one twice.
 
+### Google Analytics on the marketing site
+
+Off unless `PUBLIC_GA_MEASUREMENT_ID` is set when `apps/marketing` is built; with no ID the
+pages carry no tag, no notice and no notice script. Production uses the same GA4 property and
+stream as the web app. Every page loads the tag
+(`src/components/analytics/GoogleAnalytics.astro`), and it sends page views only. As in the
+app, the automatic page view is off and the page sends its own: the location is the origin and
+path, with the query string and fragment dropped, since docs search text can sit there (so
+campaign tags on links are not reported either); a referrer from this site keeps only its path, one from elsewhere is cut to its
+origin. The location is `set` for later events too. Page titles are sent as they are: every
+page on the site is public. A script that fails to load from Google never removes the `js`
+class, so the site's own components keep working when the tag is blocked.
+
+### The cookie notice
+
+Both sites show the same notice wherever the tag loads, and only when an ID is set: on the
+marketing site every page, in the web app the auth pages. It tells visitors that analytics
+runs and links to the privacy policy; it does not gate the tag, and there is nothing to reject
+(owner's decision, 12 Oct 2026). A card at the bottom left (full width with margins on a
+phone) with *Accept*, a close button and a 2px bar that runs down over 10 seconds, after which
+the notice closes itself. Hovering it, focusing inside it or leaving the tab pauses the count;
+under reduced motion the bar is hidden and the count still runs. It never takes focus.
+
+Accepting, closing or the count running out all set `nl_notice_dismissed=1` for a year, with
+`Domain=.nothingleft.dev` on those hosts (host-only elsewhere, such as localhost), `Path=/`,
+`SameSite=Lax` and `Secure` over HTTPS. Both sites read the same cookie, so closing the notice
+on one hides it on the other. Marketing: `src/components/analytics/CookieNotice.astro` and
+`src/scripts/cookie-notice.ts`, rendered hidden and shown by script, so a visitor without
+JavaScript never sees a notice they could not close. Web app: `components/cookie-notice.tsx`,
+rendered from `components/site-scripts.tsx` after hydration, so the server never renders it.
+
 ### Self-hosters
 
 `apps/api/.env.example` and `docker-compose.yml` ship with:

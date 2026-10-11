@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy
-updated: '2026-10-11'
+updated: '2026-10-12'
 ---
 
 This policy explains what personal data Nothing Left collects, why, who receives it, how long we
@@ -120,10 +120,9 @@ server sends it, not your browser. It sends event names, a pseudonymous ID for y
 organisation, and allow-listed counts and categories. Error reports carry the error, the route,
 the request ID and the status. The events are designed to carry IDs and counts, not your content.
 
-The web app can also load Google Analytics, but it is switched off. If we switch it on, we will
-update this policy first. It would run only on the sign-in, sign-up and invitation pages, never
-once you are inside the app, and record page addresses with IDs removed and whether you signed
-up or signed in, with email, Google or GitHub.
+The web app also loads Google Analytics, only on the sign-in, sign-up and invitation pages, never
+once you are inside the app. It records page addresses with IDs removed and whether you signed up
+or signed in, with email, Google or GitHub. A notice on those pages tells you it is there.
 
 ### Emails
 
@@ -146,10 +145,13 @@ nothing about you. Your browser remembers your own reaction so you can change it
 
 ### Browsing this website
 
-This website loads no analytics and our code sets no cookies. Fonts are served from this site and
-docs search runs in your browser. Cloudflare serves the site and processes each request, including
-your IP address. The [API reference](/docs/api) loads its viewer from jsDelivr, which sees your IP
-address, browser and the page you came from.
+This website loads Google Analytics on every page, which sets Google's analytics cookies. It
+records the address of each page you visit without its query string or fragment, so text you
+type into docs search is not sent, and the site you came from, cut to its domain. A notice tells
+you this when you first visit. Fonts are served from this site and docs search runs in your
+browser. Cloudflare serves the site and processes each request, including your IP address. The
+[API reference](/docs/api) loads its viewer from jsDelivr, which sees your IP address, browser and
+the page you came from.
 
 ### Security reports
 
@@ -224,7 +226,7 @@ built but switched off.
 | jsDelivr                            | Delivering the viewer for the API reference on this website                                                                   | Your IP address, browser and the page you came from                                                             | Active                          |
 | Vercel                              | Hosting the web app at work.nothingleft.dev                                                                                   | Web app traffic, including IP addresses, page addresses and the session cookie                                  | Active                          |
 | PostHog (US Cloud)                  | Product analytics and error reports                                                                                           | Pseudonymous IDs, event names, counts and categories, error details                                             | Active |
-| Google Analytics                    | Web app sign-in and sign-up pages                                                                                             | Page addresses with IDs removed, a cookie ID, IP address and device details                                     | Only if enabled; off            |
+| Google Analytics                    | This website, and the web app's sign-in, sign-up and invitation pages                                                         | Page addresses without query strings (and with IDs removed in the web app), a cookie ID, IP address and device details | Active                          |
 
 **Email.** The admin@nothingleft.dev mailbox is hosted by Google (Gmail). Google receives the emails
 you send us and our replies to them.
@@ -275,14 +277,20 @@ computer, anyone using the same browser profile can read them.
 
 ### On this website
 
-Our code sets no cookies here. The only thing it stores is `nl:docs:reaction:<page>` in local
-storage, which remembers your own reaction to a docs page. Cloudflare may set its own security
-cookies, such as `__cf_bm`, to filter bots. The API reference viewer may keep its own settings in
-your browser.
+Our code sets one cookie here, `nl_notice_dismissed`, described below. The only thing it stores
+in local storage is `nl:docs:reaction:<page>`, which remembers your own reaction to a docs page.
+Cloudflare may set its own security cookies, such as `__cf_bm`, to filter bots. The API reference
+viewer may keep its own settings in your browser.
 
 ### Analytics cookies
 
-None today. Google Analytics would set `_ga` cookies in the web app, and it is switched off.
+Google Analytics sets its `_ga` cookies on this website and on the web app's sign-in, sign-up
+and invitation pages. They hold a random ID that lets Google count returning visitors, and last
+up to two years.
+
+When you close the notice about them, or it closes by itself after 10 seconds, we set
+`nl_notice_dismissed` for nothingleft.dev and its subdomains, so the notice does not appear again
+on this website or in the web app. It holds only the value `1` and lasts one year.
 
 ## 10. How long we keep it
 
@@ -307,7 +315,7 @@ None today. Google Analytics would set `_ga` cookies in the web app, and it is s
 | Invitations never accepted                                            | Deleted 30 days after they expire or are cancelled                                                                                                                                  |
 | Support requests                                                      | Two years after they arrive, then deleted                                                                                                                                           |
 | Backups                                                               | The two latest weekly full backups and the changes since, about two to three weeks. Deleted data stays in backups until they rotate out                                             |
-| Records held by Resend and PostHog                                    | Set by each provider. Its own terms say how long it keeps data.                                                                                             |
+| Records held by Resend, PostHog and Google                            | Set by each provider. Its own terms say how long it keeps data.                                                                                             |
 | Docs reaction counts                                                  | Kept. They contain no personal data                                                                                                                                                 |
 
 ## 11. Your rights

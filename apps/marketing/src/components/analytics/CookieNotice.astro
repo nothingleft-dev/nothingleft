@@ -1,0 +1,121 @@
+---
+import { Cookie, X } from '@lucide/astro';
+---
+
+<section class="cookie-notice" aria-labelledby="cookie-notice-title" data-cookie-notice hidden>
+  <div class="cookie-notice-head">
+    <Cookie size={16} stroke-width={1.75} aria-hidden="true" />
+    <h2 id="cookie-notice-title" class="cookie-notice-title">
+      We use cookies
+    </h2>
+  </div>
+  <button type="button" class="cookie-notice-close" aria-label="Close cookie notice" data-cookie-dismiss>
+    <X size={16} stroke-width={1.75} aria-hidden="true" />
+  </button>
+  <p class="cookie-notice-body">
+    We use analytics to understand how the site is used. Details in our{' '}
+    <a class="link" href="/privacy">
+      privacy policy
+    </a>
+    .
+  </p>
+  <button type="button" class="btn btn-sm cookie-notice-accept" data-cookie-dismiss>
+    Accept
+  </button>
+  <div class="cookie-notice-bar" aria-hidden="true"></div>
+</section>
+
+<script>
+  import { initCookieNotice } from '@scripts/cookie-notice';
+
+  initCookieNotice();
+</script>
+
+<style is:inline>
+  .cookie-notice {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 40;
+    width: 360px;
+    padding: 16px;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-popover);
+  }
+  @media (max-width: 640px) {
+    .cookie-notice {
+      right: 16px;
+      width: auto;
+    }
+  }
+  .cookie-notice-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 32px;
+    color: var(--text-secondary);
+  }
+  .cookie-notice-title {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cookie-notice-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .cookie-notice-close:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .cookie-notice-body {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-secondary);
+  }
+  .cookie-notice-accept {
+    width: 100%;
+    margin-top: 12px;
+  }
+  .cookie-notice-accept:focus-visible {
+    outline: 2px solid var(--focus-soft);
+    outline-offset: 2px;
+  }
+  .cookie-notice-bar {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--ink);
+    transform-origin: left;
+    animation: cookie-notice-countdown 10s linear forwards;
+  }
+  .cookie-notice[data-paused] .cookie-notice-bar {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cookie-notice-bar {
+      display: none;
+    }
+  }
+  @keyframes cookie-notice-countdown {
+    to {
+      transform: scaleX(0);
+    }
+  }
+</style>

@@ -1,0 +1,30 @@
+---
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+---
+
+<script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${id}`}></script>
+{/* The query string and fragment never leave the page: docs search text can be in them. */}
+<script is:inline define:vars={{ id }}>
+  window.dataLayer = window.dataLayer || [];
+  // gtag.js only reads Arguments objects from the data layer; a plain array is ignored.
+  function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments);
+  }
+  let pageReferrer = '';
+  try {
+    const from = new URL(document.referrer);
+    pageReferrer = from.origin === location.origin ? from.origin + from.pathname : from.origin;
+  } catch {
+    // An empty or unparsable referrer is sent as none.
+  }
+  const context = { page_location: location.origin + location.pathname, page_referrer: pageReferrer };
+  gtag('js', new Date());
+  gtag('config', id, { ...context, send_page_view: false });
+  gtag('set', context);
+  gtag('event', 'page_view', context);
+</script>

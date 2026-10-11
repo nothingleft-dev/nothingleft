@@ -3,6 +3,7 @@
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { CookieNotice } from '@components/cookie-notice';
 import { env } from '@lib/env';
 import { isAuthRoute } from '@lib/auth-routes';
 import { pageContext } from '@lib/analytics/page-context';
@@ -43,7 +44,10 @@ function GoogleAnalytics({ id }: { id: string }) {
     gtag('event', 'page_view', context);
   }, [id, pathname, tracked]);
 
-  return loaded ? (
-    <Script src={`https://www.googletagmanager.com/gtag/js?id=${id}`} strategy="afterInteractive" />
-  ) : null;
+  return (
+    <>
+      {loaded && <Script src={`https://www.googletagmanager.com/gtag/js?id=${id}`} strategy="afterInteractive" />}
+      {tracked && <CookieNotice />}
+    </>
+  );
 }

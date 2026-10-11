@@ -1218,6 +1218,12 @@
   }
 }
 
+@keyframes cookie-notice-countdown {
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @utility tabular {
   font-feature-settings: var(--tabular);
 }

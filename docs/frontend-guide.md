@@ -465,7 +465,8 @@ other strict flag from the shared config is on.
   the root layout with `next/script`. Each tag is gated by its own
   `NEXT_PUBLIC_*` variable (`NEXT_PUBLIC_GA_MEASUREMENT_ID` is the worked
   example; its redaction is in [analytics.md](./analytics.md#google-analytics-on-the-web-app))
-  and renders nothing when unset. Product analytics remain PostHog
+  and renders nothing when unset. Where the GA tag loads, the cookie notice
+  renders beside it ([analytics.md](./analytics.md#the-cookie-notice)). Product analytics remain PostHog
   through `packages/analytics`; whatever is added here obeys CLAUDE.md rule
   11 — no customer content.
 
