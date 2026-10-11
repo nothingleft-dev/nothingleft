@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { SignUpSchema, type Me } from '@nothingleft/types';
@@ -14,13 +13,10 @@ import { useAuthForm } from '@components/auth/use-auth-form';
 import { signUp } from '@lib/api/auth';
 import { queryKeys } from '@lib/query/keys';
 import { viewerTimeZone } from '@lib/datetime';
-import { useRedirectWhenSignedIn } from '@hooks/use-redirect-when-signed-in';
 
 export function SignUpForm() {
   const router = useRouter();
   const client = useQueryClient();
-  const [created, setCreated] = useState(false);
-  useRedirectWhenSignedIn(!created);
 
   const form = useAuthForm({
     schema: SignUpSchema,
@@ -32,7 +28,6 @@ export function SignUpForm() {
     },
     submit: values => signUp({ ...values, timezone: viewerTimeZone() }).then(r => r.data),
     onSuccess: (me: Me) => {
-      setCreated(true);
       client.setQueryData(queryKeys.me(), me);
       // Path C starts at the profile step, which is also where the verification gate
       // lives — onboarding.md § Path C.

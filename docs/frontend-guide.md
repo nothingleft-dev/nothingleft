@@ -948,7 +948,7 @@ notifications.md, the visual ones ui-conventions.md § Notification centre. How 
 - **Preferences** PATCH one kind per change, drawn early; *Turn everything off* sends
   `{ all: 'off' }` and its toast's *Undo* sends the previous choices back as `email`.
 - **The unsubscribe page** reads the preview once (`staleTime: Infinity`, no refocus refetch)
-  and POSTs only on the button. `/unsubscribe` is in the client's `AUTH_PATHS`, so a 401
+  and POSTs only on the button. `/unsubscribe` is an anonymous route in `lib/auth-routes.ts`, so a 401
   elsewhere on the page can never bounce it to sign-in.
 
 ## Account security and lifecycle
@@ -1042,9 +1042,9 @@ Built in 1c; the visual rules are design § 8 and § 8a. How the pieces fit:
   query. A section tells _failed_ from _empty_ with `isError && !data`, and keeps stale data
   under a notice when only a refresh failed (`SectionError`, `StaleNotice`).
 - **The landing** (`/`) asks `GET /v1/me/landing` once per visit and either navigates or
-  renders the organisation chooser / no-organisation state. Sign-in with no `?next=` and
-  the signed-in bounce from the auth pages both go to `/`, so the server's answer is what
-  a returning user meets. Every project page records the visit with
+  renders the organisation chooser / no-organisation state, or sends an account that never
+  joined an organisation to `/welcome`. Sign-in with no `?next=` and the signed-in bounce
+  from the auth pages both go to `/`, so the server's answer is what a returning user meets. Every project page records the visit with
   `useRecordProjectVisit`; the issue page records itself in `useRecentlyViewed`.
 
 ## Page width
@@ -1072,6 +1072,14 @@ occupy. Never a spinner, never a blank.
 `useSession()` drives the gate. It calls `GET /v1/me` once per five minutes;
 `401` triggers the client's sign-in redirect and a network failure shows the
 retry screen.
+
+**`proxy.ts` routes on the session cookie's presence, before any page renders.** No cookie on
+a route that needs one → `/sign-in?next=<here>`; a cookie on `/sign-in` or `/sign-up` → the
+`?next=` path, else `/`. It never calls the API, so the auth pages make no `GET /v1/me` at
+all. Whether the session is still alive stays the API's answer: any request carrying a dead
+`sid` gets it cleared in the response, so a stale cookie costs one bounce to sign-in and
+cannot loop. The route lists live in `lib/auth-routes.ts`. This needs the web app to see the
+API's cookie: the same host, or `SESSION_COOKIE_DOMAIN` covering both (infrastructure.md).
 
 ## Adding a page, step by step
 

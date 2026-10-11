@@ -725,7 +725,10 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     }),
   };
 
-  await app.register(auth, { resolvePrincipal: services.auth.resolvePrincipal });
+  await app.register(auth, {
+    resolvePrincipal: services.auth.resolvePrincipal,
+    cookieDomain: env.SESSION_COOKIE_DOMAIN,
+  });
   await app.register(originCheck, { allowedOrigin: env.APP_BASE_URL });
   await app.register(idempotency, {
     store: redisIdempotencyStore(app.redis),

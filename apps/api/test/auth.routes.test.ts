@@ -366,5 +366,19 @@ describe('sign out', () => {
 
     const after = await app.inject({ method: 'GET', url: '/v1/me', headers: cookie() });
     expect(after.statusCode).toBe(401);
+    expect(after.cookies.find(c => c.name === SESSION_COOKIE_NAME)?.value).toBe('');
+  });
+
+  test('a request without a cookie sets none, and a bearer token leaves the cookie alone', async () => {
+    const bare = await app.inject({ method: 'GET', url: '/v1/me' });
+    expect(bare.cookies.find(c => c.name === SESSION_COOKIE_NAME)).toBeUndefined();
+
+    const pat = await app.inject({
+      method: 'GET',
+      url: '/v1/me',
+      headers: { ...cookie(), authorization: `Bearer ${PAT_PREFIX}not-a-real-token` },
+    });
+    expect(pat.statusCode).toBe(401);
+    expect(pat.cookies.find(c => c.name === SESSION_COOKIE_NAME)).toBeUndefined();
   });
 });
