@@ -7,5 +7,6 @@ docs/
 !apps/marketing/src/components/docs/
 !apps/marketing/src/pages/docs/
 design/
+apps/marketing/scripts/generate-og-images.ts
 *.md
 packages/db/migrations/

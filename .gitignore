@@ -54,6 +54,7 @@ next-env.d.ts
 
 # local design specs
 docs/superpowers/
+apps/marketing/scripts/generate-og-images.ts
 
 # keys and credentials
 *.pem
