@@ -32,6 +32,17 @@ class EnvironmentContract(unittest.TestCase):
         self.assertEqual(ui['values']['NEXT_PUBLIC_API_BASE_URL'], 'https://example.invalid')
         self.assertNotIn('DATABASE_URL', ui['values'])
 
+    def test_ui_reuses_the_marketing_ga_id(self):
+        variables = {'UI_NEXT_PUBLIC_API_BASE_URL': 'https://example.invalid', 'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'G-TEST'}
+        self.assertEqual(collect('UI', variables, {})['values']['NEXT_PUBLIC_GA_MEASUREMENT_ID'], 'G-TEST')
+        self.assertNotIn('NEXT_PUBLIC_GA_MEASUREMENT_ID', collect('UI', {'UI_NEXT_PUBLIC_API_BASE_URL': 'x'}, {})['values'])
+        for variables, secrets in (({**variables, 'UI_NEXT_PUBLIC_GA_MEASUREMENT_ID': 'G-OTHER'}, {}),
+                                   ({'UI_NEXT_PUBLIC_API_BASE_URL': 'x'}, {'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'do-not-log'}),
+                                   ({'UI_NEXT_PUBLIC_API_BASE_URL': 'x', 'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'G\n'}, {})):
+            with self.subTest(variables=list(variables)), self.assertRaises(ValueError) as caught:
+                collect('UI', variables, secrets)
+            self.assertNotIn('do-not-log', str(caught.exception))
+
     def test_rejects_unsafe_sources_without_leaking_values(self):
         cases = [({'API_DATABASE_URL': 'do-not-log'}, {}),
                  ({}, {'UI_NEXT_PUBLIC_API_BASE_URL': 'do-not-log'}),
