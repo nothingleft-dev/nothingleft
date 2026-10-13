@@ -221,13 +221,14 @@ export function attachmentsRepository(db: Queryable) {
       return publicIds.filter(id => haystack.includes(id));
     },
 
-    /** Every row of the articles the purge is about to delete, whatever its state. */
-    async onArticlesDeletedBefore(ctx: TenantContext, cutoff: Date): Promise<AttachmentRow[]> {
+    /** Every row of the claimed articles the purge is about to delete, whatever its state. */
+    async onArticlesDeletedBefore(ctx: TenantContext, cutoff: Date, articleIds: number[]): Promise<AttachmentRow[]> {
+      if (articleIds.length === 0) return [];
       return db
         .select({ attachment: attachments })
         .from(attachments)
         .innerJoin(articles, and(eq(articles.id, attachments.article_id), eq(articles.org_id, attachments.org_id)))
-        .where(and(inOrg(ctx), lt(articles.deleted_at, cutoff)))
+        .where(and(inOrg(ctx), inArray(articles.id, articleIds), lt(articles.deleted_at, cutoff)))
         .then(rows => rows.map(r => r.attachment));
     },
 
@@ -457,13 +458,14 @@ export function attachmentsRepository(db: Queryable) {
       return rows.length;
     },
 
-    /** Every row of the issues the purge is about to delete, whatever its state. */
-    async onIssuesDeletedBefore(ctx: TenantContext, cutoff: Date): Promise<AttachmentRow[]> {
+    /** Every row of the claimed issues the purge is about to delete, whatever its state. */
+    async onIssuesDeletedBefore(ctx: TenantContext, cutoff: Date, issueIds: number[]): Promise<AttachmentRow[]> {
+      if (issueIds.length === 0) return [];
       return db
         .select({ attachment: attachments })
         .from(attachments)
         .innerJoin(issues, and(eq(issues.id, attachments.issue_id), eq(issues.org_id, attachments.org_id)))
-        .where(and(inOrg(ctx), lt(issues.deleted_at, cutoff)))
+        .where(and(inOrg(ctx), inArray(issues.id, issueIds), lt(issues.deleted_at, cutoff)))
         .then(rows => rows.map(r => r.attachment));
     },
   };

@@ -34,7 +34,6 @@ import {
 } from '@nothingleft/types';
 import {
   systemContext,
-  tenantContext,
   type AttachmentsRepository,
   type CommentsRepository,
   type CustomFieldsRepository,
@@ -73,8 +72,9 @@ import {
   writeLinks,
   type LinkName,
 } from '@services/issue-link-writer';
-import { claimDrafts, releaseStorage } from '@services/attachment-writer';
-import { isByoUnavailable, type ObjectStores } from '@services/object-stores';
+import { claimDrafts } from '@services/attachment-writer';
+import type { ObjectStores } from '@services/object-stores';
+import { purgeDeleted } from '@services/deleted-purge';
 import { applyTags, wantedTags, type WantedTag } from '@services/issue-tag-writer';
 import {
   appliesTo,
@@ -1683,29 +1683,16 @@ export function issuesService(deps: IssuesDeps) {
         systemContext('the nightly purge has no actor and spans every organisation'),
         cutoff,
       );
-      let purged = 0;
-      for (const orgId of orgIds) {
-        const ctx = tenantContext(orgId);
-        try {
-          purged += await inTransaction(async repos => {
-            // Objects first: a row deleted before its object would leave the file unreachable and unbilled, forever.
-            const files = await repos.attachments.onIssuesDeletedBefore(ctx, cutoff);
-            await deps.stores.deleteObjects(ctx, files);
-            await releaseStorage(
-              repos,
-              ctx,
-              files.filter(f => f.deleted_at === null),
-              access.storageLimit,
-            );
-            return repos.issues.purgeDeletedBefore(ctx, cutoff);
-          });
-        } catch (error) {
-          // One organisation's storage outage must not keep every other organisation's deleted issues.
-          // A failing customer bucket waits for its admins, who were already told; nothing to report.
-          if (!isByoUnavailable(error)) analytics.captureException(error, { org_id: orgId });
-        }
-      }
-      return purged;
+      return purgeDeleted(
+        { inTransaction, stores: deps.stores, analytics, storageLimit: access.storageLimit, now },
+        orgIds,
+        {
+          claim: (repos, ctx, limit) => repos.issues.idsDeletedBefore(ctx, cutoff, limit),
+          files: (repos, ctx, ids) => repos.attachments.onIssuesDeletedBefore(ctx, cutoff, ids),
+          purge: (repos, ctx, ids) => repos.issues.purgeDeletedBefore(ctx, cutoff, ids),
+          holder: file => file.issue_id,
+        },
+      );
     },
   };
 }

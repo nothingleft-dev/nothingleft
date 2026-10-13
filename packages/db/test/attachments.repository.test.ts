@@ -157,8 +157,9 @@ describe('attachmentsRepository tenant isolation', () => {
       await issuesRepository(tx).update(ctxA, issueA.id, { deleted_at: old });
 
       const cutoff = new Date('2026-02-01T00:00:00Z');
-      expect((await repo.onIssuesDeletedBefore(ctxA, cutoff)).map(r => r.id)).toEqual([abandoned.id]);
-      expect(await repo.onIssuesDeletedBefore(ctxB, cutoff)).toEqual([]);
+      expect((await repo.onIssuesDeletedBefore(ctxA, cutoff, [issueA.id])).map(r => r.id)).toEqual([abandoned.id]);
+      expect(await repo.onIssuesDeletedBefore(ctxA, cutoff, [])).toEqual([]);
+      expect(await repo.onIssuesDeletedBefore(ctxB, cutoff, [issueA.id])).toEqual([]);
 
       const expired = await repo.expired(sys, { pendingBefore: cutoff, draftBefore: cutoff, limit: 1000 });
       const mine = expired.filter(r => r.org_id === ctxA.orgId).map(r => r.id);
@@ -310,8 +311,10 @@ describe('attachmentsRepository on articles', () => {
       await articles.update(ctxA, doomed.id, { deleted_at: old });
       await articles.update(ctxA, recent.id, { deleted_at: new Date() });
 
-      expect((await repo.onArticlesDeletedBefore(ctxA, cutoff)).map(r => r.id)).toEqual([pending.id]);
-      expect(await repo.onArticlesDeletedBefore(ctxB, cutoff)).toEqual([]);
+      const ids = [doomed.id, recent.id, live.id];
+      expect((await repo.onArticlesDeletedBefore(ctxA, cutoff, ids)).map(r => r.id)).toEqual([pending.id]);
+      expect(await repo.onArticlesDeletedBefore(ctxA, cutoff, [])).toEqual([]);
+      expect(await repo.onArticlesDeletedBefore(ctxB, cutoff, ids)).toEqual([]);
     });
   });
 });

@@ -295,7 +295,11 @@ describe('articlesRepository tenant isolation', () => {
       expect(orgs).toContain(ctxA.orgId);
       expect(orgs).toContain(ctxB.orgId);
 
-      expect(await repo.purgeDeletedBefore(ctxA, cutoff)).toBe(1);
+      const claimed = await repo.idsDeletedBefore(ctxA, cutoff, 10);
+      expect(claimed).toEqual([doomed.id]);
+      expect(await repo.idsDeletedBefore(ctxA, cutoff, 0)).toEqual([]);
+      expect(await repo.purgeDeletedBefore(ctxB, cutoff, claimed)).toEqual([]);
+      expect(await repo.purgeDeletedBefore(ctxA, cutoff, [...claimed, orphan.id, keptB.id])).toEqual([doomed.id]);
       expect(await repo.findById(ctxA, doomed.id)).toBeUndefined();
       expect((await repo.findById(ctxA, orphan.id))?.parent_id).toBeNull();
       expect((await repo.findById(ctxB, keptB.id))?.id).toBe(keptB.id);
