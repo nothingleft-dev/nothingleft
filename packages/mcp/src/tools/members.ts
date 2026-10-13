@@ -14,7 +14,7 @@ export const listMembers = defineTool({
   name: 'list_members',
   title: 'List members',
   description:
-    "Members of an organisation with their org role, or — with `project` — a project's members with their project role.",
+    "Members of an organisation with their org role, or - with `project` - a project's members with their project role.",
   input: z.strictObject({
     org: arg.org,
     project: arg.project.optional().describe('Project key, e.g. "PP". Lists that project\'s members instead.'),

@@ -53,7 +53,7 @@ export const listViews = defineTool({
   name: 'list_views',
   title: 'List saved views',
   description:
-    "The saved views you can see — your private ones, your projects' and the organisation's — with their queries.",
+    "The saved views you can see - your private ones, your projects' and the organisation's - with their queries.",
   input: z.strictObject({ org: arg.org }),
   kind: 'read',
   endpoints: ['GET /v1/saved-views'],

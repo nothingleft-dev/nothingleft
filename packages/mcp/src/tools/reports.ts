@@ -412,7 +412,7 @@ export const runReport = defineTool({
   name: 'run_report',
   title: 'Run a report',
   description:
-    'Runs one of the nine reports and returns its table with the series the chart is drawn from — the same numbers as the web chart and its CSV. Every issue report is scoped by `query` (the search language) and/or a saved `view`, within the projects you can read. Issues per field and Matrix group by any groupable field, custom fields by `custom:<slug>`. Burndown reads the sprint’s daily snapshots, with scope added as its own series. Time sums logged time by work type, user, issue, project or a work item attribute, against the estimate. Timesheet is people × days; with `user` it lists that person’s work items. An empty report says which filter produced nothing.',
+    'Runs one of the nine reports and returns its table with the series the chart is drawn from - the same numbers as the web chart and its CSV. Every issue report is scoped by `query` (the search language) and/or a saved `view`, within the projects you can read. Issues per field and Matrix group by any groupable field, custom fields by `custom:<slug>`. Burndown reads the sprint’s daily snapshots, with scope added as its own series. Time sums logged time by work type, user, issue, project or a work item attribute, against the estimate. Timesheet is people × days; with `user` it lists that person’s work items. An empty report says which filter produced nothing.',
   input,
   kind: 'read',
   endpoints: [

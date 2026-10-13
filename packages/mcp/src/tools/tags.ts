@@ -69,7 +69,7 @@ export const renameTag = defineTool({
   name: 'rename_tag',
   title: 'Rename a tag',
   description:
-    'Renames a tag everywhere it is used — every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.',
+    'Renames a tag everywhere it is used - every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.',
   input: z.strictObject({
     tag: tagName,
     name: z.string().trim().min(1).max(100).describe('The new name.'),

@@ -156,7 +156,7 @@ export function toolReference(): string {
   return `${[
     '# MCP tool reference',
     '<!-- Generated from packages/mcp by `bun run --cwd packages/mcp docs:tools`. Do not edit by hand. -->',
-    `Every tool, resource and prompt the Nothing Left MCP server offers. [mcp.md](./mcp.md) explains how to connect an agent. Tools name things the way people do — \`PP-12\`, \`@alex\`, \`"In Progress"\` — and every tool takes an optional \`org\` (the organisation's slug) for when you belong to more than one.`,
+    `Every tool, resource and prompt the Nothing Left MCP server offers. [mcp.md](./mcp.md) explains how to connect an agent. Tools name things the way people do - \`PP-12\`, \`@alex\`, \`"In Progress"\` - and every tool takes an optional \`org\` (the organisation's slug) for when you belong to more than one.`,
     ...sections,
     '## Resources',
     'A client can attach these as context. Any of them may end in `?org=acme`.',

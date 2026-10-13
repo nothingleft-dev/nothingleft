@@ -16,7 +16,7 @@ export const listComments = defineTool({
   name: 'list_comments',
   title: 'List comments',
   description:
-    "An issue's comments — or a knowledge base article's, with project and article — oldest first, each with the number update_comment and delete_comment take.",
+    "An issue's comments - or a knowledge base article's, with project and article - oldest first, each with the number update_comment and delete_comment take.",
   input: z.strictObject({ ...on, limit: arg.limit, cursor: arg.cursor, org: arg.org }),
   kind: 'read',
   endpoints: [

@@ -113,7 +113,7 @@ export const listSprints = defineTool({
   name: 'list_sprints',
   title: 'List sprints',
   description:
-    "A project's sprints — planned, active and completed — with dates, days left and progress. Without `project`, the sprints of every project you can read (default: the active ones).",
+    "A project's sprints - planned, active and completed - with dates, days left and progress. Without `project`, the sprints of every project you can read (default: the active ones).",
   input: z.strictObject({
     project: arg.project.optional(),
     state: z.array(z.enum(SPRINT_STATES)).max(3).optional().describe('Only these states, e.g. ["planned", "active"].'),
@@ -261,7 +261,7 @@ export const finishSprint = defineTool({
   name: 'finish_sprint',
   title: 'Finish a sprint',
   description:
-    'Finishes the active sprint. Every unresolved issue moves to `move_unfinished_to` — "backlog" or a planned sprint — and the answer lists them. Resolved issues stay with the finished sprint. Needs Project Admin and admin:project.',
+    'Finishes the active sprint. Every unresolved issue moves to `move_unfinished_to` - "backlog" or a planned sprint - and the answer lists them. Resolved issues stay with the finished sprint. Needs Project Admin and admin:project.',
   input: z.strictObject({
     project: arg.project,
     sprint: arg.sprint,
@@ -411,7 +411,7 @@ export const getBacklog = defineTool({
   name: 'get_backlog',
   title: 'Get the backlog',
   description:
-    "The planning view: the project's planned and active sprints with their progress, then one list in drag order — the backlog (issues in no sprint) by default, or a sprint's issues with `sprint`. `query` filters the list; the backlog defaults to #Unresolved.",
+    "The planning view: the project's planned and active sprints with their progress, then one list in drag order - the backlog (issues in no sprint) by default, or a sprint's issues with `sprint`. `query` filters the list; the backlog defaults to #Unresolved.",
   input: z.strictObject({
     project: arg.project,
     sprint: arg.sprint.optional().describe('List this sprint instead of the backlog.'),
