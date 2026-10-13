@@ -422,7 +422,7 @@ Decided 10 Oct 2026 (6d). An import file is uploaded the way an attachment is �
 its size and SHA-256 (`POST /v1/projects/{key}/imports`), `PUT` straight to a presigned URL,
 then checked (`…/complete`) — but it is not an attachment: no `attachments` row, never in the
 quota, and always in the **platform's** private bucket, even for an organisation with its own,
-at `api/{org_id}/import/{import_id}/{uuid}`. At most 20 MB. It is deleted when its import
+at `api/{org_id}/import/{import_id}/{uuid}`. At most 50 MB. It is deleted when its import
 completes or fails, or by the hourly `transfers.sweep` once a day has passed with the import
 never started.
 

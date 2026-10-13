@@ -11,7 +11,7 @@ another tracker: export from it to CSV, or point an agent at both (see
 The file must be:
 
 - **CSV, saved as UTF-8**, with a header row. Commas or semicolons both work.
-- **At most 10,000 rows and 20 MB.** Split a larger file and import it in parts.
+- **At most 10,000 rows and 50 MB.** Split a larger file and import it in parts.
 
 Importing needs a Project Admin of the project the issues go into. Every issue is created as
 you, as if you had written it: it is yours in its history, and you are not added as a watcher

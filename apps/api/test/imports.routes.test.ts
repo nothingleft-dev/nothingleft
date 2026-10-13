@@ -84,7 +84,7 @@ describe('upload and preview', () => {
   test('a file over the size limit, one not in UTF-8 and one with too many rows are refused', async () => {
     const big = await w.call(w.admin, 'POST', `/v1/projects/${KEY}/imports`, {
       filename: 'huge.csv',
-      size: 20 * 1024 * 1024 + 1,
+      size: 50 * 1024 * 1024 + 1,
       sha256: sha(new Uint8Array(1)),
     });
     expect(big.statusCode).toBe(400);
