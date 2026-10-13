@@ -504,4 +504,26 @@ describe('permissions', () => {
     expect(res.statusCode).toBe(404);
     expect(res.json().error.code).toBe('project.not_found');
   });
+
+  test('one unreadable key among several fails exactly as that key alone does', async () => {
+    const outcome = async (who: Person, projects: string) => {
+      const res = await get(who, 'issues-per-assignee', { projects });
+      const error = res.json().error;
+      delete error.request_id;
+      return { status: res.statusCode, error };
+    };
+    const cases: [Person, string, string[]][] = [
+      [w.contributor, OTHER, [`${KEY},${OTHER}`, `${OTHER},${KEY}`]],
+      [restricted, OTHER, [`${KEY},${OTHER}`, `${OTHER},${KEY}`]],
+      [w.admin, 'NOPE', [`${KEY},NOPE`, `NOPE,${OTHER}`]],
+      [outsiderToken, KEY, [`OX,${KEY}`]],
+    ];
+    for (const [who, alone, mixes] of cases) {
+      const single = await outcome(who, alone);
+      expect(single.status).toBe(404);
+      expect(single.error.code).toBe('project.not_found');
+      for (const mixed of mixes) expect(await outcome(who, mixed)).toEqual(single);
+    }
+    expect((await get(w.admin, 'issues-per-assignee', { projects: `${KEY},${OTHER}` })).statusCode).toBe(200);
+  });
 });

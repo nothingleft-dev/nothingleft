@@ -48,6 +48,25 @@ describe('organizationsRepository tenant isolation', () => {
     });
   });
 
+  test('findMembersByUserIds reads only the organisation in context, removed members on request', async () => {
+    await inRolledBackTx(async tx => {
+      const orgs = organizationsRepository(tx);
+      const users = usersRepository(tx);
+      const { alice, bob, ctxA, ctxB } = await seedTwoOrgs(tx);
+      const gone = await users.create(sys, { email: `gone-ids-${Date.now()}@test.local`, name: 'Gone' });
+      await orgs.addMember(ctxA, { user_id: gone.id, username: 'gone-ids', role: 'member' });
+      await orgs.removeMember(ctxA, gone.id);
+
+      const active = await orgs.findMembersByUserIds(ctxA, [alice, bob, gone.id]);
+      expect(active.map(r => r.user.id)).toEqual([alice]);
+      const withRemoved = await orgs.findMembersByUserIds(ctxA, [alice, bob, gone.id], { includeRemoved: true });
+      expect(withRemoved.map(r => r.user.id).sort()).toEqual([alice, gone.id].sort());
+      expect(withRemoved.every(r => r.membership.org_id === ctxA.orgId)).toBe(true);
+      expect((await orgs.findMembersByUserIds(ctxB, [alice, bob])).map(r => r.user.id)).toEqual([bob]);
+      expect(await orgs.findMembersByUserIds(ctxA, [])).toEqual([]);
+    });
+  });
+
   test('removal is a soft delete that frees nothing: the username stays reserved and restore brings it back', async () => {
     await inRolledBackTx(async tx => {
       const orgs = organizationsRepository(tx);

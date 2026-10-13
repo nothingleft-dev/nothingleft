@@ -189,19 +189,7 @@ export function searchService(deps: SearchDeps) {
       ...new Set((typeof projectKeys === 'string' ? [projectKeys] : (projectKeys ?? [])).map(k => k.toUpperCase())),
     ];
     if (keys.length > 0) {
-      const found: ProjectAccess[] = [];
-      for (const key of keys) {
-        const one = await access.project(
-          principal,
-          key,
-          found[0] ? { ...hints, slug: found[0].organization.slug } : hints,
-        );
-        access.require(principal, 'issue.read', one.scope);
-        if (found[0] && one.organization.id !== found[0].organization.id) {
-          throw new AppError('project.not_found', 404, { key }, 'key');
-        }
-        found.push(one);
-      }
+      const found = await access.projects(principal, keys, hints, 'issue.read');
       project = found.length === 1 ? found[0]! : null;
       org = found[0]!;
       scoped = found.map(f => f.project);

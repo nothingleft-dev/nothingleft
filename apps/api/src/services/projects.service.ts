@@ -15,6 +15,7 @@ import {
 import type {
   CustomFieldRow,
   CustomFieldsRepository,
+  MemberWithUser,
   OrganizationsRepository,
   ProjectMemberWithUser,
   ProjectRow,
@@ -78,13 +79,33 @@ type ProjectPatch = Partial<
 export function projectsService(deps: ProjectsDeps) {
   const { organizations, projects, customFields, access, inTransaction, mailer, analytics, appBaseUrl } = deps;
 
-  async function timeFieldsOf(org: OrgAccess, project: ProjectRow) {
-    const ids = [project.estimation_field_id, project.spent_time_field_id].filter((id): id is number => id !== null);
-    if (ids.length === 0) return { estimation_field: null, spent_time_field: null };
-    const fields = await customFields.listForProjects(org.ctx, [project.id]);
+  interface Enrichment {
+    leads: Map<number, MemberWithUser>;
+    fields: Map<number, CustomFieldRow>;
+  }
+
+  async function enrichmentOf(org: OrgAccess, rows: ProjectRow[]): Promise<Enrichment> {
+    const leadIds = [...new Set(rows.map(p => p.lead_user_id).filter((id): id is number => id !== null))];
+    const timed = rows.filter(p => p.estimation_field_id !== null || p.spent_time_field_id !== null);
+    const [leads, fields] = await Promise.all([
+      leadIds.length > 0 ? organizations.findMembersByUserIds(org.ctx, leadIds, { includeRemoved: true }) : [],
+      timed.length > 0
+        ? customFields.listForProjects(
+            org.ctx,
+            timed.map(p => p.id),
+          )
+        : [],
+    ]);
+    return {
+      leads: new Map(leads.map(l => [l.user.id, l])),
+      fields: new Map(fields.map(f => [f.id, f])),
+    };
+  }
+
+  function timeFieldsOf(project: ProjectRow, fields: Enrichment['fields']) {
     const ref = (id: number | null) => {
-      const field = id === null ? undefined : fields.find(f => f.id === id);
-      return field ? { slug: field.slug, name: field.name } : null;
+      const field = id === null ? undefined : fields.get(id);
+      return field && field.project_id === project.id ? { slug: field.slug, name: field.name } : null;
     };
     return { estimation_field: ref(project.estimation_field_id), spent_time_field: ref(project.spent_time_field_id) };
   }
@@ -122,9 +143,17 @@ export function projectsService(deps: ProjectsDeps) {
   }
 
   async function toDto(principal: Principal, org: OrgAccess, project: ProjectRow, role: ProjectRole): Promise<Project> {
-    const lead = project.lead_user_id
-      ? await organizations.findMemberByUserId(org.ctx, project.lead_user_id, { includeRemoved: true })
-      : undefined;
+    return dtoOf(principal, org, project, role, await enrichmentOf(org, [project]));
+  }
+
+  function dtoOf(
+    principal: Principal,
+    org: OrgAccess,
+    project: ProjectRow,
+    role: ProjectRole,
+    enrichment: Enrichment,
+  ): Project {
+    const lead = project.lead_user_id ? enrichment.leads.get(project.lead_user_id) : undefined;
     return {
       key: project.key,
       name: project.name,
@@ -136,7 +165,7 @@ export function projectsService(deps: ProjectsDeps) {
       lead: lead ? access.memberRef(lead.user, lead.membership) : null,
       is_archived: project.is_archived,
       time_tracking_enabled: project.time_tracking_enabled,
-      ...(await timeFieldsOf(org, project)),
+      ...timeFieldsOf(project, enrichment.fields),
       key_editable: project.issue_counter === 0,
       my_role: role,
       knowledge_base: knowledgeBaseAbilities(principal, org, project, role),
@@ -236,8 +265,12 @@ export function projectsService(deps: ProjectsDeps) {
         limit: query.limit,
         offset: query.offset,
       });
-      const data = await Promise.all(
-        rows.map(r => toDto(principal, org, r.project, elevated ? 'project_admin' : (r.role as ProjectRole))),
+      const enrichment = await enrichmentOf(
+        org,
+        rows.map(r => r.project),
+      );
+      const data = rows.map(r =>
+        dtoOf(principal, org, r.project, elevated ? 'project_admin' : (r.role as ProjectRole), enrichment),
       );
       return {
         data,
