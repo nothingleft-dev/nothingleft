@@ -1888,8 +1888,11 @@ recent_searches(user_id, org_id, query_hash bytea, query text,
 Powers the "Recent Searches" section of the search dropdown. Written by
 `GET /v1/issues` for a session with a non-empty `q` — never for a personal
 access token, so an agent's queries do not fill a person's dropdown — and
-pruned to the newest 20 per user and organisation on each write (decided
-24 Sep 2026).
+pruned to the newest 20 per user and organisation when a new query is
+inserted (decided 24 Sep 2026). A repeat of a query last used under five
+minutes ago writes nothing, so a view that polls its filter does not write on
+every poll; a later repeat bumps `last_used_at` and `use_count` once. Page 2 and
+beyond of a search are not recorded, and a failed write never fails the search.
 
 `query_hash` is `sha256(query)`, and the query text cannot be the key: a btree
 tuple is capped at roughly 2700 bytes, so a long saved query would fail to

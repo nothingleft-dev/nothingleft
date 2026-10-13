@@ -35,7 +35,7 @@ first call arrives. The steps below do the same by hand.
    **once**.
 
 Treat the token like a password. Revoke it from the same screen when you stop
-using it; the list shows when each token was last used.
+using it; the list shows when each token was last used, to within five minutes.
 
 A token limited to certain projects lists them after its scopes. If every one of those
 projects is deleted, it shows **no projects** and reaches nothing; it never falls back to

@@ -412,6 +412,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     savedViews: repos.savedViews,
     recentSearches: repos.recentSearches,
     customFields: repos.customFields,
+    analytics,
   });
   const issues = issuesService({
     access,

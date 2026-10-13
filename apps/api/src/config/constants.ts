@@ -22,6 +22,7 @@ export const CORS_EXPOSED_HEADERS = [
 ] as const;
 
 export const SESSION_ROLLING_REFRESH_MS = 24 * 60 * 60 * 1000; // docs/auth-and-tenancy.md#rolling-expiry
+export const PAT_LAST_USED_RESOLUTION_MS = 5 * 60 * 1000;
 export const GRAVATAR_PROBE_TIMEOUT_MS = 2_000;
 export const BREACH_CHECK_TIMEOUT_MS = 2_000;
 export const EMAIL_SEND_TIMEOUT_MS = 10_000;
@@ -70,6 +71,7 @@ export const AVATAR_CACHE_SECONDS = 365 * 24 * 60 * 60;
 export const ISSUE_EXPORT_MAX_ROWS = 10_000;
 export const ISSUE_EXPORT_PAGE_SIZE = 500;
 export const RECENT_SEARCHES_KEPT = 20;
+export const RECENT_SEARCH_COALESCE_MS = 5 * 60 * 1000;
 export const SUGGEST_VALUES_MAX = 10;
 
 // Bounds how stale "now" can be in the age report; writes invalidate sooner through the data version.

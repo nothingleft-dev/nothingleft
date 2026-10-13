@@ -96,15 +96,32 @@ describe('personalAccessTokensRepository user isolation', () => {
     });
   });
 
-  test('markUsed stamps last_used_at so a stale token is visible', async () => {
+  test('markUsed writes the first use at once, then only after the resolution has passed', async () => {
     await inRolledBackTx(async tx => {
       const repo = personalAccessTokensRepository(tx);
       const { alice } = await seedTwoOrgs(tx);
       const row = await repo.create(sys, token(alice, 'used'));
       expect(row.last_used_at).toBeNull();
+      const lastUsed = async () => (await repo.listForUser(sys, alice))[0]!.last_used_at;
+      const setLastUsed = (minutesAgo: number) =>
+        tx
+          .update(schema.personal_access_tokens)
+          .set({ last_used_at: new Date(Date.now() - minutesAgo * 60_000) })
+          .where(eq(schema.personal_access_tokens.id, row.id));
+      const window = 5 * 60_000;
 
-      await repo.markUsed(sys, row.id);
-      expect((await repo.listForUser(sys, alice))[0]!.last_used_at).not.toBeNull();
+      await repo.markUsed(sys, row.id, window);
+      expect(await lastUsed()).not.toBeNull();
+
+      await setLastUsed(1);
+      const withinWindow = await lastUsed();
+      await repo.markUsed(sys, row.id, window);
+      expect(await lastUsed()).toEqual(withinWindow);
+
+      await setLastUsed(10);
+      const stale = await lastUsed();
+      await repo.markUsed(sys, row.id, window);
+      expect((await lastUsed())!.getTime()).toBeGreaterThan(stale!.getTime());
     });
   });
 

@@ -1,3 +1,4 @@
+import type { Analytics } from '@nothingleft/analytics';
 import {
   checkValues,
   dateInZone,
@@ -45,7 +46,7 @@ import {
   type UsersRepository,
 } from '@nothingleft/db';
 import { t, type MessageKey } from '@nothingleft/i18n';
-import { RECENT_SEARCHES_KEPT, SUGGEST_VALUES_MAX } from '@config/constants';
+import { RECENT_SEARCH_COALESCE_MS, RECENT_SEARCHES_KEPT, SUGGEST_VALUES_MAX } from '@config/constants';
 import { AppError } from '@lib/errors';
 import type { AccessService, OrgAccess, ProjectAccess } from '@services/access';
 import { can } from '@services/permissions';
@@ -85,6 +86,7 @@ export interface SearchDeps {
   savedViews: SavedViewsRepository;
   recentSearches: RecentSearchesRepository;
   customFields: CustomFieldsRepository;
+  analytics: Analytics;
   now?: () => Date;
 }
 
@@ -148,7 +150,7 @@ function countCustom(query: Query, registry: Registry): number {
 }
 
 export function searchService(deps: SearchDeps) {
-  const { access, users, projects, issues, issueSearch, savedViews, recentSearches, customFields } = deps;
+  const { access, users, projects, issues, issueSearch, savedViews, recentSearches, customFields, analytics } = deps;
   const now = deps.now ?? (() => new Date());
 
   function wrap<T>(body: () => T, field = 'q'): T {
@@ -358,8 +360,19 @@ export function searchService(deps: SearchDeps) {
         limit: input.limit,
         offset: input.offset,
       });
-      if (compiled.text && principal.via === 'session' && input.record !== false) {
-        await recentSearches.record(sc.ctx, principal.userId, compiled.text, RECENT_SEARCHES_KEPT, sc.scope.now);
+      if (compiled.text && principal.via === 'session' && input.record !== false && input.offset === 0) {
+        try {
+          await recentSearches.record(
+            sc.ctx,
+            principal.userId,
+            compiled.text,
+            RECENT_SEARCHES_KEPT,
+            sc.scope.now,
+            RECENT_SEARCH_COALESCE_MS,
+          );
+        } catch (error) {
+          analytics.captureException(error, { user_id: principal.userId, org_id: sc.ctx.orgId });
+        }
       }
       return {
         ...result,

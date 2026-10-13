@@ -382,7 +382,8 @@ count, not in a dashboard figure and not in an exported file.
 
 The searches you run in the app are remembered - your last 20 in each
 organisation - and offered in the dropdown. Searches an AI agent runs with
-your token are not. You can clear the list at any time.
+your token are not. Repeating a search within five minutes does not move it
+in the list. You can clear the list at any time.
 
 ## Errors
 

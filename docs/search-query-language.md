@@ -384,6 +384,7 @@ the list of valid values. The API wraps them in `AppError` (1c).
 | 10 Oct 2026 | `group_limit` (API only, with `group_by`) caps the rows listed from each group so one large group cannot crowd the others off a page; counts and `pagination.total` still cover the whole filtered set. |
 | 27 Sep 2026 | Phase 5: reports run the same pipeline and aggregate over the compiled predicate; their grouping is the list's own (`packages/db/src/search/issue-groups.ts`, moved out of the search repository), plus a `status_category` grouping for reports' *group by category*. Every report group carries the query for its issues, built from the AST and rendered with `render.ts`; a report's `period` is read with the date vocabulary above. |
 | 24 Sep 2026 | Recent searches: recorded for session callers only, newest 20 per user and organisation. |
+| 13 Oct 2026 | Recent searches: a repeat within five minutes writes nothing, only a new query prunes, and page 2 onward is not recorded. |
 
 ## HTTP surface
 

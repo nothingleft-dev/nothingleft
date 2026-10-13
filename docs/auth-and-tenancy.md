@@ -379,7 +379,7 @@ personal_access_token_projects(   -- the projects a restricted token may reach
   through their client (mcp.md § Design rules 7); nothing in a call's arguments
   stands for that answer. A request refused only for a missing scope answers
   `403 token.scope_missing` with the scope named (permissions.md rule 4).
-- `last_used_at` is surfaced so stale tokens are visible and revocable.
+- `last_used_at` is surfaced so stale tokens are visible and revocable. The first call stamps it at once; later calls move it only when it is more than five minutes old, so it is accurate to five minutes after the first call and a busy token does not write on every request.
 - **A restricted token stays restricted.** `restricted` is the mode and the junction is the
   list, so deleting a token's last project leaves it reaching no project — the API lists it with
   `project_keys: []` — and it never becomes unrestricted. `project_keys` omitted, null or empty at
