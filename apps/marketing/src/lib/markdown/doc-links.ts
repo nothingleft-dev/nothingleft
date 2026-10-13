@@ -6,7 +6,7 @@ interface MdNode {
   children?: MdNode[];
 }
 
-const SIBLING_DOC = /^(?:\.\/)?([a-z0-9-]+)\.md(#.*)?$/;
+const SIBLING_DOC = /^(?:\.\/)?([a-z0-9-]+)\.md([?#].*)?$/;
 const REPO_DOC = /^\.\.\/([a-z0-9/._-]+\.(?:md|yaml|yml))(#.*)?$/;
 
 export function rewriteDocHref(url: string): string {
