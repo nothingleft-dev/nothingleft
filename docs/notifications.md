@@ -231,8 +231,13 @@ and they read from the same query.
 
 ```
 From:     Nothing Left <noreply@notifications.nothingleft.dev>
-Reply-To: (none)
+Reply-To: admin@nothingleft.dev
 ```
+
+The Reply-To is `SUPPORT_EMAIL` (production sets `admin@nothingleft.dev`; unset, mail has no
+Reply-To). Emails that ask the reader to write in say *reply to this email*, so they never name an
+address that differs between instances; the web app shows the same address from
+`NEXT_PUBLIC_SUPPORT_EMAIL`.
 
 A subdomain (`notifications.`) rather than the root domain is the right call
 and worth stating explicitly: bulk and transactional mail sent from a

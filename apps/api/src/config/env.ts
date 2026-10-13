@@ -20,7 +20,7 @@ const EnvSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  LOG_TARGETS: csv(['pretty', 'json', 'file'] as const).default(['pretty', 'file']),
+  LOG_TARGETS: csv(['pretty', 'json', 'file', 'posthog'] as const).default(['pretty', 'file']),
   LOG_FILE: z.string().default('logs/api.log'),
 
   DATABASE_URL: z.string().url().startsWith('postgres'),
@@ -88,6 +88,7 @@ const EnvSchema = z.object({
   // Public static host for assets the API links to, such as the logo images in email.
   ASSET_BASE_URL: z.string().url().default(ASSET_BASE_URL),
   EMAIL_FROM: z.string().default('Nothing Left <noreply@notifications.nothingleft.dev>'),
+  SUPPORT_EMAIL: z.string().email().optional(),
   // Signs unsubscribe links. Required in production; changing it breaks every link already sent.
   EMAIL_LINK_SECRET: z.string().min(32).optional(),
   // 32 bytes, base64. Seals two-factor and BYO storage secrets. Required in
@@ -130,6 +131,10 @@ const CheckedEnvSchema = EnvSchema.refine(e => e.NODE_ENV !== 'production' || e.
   .refine(e => (e.SMTP_USER === undefined) === (e.SMTP_PASSWORD === undefined), {
     path: ['SMTP_PASSWORD'],
     message: 'SMTP_USER and SMTP_PASSWORD are set together or not at all',
+  })
+  .refine(e => !e.LOG_TARGETS.includes('posthog') || Boolean(e.POSTHOG_KEY), {
+    path: ['POSTHOG_KEY'],
+    message: 'required when LOG_TARGETS includes posthog',
   })
   .refine(e => e.NODE_ENV !== 'production' || !e.BYO_ALLOW_ANY_ENDPOINT, {
     path: ['BYO_ALLOW_ANY_ENDPOINT'],

@@ -480,7 +480,7 @@ export const updateProjectSchema = defineTool({
   name: 'update_project_schema',
   title: 'Change a project value list',
   description:
-    'Adds, changes or deletes one status, priority, type or work type in a project — or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change, so it asks you to confirm before acting, and needs a Project Admin and admin:project.',
+    'Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change, so it asks you to confirm before acting, and needs a Project Admin and admin:project.',
   input: schemaInput,
   kind: 'destructive',
   endpoints: [

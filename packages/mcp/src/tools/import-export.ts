@@ -188,7 +188,7 @@ export const getImportStatus = defineTool({
   name: 'get_import_status',
   title: 'Import status',
   description:
-    "An import's progress, how many issues it created and each row that failed with the reason — or, without `import`, the project's recent imports.",
+    "An import's progress, how many issues it created and each row that failed with the reason - or, without `import`, the project's recent imports.",
   input: z.strictObject({
     project: arg.project,
     import: z.number().int().positive().optional().describe('The import id; omit to list recent imports.'),
@@ -270,7 +270,7 @@ export const getExportStatus = defineTool({
   name: 'get_export_status',
   title: 'Export status',
   description:
-    'An export of the organisation: its state, size and, once ready, a download link valid for five minutes — or, without `export`, the recent exports.',
+    'An export of the organisation: its state, size and, once ready, a download link valid for five minutes - or, without `export`, the recent exports.',
   input: z.strictObject({
     export: z.number().int().positive().optional().describe('The export id; omit to list recent exports.'),
     org: arg.org,

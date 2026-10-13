@@ -47,6 +47,7 @@ interface Mail {
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
   headers?: Record<string, string>;
 }
 
@@ -84,11 +85,11 @@ const field = (body: unknown, ...path: string[]): unknown =>
   );
 
 function resendTransport(apiKey: string, log: Logger): Transport {
-  return async mail => {
+  return async ({ replyTo, ...mail }) => {
     const response = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
       headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify(mail),
+      body: JSON.stringify({ ...mail, ...(replyTo ? { reply_to: replyTo } : {}) }),
       signal: AbortSignal.timeout(EMAIL_SEND_TIMEOUT_MS),
     });
     if (!response.ok) throw await rejected('resend', response, body => field(body, 'name'), log, mail.subject);
@@ -115,6 +116,7 @@ function zohoTransport(env: Env, apiKey: string, log: Logger): Transport {
         subject: mail.subject,
         textbody: mail.text,
         htmlbody: mail.html,
+        ...(mail.replyTo ? { reply_to: [{ address: mail.replyTo }] } : {}),
         ...(mail.headers ? { mime_headers: mail.headers } : {}),
       }),
       signal: AbortSignal.timeout(EMAIL_SEND_TIMEOUT_MS),
@@ -181,6 +183,7 @@ export function createMailer(env: Env, log: Logger): Mailer {
     return {
       from: env.EMAIL_FROM,
       to: [message.to],
+      ...(env.SUPPORT_EMAIL ? { replyTo: env.SUPPORT_EMAIL } : {}),
       subject: t(message.subject, message.params),
       text,
       html: renderHtml({

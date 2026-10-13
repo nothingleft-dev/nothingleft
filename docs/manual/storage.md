@@ -10,7 +10,7 @@ attachments.
 Every file attached to an issue, a comment, a time entry or an article counts toward your
 organisation's storage: 5 GB on the free plan. Avatars never count. From 80% a notice appears;
 at 95% the Org Admins and the Owner get one email; at 100% new uploads are refused until there
-is room. There is no way to buy more — you either make room or bring your own bucket.
+is room. There is no way to buy more - you either make room or bring your own bucket.
 
 ## Making room
 
@@ -20,12 +20,12 @@ file from the list and its space is free at once; the issue or article it was on
 
 Three kinds of file are counted but not listed:
 
-- **Unclaimed uploads** — files someone attached to a form they never saved. Only they can see
+- **Unclaimed uploads** - files someone attached to a form they never saved. Only they can see
   them, and they are removed after two days.
-- **Files awaiting purge** — files of a deleted issue or article. They stay while it can still
+- **Files awaiting purge** - files of a deleted issue or article. They stay while it can still
   be restored, for 14 days, and are then removed with it. The list shows them with the date they
   go.
-- **Files in your own bucket**, once you connect one — shown, never counted.
+- **Files in your own bucket**, once you connect one - shown, never counted.
 
 ## Bringing your own bucket
 
@@ -38,10 +38,10 @@ with Nothing Left.
 Create a new key just for Nothing Left. It needs to write, read and delete files in that one
 bucket, and nothing else:
 
-- **AWS S3** — create an IAM user and attach the policy the setup screen shows. It is filled in
+- **AWS S3** - create an IAM user and attach the policy the setup screen shows. It is filled in
   with your bucket name: `s3:PutObject`, `s3:GetObject` and `s3:DeleteObject` on the bucket's
   objects, and `s3:ListBucket` on the bucket.
-- **Cloudflare R2** — create an API token with *Object Read & Write*, limited to that bucket.
+- **Cloudflare R2** - create an API token with *Object Read & Write*, limited to that bucket.
 
 **Do not give it full S3 access, or a token for your whole account.** The key is stored
 encrypted and never shown again, but a key that can only touch one bucket is one that can only
@@ -59,10 +59,10 @@ Enter your R2 account ID (or your S3 region), the bucket name, the access key ID
 then confirm with your password (and a two-factor code, if you use one). Nothing Left then
 checks the bucket twice:
 
-1. **From the server** — it writes a small test file, reads it back and deletes it. If anything
+1. **From the server** - it writes a small test file, reads it back and deletes it. If anything
    fails, the screen says what: a key ID that does not exist, a secret that does not match, no
    bucket by that name, or a permission the key is missing.
-2. **From your browser** — it uploads an 8 KB test file and opens it again. If this fails while
+2. **From your browser** - it uploads an 8 KB test file and opens it again. If this fails while
    the first check passed, the CORS rule is missing or wrong: the screen shows it again.
 
 When both pass, the bucket is connected, and **the storage limit lifts at once**. Everyone who
@@ -74,20 +74,20 @@ it.
 From that moment new files go to your bucket, while the files you already had stay where they
 were and keep working. Choose **Move files** to copy them across. The screen shows how many have
 moved; you can leave it running. Each file is copied, checked, and only then removed from
-Nothing Left's storage, so every file keeps opening throughout. If the move stops — a network
-problem, a permission removed halfway — choose **Retry** and it carries on from where it
+Nothing Left's storage, so every file keeps opening throughout. If the move stops - a network
+problem, a permission removed halfway - choose **Retry** and it carries on from where it
 stopped.
 
 ## When the key stops working
 
-If the bucket starts refusing the key — it was deleted, rotated, or lost a permission — Nothing
+If the bucket starts refusing the key - it was deleted, rotated, or lost a permission - Nothing
 Left stops using it straight away and emails the admins once. Until it is fixed, files in the
 bucket show as unavailable and nobody can upload; nothing is sent to Nothing Left's storage
 instead, so you never fill it up by surprise.
 
 **To fix it**, enter a working key for the same bucket. It is checked before it replaces the old
-one, so a typo changes nothing. Changing to a different bucket — or the same bucket name in
-another account — means disconnecting first.
+one, so a typo changes nothing. Changing to a different bucket - or the same bucket name in
+another account - means disconnecting first.
 
 ## Disconnecting
 
@@ -95,22 +95,22 @@ another account — means disconnecting first.
 
 - The key is forgotten. Nothing Left still remembers which bucket each file is in: the provider,
   the R2 account or S3 region, and the bucket name.
-- **Your files stay in your bucket** — nothing there is deleted — but they no longer open in
+- **Your files stay in your bucket** - nothing there is deleted - but they no longer open in
   Nothing Left. They are listed as files in an earlier bucket.
-- **Connect the same bucket again — same account or region, same name — and they open again.**
+- **Connect the same bucket again - same account or region, same name - and they open again.**
   A bucket with the same name in a different account is a different bucket: connecting it does not
   bring the earlier files back.
 - New uploads use Nothing Left's storage, and the limit applies again.
 
 Nothing Left deletes a file from your bucket only when the file itself is deleted: someone
 deletes it, an unsaved upload expires, or a deleted issue or article reaches the end of its 14
-days. Disconnecting never deletes anything there, and neither does deleting the organisation —
+days. Disconnecting never deletes anything there, and neither does deleting the organisation -
 whatever is in your bucket then is yours to keep or remove.
 
 ## Asking an agent
 
 An agent with an Org Admin's token and the `admin:org` scope can list the files by size
-(`list_files`) and delete one (`delete_attachment`) — handy for "what is taking up our storage?".
+(`list_files`) and delete one (`delete_attachment`) - handy for "what is taking up our storage?".
 Connecting, checking and disconnecting a bucket stay in the web app: an agent never handles its
 keys.
 

@@ -152,7 +152,7 @@ export const listInvitations = defineTool({
   name: 'list_invitations',
   title: 'List invitations',
   description:
-    "The organisation's invitations — or one project's — with status, the role each grants, and uses for share links.",
+    "The organisation's invitations - or one project's - with status, the role each grants, and uses for share links.",
   input: z.strictObject(where),
   kind: 'read',
   endpoints: [

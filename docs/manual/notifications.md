@@ -12,9 +12,9 @@ Everything here is also available to an AI agent through the [MCP tools](./mcp.m
 | Mentioned | Someone writes `@you` in an issue, a comment, logged time or a knowledge base article |
 | Comments | Someone comments on an issue you watch |
 | Status changes | An issue you watch changes status |
-| Resolved | An issue you created or watch is resolved — this replaces the status change |
+| Resolved | An issue you created or watch is resolved - this replaces the status change |
 | Links | An issue you watch is linked to another |
-| Due tomorrow / Overdue | An issue assigned to you — or that you created, when nobody is assigned — is due tomorrow, or its due date has passed |
+| Due tomorrow / Overdue | An issue assigned to you - or that you created, when nobody is assigned - is due tomorrow, or its due date has passed |
 | Time logged | Someone logs time on an issue you watch or are assigned to |
 | Sprint started / finished | A sprint with an issue assigned to you starts or finishes |
 | Article published / updated | An article is published in a project you are a member of, or an article you watch changes |
@@ -33,7 +33,7 @@ A few rules hold for every kind:
   When something you watch is linked to an issue in a project you cannot open, the
   notification says *an issue in another project* instead of its key.
 - **Once per thing that happened.** If you are mentioned in a comment on an issue you watch,
-  you get one notification — the mention — not two.
+  you get one notification - the mention - not two.
 - **Due dates in your timezone.** *Due tomorrow* and *Overdue* arrive once per issue, from 9am
   where you are, using the timezone in your profile.
 
@@ -41,8 +41,8 @@ A few rules hold for every kind:
 
 A change reaches you ten minutes after it was first made. People correct themselves:
 assigning an issue to the wrong person and fixing it a minute later sends **one**
-notification, to the right person. A change that is undone inside the window — a status set
-and set back — tells nobody at all, and a mention deleted before the ten minutes are up is
+notification, to the right person. A change that is undone inside the window - a status set
+and set back - tells nobody at all, and a mention deleted before the ten minutes are up is
 never sent. Starting and finishing a sprint are the exception: they arrive straight away.
 
 ## The inbox
@@ -94,7 +94,7 @@ every organisation you belong to. Digests use the time zone in your profile
 
 ### The digest
 
-A digest comes from one organisation at a time — *Your day in ACME · Nothing Left* — and is
+A digest comes from one organisation at a time - *Your day in ACME · Nothing Left* - and is
 grouped by project, then by kind. Issues assigned to you, mentions and due dates are listed
 one by one; comments, status changes and the rest on issues you watch are a single count with
 a link to your inbox. Anything you already read in the app is left out, and **a digest with
@@ -103,13 +103,13 @@ nothing in it is never sent**.
 ### Unsubscribing
 
 Every activity email has an unsubscribe link at the bottom, and your email program's own
-*Unsubscribe* button works too. It turns off only the kind of email you clicked it in — or,
-from a digest, that digest — and nothing else. The link opens a page that says what it will
+*Unsubscribe* button works too. It turns off only the kind of email you clicked it in - or,
+from a digest, that digest - and nothing else. The link opens a page that says what it will
 turn off and waits for you to press **Turn these emails off**, so a mail scanner that follows
 links never unsubscribes you; you do not need to be signed in. You can turn it back on in
 **Settings → Notifications** at any time.
 
-Emails about your account — password resets, security alerts, invitations, storage warnings —
+Emails about your account - password resets, security alerts, invitations, storage warnings -
 are not notifications. They are always sent and have no unsubscribe link.
 
 ## Asking an agent

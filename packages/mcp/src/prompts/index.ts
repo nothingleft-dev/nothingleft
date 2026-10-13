@@ -73,7 +73,7 @@ export const standupSummary = definePrompt({
   name: 'standup-summary',
   title: 'Standup summary',
   description:
-    'What a person (default you) or a project changed since a date: done, in progress, blocked, and time logged — and, for you, what is waiting on you.',
+    'What a person (default you) or a project changed since a date: done, in progress, blocked, and time logged - and, for you, what is waiting on you.',
   input: z.strictObject({
     user: text('"me", "@casey" or a full name. Default me.').optional(),
     since: text(
@@ -93,7 +93,7 @@ export const standupSummary = definePrompt({
         [
           `1. Run search_issues with \`${scope}updated by: ${who} updated: ${range} .. Today sort by: updated desc\`, and also \`${scope}assignee: ${who} #Unresolved\` for what is still open.`,
           '2. For each issue changed, read get_issue_activity to see what this person actually did: status moves, comments, time logged.',
-          '3. Answer in three short sections — Done, In progress, Blocked or waiting — one line per issue with its key, then the total time they logged.',
+          '3. Answer in three short sections - Done, In progress, Blocked or waiting - one line per issue with its key, then the total time they logged.',
           ...(who === 'me'
             ? [
                 '4. Then run list_notifications with `unread_only: true` and `kind: ["mentioned", "assigned", "due_soon", "overdue"]`, and add a fourth section, Waiting on you: one line per issue with its key and what is asked. Do not mark anything read.',
@@ -130,7 +130,7 @@ export const writeReleaseNotes = definePrompt({
         [
           `1. Run search_issues with \`${selection} sort by: type\`, paging with offset until every issue is in.`,
           '2. Read an issue with get_issue only where its title does not say what changed for users.',
-          '3. Group by type — new, improved, fixed — and write one plain sentence per change, for the people who use the product rather than the team. Mention an issue key in brackets at the end of each line.',
+          '3. Group by type - new, improved, fixed - and write one plain sentence per change, for the people who use the product rather than the team. Mention an issue key in brackets at the end of each line.',
           '4. Leave out purely internal work (refactors, CI, tests) unless it changes behaviour. Change nothing in the tracker.',
         ].join('\n'),
       ),
@@ -229,7 +229,7 @@ export const documentThis = definePrompt({
         `Write a knowledge base article in ${key} from ${keys.join(', ')}. The issues, with their comments, are attached.${orgNote(args.org)}`,
         [
           `1. Run search_articles with \`project: ${key}\` and a few of the issues' key words, so you add to what exists rather than repeat it. If an article already covers this, say so and propose an update_article instead.`,
-          '2. Choose the shape the material fits — a runbook (symptoms, diagnosis, fix, prevention), a root-cause write-up (what happened, impact, cause, what changed) or a how-to — and draft it in markdown with headings. Cite each issue by its key (PP-12) where it is the source, so the issue lists the article under Referenced by. Leave out names of customers and anything that reads as blame.',
+          '2. Choose the shape the material fits - a runbook (symptoms, diagnosis, fix, prevention), a root-cause write-up (what happened, impact, cause, what changed) or a how-to - and draft it in markdown with headings. Cite each issue by its key (PP-12) where it is the source, so the issue lists the article under Referenced by. Leave out names of customers and anything that reads as blame.',
           `3. Propose a title${args.parent ? `, placed under "${args.parent}"` : ' and, from list_articles, where it belongs in the tree'}, and tags: the issues' own tags where they fit (list_tags with for: "articles" shows those in use).`,
           '4. Show me the draft and ask me to confirm. Change nothing until I do; then call create_article once, as a draft, with the title, body, parent and tags.',
         ].join('\n'),

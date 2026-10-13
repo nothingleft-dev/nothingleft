@@ -66,7 +66,7 @@ export const manageRoles = defineTool({
   name: 'manage_roles',
   title: 'Change a role',
   description:
-    "Changes one member's organisation role, or their role in one project — adding them to the project or removing them from it. Asks you to confirm before acting.",
+    "Changes one member's organisation role, or their role in one project - adding them to the project or removing them from it. Asks you to confirm before acting.",
   input,
   kind: 'destructive',
   endpoints: [

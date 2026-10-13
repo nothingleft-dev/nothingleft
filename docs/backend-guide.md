@@ -233,7 +233,7 @@ Pino, one logger per process, configured by env:
 
 ```
 LOG_LEVEL=debug                 fatal … trace
-LOG_TARGETS=pretty,file         any of: pretty (stdout, coloured) · json (stdout) · file
+LOG_TARGETS=pretty,file         any of: pretty (stdout, coloured) · json (stdout) · file · posthog
 LOG_FILE=logs/api.log           used by the file target; directory is created
 ```
 
@@ -243,7 +243,9 @@ Production uses `json`, collected by the host. `authorization`, `cookie` and
 `set-cookie` headers are redacted before any target sees them, and a logged `err`
 goes through `redactError` (`@nothingleft/analytics`), which strips a database
 error's SQL, parameters and row values. `logs/` is
-gitignored. Log lines are not sent to PostHog; errors are (next section).
+gitignored. `posthog` ships warn and above to PostHog Logs with `POSTHOG_KEY` (required with it),
+through `@nothingleft/analytics/log-transport`, a pino transport that drops request objects and
+email subjects first ([analytics.md](./analytics.md#logs)). Production uses `json,posthog`.
 
 ## Analytics and error reporting (PostHog)
 
@@ -264,7 +266,8 @@ POSTHOG_SAMPLE_RATE=1.0                   applied to product events only
   booleans. `@plugins/analytics` emits `api_request` per response (route
   pattern, never URL).
 - **Errors**: the error handler calls `analytics.captureException` for every
-  5xx with `request_id`, route, method and user ID. 4xx are not reported.
+  5xx with `request_id`, route, method and user ID, and every failed request with a matched
+  route sends `api_error` with its catalogue error code.
 - Both are no-ops when their switch is off or `POSTHOG_KEY` is empty. Tests
   always get `noopAnalytics`.
 - Adding an event = add it to `EventCatalogue`, then call

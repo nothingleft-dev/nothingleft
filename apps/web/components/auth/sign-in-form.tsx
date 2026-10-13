@@ -6,10 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { SignInSchema, type Me, type TwoFactorChallenge } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { AuthHeading, Swap, TextLink } from '@components/auth/auth-card';
+import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
+import { EmailUs } from '@components/email-us';
 import { safeNextPath } from '@components/auth/next-path';
 import { useAuthForm } from '@components/auth/use-auth-form';
 import { TwoFactorStep } from '@components/auth/two-factor-step';
@@ -73,8 +74,8 @@ export function SignInForm() {
 
       {deactivated && !form.summary && !expired ? (
         <FormAlert tone="success" title="Your account is deactivated">
-          You are signed out everywhere and your access tokens no longer work. To come back, email us from the address
-          on the account.
+          You are signed out everywhere and your access tokens no longer work. To come back, <EmailUs /> from the
+          address on the account.
         </FormAlert>
       ) : null}
       {expired && !form.summary ? <FormAlert title={expired} /> : null}
@@ -82,7 +83,9 @@ export function SignInForm() {
       {form.summary ? (
         <FormAlert title={form.summary}>
           {code === 'auth.account_deactivated' ? (
-            <>To reactivate it, email us from the address on the account. Your memberships come back as they were.</>
+            <>
+              To reactivate it, <EmailUs /> from the address on the account. Your memberships come back as they were.
+            </>
           ) : code === 'auth.account_locked' ? (
             <>
               Wait, then try again - or <TextLink href="/reset-password">reset your password</TextLink>.
@@ -125,6 +128,11 @@ export function SignInForm() {
         <Button type="submit" disabled={form.isPending} className="mt-1 w-full">
           {form.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
+        <FinePrint>
+          Signing in with Google or GitHub for the first time creates an account, and you agree to the{' '}
+          <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}
+          <ExternalLink href="https://nothingleft.dev/privacy">privacy policy</ExternalLink>.
+        </FinePrint>
       </form>
 
       <Swap>

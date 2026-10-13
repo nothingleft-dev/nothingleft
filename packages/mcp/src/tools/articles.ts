@@ -312,7 +312,7 @@ export const search = defineTool({
   name: 'search',
   title: 'Search everything',
   description:
-    "Issues and knowledge base articles in two groups for one query — the app's search box. One tag reaches both: `tag: payment-outage` finds the outage issues and the RCA written afterwards. Each group reads the query in its own language; one that cannot (e.g. `priority:` for articles) says why and shows nothing.",
+    "Issues and knowledge base articles in two groups for one query - the app's search box. One tag reaches both: `tag: payment-outage` finds the outage issues and the RCA written afterwards. Each group reads the query in its own language; one that cannot (e.g. `priority:` for articles) says why and shows nothing.",
   input: z.strictObject({
     query: z.string().max(2000).describe('Words, a tag, or either query language.'),
     project: arg.project.optional().describe('Only this project. Default: every project you can read.'),

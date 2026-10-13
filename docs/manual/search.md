@@ -128,8 +128,8 @@ A saved view is one of three kinds:
 | Visible to                                         | Who can create it                                   | Who can change or delete it                    |
 | -------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------- |
 | **Only you**                                       | Anyone                                              | You                                            |
-| **A project** — everyone who can open that project | Contributors and Project Admins of the project      | Its creator, or a Project Admin of the project |
-| **The organisation** — every member                | Anyone who is a Contributor in at least one project | Its creator, or an Org Admin                   |
+| **A project** - everyone who can open that project | Contributors and Project Admins of the project      | Its creator, or a Project Admin of the project |
+| **The organisation** - every member                | Anyone who is a Contributor in at least one project | Its creator, or an Org Admin                   |
 
 A view can use other views: `#{Open work} assignee: me` works even when _Open
 work_ is itself built from another view. A view cannot end up referring to
@@ -155,8 +155,8 @@ assignee: Unassigned
 ```
 
 People attributes: `assignee`, `created by`, `updated by`, `commenter`,
-`work author`. Someone who has left the organisation still matches —
-`created by: @alex` finds what Alex Lee filed after they were removed — though
+`work author`. Someone who has left the organisation still matches -
+`created by: @alex` finds what Alex Lee filed after they were removed - though
 autocomplete no longer offers them.
 
 ## Dates
@@ -318,11 +318,11 @@ Sortable attributes: `created`, `updated`, `resolved date`, `due date`,
 
 As you type, the dropdown offers:
 
-1. **Attributes** matching what you have typed, with a short description —
+1. **Attributes** matching what you have typed, with a short description -
    `created by:` _by reporter_, `commenter:` _by commenter_.
-2. **Values** as `#` shortcuts, grouped by where they come from —
+2. **Values** as `#` shortcuts, grouped by where they come from -
    `#Critical` _Priority_, `#{Code Review}` _Status_, `#{Sprint 14}` _Sprints_.
-3. **Saved searches** — `#{My open bugs}`.
+3. **Saved searches** - `#{My open bugs}`.
 4. **Recent searches**, filtered by what you have typed.
 
 After an attribute and its colon, the list switches to that attribute's
@@ -375,13 +375,13 @@ project: ACME login
 project: ACME, OPS #Unresolved
 ```
 
-Nothing you cannot open ever appears — not in the list, not in a group
+Nothing you cannot open ever appears - not in the list, not in a group
 count, not in a dashboard figure and not in an exported file.
 
 ## Recent searches
 
-The searches you run in the app are remembered — your last 20 in each
-organisation — and offered in the dropdown. Searches an AI agent runs with
+The searches you run in the app are remembered - your last 20 in each
+organisation - and offered in the dropdown. Searches an AI agent runs with
 your token are not. You can clear the list at any time.
 
 ## Errors
@@ -392,7 +392,7 @@ valid choices:
 
 - an unknown attribute lists every attribute you can use;
 - an unsortable attribute in `sort by:` lists the sortable ones;
-- a value that does not exist — `status: Donee`, `assignee: @nobody`,
-  `#Nonsense` — lists the values that do, in the projects you can see.
+- a value that does not exist - `status: Donee`, `assignee: @nobody`,
+  `#Nonsense` - lists the values that do, in the projects you can see.
 
 Nothing is silently ignored, and a typo never quietly returns an empty list.

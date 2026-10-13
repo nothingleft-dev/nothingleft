@@ -208,7 +208,7 @@ export const createCustomField = defineTool({
   name: 'create_custom_field',
   title: 'Create custom field',
   description:
-    'Adds a custom field to a project: name, type, options for a select, the issue types it applies to (all by default), required, a default, an empty label, and min / max / decimals for numbers. The slug — the search attribute — comes from the name unless given, and never changes. At most 50 live fields per project. Needs a Project Admin and admin:project.',
+    'Adds a custom field to a project: name, type, options for a select, the issue types it applies to (all by default), required, a default, an empty label, and min / max / decimals for numbers. The slug - the search attribute - comes from the name unless given, and never changes. At most 50 live fields per project. Needs a Project Admin and admin:project.',
   input: z.strictObject({
     project: arg.project,
     name: z.string().trim().min(1).max(60),
@@ -365,7 +365,7 @@ export const updateCustomField = defineTool({
   name: 'update_custom_field',
   title: 'Update custom field',
   description:
-    'Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options — add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. Asks you to confirm before acting.',
+    'Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. Asks you to confirm before acting.',
   input: updateCustomFieldInput,
   kind: 'destructive',
   endpoints: [

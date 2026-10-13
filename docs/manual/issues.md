@@ -10,8 +10,8 @@ Every issue has a key made of its project's key and a number: `ACME-1`,
 `ACME-2`, `ACME-118`. Numbers count up from 1 in each project and never skip,
 so `ACME-42` is always the forty-second issue filed in ACME.
 
-Keys are what you type, paste and say out loud. They are not case-sensitive —
-`acme-118` finds `ACME-118` — and they are the whole address: the API reads an
+Keys are what you type, paste and say out loud. They are not case-sensitive -
+`acme-118` finds `ACME-118` - and they are the whole address: the API reads an
 issue at `/v1/issues/ACME-118`.
 
 A project's key can be changed only until its first issue exists. After that
@@ -21,31 +21,31 @@ it is fixed, because every key already handed out would stop working.
 
 | Field                | What it holds                                 | When it is empty               |
 | -------------------- | --------------------------------------------- | ------------------------------ |
-| Title                | One line, up to 500 characters                | — (always set)                 |
+| Title                | One line, up to 500 characters                | - (always set)                 |
 | Description          | Markdown                                      | nothing is shown               |
-| Status               | One of the project's statuses                 | — (always set)                 |
-| Priority             | One of the project's priorities               | — (always set)                 |
-| Type                 | One of the project's issue types              | — (always set)                 |
+| Status               | One of the project's statuses                 | - (always set)                 |
+| Priority             | One of the project's priorities               | - (always set)                 |
+| Type                 | One of the project's issue types              | - (always set)                 |
 | Assignee             | Any number of people                          | `Unassigned`                   |
 | Estimation           | A duration                                    | `?`                            |
 | Spent time           | The time logged on the issue and its subtasks | `?`                            |
 | Story points         | A whole number, 0–999                         | `Not estimated`                |
 | Sprint               | The one sprint the issue is planned into      | `Unscheduled`                  |
 | Start date, Due date | Calendar dates                                | `No start date`, `No due date` |
-| Parent               | The issue this one is a subtask of            | — (none)                       |
+| Parent               | The issue this one is a subtask of            | - (none)                       |
 | Tags                 | Any number of organisation-wide tags          | nothing is shown               |
 
 In the issue list, an empty cell shows `--`.
 
 **Story points and sprints** are covered in [Sprints, backlog and boards](./agile.md). A
-parent issue — an epic — also shows the story points of everything beneath it added up,
+parent issue - an epic - also shows the story points of everything beneath it added up,
 and a board card shows how many of its subtasks are done (`1/3`).
 
 **Dates are calendar dates.** A due date of 19 Sep 2026 reads as 19 Sep 2026
 for everyone, in every timezone. The start date cannot be after the due date.
 
 **Durations** are written the way you would say them: `4h`, `1d 2h`, `1w`,
-`30m`. A day and a week follow your organisation's working calendar — with
+`30m`. A day and a week follow your organisation's working calendar - with
 the default eight-hour day and five-day week, `1d 2h` is ten hours. The API
 also accepts a plain number of minutes.
 
@@ -63,11 +63,11 @@ last person to change the issue itself.
 
 **People who have left.** When someone is removed from the organisation,
 everything they did keeps their real name and picture, with a small _Former
-member_ label — never "Deleted user". You can still search for their work
+member_ label - never "Deleted user". You can still search for their work
 (`created by: @alex`), but they are no longer offered when you assign or
 mention someone.
 
-Projects can add their own fields — a severity, a launch date, a reviewer — which appear in the
+Projects can add their own fields - a severity, a launch date, a reviewer - which appear in the
 sidebar below these. See [Custom fields](./custom-fields.md).
 
 ## Statuses and resolution
@@ -75,7 +75,7 @@ sidebar below these. See [Custom fields](./custom-fields.md).
 Each status belongs to a category: `backlog`, `unstarted`, `started`, `done`
 or `cancelled`. Moving an issue into a `done` or `cancelled` status marks it
 **resolved** and records when. Moving it back out clears that. Moving between
-two resolved statuses — Fixed to Closed, say — keeps the original resolution
+two resolved statuses - Fixed to Closed, say - keeps the original resolution
 time.
 
 There are no transition rules. Any status can follow any status.
@@ -107,7 +107,7 @@ archived project.
 
 ## History
 
-Every change is kept in the issue's history — `Status: Open → In Progress` —
+Every change is kept in the issue's history - `Status: Open → In Progress` -
 with who made it and when.
 
 - Changes saved together appear as **one entry**.
@@ -130,7 +130,7 @@ with who made it and when.
 
 Descriptions and comments share one editor. **Visual** shows the text as it will
 look; **Markdown** shows the source. Switch between them at any time with the toggle
-on the right of the toolbar — both are the same text, and the editor remembers which
+on the right of the toolbar - both are the same text, and the editor remembers which
 one you used last.
 
 - The toolbar sets the block type (normal text or a heading), bold, italic,
@@ -155,7 +155,7 @@ issue's activity.
 - You can edit or delete your own comments; Project Admins can edit or delete
   anyone's. Both are in the menu that appears when you point at a comment. An edited
   comment shows _edited_; hover it to see when.
-- A deleted comment disappears from the issue entirely — you are asked first, because
+- A deleted comment disappears from the issue entirely - you are asked first, because
   it cannot be brought back. The history keeps one line saying a comment was deleted,
   and by whom.
 - The activity has four tabs: **All** shows comments and changes together, **Comments**
@@ -166,7 +166,7 @@ issue's activity.
 
 ## Time tracking
 
-Log the time you spend on an issue with **Add spent time** — below the comment box, on
+Log the time you spend on an issue with **Add spent time** - below the comment box, on
 the **+** beside _Spent time_ in the sidebar, or on the issue's **Spent time** tab. You
 need to be a Contributor or above in the project.
 
@@ -176,16 +176,16 @@ need to be a Contributor or above in the project.
   21 Sep to Friday 25 Sep 2026 writes five separate records of two hours; weekends are
   skipped (your organisation's working week decides which days count). Each record can
   be changed or deleted on its own afterwards.
-- **Add another record** puts several dates, or several ranges, into one save — they
+- **Add another record** puts several dates, or several ranges, into one save - they
   share the type and the note.
 - The **type** starts at the project's default work type (Development in a new
   project). Choose another, or _No type_.
 - The **note** is markdown, up to 16 KB. `@username` mentions work as in comments.
 - **Project Admins** can log time for someone else: pick them as the **Author**. Anyone
-  who could log their own time in the project can be chosen — not an Observer. The
+  who could log their own time in the project can be chosen - not an Observer. The
   record then shows _logged by_ the admin who wrote it.
 
-**Spent time** in the sidebar shows what has been logged against the estimate — `3h of
+**Spent time** in the sidebar shows what has been logged against the estimate - `3h of
 4h` with a bar under it. Once it goes past the estimate the bar turns red and says how
 far over it is. An issue's spent time includes everything logged on its subtasks, so an
 epic shows the whole effort beneath it. Deleting a subtask takes its time off the epic;
@@ -205,7 +205,7 @@ Nothing is deleted: turn it back on and every record is where it was.
 ## Subtasks and links
 
 **Subtasks.** An issue can have one parent in the same project, and the
-hierarchy goes at most three levels deep — Epic, Task, Subtask. Moving an
+hierarchy goes at most three levels deep - Epic, Task, Subtask. Moving an
 issue moves everything beneath it, so an issue with subtasks of its own
 cannot go under a subtask. An issue can never end up beneath itself.
 
@@ -224,14 +224,14 @@ A _depends on_ chain can never loop back on itself: if ACME-3 depends on
 ACME-2, and ACME-2 on ACME-1, then ACME-1 cannot depend on ACME-3. Linking
 the same two issues twice is refused, whichever end you start from.
 
-The issue page groups links by kind with a count — _Parent for 3_,
-_Relates to 1_ — and shows each linked issue's key, struck through once it is
+The issue page groups links by kind with a count - _Parent for 3_,
+_Relates to 1_ - and shows each linked issue's key, struck through once it is
 resolved. Issues in projects you cannot open are left out. Contributors and
 above can add and remove links and set parents.
 
 - **Add links** opens a dialog: pick how the issues relate, then find any number of
-  issues by key or title. If one of them cannot be linked — a _depends on_ that would
-  loop, say — the dialog says why and nothing is linked.
+  issues by key or title. If one of them cannot be linked - a _depends on_ that would
+  loop, say - the dialog says why and nothing is linked.
 - To remove a link, point at it and press **×**. Star a linked issue from its row
   without opening it.
 - An issue's parent appears above its title as _Subtask of ACME-4_. Change or remove it
@@ -241,10 +241,10 @@ above can add and remove links and set parents.
 ## Tags
 
 Tags belong to the whole organisation, so a tag made in one project is ready
-in every other. Type a tag and the existing one is used if it matches —
+in every other. Type a tag and the existing one is used if it matches -
 `Needs Review`, `needs review` and `needs-review` are the same tag, shown as
 it was first written. Anything else creates a new tag, with a colour from
-the same grid statuses and types use — pick one, or one is chosen for you. Colons are kept, so namespaced tags such as `area:billing`
+the same grid statuses and types use - pick one, or one is chosen for you. Colons are kept, so namespaced tags such as `area:billing`
 work. Contributors and above can add and remove tags; tags appear under the
 issue's title. You can also add tags, and links, while creating an issue.
 
@@ -269,7 +269,7 @@ download. Each file shows its progress under the text and can be cancelled while
 travels; you can save once every file has finished. The paperclip beside the issue's
 title attaches files to the issue without putting them in any text.
 
-You can attach files while you are still writing a new issue, comment or time entry —
+You can attach files while you are still writing a new issue, comment or time entry -
 they join it when you save. A file you removed from the text before saving is deleted
 rather than attached, and if you never save, the files are thrown away after two days.
 
@@ -279,14 +279,14 @@ rather than attached, and if you never save, the files are thrown away after two
   SVG images included, downloads. Click an image to see it full size; right-click it to
   open it in a new tab.
 - The issue's _Attachments_ section lists every file, and appears once the issue has one.
-  Files already shown in the description or a comment are hidden from it —
-  _Attachments 3 · Hidden files 2_ — with _Show_ to list them too.
+  Files already shown in the description or a comment are hidden from it -
+  _Attachments 3 · Hidden files 2_ - with _Show_ to list them too.
 - Files are private. A file link works only for someone signed in who can open the
   issue, and stops working for anyone who loses access. Alex Lee can paste a file link
   into a chat, but only members of the ACME project can open it.
 - Contributors and above can attach files. You can delete your own; Project Admins can
-  delete anyone's — hover the file and press `×`, then confirm, since a deleted file
-  cannot be brought back. A file cannot be edited — delete it and attach the new version.
+  delete anyone's - hover the file and press `×`, then confirm, since a deleted file
+  cannot be brought back. A file cannot be edited - delete it and attach the new version.
   Attaching and deleting appear in the issue's history.
 - Deleting a comment or a time entry deletes its files too. A deleted issue keeps its
   files for the 14 days it can be restored; after that they are removed with it.
@@ -301,7 +301,7 @@ AWS S3 bucket, which lifts the limit. Avatars do not count. See [Storage](./stor
 
 Project Admins can delete an issue from the menu on its page. You are asked
 to confirm; the issue then disappears from the project straight away, but it
-can be **restored for 14 days** — from the _Undo_ on the message that
+can be **restored for 14 days** - from the _Undo_ on the message that
 follows, or from the project's list of deleted issues. After 14 days it is removed for good,
 together with its comments, time entries, attachments and history.
 
@@ -335,8 +335,8 @@ Every change to these lists is recorded in the organisation's audit log.
 
 ## Working with lists of issues
 
-Every list of issues — a project's issues, **My issues**, **Starred**, or any
-search — works the same way.
+Every list of issues - a project's issues, **My issues**, **Starred**, or any
+search - works the same way.
 
 - **Group** the list by project, status, priority, type, assignee, tag or due
   date. Each group header shows how many issues it holds across the whole
@@ -347,7 +347,7 @@ search — works the same way.
 - **Saved views** sit above the list as tabs, each with its count. Click one
   to run it; type past its query and the tab lets go. _Save view_ keeps the
   current query, sort and columns under a name; the active tab's menu saves a
-  changed query back into it, renames or re-shares it, or deletes it — for
+  changed query back into it, renames or re-shares it, or deletes it - for
   views you may change (see [Searching](./search.md#saved-searches)).
 - **Edit in place**: click a status, the priority letter or the assignees to
   change them without opening the issue. Sort by clicking a column header;
@@ -401,6 +401,6 @@ cannot change. Unarchive the project to work in it again.
   token, read the `Location` header rather than following it. Uploading needs the
   `issues:write` scope.
 - `GET /v1/issues/refs?keys=ACME-1,ACME-2` answers the title and resolved
-  state of each issue you can open — what the app uses to render issue keys
+  state of each issue you can open - what the app uses to render issue keys
   in text.
 - The full reference is in the API documentation.

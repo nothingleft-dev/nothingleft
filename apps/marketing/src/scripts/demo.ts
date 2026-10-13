@@ -128,7 +128,7 @@ export function initDemo(): void {
     whoCell.classList.add('none');
     whoAvatar.hidden = true;
     whoName.textContent = 'Unassigned';
-    spent.textContent = '—';
+    spent.textContent = '-';
     dot.classList.remove('started');
     status.textContent = 'Open';
     [who, statusField, spent].forEach(el => el.classList.remove('flash'));

@@ -97,7 +97,7 @@ once. Pointing either at the pooled URL produces failures that look random.
 
 ```
 LOG_LEVEL                     info | debug | …
-LOG_TARGETS                   pretty,file — any of pretty · json · file (see backend-guide.md#logging)
+LOG_TARGETS                   pretty,file — any of pretty · json · file · posthog (see backend-guide.md#logging)
 LOG_FILE                      logs/api.log
 DATABASE_URL                  postgres://…   direct — migrations, pg-boss
 DATABASE_URL_POOLED           postgres://…   pooled — application queries
@@ -124,6 +124,7 @@ SMTP_SECURE                   true|false — implicit TLS; unset: on for port 46
 SMTP_USER / SMTP_PASSWORD     set together, or both unset for a relay that needs no login
 ASSET_BASE_URL                https://static.nothingleft.dev — public static host; email logos load from `email/logo-light.png` and `email/logo-dark.png` under it
 EMAIL_FROM                    "Nothing Left <noreply@notifications.nothingleft.dev>"
+SUPPORT_EMAIL                 admin@nothingleft.dev in production — Reply-To on every email; unset: no Reply-To
 EMAIL_LINK_SECRET             32+ characters — signs unsubscribe links; required in production, never rotated casually
 POSTHOG_KEY / POSTHOG_HOST
 POSTHOG_ANALYTICS_ENABLED     true|false  — product events

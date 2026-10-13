@@ -52,9 +52,9 @@ time entries and articles. Avatars never count.
 
 There is no way to buy more storage. At the limit you either:
 
-1. **Make room** — delete files from **Organisation → Storage**, which lists them
+1. **Make room** - delete files from **Organisation → Storage**, which lists them
    largest first.
-2. **Bring your own bucket** — connect a Cloudflare R2 or AWS S3 bucket. Once
+2. **Bring your own bucket** - connect a Cloudflare R2 or AWS S3 bucket. Once
    it passes its checks, the storage limit lifts at once, without waiting for
    existing files to move.
 

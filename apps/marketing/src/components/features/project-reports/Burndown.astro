@@ -35,8 +35,8 @@ const nonWorking = BURNDOWN.map((day, index) => ({ day, index })).filter(({ day 
 const ticks = [0, 10, 20, 30, 40];
 const dayLabels = BURNDOWN.map((day, index) => ({ day, index })).filter(({ index }) => index % 3 === 0);
 
-const signed = (value: number | null) => (value === null ? '—' : value > 0 ? `+${value}` : String(value));
-const shown = (value: number | null) => (value === null ? '—' : String(value));
+const signed = (value: number | null) => (value === null ? '-' : value > 0 ? `+${value}` : String(value));
+const shown = (value: number | null) => (value === null ? '-' : String(value));
 const csvName = `acme-burndown-acme-${SPRINT.name.toLowerCase().replace(' ', '-')}.csv`;
 ---
 

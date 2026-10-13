@@ -84,7 +84,8 @@ export function SignUpForm() {
           {form.isPending ? 'Creating your account…' : 'Create account'}
         </Button>
         <FinePrint>
-          By continuing you agree to the <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}
+          By creating an account, or signing up with Google or GitHub, you agree to the{' '}
+          <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}
           <ExternalLink href="https://nothingleft.dev/privacy">privacy policy</ExternalLink>. Until you opt in, we only
           email you about your account.
         </FinePrint>

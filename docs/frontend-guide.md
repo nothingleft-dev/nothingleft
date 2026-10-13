@@ -25,7 +25,8 @@ restate.
 The web app reads `apps/web/.env` using Next's built-in environment loader
 (copy `apps/web/.env.example`). Backend settings live separately in
 `apps/api/.env`. The one required variable is `NEXT_PUBLIC_API_BASE_URL`,
-validated by `lib/env.ts` at import time. The API must be running for anything that talks to it; the shell itself
+validated by `lib/env.ts` at import time. `NEXT_PUBLIC_SUPPORT_EMAIL` (optional, the API's
+`SUPPORT_EMAIL`) is the address `components/email-us.tsx` shows where the app says *email us*. The API must be running for anything that talks to it; the shell itself
 renders without it.
 
 `bun run dev` at the root starts both — the API on `:4000` and the web app on
@@ -1046,7 +1047,8 @@ Built in 1c; the visual rules are design § 8 and § 8a. How the pieces fit:
   renders the organisation chooser / no-organisation state, or sends an account that never
   joined an organisation to `/welcome`. Sign-in with no `?next=` and the signed-in bounce
   from the auth pages both go to `/`, so the server's answer is what a returning user meets. Every project page records the visit with
-  `useRecordProjectVisit`; the issue page records itself in `useRecentlyViewed`.
+  `useRecordProjectVisit`; the issue page records itself in `useRecentlyViewed`, and signing out or deactivating calls
+  `clearRecentlyViewed()`, which removes every account's list from the browser.
 
 ## Page width
 

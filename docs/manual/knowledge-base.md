@@ -41,7 +41,7 @@ contents beside the article on a wide screen.
 
 ## Addresses
 
-Each article has a short address in its project, made from its title when you create it —
+Each article has a short address in its project, made from its title when you create it -
 _Restoring a failed sync_ becomes `restoring-a-failed-sync`. If the project already has one,
 the new article gets a number: `overview-2`. Renaming an article keeps its address, so links
 to it keep working; you can change the address yourself, as long as no other article in the
@@ -77,15 +77,15 @@ access. In an archived project the knowledge base is read-only.
 
 Deleting an article that has articles under it asks what should happen to them:
 
-- **Move them up** — they take its place, one level higher, in the same order.
-- **Delete them too** — the whole branch goes. A Contributor can do this only when every
+- **Move them up** - they take its place, one level higher, in the same order.
+- **Delete them too** - the whole branch goes. A Contributor can do this only when every
   article in the branch is their own.
 
 A draft someone else is still writing underneath is never deleted by you: it moves up a level.
 
 A deleted article can be restored for 14 days from **Deleted articles**, at the bottom of the
 knowledge base's side panel (it appears when there is something you may restore), and anything deleted along with it comes back
-with it — restoring a branch needs the same rights as deleting it. If its address has been taken
+with it - restoring a branch needs the same rights as deleting it. If its address has been taken
 in the meantime it gets a number; if the article it sat under is gone, or the branch would now
 sit more than three levels deep, it comes back at the top level. After 14 days it is removed for good, with its
 comments and files.
@@ -94,7 +94,7 @@ There is no version history: the article shows who changed it last, and when.
 
 ## Tags
 
-Articles use the same tags as issues — one list for the whole organisation. That is the point:
+Articles use the same tags as issues - one list for the whole organisation. That is the point:
 tag the outage issues and the write-up afterwards `payment-outage`, and one search finds both.
 Tags show as chips under the title; the knowledge base lists the tags in use, with how many
 articles carry each, so you can filter with one click. When you tag an article, tags already
@@ -116,21 +116,21 @@ style as the issue search ([Search](./search.md)):
 | Order | `sort by: updated desc` |
 
 Words that are not filters search the text; the best matches come first. A name that matches
-nothing — `status: archived` — is an error that lists what would work. Issue filters such as
+nothing - `status: archived` - is an error that lists what would work. Issue filters such as
 `priority:` do not apply to articles.
 
 Clicking a tag in the side panel filters by it; clicking it again clears the filter. **Knowledge
 base** in the main menu searches every project you belong to, one section per project.
 
 The search box at the top of the app shows **issues and articles in separate groups**. When a
-query only makes sense for one of them — `priority: High` for issues, `status: draft` for
-articles — the other group says so instead of showing results.
+query only makes sense for one of them - `priority: High` for issues, `status: draft` for
+articles - the other group says so instead of showing results.
 
 ## Linking issues and articles
 
 Write an issue key such as `ACME-12` anywhere in an article and it becomes a link to the issue,
 struck through once the issue is resolved. The issue in turn lists the article under
-**Referenced by**, so whoever opens `ACME-12` finds the runbook or write-up that mentions it —
+**Referenced by**, so whoever opens `ACME-12` finds the runbook or write-up that mentions it -
 even if the article was written before the issue existed. A key inside a code block is not a
 reference.
 

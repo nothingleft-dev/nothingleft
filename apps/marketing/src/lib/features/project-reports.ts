@@ -195,7 +195,7 @@ export const RUN_REPORT_CALL = `run_report {
 }`;
 
 export const RUN_REPORT_ANSWER = [
-  `**Issues per assignee** — in ACME, for \`${SCOPE_QUERY}\``,
+  `**Issues per assignee** - in ACME, for \`${SCOPE_QUERY}\``,
   '',
   mdRow(['Group', 'Issues', 'Share', 'Series', 'Search with']),
   '|---|---|---|---|---|',

@@ -164,7 +164,7 @@ the organisation.
 
 - **Own** is time logged _for_ you, whoever recorded it. Time a Project Admin logs on your
   behalf is yours to edit and delete.
-- Time can be logged for anyone who could log their own time in the project — never an
+- Time can be logged for anyone who could log their own time in the project - never an
   Observer. Only a Project Admin and up can change whose time a record is.
 - With time tracking off, or the project archived, nobody logs, edits or deletes time.
   Logged time can still be read.
@@ -242,7 +242,7 @@ Whatever your roles, you can:
 - accept or decline ownership of an organisation offered to you.
 
 The Org Owner cannot deactivate their account while their organisation still exists. Erasing
-an account is not self-service: you, or an Org Admin on your behalf, email us
+an account is not self-service: you, or an Org Admin on your behalf, email admin@nothingleft.dev
 ([Account security](./account-security.md)).
 
 ## Agents and tokens

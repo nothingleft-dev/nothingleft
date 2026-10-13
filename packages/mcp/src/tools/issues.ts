@@ -76,7 +76,7 @@ export const searchIssues = defineTool({
   name: 'search_issues',
   title: 'Search issues',
   description:
-    'Finds issues with the query language the search bar uses, e.g. `project: PP #Unresolved assignee: me priority: Critical, Major sort by: updated desc`. Attributes include project, status, priority, type, assignee, created by, updated by, tag, sprint (`sprint: {September 2026}`, `{No sprint}`), story points (`3 .. 8`), created, updated, resolved date, due date, estimation, spent time, has, links such as `subtask of: PP-12`, any custom field by its slug (`severity: High`, `launch: {This month}`) — whose values then show as extra columns — and free text. `#Unresolved`, `#me` are shortcuts. An unknown attribute or value is an error listing the valid ones; call suggest_query to explore. Returns a table.',
+    'Finds issues with the query language the search bar uses, e.g. `project: PP #Unresolved assignee: me priority: Critical, Major sort by: updated desc`. Attributes include project, status, priority, type, assignee, created by, updated by, tag, sprint (`sprint: {September 2026}`, `{No sprint}`), story points (`3 .. 8`), created, updated, resolved date, due date, estimation, spent time, has, links such as `subtask of: PP-12`, any custom field by its slug (`severity: High`, `launch: {This month}`) - whose values then show as extra columns - and free text. `#Unresolved`, `#me` are shortcuts. An unknown attribute or value is an error listing the valid ones; call suggest_query to explore. Returns a table.',
   input: z.strictObject({
     query: z
       .string()
@@ -335,7 +335,7 @@ export const updateIssue = defineTool({
   name: 'update_issue',
   title: 'Update issue',
   description:
-    'Changes one issue: only the arguments you pass change, and null clears a field. Covers fields, custom fields, story points, sprint, parent, tags (add_tags / remove_tags, new names are created), watchers, and your own star, watch and vote — so a triage is one call. Returns the issue as it now is.',
+    'Changes one issue: only the arguments you pass change, and null clears a field. Covers fields, custom fields, story points, sprint, parent, tags (add_tags / remove_tags, new names are created), watchers, and your own star, watch and vote - so a triage is one call. Returns the issue as it now is.',
   input: z.strictObject({
     issue: arg.issue,
     title: title().optional(),

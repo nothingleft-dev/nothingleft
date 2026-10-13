@@ -26,20 +26,20 @@ figure; click it to open the issues it counts.
 
 Every issue report is scoped the way you search:
 
-- **A query** in the [search language](./search.md) — `type: Bug #Unresolved`,
+- **A query** in the [search language](./search.md) - `type: Bug #Unresolved`,
   `sprint: {September 2026}`, `assignee: me`. Anything the search bar understands works here.
-- **A saved view**, by name — *My open bugs*. A query and a view together narrow each other.
-- **Projects** — one or several. Without them, a report covers every project you can open.
+- **A saved view**, by name - *My open bugs*. A query and a view together narrow each other.
+- **Projects** - one or several. Without them, a report covers every project you can open.
 
 A report **never counts an issue you could not open yourself**: issues in projects you are not a
-member of, deleted issues, and — for an agent — projects outside its access token are left out
+member of, deleted issues, and - for an agent - projects outside its access token are left out
 before anything is counted.
 
 Every bar, slice and cell leads to the issue list with exactly the issues it counts. A cell of
 *Open × High* opens the list for `status: Open severity: High` within the same scope.
 
-When a report finds nothing, it says which filter did it — *No issues match priority: Critical,
-in ACME* — and offers to drop each filter in turn. A period is widened to *This month* or *This
+When a report finds nothing, it says which filter did it - *No issues match priority: Critical,
+in ACME* - and offers to drop each filter in turn. A period is widened to *This month* or *This
 year* rather than dropped.
 
 ## The nine
@@ -58,12 +58,12 @@ How issues spread over the organisation's projects.
 ### Issues per field
 
 How issues spread over any field: status, priority, type, assignee, tag, sprint, due date
-(Overdue, Today, This week, Later, No due date), or a custom field — a select, multi-select,
+(Overdue, Today, This week, Later, No due date), or a custom field - a select, multi-select,
 person, people or checkbox field. Issues without a value are counted under the field's empty
 label (*No Severity*), and a custom field counts only on the issue types it applies to.
 
 When the projects in a report name their statuses differently, **group by category** adds them
-up by the five status categories — Backlog, Unstarted, Started, Done, Cancelled — so *Fixed* in
+up by the five status categories - Backlog, Unstarted, Started, Done, Cancelled - so *Fixed* in
 one project and *Closed* in another both count as Done.
 
 ### Matrix
@@ -88,8 +88,8 @@ live. **Scope added after the start is its own line**, so *we finished nothing* 
 
 ### Average issue age
 
-How long issues have been open, per field value — from creation to resolution, or to now while
-they are still open — in days. It looks at unresolved issues unless you include resolved ones,
+How long issues have been open, per field value - from creation to resolution, or to now while
+they are still open - in days. It looks at unresolved issues unless you include resolved ones,
 and names the oldest issue in each group.
 
 ### Time report
@@ -98,8 +98,8 @@ Time logged over a period on the issues in scope, by work type, person, issue, p
 of the project's work item attributes (*Billable*). It adds up the time entries themselves, so a
 subtask's time is never counted twice through its parent.
 
-Grouped by issue or project, each row also shows the estimate — the project's Estimation field
-if it has chosen one — the difference (negative means over the estimate) and its share of the
+Grouped by issue or project, each row also shows the estimate - the project's Estimation field
+if it has chosen one - the difference (negative means over the estimate) and its share of the
 total. An estimate belongs to a whole issue, so a report by person or work type shows no
 estimate.
 
@@ -113,19 +113,19 @@ A project's issues on a timeline, from start date to due date, with an arrow for
 *depends on* link between two of them. Group the bars by epic (the issue's nearest Epic above
 it), by assignee, or not at all.
 
-An issue without both a start date and a due date is **listed underneath, not dropped** — a
+An issue without both a start date and a due date is **listed underneath, not dropped** - a
 timeline that quietly leaves out half the work is worse than none.
 
-Each bar is grey with its status on the left edge — amber once started, green when done — and
+Each bar is grey with its status on the left edge - amber once started, green when done - and
 a red end when it is past its due date and still open. An arrow turns red when an issue starts
 before the one it depends on ends. Click a bar to open the issue over the chart; **Days** and
 **Weeks** change the scale.
 
 ### Timesheet
 
-People as rows, days as columns, totals both ways — this week for you unless you choose other
+People as rows, days as columns, totals both ways - this week for you unless you choose other
 people or dates, up to 62 days. Non-working days are marked. Open a cell to see the time entries
-behind it — or a person's total, for the whole period. **People** adds colleagues or shows
+behind it - or a person's total, for the whole period. **People** adds colleagues or shows
 *Everyone*. You see time logged on any issue you can open, whoever logged it.
 
 ## Colours
@@ -142,15 +142,15 @@ report can export it.
 
 ## Asking an agent
 
-`run_report` takes the report's name and the same choices by name — never an internal number:
+`run_report` takes the report's name and the same choices by name - never an internal number:
 
-- *"How are ACME's open bugs spread over people?"* — `issues-per-assignee` with the query
+- *"How are ACME's open bugs spread over people?"* - `issues-per-assignee` with the query
   `project: ACME type: Bug #Unresolved`.
-- *"Show the September 2026 burndown in story points."* — `burndown` with `project: ACME`,
+- *"Show the September 2026 burndown in story points."* - `burndown` with `project: ACME`,
   `sprint: September 2026`.
-- *"How much of last week went on testing?"* — `time` with `period: Last week`,
+- *"How much of last week went on testing?"* - `time` with `period: Last week`,
   `group_by: work_type`.
-- *"What did Casey log on Tuesday?"* — `timesheet` with `user: Casey Kim` and that day.
+- *"What did Casey log on Tuesday?"* - `timesheet` with `user: Casey Kim` and that day.
 
 The agent reads the same table and series the chart is drawn from, and when a report is empty it
 is told which filter to drop.

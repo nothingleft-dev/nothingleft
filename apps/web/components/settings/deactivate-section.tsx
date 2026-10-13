@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import type { Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { FormAlert } from '@components/auth/form-alert';
+import { EmailUs } from '@components/email-us';
 import { StepUpDialog } from '@components/step-up-dialog';
 import { SettingsSection } from '@components/settings/section';
 import { useDeactivateAccount } from '@hooks/use-account-security';
@@ -79,7 +80,9 @@ export function DeactivateSection({ user, reopen, onReopened }: DeactivateSectio
             Your memberships and everything you wrote stay, under your real name. Colleagues see your name greyed out,
             and you are no longer offered as an assignee or in mentions.
           </li>
-          <li>We send you a confirmation email. To come back, email us from {user.email}.</li>
+          <li>
+            We send you a confirmation email. To come back, <EmailUs /> from {user.email}.
+          </li>
         </ul>
       </StepUpDialog>
     </SettingsSection>

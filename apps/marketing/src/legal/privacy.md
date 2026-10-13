@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy
-updated: '2026-10-12'
+updated: '2026-10-13'
 ---
 
 This policy explains what personal data Nothing Left collects, why, who receives it, how long we
@@ -119,6 +119,8 @@ Nothing Left sends product analytics and error reports to PostHog. Session repla
 server sends it, not your browser. It sends event names, a pseudonymous ID for you and your
 organisation, and allow-listed counts and categories. Error reports carry the error, the route,
 the request ID and the status. The events are designed to carry IDs and counts, not your content.
+Warning and error lines from the API's log also go to PostHog, without IP addresses, URLs or email
+subjects, and PostHog keeps them for 14 days.
 
 The web app also loads Google Analytics, only on the sign-in, sign-up and invitation pages, never
 once you are inside the app. It records page addresses with IDs removed and whether you signed up
@@ -225,7 +227,7 @@ built but switched off.
 | GitHub                              | Sign-in, if you choose it; private security reports                                                                           | GitHub sends us your account ID, username, name, avatar URL and email addresses, and learns that you signed in  | Active when you use it          |
 | jsDelivr                            | Delivering the viewer for the API reference on this website                                                                   | Your IP address, browser and the page you came from                                                             | Active                          |
 | Vercel                              | Hosting the web app at work.nothingleft.dev                                                                                   | Web app traffic, including IP addresses, page addresses and the session cookie                                  | Active                          |
-| PostHog (US Cloud)                  | Product analytics and error reports                                                                                           | Pseudonymous IDs, event names, counts and categories, error details                                             | Active |
+| PostHog (US Cloud)                  | Product analytics, error reports and warning and error logs                                                                   | Pseudonymous IDs, event names, counts and categories, error details, log lines without IPs or URLs              | Active |
 | Google Analytics                    | This website, and the web app's sign-in, sign-up and invitation pages                                                         | Page addresses without query strings (and with IDs removed in the web app), a cookie ID, IP address and device details | Active                          |
 
 **Email.** The admin@nothingleft.dev mailbox is hosted by Google (Gmail). Google receives the emails
@@ -272,8 +274,8 @@ The web app also keeps these in your browser's local and session storage:
 | `nl:oauth-next`                | Where to return after signing in, for this tab only |
 | `nl:invite-intent`             | An invitation you are accepting, for this tab only  |
 
-Issue titles in `nl.recently-viewed` stay on your device until you clear them. On a shared
-computer, anyone using the same browser profile can read them.
+Issue titles in `nl.recently-viewed` are removed from the browser when you sign out or deactivate
+your account. Until then, on a shared computer, anyone using the same browser profile can read them.
 
 ### On this website
 

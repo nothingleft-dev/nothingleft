@@ -10,7 +10,7 @@ This page is about looking after the vocabulary itself.
 ## Seeing every tag
 
 **Organisation → Tags** lists every tag in alphabetical order and counts each across the whole
-organisation, split by kind: `rca — 3 issues · 12 articles`. Tags nobody uses any more are
+organisation, split by kind: `rca - 3 issues · 12 articles`. Tags nobody uses any more are
 listed too, marked *Unused*, so they can be tidied away. **Search tags** narrows the list by
 name.
 
@@ -20,7 +20,7 @@ tags, with counts over what they can read, wherever they pick one.
 ## Renaming
 
 Renaming a tag renames it everywhere, in every project, on issues and articles alike. Its
-address follows the new name — `Needs Review` becomes `needs-review`, and renamed to
+address follows the new name - `Needs Review` becomes `needs-review`, and renamed to
 `Awaiting QA` it becomes `awaiting-qa`. Saved views that search for it with `tag:` are
 updated to the new name, so they keep finding the same issues. A view that only says
 `#Needs-Review` is left as written, because that shorthand also matches statuses, priorities,
@@ -38,7 +38,7 @@ shows the tag as it will look. The tag changes colour everywhere.
 ## Merging
 
 Merging folds one or more tags into another. Every issue and article that had any of them now
-has the one you keep — once, even if it had several — and the others are deleted. Saved views
+has the one you keep - once, even if it had several - and the others are deleted. Saved views
 that searched for a merged tag search for the one you kept.
 
 Use it when the same idea has grown two names: `ui-bug`, `bug-ui` and `frontend-bug` become

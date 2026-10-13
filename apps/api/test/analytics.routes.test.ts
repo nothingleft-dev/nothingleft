@@ -50,3 +50,27 @@ describe('activation funnel', () => {
     expect(days[0]!.props).toEqual({ via: 'session', days_since_signup: 0 });
   });
 });
+
+describe('api_error', () => {
+  test('a failed request carries its error code and route pattern, never the URL', async () => {
+    captured.length = 0;
+    const missing = await call('GET', '/v1/issues/FN-9999');
+    expect(missing.statusCode).toBe(404);
+
+    const [error] = named('api_error');
+    expect(error!.props).toMatchObject({
+      route: '/v1/issues/:key',
+      method: 'GET',
+      status_code: 404,
+      error_code: 'issue.not_found',
+      via: 'session',
+    });
+    expect(JSON.stringify(error!.props)).not.toContain('FN-9999');
+  });
+
+  test('an unmatched path sends nothing', async () => {
+    captured.length = 0;
+    await call('GET', '/v1/no-such-route');
+    expect(named('api_error')).toHaveLength(0);
+  });
+});

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { pino } from 'pino';
-import { loggerOptions } from '@lib/logger';
+import { loggerOptions, logTargets } from '@lib/logger';
 
 const MARKER = 'alex.lee@acme.example';
 
@@ -62,4 +62,25 @@ test('05: every call shape that can carry a database error is stripped', () => {
 
   expect(lines).toHaveLength(10);
   for (const line of lines) expect(line).not.toContain(MARKER);
+});
+
+test('the posthog target ships warn and above, and only when asked for', () => {
+  const env = {
+    LOG_LEVEL: 'info',
+    LOG_FILE: 'logs/api.log',
+    NODE_ENV: 'production',
+    POSTHOG_KEY: 'phc_test',
+    POSTHOG_HOST: 'https://us.i.posthog.com',
+  } as const;
+
+  expect(logTargets({ ...env, LOG_TARGETS: ['json'] }).map(t => t.target)).toEqual(['pino/file']);
+  const [, posthog] = logTargets({ ...env, LOG_TARGETS: ['json', 'posthog'] });
+  expect(posthog!.level).toBe('warn');
+  expect(posthog!.target).toEndWith('packages/analytics/src/log-transport.ts');
+  expect(posthog!.options).toEqual({
+    host: 'https://us.i.posthog.com',
+    token: 'phc_test',
+    service: 'api',
+    environment: 'production',
+  });
 });

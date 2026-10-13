@@ -133,3 +133,12 @@ describe('TRUST_PROXY', () => {
     expect(fastifyTrustProxy('10.0.0.0/8')).toBe('10.0.0.0/8');
   });
 });
+
+describe('LOG_TARGETS posthog', () => {
+  const base = { ...source, REDIS_URL: 'redis://localhost:6379', LOG_TARGETS: 'json,posthog' };
+
+  test('needs the project key that ships the lines', () => {
+    expect(() => loadEnv(base)).toThrow('POSTHOG_KEY');
+    expect(loadEnv({ ...base, POSTHOG_KEY: 'phc_test' }).LOG_TARGETS).toEqual(['json', 'posthog']);
+  });
+});

@@ -25,6 +25,20 @@ application never depends on PostHog being reachable.
 Separating them matters: product analytics can be dropped while error
 tracking stays on, rather than losing both.
 
+### Logs
+
+```
+LOG_TARGETS=json,posthog           adds PostHog Logs to the API's log targets
+```
+
+With `posthog` in `LOG_TARGETS` (`docs/backend-guide.md#logging`), the API also ships every
+warn, error and fatal line to PostHog Logs over OpenTelemetry's HTTP format, with the same
+`POSTHOG_KEY`. Info and below stay on the host. Lines are already redacted before any target
+sees them (database errors, cookies, authorisation headers); this target also drops the request
+and response objects (client IP, host, full URL), email subjects and the host name, and keeps an
+error's type, message, stack and code only. Lines are sent in batches every five seconds; when
+PostHog is unreachable a batch is dropped and the host's own log still has it.
+
 ### Session replay
 
 **Session replay ships off.** It records customers' confidential issue text,
@@ -149,6 +163,13 @@ Hacker News, deservedly.
 The full catalogue, with every property, is `EventCatalogue` in
 `packages/types/src/events.ts`. What each area emits:
 
+### Requests and errors
+
+`api_request` on every response (route pattern, method, status, duration, `via`; sampled), and
+`api_error` on every failed request (status 400 and above): the route pattern, method, status,
+the catalogue error code (`issue.not_found`, `validation_failed`, `internal`) and `via`. A path
+that matches no route sends neither. Never the URL.
+
 ### Accounts and onboarding
 
 All server-side, where the fact is recorded:
@@ -251,7 +272,10 @@ are only counted, never sent.
 
 The MCP server marks every API call it makes with `X-Nothingleft-Client: mcp`, so
 `issue_created.via` is `session`, `pat` (a script) or `mcp` — the MCP-vs-UI ratio is `mcp`
-over `session`. **Never-called tools** are the tool names
+over `session`. The event carries the user and no organisation: one token reaches every
+organisation its holder belongs to, and one tool call can touch several or none. Organisations
+acting through MCP are counted from the events that carry `via: mcp` and the `organization`
+group (`issue_created`, `article_created`, `report_viewed` and the rest). **Never-called tools** are the tool names
 ([manual/mcp-tools.md](./manual/mcp-tools.md)) with no `mcp_tool_called` event in the
 period. Nothing about it is exposed through the API or MCP.
 
