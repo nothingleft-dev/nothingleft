@@ -54,6 +54,14 @@ export function projectsRepository(db: Queryable) {
       return db.query.projects.findFirst({ where: and(inOrg(ctx), eq(projects.key, key)) });
     },
 
+    async findByKeys(ctx: TenantContext, keys: readonly string[]): Promise<ProjectRow[]> {
+      if (keys.length === 0) return [];
+      return db
+        .select()
+        .from(projects)
+        .where(and(inOrg(ctx), inArray(projects.key, [...new Set(keys)])));
+    },
+
     async findById(ctx: TenantContext, id: number): Promise<ProjectRow | undefined> {
       return db.query.projects.findFirst({ where: and(inOrg(ctx), eq(projects.id, id)) });
     },
@@ -147,6 +155,20 @@ export function projectsRepository(db: Queryable) {
           eq(project_members.user_id, userId),
         ),
       });
+    },
+
+    async findMembers(ctx: TenantContext, projectIds: readonly number[], userId: number): Promise<ProjectMemberRow[]> {
+      if (projectIds.length === 0) return [];
+      return db
+        .select()
+        .from(project_members)
+        .where(
+          and(
+            eq(project_members.org_id, ctx.orgId),
+            inArray(project_members.project_id, [...new Set(projectIds)]),
+            eq(project_members.user_id, userId),
+          ),
+        );
     },
 
     /** Members whose organisation membership is live; a removed member holds no project seat. */

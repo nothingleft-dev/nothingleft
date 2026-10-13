@@ -131,3 +131,41 @@ describe('projectsRepository.lockById', () => {
     });
   });
 });
+
+describe('projectsRepository batch reads, tenant isolation', () => {
+  test('findByKeys returns only the organisation’s projects among the keys asked for', async () => {
+    await inRolledBackTx(async tx => {
+      const repo = projectsRepository(tx);
+      const { ctxA, ctxB, orgA, orgB, alice, bob } = await seedTwoOrgs(tx);
+      const [pp, qq] = await tx
+        .insert(schema.projects)
+        .values([newProject(orgA, alice, 'PP'), newProject(orgA, alice, 'QQ'), newProject(orgA, alice, 'RR')])
+        .returning();
+      await tx.insert(schema.projects).values(newProject(orgB, bob, 'ZZ'));
+
+      const found = await repo.findByKeys(ctxA, ['PP', 'QQ', 'ZZ', 'NOPE']);
+      expect(found.map(p => p.id).sort()).toEqual([pp!.id, qq!.id].sort());
+      expect(await repo.findByKeys(ctxB, ['PP', 'QQ'])).toEqual([]);
+      expect(await repo.findByKeys(ctxA, [])).toEqual([]);
+    });
+  });
+
+  test('findMembers returns the user’s memberships in the organisation’s projects only', async () => {
+    await inRolledBackTx(async tx => {
+      const repo = projectsRepository(tx);
+      const { ctxA, ctxB, orgA, orgB, alice, bob } = await seedTwoOrgs(tx);
+      const [pa, pa2, pb] = await tx
+        .insert(schema.projects)
+        .values([newProject(orgA, alice, 'PA'), newProject(orgA, alice, 'PB'), newProject(orgB, bob, 'PB')])
+        .returning();
+      await repo.addMember(ctxA, { project_id: pa!.id, user_id: alice, role: 'observer', created_by: alice });
+      await repo.addMember(ctxB, { project_id: pb!.id, user_id: bob, role: 'contributor', created_by: bob });
+
+      const mine = await repo.findMembers(ctxA, [pa!.id, pa2!.id, pb!.id], alice);
+      expect(mine.map(m => [m.project_id, m.role])).toEqual([[pa!.id, 'observer']]);
+      expect(await repo.findMembers(ctxA, [pb!.id], bob)).toEqual([]);
+      expect((await repo.findMembers(ctxB, [pb!.id], bob)).map(m => m.project_id)).toEqual([pb!.id]);
+      expect(await repo.findMembers(ctxA, [], alice)).toEqual([]);
+    });
+  });
+});
