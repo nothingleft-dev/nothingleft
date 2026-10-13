@@ -58,6 +58,7 @@ import {
   RATE_LIMIT_MAX_PER_PAT,
   RATE_LIMIT_MAX_PER_SESSION,
   RATE_LIMIT_WINDOW_MS,
+  REDIS_COMMAND_TIMEOUT_MS,
   REQUEST_BODY_LIMIT_BYTES,
 } from '@config/constants';
 import { createLogger } from '@lib/logger';
@@ -277,7 +278,12 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     credentials: true,
     exposedHeaders: [...CORS_EXPOSED_HEADERS],
   });
-  await app.register(redisPlugin, { url: env.REDIS_URL, connectTimeout: 5_000, maxRetriesPerRequest: 1 });
+  await app.register(redisPlugin, {
+    url: env.REDIS_URL,
+    connectTimeout: 5_000,
+    maxRetriesPerRequest: 1,
+    commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
+  });
   await app.register(envelope);
   await app.register(analyticsPlugin, { analytics });
   await app.register(errorHandler, { analytics });
@@ -597,6 +603,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     storage,
     queue: () => queue,
     analytics,
+    onIssuesWritten: orgId => reportResults.bump(orgId),
   });
   const exports = exportsService({
     access,

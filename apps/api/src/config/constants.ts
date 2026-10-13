@@ -9,6 +9,8 @@ export const REQUEST_BODY_LIMIT_BYTES = 1 * 1024 * 1024;
 export const HEALTH_CHECK_TIMEOUT_MS = 3_000;
 export const HEALTH_DEEP_MAX_PER_MINUTE = 10;
 export const HEALTH_DEEP_MEMO_MS = 5_000;
+// Every Redis caller degrades on failure, so a stalled server fails fast; a blocking command would need its own client.
+export const REDIS_COMMAND_TIMEOUT_MS = 2_000;
 
 // Browsers hide every non-safelisted response header unless it is named here.
 export const CORS_EXPOSED_HEADERS = [
@@ -74,6 +76,9 @@ export const SUGGEST_VALUES_MAX = 10;
 
 // Bounds how stale "now" can be in the age report; writes invalidate sooner through the data version.
 export const REPORT_CACHE_TTL_SECONDS = 5 * 60;
+// A lost version key reads as '0', which hashes apart from every live result, so any expiry
+// well past REPORT_CACHE_TTL_SECONDS only reclaims idle organisations' keys.
+export const REPORT_VERSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export const TOTP_ISSUER = 'Nothing Left';
 // One 30-second step either side, for a phone clock that drifts.

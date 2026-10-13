@@ -52,6 +52,8 @@ export interface ImportsDeps {
   /** Read lazily: pg-boss replaces the recording queue once jobs start. */
   queue: () => JobQueue;
   analytics: Analytics;
+  /** Imported issues change what reports read; the report cache hears of it here. */
+  onIssuesWritten?: (orgId: number) => Promise<void>;
   now?: () => Date;
 }
 
@@ -524,115 +526,124 @@ export function importsService(deps: ImportsDeps) {
      * the job's progress, so a run cut short resumes without creating anything twice.
      */
     async run(job: ImportCsvJob, at = now()): Promise<number> {
-      const ctx = tenantContext(job.org_id);
-      let row = await importJobs.findById(ctx, job.job_id);
-      if (!row || (row.status !== 'queued' && row.status !== 'running')) return 0;
-      row = (await importJobs.transition(ctx, row.id, ['queued', 'running'], {
-        status: 'running',
-        started_at: row.started_at ?? at,
-      }))!;
-      const started = Date.now();
-      const mapping = row.column_mapping as ImportMapping;
-      const principal = actingAs(row);
-      const fail = async (code: JobError) => {
-        await importJobs.transition(ctx, row!.id, ['running'], { status: 'failed', error: code, completed_at: now() });
-        await release(ctx, row!);
-        return 0;
-      };
-
-      let project: ProjectAccess;
-      let file: Parsed;
-      let mapped: Mapped;
-      let byEmail: Map<string, string>;
       try {
-        const org = await access.orgById(principal, row.org_id);
-        project = await access.projectById(principal, org, row.project_id);
-        access.require(principal, 'issue.import', project.scope);
-        ({ file, mapped, byEmail } = await prepared(principal, project, row, mapping));
-      } catch (err) {
-        if (err instanceof AppError && err.status < 500) {
-          return fail(err.code === 'import.upload_missing' ? 'import.upload_missing' : 'forbidden');
+        const ctx = tenantContext(job.org_id);
+        let row = await importJobs.findById(ctx, job.job_id);
+        if (!row || (row.status !== 'queued' && row.status !== 'running')) return 0;
+        row = (await importJobs.transition(ctx, row.id, ['queued', 'running'], {
+          status: 'running',
+          started_at: row.started_at ?? at,
+        }))!;
+        const started = Date.now();
+        const mapping = row.column_mapping as ImportMapping;
+        const principal = actingAs(row);
+        const fail = async (code: JobError) => {
+          await importJobs.transition(ctx, row!.id, ['running'], {
+            status: 'failed',
+            error: code,
+            completed_at: now(),
+          });
+          await release(ctx, row!);
+          return 0;
+        };
+
+        let project: ProjectAccess;
+        let file: Parsed;
+        let mapped: Mapped;
+        let byEmail: Map<string, string>;
+        try {
+          const org = await access.orgById(principal, row.org_id);
+          project = await access.projectById(principal, org, row.project_id);
+          access.require(principal, 'issue.import', project.scope);
+          ({ file, mapped, byEmail } = await prepared(principal, project, row, mapping));
+        } catch (err) {
+          if (err instanceof AppError && err.status < 500) {
+            return fail(err.code === 'import.upload_missing' ? 'import.upload_missing' : 'forbidden');
+          }
+          throw err;
         }
-        throw err;
-      }
 
-      const memo = createMemo();
-      const errors = [...(row.errors as ImportRowError[])];
-      let failed = row.failed_rows;
-      let created = 0;
-      let index = row.processed_rows;
-      try {
-        for (; index < file.rows.length; index++) {
-          if (Date.now() - started > IMPORT_RUN_MS) {
-            await deps.queue().send('import.csv', job, { startAfter: now(), singletonKey: `import:${row.id}` });
-            return created;
-          }
-          const outcome = await checkRow(
-            principal,
-            project,
-            mapping,
-            mapped,
-            byEmail,
-            memo,
-            file.rows[index]!,
-            index + 2,
-          );
-          if (outcome.error || !outcome.plan) {
-            failed++;
-            if (errors.length < CSV_IMPORT_ERRORS_KEPT) errors.push(outcome.error!);
-            continue;
-          }
-          const progress = { processed_rows: index + 1, failed_rows: failed, errors: [...errors] };
-          try {
-            await issues.insertPlanned(principal, project, outcome.plan, {
-              watch: false,
-              also: async repos => {
-                await repos.importJobs.update(ctx, row!.id, {
-                  ...progress,
-                  created_issues: row!.created_issues + created + 1,
-                });
-              },
-            });
-            created++;
-          } catch (err) {
-            if (!(err instanceof AppError) || err.status >= 500) throw err;
-            failed++;
-            if (errors.length < CSV_IMPORT_ERRORS_KEPT) {
-              errors.push({
-                row: index + 2,
-                ...columnOf(mapping, err.field),
-                code: err.code,
-                message: err.message,
-                ...(err.validValues ? { valid_values: err.validValues } : {}),
+        const memo = createMemo();
+        const errors = [...(row.errors as ImportRowError[])];
+        let failed = row.failed_rows;
+        let created = 0;
+        let index = row.processed_rows;
+        try {
+          for (; index < file.rows.length; index++) {
+            if (Date.now() - started > IMPORT_RUN_MS) {
+              await deps.queue().send('import.csv', job, { startAfter: now(), singletonKey: `import:${row.id}` });
+              return created;
+            }
+            const outcome = await checkRow(
+              principal,
+              project,
+              mapping,
+              mapped,
+              byEmail,
+              memo,
+              file.rows[index]!,
+              index + 2,
+            );
+            if (outcome.error || !outcome.plan) {
+              failed++;
+              if (errors.length < CSV_IMPORT_ERRORS_KEPT) errors.push(outcome.error!);
+              continue;
+            }
+            const progress = { processed_rows: index + 1, failed_rows: failed, errors: [...errors] };
+            try {
+              await issues.insertPlanned(principal, project, outcome.plan, {
+                watch: false,
+                also: async repos => {
+                  await repos.importJobs.update(ctx, row!.id, {
+                    ...progress,
+                    created_issues: row!.created_issues + created + 1,
+                  });
+                },
               });
+              created++;
+              await deps.onIssuesWritten?.(row.org_id);
+            } catch (err) {
+              if (!(err instanceof AppError) || err.status >= 500) throw err;
+              failed++;
+              if (errors.length < CSV_IMPORT_ERRORS_KEPT) {
+                errors.push({
+                  row: index + 2,
+                  ...columnOf(mapping, err.field),
+                  code: err.code,
+                  message: err.message,
+                  ...(err.validValues ? { valid_values: err.validValues } : {}),
+                });
+              }
             }
           }
+        } catch (err) {
+          await importJobs.update(ctx, row.id, { failed_rows: failed, errors });
+          await fail('import.failed');
+          throw err;
         }
-      } catch (err) {
-        await importJobs.update(ctx, row.id, { failed_rows: failed, errors });
-        await fail('import.failed');
-        throw err;
-      }
 
-      const done = (await importJobs.transition(ctx, row.id, ['running'], {
-        status: 'completed',
-        processed_rows: file.rows.length,
-        failed_rows: failed,
-        errors,
-        completed_at: now(),
-      }))!;
-      await release(ctx, done);
-      analytics.capture(
-        'csv_import_finished',
-        {
-          rows: file.rows.length,
-          created: done.created_issues,
-          failed,
-          duration_ms: done.completed_at!.getTime() - done.started_at!.getTime(),
-        },
-        { userId: row.created_by, orgId: row.org_id },
-      );
-      return created;
+        const done = (await importJobs.transition(ctx, row.id, ['running'], {
+          status: 'completed',
+          processed_rows: file.rows.length,
+          failed_rows: failed,
+          errors,
+          completed_at: now(),
+        }))!;
+        await release(ctx, done);
+        analytics.capture(
+          'csv_import_finished',
+          {
+            rows: file.rows.length,
+            created: done.created_issues,
+            failed,
+            duration_ms: done.completed_at!.getTime() - done.started_at!.getTime(),
+          },
+          { userId: row.created_by, orgId: row.org_id },
+        );
+        return created;
+      } finally {
+        await deps.onIssuesWritten?.(job.org_id);
+      }
     },
 
     /** Hourly: files of ended jobs not yet deleted, and uploads nobody ran within a day. */

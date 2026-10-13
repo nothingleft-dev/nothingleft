@@ -19,8 +19,9 @@ export const recordOrgTouched = (orgId: number): void => {
 };
 
 /**
- * Every successful write bumps the report data version of the organisations it acted in, so a
- * cached report is never served over data it did not see. One hook covers every route, MCP included.
+ * Every write bumps the report data version of the organisations it acted in, so a cached report is
+ * never served over data it did not see. One hook covers every route, MCP included. A refused write
+ * bumps too, since it may have committed part of its work first; the bump lands before the response.
  */
 const reportVersion: FastifyPluginAsync<{ bump: (orgId: number) => Promise<void> }> = async (app, { bump }) => {
   app.decorateRequest('touchedOrgs', null);
@@ -29,10 +30,11 @@ const reportVersion: FastifyPluginAsync<{ bump: (orgId: number) => Promise<void>
     request.touchedOrgs = orgs;
     touchedOrgs.run(orgs, done);
   });
-  app.addHook('onResponse', async (request, reply) => {
-    if (!MUTATING.has(request.method) || reply.statusCode >= 400 || reply.hasHeader(IDEMPOTENCY_REPLAYED_HEADER))
-      return;
-    for (const orgId of request.touchedOrgs ?? []) await bump(orgId);
+  app.addHook('onSend', async (request, reply, payload) => {
+    if (MUTATING.has(request.method) && !reply.hasHeader(IDEMPOTENCY_REPLAYED_HEADER)) {
+      for (const orgId of request.touchedOrgs ?? []) await bump(orgId);
+    }
+    return payload;
   });
 };
 

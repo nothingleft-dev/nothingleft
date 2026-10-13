@@ -242,15 +242,23 @@ One route per report, each with its CSV twin, all `GET` and all *View reports* /
   caller's id, **timezone and today** (they change `me`, date words and due buckets), the
   sorted readable-project ids, and the organisation's **data version**.
 - **The data version is a Redis counter per organisation**, `report:v:{org}`. The access layer
-  records every organisation a request resolves (AsyncLocalStorage); an `onResponse` hook bumps
-  each one after any successful `POST` / `PUT` / `PATCH` / `DELETE`
-  (`@plugins/report-version`). One hook covers every route present and future, and MCP writes,
-  which arrive as REST calls. It is coarse — a star bumps it too, and `#Star` does affect
-  queries — but it cannot be forgotten. The nightly `sprint.snapshot` job bumps each
-  organisation it writes to.
+  records every organisation a request resolves (AsyncLocalStorage); an `onSend` hook bumps
+  each one on any `POST` / `PUT` / `PATCH` / `DELETE` except an idempotent replay
+  (`@plugins/report-version`), before the response is written, so the caller's next read sees
+  its own write. A refused write bumps too: it may have committed part of its work (a bulk
+  update that fails part-way), and a needless bump costs one `INCR`. One hook covers every
+  route present and future, and MCP writes, which arrive as REST calls. It is coarse — a star
+  bumps it too, and `#Star` does affect queries — but it cannot be forgotten. Writes outside a
+  request bump it themselves: the nightly `sprint.snapshot` job for each organisation it writes
+  to, and `import.csv` after every issue it creates and again whenever a run ends.
+- **The counter expires seven days after its last bump** (`INCR` and `EXPIRE` in one `MULTI`),
+  so idle organisations do not keep a key forever. A missing counter reads as `0`, which no
+  live result is keyed by: any counter TTL at least twice the result TTL is safe.
 - **TTL five minutes**, which bounds how stale "now" can be in the age report.
 - **Redis down means no cache**: a failed read, write or version read computes and serves the
-  report, never an error. The CSV reads the same cached result as the JSON.
+  report, never an error. A failed bump is swallowed too, so a read that reaches Redis after it
+  can serve a result computed before the write, for at most one result TTL. The CSV reads the
+  same cached result as the JSON.
 
 ### CSV
 
