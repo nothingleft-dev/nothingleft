@@ -225,10 +225,10 @@ for (const file of htmlFiles(distDir)) {
       .filter((c): c is Node => typeof c !== 'string' && c.tag === 'td')
       .map(c => clean(textOf(c)));
     if (!day || cells.length < 5) continue;
-    const show = (value: number | null) => (value === null ? '—' : String(value));
+    const show = (value: number | null) => (value === null ? '-' : String(value));
     const added =
       day.scope === null
-        ? '—'
+        ? '-'
         : String(day.scope - summary.committed).replace(/^(\d+)$/, n => (n === '0' ? '0' : `+${n}`));
     const expected = [show(day.remaining), String(day.ideal), show(day.scope), added, show(day.completed)];
     if (cells.join('|') !== expected.join('|'))
