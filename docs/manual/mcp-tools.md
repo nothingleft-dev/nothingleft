@@ -2,7 +2,7 @@
 
 <!-- Generated from packages/mcp by `bun run --cwd packages/mcp docs:tools`. Do not edit by hand. -->
 
-Every tool, resource and prompt the Nothing Left MCP server offers. [mcp.md](./mcp.md) explains how to connect an agent. Tools name things the way people do — `PP-12`, `@alex`, `"In Progress"` — and every tool takes an optional `org` (the organisation's slug) for when you belong to more than one.
+Every tool, resource and prompt the Nothing Left MCP server offers. [mcp.md](./mcp.md) explains how to connect an agent. Tools name things the way people do - `PP-12`, `@alex`, `"In Progress"` - and every tool takes an optional `org` (the organisation's slug) for when you belong to more than one.
 
 ## Discovery
 
@@ -71,7 +71,7 @@ The map of one project, in one call: statuses with their category (and which res
 
 ### `search`
 
-Issues and knowledge base articles in two groups for one query — the app's search box. One tag reaches both: `tag: payment-outage` finds the outage issues and the RCA written afterwards. Each group reads the query in its own language; one that cannot (e.g. `priority:` for articles) says why and shows nothing.
+Issues and knowledge base articles in two groups for one query - the app's search box. One tag reaches both: `tag: payment-outage` finds the outage issues and the RCA written afterwards. Each group reads the query in its own language; one that cannot (e.g. `priority:` for articles) says why and shows nothing.
 
 *Reads only.*
 
@@ -84,7 +84,7 @@ Issues and knowledge base articles in two groups for one query — the app's sea
 
 ### `search_issues`
 
-Finds issues with the query language the search bar uses, e.g. `project: PP #Unresolved assignee: me priority: Critical, Major sort by: updated desc`. Attributes include project, status, priority, type, assignee, created by, updated by, tag, sprint (`sprint: {September 2026}`, `{No sprint}`), story points (`3 .. 8`), created, updated, resolved date, due date, estimation, spent time, has, links such as `subtask of: PP-12`, any custom field by its slug (`severity: High`, `launch: {This month}`) — whose values then show as extra columns — and free text. `#Unresolved`, `#me` are shortcuts. An unknown attribute or value is an error listing the valid ones; call suggest_query to explore. Returns a table.
+Finds issues with the query language the search bar uses, e.g. `project: PP #Unresolved assignee: me priority: Critical, Major sort by: updated desc`. Attributes include project, status, priority, type, assignee, created by, updated by, tag, sprint (`sprint: {September 2026}`, `{No sprint}`), story points (`3 .. 8`), created, updated, resolved date, due date, estimation, spent time, has, links such as `subtask of: PP-12`, any custom field by its slug (`severity: High`, `launch: {This month}`) - whose values then show as extra columns - and free text. `#Unresolved`, `#me` are shortcuts. An unknown attribute or value is an error listing the valid ones; call suggest_query to explore. Returns a table.
 
 *Reads only.*
 
@@ -169,7 +169,7 @@ Creates an issue with everything in one call: title, markdown description, type,
 
 ### `update_issue`
 
-Changes one issue: only the arguments you pass change, and null clears a field. Covers fields, custom fields, story points, sprint, parent, tags (add_tags / remove_tags, new names are created), watchers, and your own star, watch and vote — so a triage is one call. Returns the issue as it now is.
+Changes one issue: only the arguments you pass change, and null clears a field. Covers fields, custom fields, story points, sprint, parent, tags (add_tags / remove_tags, new names are created), watchers, and your own star, watch and vote - so a triage is one call. Returns the issue as it now is.
 
 *Changes data.*
 
@@ -264,7 +264,7 @@ A project's custom fields: name, slug (the search attribute), type, whether requ
 
 ### `create_custom_field`
 
-Adds a custom field to a project: name, type, options for a select, the issue types it applies to (all by default), required, a default, an empty label, and min / max / decimals for numbers. The slug — the search attribute — comes from the name unless given, and never changes. At most 50 live fields per project. Needs a Project Admin and admin:project.
+Adds a custom field to a project: name, type, options for a select, the issue types it applies to (all by default), required, a default, an empty label, and min / max / decimals for numbers. The slug - the search attribute - comes from the name unless given, and never changes. At most 50 live fields per project. Needs a Project Admin and admin:project.
 
 *Changes data.*
 
@@ -287,7 +287,7 @@ Adds a custom field to a project: name, type, options for a select, the issue ty
 
 ### `update_custom_field`
 
-Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options — add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. Asks you to confirm before acting.
+Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. Asks you to confirm before acting.
 
 *Changes data; asks you to confirm in your MCP client first.*
 
@@ -366,7 +366,7 @@ Removes one link between two issues. Returns the issue's remaining links.
 
 ### `list_comments`
 
-An issue's comments — or a knowledge base article's, with project and article — oldest first, each with the number update_comment and delete_comment take.
+An issue's comments - or a knowledge base article's, with project and article - oldest first, each with the number update_comment and delete_comment take.
 
 *Reads only.*
 
@@ -442,7 +442,7 @@ The organisation's tags, shared by every project and by issues and knowledge bas
 
 ### `rename_tag`
 
-Renames a tag everywhere it is used — every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.
+Renames a tag everywhere it is used - every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.
 
 *Changes data.*
 
@@ -556,7 +556,7 @@ Deletes one work item; the issue's spent time drops by it. Contributors may dele
 
 ### `list_attachments`
 
-Files on an issue, its comments and its work items — or on a knowledge base article and its comments (project and article) — or only one comment's or work item's. `Inline` means the text shows it as an image.
+Files on an issue, its comments and its work items - or on a knowledge base article and its comments (project and article) - or only one comment's or work item's. `Inline` means the text shows it as an image.
 
 *Reads only.*
 
@@ -585,7 +585,7 @@ A download link for one file, valid for five minutes, after the same permission 
 
 ### `upload_attachment`
 
-Attaches a file to an issue, a comment or a work item — or to a knowledge base article or a comment on it (project and article). Text you have in hand (a log excerpt, a markdown note) goes in `content` and is attached at once. A file on disk never passes through the conversation: give its `size_bytes` and `sha256` (base64: `openssl dgst -sha256 -binary FILE | base64`), run the curl command the answer gives, then call complete_upload.
+Attaches a file to an issue, a comment or a work item - or to a knowledge base article or a comment on it (project and article). Text you have in hand (a log excerpt, a markdown note) goes in `content` and is attached at once. A file on disk never passes through the conversation: give its `size_bytes` and `sha256` (base64: `openssl dgst -sha256 -binary FILE | base64`), run the curl command the answer gives, then call complete_upload.
 
 *Changes data.*
 
@@ -630,7 +630,7 @@ Deletes a file from an issue or an article for good; an image the text shows sto
 
 ### `list_files`
 
-The organisation's files, largest first, with what each is attached to and where it is stored — the storage screen's data. Delete one with delete_attachment. Needs an Org Admin and a token with admin:org.
+The organisation's files, largest first, with what each is attached to and where it is stored - the storage screen's data. Delete one with delete_attachment. Needs an Org Admin and a token with admin:org.
 
 *Reads only.*
 
@@ -647,7 +647,7 @@ The organisation's files, largest first, with what each is attached to and where
 
 ### `list_views`
 
-The saved views you can see — your private ones, your projects' and the organisation's — with their queries.
+The saved views you can see - your private ones, your projects' and the organisation's - with their queries.
 
 *Reads only.*
 
@@ -714,7 +714,7 @@ Deletes a saved view; a shared one disappears for everyone it was shared with. A
 
 ### `list_sprints`
 
-A project's sprints — planned, active and completed — with dates, days left and progress. Without `project`, the sprints of every project you can read (default: the active ones).
+A project's sprints - planned, active and completed - with dates, days left and progress. Without `project`, the sprints of every project you can read (default: the active ones).
 
 *Reads only.*
 
@@ -784,7 +784,7 @@ Starts a planned sprint: one active sprint per project. It starts today unless s
 
 ### `finish_sprint`
 
-Finishes the active sprint. Every unresolved issue moves to `move_unfinished_to` — "backlog" or a planned sprint — and the answer lists them. Resolved issues stay with the finished sprint. Needs Project Admin and admin:project.
+Finishes the active sprint. Every unresolved issue moves to `move_unfinished_to` - "backlog" or a planned sprint - and the answer lists them. Resolved issues stay with the finished sprint. Needs Project Admin and admin:project.
 
 *Changes data.*
 
@@ -809,7 +809,7 @@ Deletes a planned sprint; its issues go back to the backlog. A sprint that has s
 
 ### `get_backlog`
 
-The planning view: the project's planned and active sprints with their progress, then one list in drag order — the backlog (issues in no sprint) by default, or a sprint's issues with `sprint`. `query` filters the list; the backlog defaults to #Unresolved.
+The planning view: the project's planned and active sprints with their progress, then one list in drag order - the backlog (issues in no sprint) by default, or a sprint's issues with `sprint`. `query` filters the list; the backlog defaults to #Unresolved.
 
 *Reads only.*
 
@@ -1026,7 +1026,7 @@ Brings back a deleted article within 14 days, with any sub-articles deleted alon
 
 ### `run_report`
 
-Runs one of the nine reports and returns its table with the series the chart is drawn from — the same numbers as the web chart and its CSV. Every issue report is scoped by `query` (the search language) and/or a saved `view`, within the projects you can read. Issues per field and Matrix group by any groupable field, custom fields by `custom:<slug>`. Burndown reads the sprint’s daily snapshots, with scope added as its own series. Time sums logged time by work type, user, issue, project or a work item attribute, against the estimate. Timesheet is people × days; with `user` it lists that person’s work items. An empty report says which filter produced nothing.
+Runs one of the nine reports and returns its table with the series the chart is drawn from - the same numbers as the web chart and its CSV. Every issue report is scoped by `query` (the search language) and/or a saved `view`, within the projects you can read. Issues per field and Matrix group by any groupable field, custom fields by `custom:<slug>`. Burndown reads the sprint’s daily snapshots, with scope added as its own series. Time sums logged time by work type, user, issue, project or a work item attribute, against the estimate. Timesheet is people × days; with `user` it lists that person’s work items. An empty report says which filter produced nothing.
 
 *Reads only.*
 
@@ -1148,7 +1148,7 @@ Changes a project: name, key (only before its first issue), description, lead, t
 
 ### `update_project_schema`
 
-Adds, changes or deletes one status, priority, type or work type in a project — or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change, so it asks you to confirm before acting, and needs a Project Admin and admin:project.
+Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change, so it asks you to confirm before acting, and needs a Project Admin and admin:project.
 
 *Changes data; asks you to confirm in your MCP client first.*
 
@@ -1244,7 +1244,7 @@ Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000
 
 ### `get_import_status`
 
-An import's progress, how many issues it created and each row that failed with the reason — or, without `import`, the project's recent imports.
+An import's progress, how many issues it created and each row that failed with the reason - or, without `import`, the project's recent imports.
 
 *Reads only.*
 
@@ -1266,7 +1266,7 @@ Starts a full export of the organisation: one .zip with every project, issue, co
 
 ### `get_export_status`
 
-An export of the organisation: its state, size and, once ready, a download link valid for five minutes — or, without `export`, the recent exports.
+An export of the organisation: its state, size and, once ready, a download link valid for five minutes - or, without `export`, the recent exports.
 
 *Reads only.*
 
@@ -1279,7 +1279,7 @@ An export of the organisation: its state, size and, once ready, a download link 
 
 ### `list_members`
 
-Members of an organisation with their org role, or — with `project` — a project's members with their project role.
+Members of an organisation with their org role, or - with `project` - a project's members with their project role.
 
 *Reads only.*
 
@@ -1334,7 +1334,7 @@ Creates a share link that lets anyone who opens it join the organisation, or a p
 
 ### `manage_roles`
 
-Changes one member's organisation role, or their role in one project — adding them to the project or removing them from it. Asks you to confirm before acting.
+Changes one member's organisation role, or their role in one project - adding them to the project or removing them from it. Asks you to confirm before acting.
 
 *Changes data; asks you to confirm in your MCP client first.*
 
@@ -1361,7 +1361,7 @@ Removes someone from the organisation: their open issues go to `reassign_to` or 
 
 ### `list_invitations`
 
-The organisation's invitations — or one project's — with status, the role each grants, and uses for share links.
+The organisation's invitations - or one project's - with status, the role each grants, and uses for share links.
 
 *Reads only.*
 
@@ -1443,7 +1443,7 @@ Searches for issues like one you are about to file, before you file it.
 
 ### `standup-summary`
 
-What a person (default you) or a project changed since a date: done, in progress, blocked, and time logged — and, for you, what is waiting on you.
+What a person (default you) or a project changed since a date: done, in progress, blocked, and time logged - and, for you, what is waiting on you.
 
 | Argument | Type | Required | Description |
 |---|---|---|---|

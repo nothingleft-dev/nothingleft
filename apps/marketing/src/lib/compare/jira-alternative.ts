@@ -299,7 +299,7 @@ const searchRows = issuesInSprint(SPRINT_NAME, SEARCH_AT)
       title: item.title,
       priority: item.priority,
       assignees: assigneesOf(item.key, SEARCH_AT).map(person => person.name),
-      spent: spent > 0 ? formatDuration(spent) : '—',
+      spent: spent > 0 ? formatDuration(spent) : '-',
       status: statusOf(item.key, SEARCH_AT),
     };
   });

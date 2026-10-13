@@ -27,7 +27,7 @@ page. It is uploaded and read straight away; a file that is too large, not UTF-8
 
 Each column of the file is a line on the screen, with its first few values beside it and an
 **Imports as** picker. Pick the field the column fills; a column left on **Don't import** is
-ignored. Columns named like a field are matched for you — *Summary* to **Title**, *State* to
+ignored. Columns named like a field are matched for you - *Summary* to **Title**, *State* to
 **Status**, *Labels* to **Tags**, a column named after a custom field to that field. A field
 takes one column, so choosing it for a second column moves it there. **Title** is required.
 
@@ -55,10 +55,10 @@ nothing. It shows the rows in the file, how many would become issues and how man
 and for each row that would fail, the row number as your spreadsheet shows it (the header is
 row 1), the column, the reason, and the values that would have worked:
 
-> Row 7 · Status · Unknown status "Doing" for project ACME. — Open, In Progress, Fixed…
+> Row 7 · Status · Unknown status "Doing" for project ACME. - Open, In Progress, Fixed…
 
-Values the project lacks are also summed up under **Values the project does not have** —
-*Status "Doing" · 42 rows* — with a link to the project's statuses, priorities or types, so one
+Values the project lacks are also summed up under **Values the project does not have** -
+*Status "Doing" · 42 rows* - with a link to the project's statuses, priorities or types, so one
 fix to the project, or one find-and-replace in the file, clears them all. Run it as often as you
 like; changing a column's field sets the dry run aside until you run it again.
 
@@ -72,7 +72,7 @@ bring in the skipped rows, fix them in the file and import just those rows.
 
 **Recent imports**, under the import, lists the latest imports into the project by anyone:
 the file, its state, the rows, how many issues were created and how many rows failed, who
-imported it and when. Choose one to open it in place — how far it has got while it runs, the
+imported it and when. Choose one to open it in place - how far it has got while it runs, the
 failed rows once it is done, or why it stopped.
 
 The uploaded file is deleted when the import finishes. One that is uploaded but never
@@ -86,12 +86,12 @@ An Org Admin or the Owner can export everything in the organisation as one `.zip
 - every project, with its statuses, priorities, types, custom fields, sprints and boards
 - every issue, with its history, comments, time entries, links and tags
 - every knowledge base article
-- every attached file, wherever it is stored — including your own bucket
+- every attached file, wherever it is stored - including your own bucket
 - the members, the shared saved views and the organisation's audit log
 
 Issues come both as they appear in the API (`issues.json`, with keys and names) and, with
 everything else, as the tables they are stored in (`tables/`). `manifest.json` counts what is
-in the file, and names any attached file that could not be included — one deleted from
+in the file, and names any attached file that could not be included - one deleted from
 storage, or in your own bucket while it was not answering.
 
 Not in the export: anything in the trash, private saved views, notifications, personal
@@ -110,7 +110,7 @@ means three attached files could not be included; `manifest.json` names them.
 
 ## Asking an agent
 
-*"Import backlog.csv into ACME"* — the agent uses `start_csv_import`, shows you the suggested
+*"Import backlog.csv into ACME"* - the agent uses `start_csv_import`, shows you the suggested
 mapping and the dry run, and imports only when you say so; `get_import_status` follows it.
 *"Export our organisation"* is `request_org_export`; `get_export_status` gives a download link
 once it is ready. Importing needs a token with **admin:project**, exporting **admin:org**. See

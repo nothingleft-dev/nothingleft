@@ -50,8 +50,8 @@ const scopeLine = line(burndown.days.map(day => day.scope));
 const ticks = [0, 10, 20, 30].filter(tick => tick <= burndown.max);
 const labelled = new Set([0, burndown.days.findIndex(day => day.live), last]);
 const { summary } = burndown;
-const addedText = (value: number | null) => (value === null ? '—' : value === 0 ? '0' : `+${value}`);
-const show = (value: number | null) => (value === null ? '—' : String(value));
+const addedText = (value: number | null) => (value === null ? '-' : value === 0 ? '0' : `+${value}`);
+const show = (value: number | null) => (value === null ? '-' : String(value));
 ---
 
 <section id="ja-walkthrough" class="border-t border-line bg-app" aria-labelledby="ja-walkthrough-title">

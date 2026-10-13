@@ -24,7 +24,7 @@ The rail on the left names the four steps that follow; **Back** returns to an ea
 
 Your name comes from the provider or your sign-up form. Your time zone is detected from the
 browser and shown for you to confirm; dates and times are displayed in it. A photo is
-optional — your Gravatar or your initials stand in until you upload one.
+optional - your Gravatar or your initials stand in until you upload one.
 
 ## 3. Create your organisation
 
@@ -37,8 +37,8 @@ organisation's address, the `acme` in `X-Organization: acme` when you call the A
 
 This step cannot be skipped: an organisation with no project has nowhere to put work.
 
-Give the project a **Project name**. The **Project key** is derived from its initials —
-`Partner Portal` becomes `PP` — and every issue key starts with it: `PP-1`, `PP-2`. A key is
+Give the project a **Project name**. The **Project key** is derived from its initials -
+`Partner Portal` becomes `PP` - and every issue key starts with it: `PP-1`, `PP-2`. A key is
 2–10 letters or digits. You can change it until the project's first issue exists; after that
 it is fixed, because every key already handed out would stop working. If the key is taken,
 the form suggests a free one.

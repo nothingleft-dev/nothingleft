@@ -130,9 +130,9 @@ function wireCalculator(root: HTMLElement): void {
       ? 'That is not an amount we can read. Use digits only, such as 1250, 1,250.50 or 1.250,50.'
       : 'Digits only, such as 1250, 1,250.50 or 1.250,50.';
     if (parsed.kind !== 'amount') {
-      current.textContent = '—';
+      current.textContent = '-';
       currentBasis.textContent = '';
-      avoided.textContent = '—';
+      avoided.textContent = '-';
       message.textContent = invalid
         ? 'Fix the amount to see the comparison.'
         : 'Enter what you pay today to see the comparison.';

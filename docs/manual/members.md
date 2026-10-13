@@ -65,5 +65,5 @@ DELETE /v1/organizations/acme/members/riley.quinn?reassign_to=casey.kim
 ```
 
 Leave out `reassign_to` to leave the open issues unassigned, and
-`transfer_views_to` to delete the saved views — so the request above hands the
+`transfer_views_to` to delete the saved views - so the request above hands the
 open issues to Casey Kim and deletes the views.

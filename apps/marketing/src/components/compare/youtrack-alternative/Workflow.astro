@@ -88,7 +88,7 @@ const priorityClass = (priority: string) => `l-${priority.toLowerCase()}`;
                           ) : (
                             <span class="who none">Unassigned</span>
                           )}
-                          <span class="spent">{row.spent > 0 ? formatDuration(row.spent) : '—'}</span>
+                          <span class="spent">{row.spent > 0 ? formatDuration(row.spent) : '-'}</span>
                           <span class="status">
                             <i class:list={['dot', { started: row.status === 'In Progress' }]} />
                             {row.status}

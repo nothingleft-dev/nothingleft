@@ -1,8 +1,8 @@
 # Account security
 
 Two-factor authentication, deactivating your account, transferring an organisation you own,
-and deleting one. All of it lives in the web app — **Settings → Security** for your account,
-**Organisation → Danger zone** for the organisation — and none of it can be done with an access
+and deleting one. All of it lives in the web app - **Settings → Security** for your account,
+**Organisation → Danger zone** for the organisation - and none of it can be done with an access
 token or an AI agent: those are the credentials it protects.
 
 ## Access tokens and devices
@@ -31,7 +31,7 @@ an authenticator app on your phone, such as Google Authenticator, 1Password or A
    is only switched on once a code has been accepted, so a mis-scanned QR code can never lock
    you out.
 4. Save your **ten recovery codes**. They are shown once. Each one signs you in a single time if
-   you lose your phone — there is no support desk that can let you back in without them.
+   you lose your phone - there is no support desk that can let you back in without them.
 
 You get an email whenever two-factor is turned on or off.
 
@@ -53,7 +53,7 @@ codes pause sign-in for 15 minutes.
 
 - **Create new recovery codes** when you have used several, or think someone has seen them. The
   old ones stop working at once.
-- **Turn off** two-factor with your password and a code — from the app, or a recovery code.
+- **Turn off** two-factor with your password and a code - from the app, or a recovery code.
 
 An account that only ever signs in with Google or GitHub has no password, so there is nothing for
 two-factor to protect; set a password first if you want it.
@@ -64,7 +64,7 @@ Turning off two-factor, creating new recovery codes, deactivating your account, 
 handing over an organisation all ask you to confirm:
 
 - with your **password**, plus a **code** if two-factor is on;
-- or, if your account has no password, by **signing in with Google or GitHub again** — the
+- or, if your account has no password, by **signing in with Google or GitHub again** - the
   change then goes through within the next ten minutes.
 
 ## Deactivating your account
@@ -80,7 +80,7 @@ handing over an organisation all ask you to confirm:
   [Erasing your data](#erasing-your-data), and the account cannot be reactivated.
 
 If you own an organisation, you cannot deactivate your account until you **transfer ownership**
-or the organisation is **deleted** — someone has to be able to look after it.
+or the organisation is **deleted** - someone has to be able to look after it.
 
 To reactivate, email admin@nothingleft.dev (or reply to the deactivation email) from the address on the account within six months of deactivating. On a self-hosted instance, write to the address its administrator gives. Your memberships come back as they
 were; sign in again and create new access tokens.
@@ -88,7 +88,7 @@ were; sign in again and create new access tokens.
 ### Erasing your data
 
 Deactivation keeps your name on your work. Six months after you deactivate,
-your personal data is erased automatically. To have it erased sooner, email admin@nothingleft.dev — you, or an Org
+your personal data is erased automatically. To have it erased sooner, email admin@nothingleft.dev - you, or an Org
 Admin of your organisation on your behalf. Erasure replaces your name with *Deleted user*, and
 removes your email address, photo, password, sign-in links, last sign-in IP address and recent
 searches. What you wrote in issues and comments is not rewritten.
@@ -126,5 +126,5 @@ then confirm.
 - After 14 days the organisation's projects, issues, comments, articles and files are deleted,
   and nobody can open it any more. Files kept in your own connected bucket are never touched.
   Members' accounts, and their other organisations, are unaffected.
-- The organisation's address — `acme` in `X-Organization: acme` — stays reserved, so it can
+- The organisation's address - `acme` in `X-Organization: acme` - stays reserved, so it can
   never be taken by someone else.

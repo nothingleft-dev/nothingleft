@@ -42,8 +42,8 @@ const labelled = new Set([0, recorded.at(-1)?.index ?? 0, last]);
 const addedDay = recorded.find(day => (day.added ?? 0) > 0);
 const today = recorded.at(-1);
 const weekends = report.days.flatMap((day, index) => (day.working ? [] : [index]));
-const signed = (value: number | null) => (value === null ? '—' : value > 0 ? `+${value}` : String(value));
-const shown = (value: number | null) => (value === null ? '—' : String(value));
+const signed = (value: number | null) => (value === null ? '-' : value > 0 ? `+${value}` : String(value));
+const shown = (value: number | null) => (value === null ? '-' : String(value));
 ---
 
 <section id="np-flow" class="border-t border-line bg-app" aria-labelledby="np-flow-title">

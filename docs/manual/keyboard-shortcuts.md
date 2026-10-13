@@ -11,8 +11,8 @@ while a menu or dialog is open.
 | `/`          | Focus search                                                          |
 | `c`          | Create issue                                                          |
 | `g` then `d` | Go to the dashboard                                                   |
-| `g` then `i` | Go to issues — the current project's, when you are in one             |
-| `g` then `b` | Go to the board — the current project's, else the last one you opened |
+| `g` then `i` | Go to issues - the current project's, when you are in one             |
+| `g` then `b` | Go to the board - the current project's, else the last one you opened |
 | `g` then `m` | Go to my issues                                                       |
 | `g` then `p` | Go to projects                                                        |
 | `[`          | Collapse or expand the sidebar                                        |

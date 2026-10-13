@@ -124,7 +124,7 @@ for its security and for the data in it. These terms and our Privacy Policy do n
 ## 10. Your data when things end
 
 - **Export.** Issues and reports export as CSV. Org Admins can export the audit log as CSV, and
-  the whole organisation — every project, issue, article and file — as one download, kept for 7
+  the whole organisation - every project, issue, article and file - as one download, kept for 7
   days. Everything you can see is also available through the REST API and MCP.
 - **Deactivation** keeps your memberships and your work, under your name. A deactivated account is
   erased six months after deactivation, as the [Privacy Policy](/privacy#10-how-long-we-keep-it)
