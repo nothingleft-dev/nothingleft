@@ -304,6 +304,28 @@ describe('issueSearchRepository.search', () => {
     });
   });
 
+  test('page returns the search order without a count, and stays in its organisation', async () => {
+    await inRolledBackTx(async tx => {
+      const { ctxA, ctxB, projectA } = await world(tx);
+      const repo = issueSearchRepository(tx);
+      for (const text of ['', 'sort by: priority', 'sort by: {due date} desc', '#Unresolved']) {
+        const query = q(text);
+        const full = await repo.search(ctxA, scopeOf([projectA]), query, {
+          sort: sortKeysOf(query),
+          limit: 50,
+          offset: 0,
+        });
+        const page = (offset: number, limit: number) =>
+          repo.page(ctxA, scopeOf([projectA]), query, { sort: sortKeysOf(query), limit, offset });
+        const ids = full.entries.map(e => e.row.id);
+        expect((await page(0, 50)).map(r => r.id)).toEqual(ids);
+        expect((await page(1, 2)).map(r => r.id)).toEqual(ids.slice(1, 3));
+        expect((await page(0, 50)).every(r => !('search_tsv' in r))).toBe(true);
+      }
+      expect(await repo.page(ctxB, scopeOf([projectA]), q(''), { sort: [], limit: 50, offset: 0 })).toEqual([]);
+    });
+  });
+
   test('groups count the whole filtered set, and a multi-valued group repeats the issue', async () => {
     await inRolledBackTx(async tx => {
       const { ctxA, projectA } = await world(tx);

@@ -133,6 +133,17 @@ export function issuesRepository(db: Queryable) {
       return row;
     },
 
+    /** In the order asked, soft-deleted included; ids not in the organisation are skipped. */
+    async findByIds(ctx: TenantContext, ids: number[]): Promise<IssueRow[]> {
+      if (ids.length === 0) return [];
+      const rows = await db
+        .select(issueColumns)
+        .from(issues)
+        .where(and(inOrg(ctx), inArray(issues.id, [...new Set(ids)])));
+      const byId = new Map(rows.map(r => [r.id, r]));
+      return ids.flatMap(id => byId.get(id) ?? []);
+    },
+
     /** Row-locked, so concurrent saves to one issue serialise and coalescing sees settled history. */
     async lockById(ctx: TenantContext, id: number): Promise<IssueRow | undefined> {
       const [row] = await db

@@ -513,6 +513,7 @@ export function sprintsService(deps: SprintsDeps) {
         principal,
         project,
         result.entries.map(e => e.row),
+        { catalogue: sc.catalogue },
       );
       if (await dailyOnce(deps.redis, `backlog:${principal.userId}:${project.project.id}`, now())) {
         analytics.capture(
@@ -620,12 +621,11 @@ export function sprintsService(deps: SprintsDeps) {
         { via: principal.via, count: rows.length, sprint_changed: changed.length > 0 },
         { userId: principal.userId, orgId: project.organization.id },
       );
-      const fresh = await Promise.all(rows.map(r => issues.findById(project.ctx, r.id)));
-      return issuesService.dtos(
-        principal,
-        project,
-        fresh.map(r => r!),
+      const fresh = await issues.findByIds(
+        project.ctx,
+        rows.map(r => r.id),
       );
+      return issuesService.dtos(principal, project, fresh);
     },
 
     /** The nightly sprint.snapshot job: yesterday's figures, UTC, for every active sprint. */

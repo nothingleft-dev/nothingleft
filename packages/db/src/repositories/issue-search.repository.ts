@@ -200,6 +200,23 @@ export function issueSearchRepository(db: Queryable) {
       };
     },
 
+    /** One page of the query in `search`'s order, without the count a paged list needs. */
+    async page(
+      ctx: TenantContext,
+      scope: SearchScope,
+      query: Query,
+      options: { sort: readonly SortKey[]; limit: number; offset: number },
+    ): Promise<IssueRow[]> {
+      const compiled = compiler(ctx, scope);
+      return db
+        .select(issueColumns)
+        .from(issues)
+        .where(compiled.where(query))
+        .orderBy(...compiled.orderBy(query, options.sort))
+        .limit(options.limit)
+        .offset(options.offset);
+    },
+
     /** Filter-aware counts per value of `field` within one container: board columns and the distribution strip. */
     async valueCounts(
       ctx: TenantContext,
