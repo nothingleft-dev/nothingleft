@@ -3068,7 +3068,7 @@ paths:
       description: |
         Reserves an import and presigns the upload, like an attachment: `PUT` the file to
         `upload_url` with every `upload_headers` entry within 15 minutes, then
-        `POST …/imports/{id}/complete`. UTF-8, a header row, at most 100 MB and 10,000 rows. The
+        `POST …/imports/{id}/complete`. UTF-8, a header row, at most 20 MB and 10,000 rows. The
         file lives in the platform's private bucket until its import ends, and never counts toward
         the quota. Project Admins and up (*Import issues from CSV*); a token needs `admin:project`.
       tags: [imports]
@@ -8067,7 +8067,7 @@ components:
       required: [filename, size, sha256]
       properties:
         filename: { type: string, maxLength: 255, example: backlog.csv }
-        size: { type: integer, minimum: 1, description: Bytes; at most 100 MB. }
+        size: { type: integer, minimum: 1, description: Bytes; at most 20 MB. }
         sha256: { type: string, description: Base64 SHA-256 of the file, signed into the upload. }
     ImportMapping:
       type: object
