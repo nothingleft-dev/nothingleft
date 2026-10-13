@@ -32,7 +32,12 @@ import {
 } from '@nothingleft/db';
 import type { Analytics } from '@nothingleft/analytics';
 import { errorKey, t } from '@nothingleft/i18n';
-import { IMPORT_JOBS_LISTED, IMPORT_RUN_MS, TRANSFER_SWEEP_BATCH } from '@config/constants';
+import {
+  IMPORT_JOBS_LISTED,
+  IMPORT_REPORT_BUMP_INTERVAL_MS,
+  IMPORT_RUN_MS,
+  TRANSFER_SWEEP_BATCH,
+} from '@config/constants';
 import { parseCsv } from '@lib/csv';
 import { AppError } from '@lib/errors';
 import type { ImportCsvJob, JobQueue } from '@lib/jobs';
@@ -568,8 +573,15 @@ export function importsService(deps: ImportsDeps) {
         let failed = row.failed_rows;
         let created = 0;
         let index = row.processed_rows;
+        let unbumped = false;
+        let lastBump = 0;
         try {
           for (; index < file.rows.length; index++) {
+            if (unbumped && Date.now() - lastBump >= IMPORT_REPORT_BUMP_INTERVAL_MS) {
+              await deps.onIssuesWritten?.(row.org_id);
+              unbumped = false;
+              lastBump = Date.now();
+            }
             if (Date.now() - started > IMPORT_RUN_MS) {
               await deps.queue().send('import.csv', job, { startAfter: now(), singletonKey: `import:${row.id}` });
               return created;
@@ -601,7 +613,7 @@ export function importsService(deps: ImportsDeps) {
                 },
               });
               created++;
-              await deps.onIssuesWritten?.(row.org_id);
+              unbumped = true;
             } catch (err) {
               if (!(err instanceof AppError) || err.status >= 500) throw err;
               failed++;

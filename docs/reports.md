@@ -246,14 +246,19 @@ One route per report, each with its CSV twin, all `GET` and all *View reports* /
   each one on any `POST` / `PUT` / `PATCH` / `DELETE` except an idempotent replay
   (`@plugins/report-version`), before the response is written, so the caller's next read sees
   its own write. A refused write bumps too: it may have committed part of its work (a bulk
-  update that fails part-way), and a needless bump costs one `INCR`. One hook covers every
-  route present and future, and MCP writes, which arrive as REST calls. It is coarse — a star
-  bumps it too, and `#Star` does affect queries — but it cannot be forgotten. Writes outside a
+  update that fails part-way), and a needless bump costs one `MULTI` (`INCR` + `EXPIRE`). One
+  hook covers every route present and future, and MCP writes, which arrive as REST calls. It is
+  coarse — a star bumps it too, and `#Star` does affect queries — but it cannot be forgotten.
+  Writes outside a
   request bump it themselves: the nightly `sprint.snapshot` job for each organisation it writes
-  to, and `import.csv` after every issue it creates and again whenever a run ends.
-- **The counter expires seven days after its last bump** (`INCR` and `EXPIRE` in one `MULTI`),
-  so idle organisations do not keep a key forever. A missing counter reads as `0`, which no
-  live result is keyed by: any counter TTL at least twice the result TTL is safe.
+  to, and `import.csv` at most once a second while it creates issues and again whenever a run
+  ends.
+- **The counter expires seven days after its last bump or report read**: a bump is `INCR` and
+  `EXPIRE` in one `MULTI`, and a report reads it with `GETEX … EX`. It therefore lapses only
+  after seven days with no write and no report read, when no result keyed by it can be live,
+  so restarting from `0` cannot land on a cached result. Expiring on bumps alone would not be
+  safe: a counter that lapsed while its results were still read would restart at a value those
+  results are keyed by.
 - **TTL five minutes**, which bounds how stale "now" can be in the age report.
 - **Redis down means no cache**: a failed read, write or version read computes and serves the
   report, never an error. A failed bump is swallowed too, so a read that reaches Redis after it

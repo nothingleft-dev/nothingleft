@@ -4,6 +4,7 @@ import { REPORT_CACHE_TTL_SECONDS, REPORT_VERSION_TTL_SECONDS } from '@config/co
 /** The slice of the Redis client the report cache needs; typed structurally so tests can stand one in. */
 export interface ReportCacheStore {
   get(key: string): Promise<string | null>;
+  getex(key: string, mode: 'EX', seconds: number): Promise<string | null>;
   set(key: string, value: string, mode: 'EX', ttl: number): Promise<unknown>;
   multi(): ReportCacheTransaction;
 }
@@ -49,7 +50,9 @@ export function reportCache(store: ReportCacheStore, ttlSeconds = REPORT_CACHE_T
     ): Promise<{ value: T; cached: boolean }> {
       let key: string | null;
       try {
-        const version = (await store.get(versionKey(orgId))) ?? '0';
+        // Read refreshes the expiry too: a counter that lapsed while its results were still read would
+        // restart at a value those results are keyed by.
+        const version = (await store.getex(versionKey(orgId), 'EX', REPORT_VERSION_TTL_SECONDS)) ?? '0';
         key = `report:${orgId}:${createHash('sha256')
           .update(canonicalJson([parts, version]))
           .digest('hex')}`;

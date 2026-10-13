@@ -76,8 +76,7 @@ export const SUGGEST_VALUES_MAX = 10;
 
 // Bounds how stale "now" can be in the age report; writes invalidate sooner through the data version.
 export const REPORT_CACHE_TTL_SECONDS = 5 * 60;
-// A lost version key reads as '0', which hashes apart from every live result, so any expiry
-// well past REPORT_CACHE_TTL_SECONDS only reclaims idle organisations' keys.
+// Refreshed by every bump and every report read, so it lapses only once no result keyed by it can be live.
 export const REPORT_VERSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export const TOTP_ISSUER = 'Nothing Left';
@@ -103,6 +102,8 @@ export const MIGRATION_RUN_FILES = 500;
 export const MIGRATION_RUN_MS = 5 * 60 * 1000;
 // One import.csv run stops after this long and queues the next, which resumes at the first unwritten row.
 export const IMPORT_RUN_MS = 5 * 60 * 1000;
+// A stalled Redis costs each bump its full command timeout, so a run bumps at most this often.
+export const IMPORT_REPORT_BUMP_INTERVAL_MS = 1_000;
 export const IMPORT_JOBS_LISTED = 20;
 export const EXPORT_JOBS_LISTED = 20;
 export const EXPORT_PAGE_SIZE = 500;
