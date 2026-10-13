@@ -36,6 +36,30 @@ describe('issuesRepository tenant isolation', () => {
     });
   });
 
+  test('findByIds answers in the order asked, skips unknown ids and never crosses organisations', async () => {
+    await inRolledBackTx(async tx => {
+      const repo = issuesRepository(tx);
+      const projects = projectsRepository(tx);
+      const { ctxA, ctxB, alice, projectA, issueA, issueB } = await seedIssueWorld(tx);
+      const second = await repo.insert(ctxA, {
+        project_id: projectA,
+        key_number: await projects.claimIssueNumber(ctxA, projectA),
+        title: 'Second',
+        status_id: issueA.status_id,
+        priority_id: issueA.priority_id,
+        type_id: issueA.type_id,
+        created_by: alice,
+        updated_by: alice,
+      });
+      expect(await repo.findByIds(ctxA, [])).toEqual([]);
+      const found = await repo.findByIds(ctxA, [second.id, issueB.id, issueA.id, 0]);
+      expect(found.map(r => r.id)).toEqual([second.id, issueA.id]);
+      expect('search_tsv' in found[0]!).toBe(false);
+      expect(await repo.findByIds(ctxB, [issueA.id, second.id])).toEqual([]);
+      expect((await repo.findByIds(ctxB, [issueB.id])).map(r => r.id)).toEqual([issueB.id]);
+    });
+  });
+
   test("insert files an issue under the caller's organisation, and never under another's project", async () => {
     await inRolledBackTx(async tx => {
       const repo = issuesRepository(tx);
