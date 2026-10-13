@@ -208,10 +208,43 @@ describe('start and finish', () => {
 
   test('the board reads the active sprint: filter-aware counts, WIP totals, lanes', async () => {
     const epic = await newIssue({ type: 'Epic', title: 'Checkout', sprint: 'september-2026' });
-    await newIssue({ parent: epic, sprint: 'september-2026', assignees: [w.contributor.username] });
+    await newIssue({
+      parent: epic,
+      sprint: 'september-2026',
+      assignees: [w.contributor.username],
+      tags: ['board-card'],
+      estimate: '2h',
+      story_points: 3,
+      due_date: '2099-12-01',
+    });
     const res = await w.call(w.observer, 'GET', `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view`);
     expect(res.statusCode).toBe(200);
     const view = res.json().data;
+    const cards: Record<string, unknown>[] = view.lanes.flatMap(
+      (l: { issue: Record<string, unknown> | null; cells: { cards: Record<string, unknown>[] }[] }) => [
+        ...(l.issue ? [l.issue] : []),
+        ...l.cells.flatMap(c => c.cards),
+      ],
+    );
+    expect(cards.length).toBeGreaterThan(1);
+    for (const card of cards) {
+      const issue = (await w.call(w.observer, 'GET', `/v1/issues/${String(card.key)}`)).json().data;
+      expect(card).toEqual({
+        key: issue.key,
+        title: issue.title,
+        status: issue.status,
+        priority: issue.priority,
+        type: issue.type,
+        assignees: issue.assignees,
+        tags: issue.tags,
+        due_date: issue.due_date,
+        story_points: issue.story_points,
+        estimate_minutes: issue.estimate_minutes,
+        parent: issue.parent,
+        subtasks: issue.subtasks,
+        resolved: issue.resolved_at !== null,
+      });
+    }
     expect(view.sprint.slug).toBe('september-2026');
     const total = view.columns.reduce((n: number, c: { total: number }) => n + c.total, 0);
     expect(total).toBe(view.sprint.progress.issues);

@@ -12,6 +12,7 @@ import {
   type CustomAttributeType,
   type Query,
   type Registry,
+  type SortKey,
   type ValueProvider,
   type Vocabulary,
   type Weekday,
@@ -99,6 +100,12 @@ export interface SearchContext {
   /** The custom fields of `projects`, and the registry that knows their slugs. */
   catalogue: FieldCatalogue;
   registry: Registry;
+}
+
+export interface CompiledSearch {
+  query: Query;
+  sort: SortKey[];
+  text: string;
 }
 
 const EMPTY_QUERY: Query = { clauses: [] };
@@ -259,7 +266,7 @@ export function searchService(deps: SearchDeps) {
     text: string | undefined,
     sortText?: string,
     options: { asView?: { name: string; query: Query }; field?: string } = {},
-  ) {
+  ): Promise<CompiledSearch> {
     const { asView, field = 'q' } = options;
     const trimmed = text?.trim() ?? '';
     const registry = sc.registry;
@@ -339,6 +346,8 @@ export function searchService(deps: SearchDeps) {
       input: {
         q?: string | undefined;
         sort?: string | undefined;
+        /** `compile` of this `q` and `sort`, when the caller already ran it. */
+        compiled?: CompiledSearch | undefined;
         groupBy?: IssueGroupBy | undefined;
         groupLimit?: number | undefined;
         container?: IssueContainer | undefined;
@@ -349,7 +358,7 @@ export function searchService(deps: SearchDeps) {
       },
     ): Promise<IssueSearchResult & { groupsDto: IssueGroup[] | undefined; customAttributeCount: number }> {
       checkGroupBy(sc, input.groupBy);
-      const compiled = await compile(principal, sc, input.q, input.sort);
+      const compiled = input.compiled ?? (await compile(principal, sc, input.q, input.sort));
       const result = await issueSearch.search(sc.ctx, sc.scope, compiled.query, {
         sort: compiled.sort,
         groupBy: input.groupBy,
