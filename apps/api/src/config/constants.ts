@@ -9,6 +9,8 @@ export const REQUEST_BODY_LIMIT_BYTES = 1 * 1024 * 1024;
 export const HEALTH_CHECK_TIMEOUT_MS = 3_000;
 export const HEALTH_DEEP_MAX_PER_MINUTE = 10;
 export const HEALTH_DEEP_MEMO_MS = 5_000;
+// Every Redis caller degrades on failure, so a stalled server fails fast; a blocking command would need its own client.
+export const REDIS_COMMAND_TIMEOUT_MS = 2_000;
 
 // Browsers hide every non-safelisted response header unless it is named here.
 export const CORS_EXPOSED_HEADERS = [
@@ -76,6 +78,8 @@ export const SUGGEST_VALUES_MAX = 10;
 
 // Bounds how stale "now" can be in the age report; writes invalidate sooner through the data version.
 export const REPORT_CACHE_TTL_SECONDS = 5 * 60;
+// Refreshed by every bump and every report read, so it lapses only once no result keyed by it can be live.
+export const REPORT_VERSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export const TOTP_ISSUER = 'Nothing Left';
 // One 30-second step either side, for a phone clock that drifts.
@@ -100,6 +104,8 @@ export const MIGRATION_RUN_FILES = 500;
 export const MIGRATION_RUN_MS = 5 * 60 * 1000;
 // One import.csv run stops after this long and queues the next, which resumes at the first unwritten row.
 export const IMPORT_RUN_MS = 5 * 60 * 1000;
+// A stalled Redis costs each bump its full command timeout, so a run bumps at most this often.
+export const IMPORT_REPORT_BUMP_INTERVAL_MS = 1_000;
 export const IMPORT_JOBS_LISTED = 20;
 export const EXPORT_JOBS_LISTED = 20;
 export const EXPORT_PAGE_SIZE = 500;

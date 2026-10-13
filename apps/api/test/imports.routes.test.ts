@@ -227,6 +227,16 @@ describe('the import job', () => {
     expect(await titles()).toContain('=SUM(A1)');
   });
 
+  test('a run moves the organisation’s report data version', async () => {
+    const { id } = await upload('Title\nVersioned one\nVersioned two\n');
+    await complete(id);
+    expect((await start(id, { title: 'Title' })).statusCode).toBe(202);
+    const versionKey = `report:v:${w.repos.ctx.orgId}`;
+    const before = Number((await w.app.redis.get(versionKey)) ?? 0);
+    expect(await runImports()).toBe(2);
+    expect(Number(await w.app.redis.get(versionKey))).toBeGreaterThan(before);
+  });
+
   test('a run cut short resumes at the first unwritten row', async () => {
     const { id } = await upload('Title\nResume one\nResume two\nResume three\n');
     await complete(id);

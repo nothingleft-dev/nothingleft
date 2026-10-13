@@ -328,6 +328,15 @@ describe('scope', () => {
     await w.call(w.admin, 'DELETE', `/v1/issues/${key}`);
     expect((await report(w.admin, 'issues-per-project', { projects: KEY })).total_issues).toBe(before.total_issues);
   });
+
+  test('a write refused after it resolved the organisation still moves the data version', async () => {
+    const versionKey = `report:v:${w.repos.ctx.orgId}`;
+    const before = Number((await w.app.redis.get(versionKey)) ?? 0);
+    const res = await w.call(w.admin, 'POST', '/v1/issues', { project: KEY, title: 'Nope', status: 'No Such Status' });
+    expect(res.statusCode).toBe(400);
+    expect(Number(await w.app.redis.get(versionKey))).toBe(before + 1);
+    expect(await w.app.redis.ttl(versionKey)).toBeGreaterThan(0);
+  });
 });
 
 describe('matrix', () => {
