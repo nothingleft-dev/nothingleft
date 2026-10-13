@@ -172,9 +172,41 @@ describe('issuesRepository tenant isolation', () => {
       const cutoff = new Date(Date.now() - 14 * 86_400_000);
 
       expect(await repo.orgsWithDeletedBefore(sys, cutoff)).toEqual(expect.arrayContaining([ctxA.orgId, ctxB.orgId]));
-      expect(await repo.purgeDeletedBefore(ctxA, cutoff)).toBe(1);
+      expect(await repo.idsDeletedBefore(ctxA, cutoff, 10)).toEqual([issueA.id]);
+      expect(await repo.purgeDeletedBefore(ctxB, cutoff, [issueA.id])).toEqual([]);
+      expect(await repo.purgeDeletedBefore(ctxA, cutoff, [issueA.id, issueB.id])).toEqual([issueA.id]);
       expect(await repo.lockById(ctxA, issueA.id)).toBeUndefined();
       expect((await repo.lockById(ctxB, issueB.id))?.id).toBe(issueB.id);
+    });
+  });
+
+  test('the purge claims at most the batch, and spares a claimed issue restored since', async () => {
+    await inRolledBackTx(async tx => {
+      const repo = issuesRepository(tx);
+      const { ctxA, alice, issueA } = await seedIssueWorld(tx);
+      const second = await repo.insert(ctxA, {
+        project_id: issueA.project_id,
+        key_number: issueA.key_number + 1000,
+        title: 'Second',
+        status_id: issueA.status_id,
+        priority_id: issueA.priority_id,
+        type_id: issueA.type_id,
+        created_by: alice,
+        updated_by: alice,
+      });
+      const old = new Date(Date.now() - 20 * 86_400_000);
+      await repo.update(ctxA, issueA.id, { deleted_at: old });
+      await repo.update(ctxA, second.id, { deleted_at: old });
+      const cutoff = new Date(Date.now() - 14 * 86_400_000);
+
+      expect(await repo.idsDeletedBefore(ctxA, cutoff, 1)).toEqual([issueA.id]);
+      const claimed = await repo.idsDeletedBefore(ctxA, cutoff, 10);
+      expect(claimed).toEqual([issueA.id, second.id]);
+      await repo.update(ctxA, second.id, { deleted_at: null });
+
+      expect(await repo.purgeDeletedBefore(ctxA, cutoff, claimed)).toEqual([issueA.id]);
+      expect((await repo.lockById(ctxA, second.id))?.id).toBe(second.id);
+      expect(await repo.purgeDeletedBefore(ctxA, cutoff, [])).toEqual([]);
     });
   });
 });

@@ -41,6 +41,9 @@ export const DUE_OVERDUE_GRACE_DAYS = 3;
 export const DIGEST_ISSUES_PER_LINE = 5;
 export const ATTACHMENT_PENDING_TTL_MS = 60 * 60 * 1000; // docs/file-storage.md#upload
 export const ATTACHMENT_SWEEP_BATCH = 500;
+export const PURGE_BATCH = 200;
+// One issues.purge run stops after this long; the next night carries on from what is left.
+export const PURGE_RUN_MS = 5 * 60 * 1000;
 // Just under the presigned URL's five minutes, so a cached redirect never outlives its signature.
 export const ATTACHMENT_REDIRECT_MAX_AGE_SECONDS = 240;
 

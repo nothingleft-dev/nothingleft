@@ -444,22 +444,33 @@ export function articlesRepository(db: Queryable) {
       return rows.map(r => r.org_id);
     },
 
-    /** Hard delete; comments, mentions, tags, stars, watchers, references and attachment rows go by cascade. */
-    async purgeDeletedBefore(ctx: TenantContext, cutoff: Date): Promise<number> {
-      const doomed = db
+    /** One batch of the purge, oldest id first. */
+    async idsDeletedBefore(ctx: TenantContext, cutoff: Date, limit: number): Promise<number[]> {
+      const rows = await db
         .select({ id: articles.id })
         .from(articles)
-        .where(and(inOrg(ctx), lt(articles.deleted_at, cutoff)));
+        .where(and(inOrg(ctx), lt(articles.deleted_at, cutoff)))
+        .orderBy(asc(articles.id))
+        .limit(limit);
+      return rows.map(r => r.id);
+    },
+
+    /**
+     * Hard delete of the claimed ids still deleted before the cutoff; comments, mentions, tags, stars,
+     * watchers, references and attachment rows go by cascade. Returns the ids it removed.
+     */
+    async purgeDeletedBefore(ctx: TenantContext, cutoff: Date, ids: number[]): Promise<number[]> {
+      if (ids.length === 0) return [];
+      const doomed = and(inOrg(ctx), inArray(articles.id, ids), lt(articles.deleted_at, cutoff));
       // Another deleted article may still name a doomed one as its parent; it loses the parent instead.
       await db
         .update(articles)
         .set({ parent_id: null })
-        .where(and(inOrg(ctx), inArray(articles.parent_id, doomed)));
-      const rows = await db
-        .delete(articles)
-        .where(and(inOrg(ctx), lt(articles.deleted_at, cutoff)))
-        .returning({ id: articles.id });
-      return rows.length;
+        .where(
+          and(inOrg(ctx), inArray(articles.parent_id, db.select({ id: articles.id }).from(articles).where(doomed))),
+        );
+      const rows = await db.delete(articles).where(doomed).returning({ id: articles.id });
+      return rows.map(r => r.id);
     },
   };
 }

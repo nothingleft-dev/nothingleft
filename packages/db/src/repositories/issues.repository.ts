@@ -720,22 +720,31 @@ export function issuesRepository(db: Queryable) {
       return rows.map(r => r.org_id);
     },
 
-    /** Hard delete; comments, work items, attachments, activity and mentions go by cascade. */
-    async purgeDeletedBefore(ctx: TenantContext, cutoff: Date): Promise<number> {
-      const doomed = db
+    /** One batch of the purge, oldest id first. */
+    async idsDeletedBefore(ctx: TenantContext, cutoff: Date, limit: number): Promise<number[]> {
+      const rows = await db
         .select({ id: issues.id })
         .from(issues)
-        .where(and(inOrg(ctx), lt(issues.deleted_at, cutoff)));
+        .where(and(inOrg(ctx), lt(issues.deleted_at, cutoff)))
+        .orderBy(asc(issues.id))
+        .limit(limit);
+      return rows.map(r => r.id);
+    },
+
+    /**
+     * Hard delete of the claimed ids still deleted before the cutoff; comments, work items, attachments,
+     * activity and mentions go by cascade. Returns the ids it removed.
+     */
+    async purgeDeletedBefore(ctx: TenantContext, cutoff: Date, ids: number[]): Promise<number[]> {
+      if (ids.length === 0) return [];
+      const doomed = and(inOrg(ctx), inArray(issues.id, ids), lt(issues.deleted_at, cutoff));
       // A live child keeps living; it loses a parent rather than blocking the purge.
       await db
         .update(issues)
         .set({ parent_id: null })
-        .where(and(inOrg(ctx), inArray(issues.parent_id, doomed)));
-      const rows = await db
-        .delete(issues)
-        .where(and(inOrg(ctx), lt(issues.deleted_at, cutoff)))
-        .returning({ id: issues.id });
-      return rows.length;
+        .where(and(inOrg(ctx), inArray(issues.parent_id, db.select({ id: issues.id }).from(issues).where(doomed))));
+      const rows = await db.delete(issues).where(doomed).returning({ id: issues.id });
+      return rows.map(r => r.id);
     },
   };
 }

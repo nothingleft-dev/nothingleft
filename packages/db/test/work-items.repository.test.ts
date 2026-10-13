@@ -187,7 +187,9 @@ describe('deleting and re-pointing over the project keys', () => {
       const item = await loggedWithValues(tx, ctxA, issueA, alice);
       await issues.update(ctxA, issueA.id, { deleted_at: new Date(Date.now() - 20 * 86_400_000) });
 
-      expect(await issues.purgeDeletedBefore(ctxA, new Date(Date.now() - 14 * 86_400_000))).toBe(1);
+      expect(await issues.purgeDeletedBefore(ctxA, new Date(Date.now() - 14 * 86_400_000), [issueA.id])).toEqual([
+        issueA.id,
+      ]);
       expect(await workItemsRepository(tx).findMany(ctxA, [item.id])).toEqual([]);
       expect(await workItemAttributesRepository(tx).valuesForWorkItems(ctxA, [item.id])).toEqual([]);
     });

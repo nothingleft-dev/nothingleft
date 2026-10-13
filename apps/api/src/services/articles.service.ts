@@ -24,7 +24,6 @@ import {
 } from '@nothingleft/types';
 import {
   systemContext,
-  tenantContext,
   type ArticleRow,
   type ArticleSearchRepository,
   type ArticleSearchScope,
@@ -60,8 +59,9 @@ import { AppError } from '@lib/errors';
 import { denial, type AccessService, type OrgAccess, type ProjectAccess } from '@services/access';
 import { articleVisibleTo, draftReach } from '@services/article-visibility';
 import { articleTree, renumber, visibleTree, type ArticleTree } from '@services/article-tree';
-import { claimArticleDrafts, releaseStorage } from '@services/attachment-writer';
-import { isByoUnavailable, type ObjectStores } from '@services/object-stores';
+import { claimArticleDrafts } from '@services/attachment-writer';
+import type { ObjectStores } from '@services/object-stores';
+import { purgeDeleted } from '@services/deleted-purge';
 import { dailyOnce, type DailyOnceStore } from '@services/daily-once';
 import { ensureTags, wantedTags } from '@services/issue-tag-writer';
 import type { IssuesService } from '@services/issues.service';
@@ -1086,27 +1086,16 @@ export function articlesService(deps: ArticlesDeps) {
         systemContext('the nightly purge has no actor and spans every organisation'),
         cutoff,
       );
-      let purged = 0;
-      for (const orgId of orgIds) {
-        const ctx = tenantContext(orgId);
-        try {
-          purged += await inTransaction(async repos => {
-            const files = await repos.attachments.onArticlesDeletedBefore(ctx, cutoff);
-            await deps.stores.deleteObjects(ctx, files);
-            await releaseStorage(
-              repos,
-              ctx,
-              files.filter(f => f.deleted_at === null),
-              access.storageLimit,
-            );
-            return repos.articles.purgeDeletedBefore(ctx, cutoff);
-          });
-        } catch (error) {
-          // A failing customer bucket waits for its admins, who were already told; nothing to report.
-          if (!isByoUnavailable(error)) analytics.captureException(error, { org_id: orgId });
-        }
-      }
-      return purged;
+      return purgeDeleted(
+        { inTransaction, stores: deps.stores, analytics, storageLimit: access.storageLimit, now },
+        orgIds,
+        {
+          claim: (repos, ctx, limit) => repos.articles.idsDeletedBefore(ctx, cutoff, limit),
+          files: (repos, ctx, ids) => repos.attachments.onArticlesDeletedBefore(ctx, cutoff, ids),
+          purge: (repos, ctx, ids) => repos.articles.purgeDeletedBefore(ctx, cutoff, ids),
+          holder: file => file.article_id,
+        },
+      );
     },
   };
 }
