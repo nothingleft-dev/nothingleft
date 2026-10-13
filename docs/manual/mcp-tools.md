@@ -1226,7 +1226,7 @@ Changes your own name or timezone (an IANA name such as "Europe/London"), which 
 
 ### `start_csv_import`
 
-Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000 rows and 100 MB). First call: give the CSV as `content` (text up to 1 MB), or `size_bytes` and `sha256` of a file on disk and run the curl command the answer gives. That answers the columns, a sample and a suggested mapping. Then call again with `import` and a `mapping`: a dry run (the default) lists each row that would fail and why; `dry_run: false` creates the issues in the background. Rows that fail are skipped and listed. Needs a Project Admin and a token with admin:project.
+Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000 rows and 20 MB). First call: give the CSV as `content` (text up to 1 MB), or `size_bytes` and `sha256` of a file on disk and run the curl command the answer gives. That answers the columns, a sample and a suggested mapping. Then call again with `import` and a `mapping`: a dry run (the default) lists each row that would fail and why; `dry_run: false` creates the issues in the background. Rows that fail are skipped and listed. Needs a Project Admin and a token with admin:project.
 
 *Changes data.*
 
