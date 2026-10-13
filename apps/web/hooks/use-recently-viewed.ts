@@ -48,6 +48,18 @@ const write = (key: string, value: RecentIssue[]) => {
   listeners.forEach(fn => fn());
 };
 
+/** Every account's lists on this browser, so the next person at a shared computer sees no titles. */
+export function clearRecentlyViewed() {
+  try {
+    const keys = Array.from({ length: window.localStorage.length }, (_, i) => window.localStorage.key(i));
+    for (const key of keys) if (key?.startsWith(STORAGE_PREFIX)) window.localStorage.removeItem(key);
+  } catch {
+    return;
+  }
+  cache.clear();
+  listeners.forEach(fn => fn());
+}
+
 const subscribe = (fn: () => void) => {
   listeners.add(fn);
   window.addEventListener('storage', fn);

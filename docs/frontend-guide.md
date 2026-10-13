@@ -1047,7 +1047,8 @@ Built in 1c; the visual rules are design § 8 and § 8a. How the pieces fit:
   renders the organisation chooser / no-organisation state, or sends an account that never
   joined an organisation to `/welcome`. Sign-in with no `?next=` and the signed-in bounce
   from the auth pages both go to `/`, so the server's answer is what a returning user meets. Every project page records the visit with
-  `useRecordProjectVisit`; the issue page records itself in `useRecentlyViewed`.
+  `useRecordProjectVisit`; the issue page records itself in `useRecentlyViewed`, and signing out or deactivating calls
+  `clearRecentlyViewed()`, which removes every account's list from the browser.
 
 ## Page width
 

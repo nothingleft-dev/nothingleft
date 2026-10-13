@@ -1,6 +1,6 @@
 ---
 title: Privacy Policy
-updated: '2026-10-12'
+updated: '2026-10-13'
 ---
 
 This policy explains what personal data Nothing Left collects, why, who receives it, how long we
@@ -274,8 +274,8 @@ The web app also keeps these in your browser's local and session storage:
 | `nl:oauth-next`                | Where to return after signing in, for this tab only |
 | `nl:invite-intent`             | An invitation you are accepting, for this tab only  |
 
-Issue titles in `nl.recently-viewed` stay on your device until you clear them. On a shared
-computer, anyone using the same browser profile can read them.
+Issue titles in `nl.recently-viewed` are removed from the browser when you sign out or deactivate
+your account. Until then, on a shared computer, anyone using the same browser profile can read them.
 
 ### On this website
 

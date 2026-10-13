@@ -10,6 +10,7 @@ import {
   startTwoFactorSetup,
 } from '@lib/api/security';
 import { queryKeys } from '@lib/query/keys';
+import { clearRecentlyViewed } from '@hooks/use-recently-viewed';
 
 function drawTwoFactor(client: ReturnType<typeof useQueryClient>, codes: TwoFactorRecoveryCodes) {
   client.setQueryData<Me>(queryKeys.me(), me =>
@@ -59,6 +60,7 @@ export function useDeactivateAccount() {
     mutationFn: (body: StepUp) => deactivateAccount(body).then(r => r.data),
     onSuccess: () => {
       client.clear();
+      clearRecentlyViewed();
       window.location.assign(new URL('/sign-in?deactivated=1', window.location.origin).toString());
     },
   });
