@@ -1,10 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { noopAnalytics } from '@nothingleft/analytics';
-import { PURGE_BATCH } from '@config/constants';
 import type { IssuesDeps } from '@services/issues.service';
 import { issuesService } from '@services/issues.service';
 import { loadCatalogue } from '@services/custom-field-values';
-import { ISSUE_EXPORT_PAGE_SIZE } from '@config/constants';
+import { ISSUE_EXPORT_PAGE_SIZE, PURGE_BATCH } from '@config/constants';
 import type { Principal } from '@nothingleft/types';
 import type { TenantContext } from '@nothingleft/db';
 

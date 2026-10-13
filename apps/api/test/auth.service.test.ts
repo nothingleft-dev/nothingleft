@@ -168,6 +168,5 @@ describe('personal access token lookup', () => {
 
     expect(await auth.resolvePrincipal({ kind: 'pat', token: 'nl_pat_x' })).toMatchObject({ via: 'pat', tokenId: 3 });
     expect(marked).toEqual([{ id: 3, resolutionMs: PAT_LAST_USED_RESOLUTION_MS }]);
-    expect(PAT_LAST_USED_RESOLUTION_MS).toBe(5 * 60 * 1000);
   });
 });

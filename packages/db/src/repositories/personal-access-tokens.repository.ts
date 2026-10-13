@@ -83,7 +83,7 @@ export function personalAccessTokensRepository(db: Queryable) {
     async markUsed(_ctx: SystemContext, id: number, resolutionMs: number): Promise<void> {
       await db
         .update(personal_access_tokens)
-        .set({ last_used_at: new Date() })
+        .set({ last_used_at: sql`now()` })
         .where(
           and(
             eq(personal_access_tokens.id, id),
