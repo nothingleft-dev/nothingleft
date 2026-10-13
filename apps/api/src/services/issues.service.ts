@@ -490,11 +490,14 @@ export function issuesService(deps: IssuesDeps) {
     });
   }
 
-  /** `values` are the issue's own field values. */
-  function effectiveEstimate(cat: FieldCatalogue, row: IssueRow, values: readonly IssueFieldValueRow[]): number | null {
+  function effectiveEstimate(
+    cat: FieldCatalogue,
+    row: IssueRow,
+    ownValues: readonly IssueFieldValueRow[],
+  ): number | null {
     const fieldId = cat.roles.get(row.project_id)?.estimation ?? null;
     if (fieldId === null) return row.estimate_minutes;
-    const value = values.find(v => v.field_id === fieldId)?.value_number;
+    const value = ownValues.find(v => v.field_id === fieldId)?.value_number;
     return value === undefined || value === null ? null : value;
   }
 

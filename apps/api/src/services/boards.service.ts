@@ -176,7 +176,6 @@ export function boardsService(deps: BoardsDeps) {
     return (await presentWith(project, rows)).boards;
   }
 
-  /** The boards, with the layouts and project values they were built from. */
   async function presentWith(project: ProjectAccess, rows: BoardRow[]) {
     const [layouts, values, people] = await Promise.all([
       boards.layout(

@@ -249,10 +249,9 @@ One route per report, each with its CSV twin, all `GET` and all *View reports* /
   update that fails part-way), and a needless bump costs one `MULTI` (`INCR` + `EXPIRE`). One
   hook covers every route present and future, and MCP writes, which arrive as REST calls. It is
   coarse — a star bumps it too, and `#Star` does affect queries — but it cannot be forgotten.
-  Writes outside a
-  request bump it themselves: the nightly `sprint.snapshot` job for each organisation it writes
-  to, and `import.csv` at most once a second while it creates issues and again whenever a run
-  ends.
+  Writes outside a request bump it themselves: the nightly `sprint.snapshot` job for each
+  organisation it writes to, and `import.csv` at most once a second while it creates issues and
+  again whenever a run ends.
 - **The counter expires seven days after its last bump or report read**: a bump is `INCR` and
   `EXPIRE` in one `MULTI`, and a report reads it with `GETEX … EX`. It therefore lapses only
   after seven days with no write and no report read, when no result keyed by it can be live,

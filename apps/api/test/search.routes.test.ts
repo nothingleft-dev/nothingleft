@@ -121,7 +121,7 @@ describe('recent searches on the read path', () => {
       .json()
       .data.filter((s: { kind: string }) => s.kind === 'recent_search');
 
-  test('a repeat is one entry, and page 2 is not recorded', async () => {
+  test('a repeated query leaves one recent-search entry, and page 2 is not recorded', async () => {
     const who = w.projectAdmin;
     await w.call(who, 'DELETE', '/v1/search/recent');
     await list(who, { q: 'polled' });
