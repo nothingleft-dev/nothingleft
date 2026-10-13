@@ -115,6 +115,23 @@ describe('GET /v1/issues?q=', () => {
   });
 });
 
+describe('recent searches on the read path', () => {
+  const recentOf = async (who: IssueWorld['admin']) =>
+    (await w.call(who, 'GET', '/v1/search/suggest?q='))
+      .json()
+      .data.filter((s: { kind: string }) => s.kind === 'recent_search');
+
+  test('a repeat is one entry, and page 2 is not recorded', async () => {
+    const who = w.projectAdmin;
+    await w.call(who, 'DELETE', '/v1/search/recent');
+    await list(who, { q: 'polled' });
+    await list(who, { q: 'polled' });
+    await list(who, { q: 'paged', limit: '1', offset: '1' });
+    expect((await recentOf(who)).map((s: { label: string }) => s.label)).toEqual(['polled']);
+    await w.call(who, 'DELETE', '/v1/search/recent');
+  });
+});
+
 describe('GET /v1/search/suggest', () => {
   test('attributes carry their description; values come from the readable projects', async () => {
     const attrs = (await w.call(w.admin, 'GET', '/v1/search/suggest?q=crea')).json().data;

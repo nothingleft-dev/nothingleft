@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, notInArray, sql } from 'drizzle-orm';
 import type { Queryable } from '../client.ts';
 import { recent_searches, type RecentSearchRow } from '../schema/index.ts';
 import type { TenantContext } from '../tenant-context.ts';
@@ -11,15 +11,28 @@ export function recentSearchesRepository(db: Queryable) {
     and(eq(recent_searches.org_id, ctx.orgId), eq(recent_searches.user_id, userId));
 
   return {
-    /** Bumps a repeated query to the top and keeps only the newest `keep`. */
-    async record(ctx: TenantContext, userId: number, query: string, keep: number, at: Date): Promise<void> {
-      await db
+    /**
+     * Bumps a repeated query to the top and keeps only the newest `keep`. A repeat inside `coalesceMs`
+     * writes nothing, and only a new query prunes.
+     */
+    async record(
+      ctx: TenantContext,
+      userId: number,
+      query: string,
+      keep: number,
+      at: Date,
+      coalesceMs: number,
+    ): Promise<void> {
+      const written = await db
         .insert(recent_searches)
         .values({ org_id: ctx.orgId, user_id: userId, query_hash: hashOf(query), query, last_used_at: at })
         .onConflictDoUpdate({
           target: [recent_searches.user_id, recent_searches.org_id, recent_searches.query_hash],
           set: { last_used_at: at, use_count: sql`${recent_searches.use_count} + 1` },
-        });
+          setWhere: lt(recent_searches.last_used_at, new Date(at.getTime() - coalesceMs)),
+        })
+        .returning({ inserted: sql<boolean>`(xmax = 0)` });
+      if (!written[0]?.inserted) return;
       const kept = db
         .select({ hash: recent_searches.query_hash })
         .from(recent_searches)

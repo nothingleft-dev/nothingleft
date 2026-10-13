@@ -9049,7 +9049,10 @@ components:
           description: Null means every project the owner can reach. An empty list means every project the token was restricted to has been deleted, and it reaches none. Keys, not ids.
           items: { type: string }
         expires_at: { type: [string, 'null'], format: date-time }
-        last_used_at: { type: [string, 'null'], format: date-time }
+        last_used_at:
+          type: [string, 'null']
+          format: date-time
+          description: Set on the first call, then moved at most once every five minutes, so it is accurate to five minutes after the first call.
         created_at: { type: string, format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
     DeepHealthEnvelope:
