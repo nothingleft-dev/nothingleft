@@ -8,6 +8,7 @@ const EnvSchema = z.object({
     .optional(),
   // Mirrors the API's BYO_ALLOW_ANY_ENDPOINT, which production refuses: the storage wizard then offers a typed endpoint.
   NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT: z.enum(['true', 'false']).optional(),
+  NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().optional(),
 });
 
 // Next inlines NEXT_PUBLIC_* only when each one is referenced by its full literal name.
@@ -15,6 +16,7 @@ const parsed = EnvSchema.safeParse({
   NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   NEXT_PUBLIC_GA_MEASUREMENT_ID: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || undefined,
   NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT: process.env.NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT || undefined,
+  NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || undefined,
 });
 
 if (!parsed.success) {
@@ -26,4 +28,5 @@ export const env = {
   apiBaseUrl: parsed.data.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, ''),
   gaMeasurementId: parsed.data.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? null,
   byoAllowAnyEndpoint: parsed.data.NEXT_PUBLIC_BYO_ALLOW_ANY_ENDPOINT === 'true',
+  supportEmail: parsed.data.NEXT_PUBLIC_SUPPORT_EMAIL ?? null,
 };

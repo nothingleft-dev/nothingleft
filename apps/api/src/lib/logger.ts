@@ -1,4 +1,5 @@
 import { pino, stdSerializers, type LogFn, type Logger, type LoggerOptions, type TransportTargetOptions } from 'pino';
+import { fileURLToPath } from 'node:url';
 import { redactError } from '@nothingleft/analytics';
 import type { Env } from '@config/env';
 
@@ -52,8 +53,10 @@ export function loggerOptions(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>): LoggerO
   };
 }
 
-export function createLogger(env: Env): Logger {
-  const targets: TransportTargetOptions[] = env.LOG_TARGETS.map(t => {
+type TargetEnv = Pick<Env, 'LOG_LEVEL' | 'LOG_TARGETS' | 'LOG_FILE' | 'NODE_ENV' | 'POSTHOG_KEY' | 'POSTHOG_HOST'>;
+
+export function logTargets(env: TargetEnv): TransportTargetOptions[] {
+  return env.LOG_TARGETS.map(t => {
     switch (t) {
       case 'pretty':
         return {
@@ -65,8 +68,16 @@ export function createLogger(env: Env): Logger {
         return { target: 'pino/file', level: env.LOG_LEVEL, options: { destination: 1 } };
       case 'file':
         return { target: 'pino/file', level: env.LOG_LEVEL, options: { destination: env.LOG_FILE, mkdir: true } };
+      case 'posthog':
+        return {
+          target: fileURLToPath(import.meta.resolve('@nothingleft/analytics/log-transport')),
+          level: 'warn',
+          options: { host: env.POSTHOG_HOST, token: env.POSTHOG_KEY, service: 'api', environment: env.NODE_ENV },
+        };
     }
   });
+}
 
-  return pino({ ...loggerOptions(env), transport: { targets } });
+export function createLogger(env: Env): Logger {
+  return pino({ ...loggerOptions(env), transport: { targets: logTargets(env) } });
 }

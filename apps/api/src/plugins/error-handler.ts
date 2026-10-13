@@ -7,6 +7,7 @@ import { errorKey, t } from '@nothingleft/i18n';
 import { AppError } from '@lib/errors';
 import { isUniqueViolation } from '@lib/pg-errors';
 import { REQUEST_ID_HEADER } from '@config/constants';
+import { requestAttribution } from '@plugins/analytics';
 
 const errorHandlerPlugin: FastifyPluginAsync<{ analytics: Analytics }> = async (app, { analytics }) => {
   app.setErrorHandler((err, request, reply) => {
@@ -45,10 +46,20 @@ const errorHandlerPlugin: FastifyPluginAsync<{ analytics: Analytics }> = async (
       request.log.error({ err }, 'unhandled error');
     }
 
+    const route = request.routeOptions.url;
+    if (route) {
+      const { via, org, actor } = requestAttribution(request);
+      analytics.capture(
+        'api_error',
+        { route, method: request.method, status_code: status, error_code: body.code, via, ...org },
+        actor,
+      );
+    }
+
     if (status >= 500) {
       analytics.captureException(err, {
         request_id,
-        route: request.routeOptions.url ?? request.url,
+        ...(route ? { route } : {}),
         method: request.method,
         status_code: status,
         ...(request.principal ? { user_id: request.principal.userId } : {}),

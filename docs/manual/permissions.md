@@ -242,7 +242,7 @@ Whatever your roles, you can:
 - accept or decline ownership of an organisation offered to you.
 
 The Org Owner cannot deactivate their account while their organisation still exists. Erasing
-an account is not self-service: you, or an Org Admin on your behalf, email us
+an account is not self-service: you, or an Org Admin on your behalf, email admin@nothingleft.dev
 ([Account security](./account-security.md)).
 
 ## Agents and tokens

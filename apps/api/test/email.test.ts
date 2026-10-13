@@ -71,6 +71,20 @@ describe('mailer with RESEND_API_KEY', () => {
     expect(output()).not.toContain('secret-token');
     expect(output()).not.toContain('alex@example.com');
   });
+
+  test('sends the support address as reply_to, and nothing without one', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(init.body as string) as Record<string, unknown>);
+      return Response.json({ id: 'x' });
+    }) as unknown as typeof fetch;
+    const env = { ...base, NODE_ENV: 'production', RESEND_API_KEY: 're_test' } as Env;
+    await createMailer({ ...env, SUPPORT_EMAIL: 'admin@nothingleft.dev' }, capture().log).send(reset);
+    await createMailer(env, capture().log).send(reset);
+    expect(bodies[0]!.reply_to).toBe('admin@nothingleft.dev');
+    expect(bodies[0]!.replyTo).toBeUndefined();
+    expect(bodies[1]).not.toHaveProperty('reply_to');
+  });
 });
 
 describe('mailer with zoho', () => {
@@ -107,6 +121,17 @@ describe('mailer with zoho', () => {
     expect(seen?.body.to).toEqual([{ email_address: { address: 'alex@example.com' } }]);
     expect(seen?.body.mime_headers).toEqual({ 'List-Unsubscribe': '<https://x.example/u>' });
     expect(String(seen?.body.textbody)).toContain('secret-token');
+    expect(seen?.body.reply_to).toBeUndefined();
+  });
+
+  test('replies go to the support address when one is set', async () => {
+    let body: Record<string, unknown> = {};
+    globalThis.fetch = (async (_url: string, init: RequestInit) => {
+      body = JSON.parse(init.body as string) as Record<string, unknown>;
+      return Response.json({});
+    }) as unknown as typeof fetch;
+    await createMailer({ ...env('abc123'), SUPPORT_EMAIL: 'help@mail.example.com' }, capture().log).send(reset);
+    expect(body.reply_to).toEqual([{ address: 'help@mail.example.com' }]);
   });
 
   test('a key that already carries the prefix is sent as is', async () => {
@@ -192,6 +217,7 @@ describe('mailer with smtp', () => {
       const raw = received();
       expect(raw).toContain('Subject: =?UTF-8?Q?Reset_your_password');
       expect(raw).toContain('List-Unsubscribe: <https://x.example/u>');
+      expect(raw).not.toContain('Reply-To');
       expect(raw).toContain('text/html');
       expect(raw).toContain('text/plain');
     } finally {
