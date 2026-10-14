@@ -150,7 +150,7 @@ export function sprintsService(deps: SprintsDeps) {
         end_date: row.end_date,
         started_at: row.started_at?.toISOString() ?? null,
         completed_at: row.completed_at?.toISOString() ?? null,
-        days_left: row.state === 'active' && row.end_date ? Math.max(0, daysBetween(today, row.end_date)) : null,
+        days_left: row.state === 'active' && row.end_date ? daysBetween(today, row.end_date) : null,
         progress: {
           issues: f.issues,
           resolved_issues: f.resolved_issues,

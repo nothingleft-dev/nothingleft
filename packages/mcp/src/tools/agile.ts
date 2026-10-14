@@ -29,6 +29,9 @@ const SNAPSHOT_ROWS = 14;
 const dates = (s: Pick<Sprint, 'start_date' | 'end_date'>) =>
   s.start_date || s.end_date ? `${date(s.start_date)} – ${date(s.end_date)}` : 'Unscheduled';
 
+const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+const daysLeft = (n: number) => (n < 0 ? `ended ${days(-n)} ago` : n === 0 ? 'ends today' : `${days(n)} left`);
+
 const progressLine = (s: Sprint, minutes?: string | null) =>
   [
     `${s.progress.resolved_issues}/${s.progress.issues} issues resolved`,
@@ -52,7 +55,7 @@ async function sprintFacts(ctx: ToolContext, s: Sprint, org: string | undefined)
     ['Project', `${s.project.key} — ${s.project.name}`],
     ['State', s.state],
     ['Dates', dates(s)],
-    ['Days left', s.days_left === null ? null : String(s.days_left)],
+    ['Days left', s.days_left === null ? null : s.days_left < 0 ? daysLeft(s.days_left) : String(s.days_left)],
     ['Progress', progressLine(s, left)],
     ['By status', statusLine(s)],
     [
@@ -103,7 +106,7 @@ const sprintRows = (sprints: Sprint[], withProject: boolean) =>
       s.name,
       s.state,
       dates(s),
-      s.days_left === null ? '—' : String(s.days_left),
+      s.days_left === null ? '—' : s.days_left < 0 ? daysLeft(s.days_left) : String(s.days_left),
       `${s.progress.resolved_issues}/${s.progress.issues}`,
       `${s.progress.resolved_points}/${s.progress.points}`,
     ]),
@@ -535,7 +538,7 @@ export async function renderBoard(
       `${v.board.project.key} has no active sprint. start_sprint starts one; get_backlog shows what is planned.`,
     );
   }
-  const sprintLine = `Sprint **${v.sprint.name}** (${v.sprint.state}) · ${dates(v.sprint)}${v.sprint.days_left !== null ? ` · ${v.sprint.days_left} days left` : ''} · ${progressLine(v.sprint)}`;
+  const sprintLine = `Sprint **${v.sprint.name}** (${v.sprint.state}) · ${dates(v.sprint)}${v.sprint.days_left !== null ? ` · ${daysLeft(v.sprint.days_left)}` : ''} · ${progressLine(v.sprint)}`;
   const columns = table(
     ['Column', FIELD_LABELS[v.board.column_field], 'Cards', 'WIP'],
     v.columns.map(c => [
@@ -752,5 +755,5 @@ export async function activeSprintLine(ctx: ToolContext, key: string, org: strin
   });
   const sp = data[0];
   if (!sp) return 'Active sprint: none.';
-  return `Active sprint: **${sp.name}** · ${dates(sp)}${sp.days_left !== null ? ` · ${sp.days_left} days left` : ''} · ${progressLine(sp)}`;
+  return `Active sprint: **${sp.name}** · ${dates(sp)}${sp.days_left !== null ? ` · ${daysLeft(sp.days_left)}` : ''} · ${progressLine(sp)}`;
 }

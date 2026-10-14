@@ -8563,7 +8563,7 @@ components:
             end_date: { type: [string, 'null'], format: date }
             started_at: { type: [string, 'null'], format: date-time }
             completed_at: { type: [string, 'null'], format: date-time }
-            days_left: { type: [integer, 'null'], description: "Active sprints only: calendar days from the caller's today to the end date, never below 0." }
+            days_left: { type: [integer, 'null'], description: "Active sprints only: calendar days from the caller's today to the end date; 0 on the end date, negative once it has passed and the sprint is still open." }
             progress:
               type: object
               required: [issues, resolved_issues, points, resolved_points, remaining_estimate_minutes, by_status, mine]

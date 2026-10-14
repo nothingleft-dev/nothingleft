@@ -125,7 +125,8 @@ running, `/projects/PP/board/pp/sprint-17` stays on that one - and `/board/pp/cu
 the short form.
 
 - **The header** has the sprint picker (running, planned and finished sprints), its dates,
-  the days left (red under three days), _Start sprint_ or _Finish sprint_ for Project
+  the days left (red under three days, _Ended 4 days ago_ once the end date has passed and
+  the sprint is still open), _Start sprint_ or _Finish sprint_ for Project
   Admins, a strip counting the cards by what the columns show - statuses, or priorities or
   types on a board set up that way; hover a segment for _6 cards in status In Progress_ - and
   the story points resolved.

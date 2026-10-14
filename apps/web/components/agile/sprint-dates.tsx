@@ -20,6 +20,11 @@ export function SprintDates({ sprint, className }: { sprint: Dated; className?: 
   );
 }
 
+const dayCount = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+
+export const daysLeftLabel = (days: number) =>
+  days < 0 ? `Ended ${dayCount(-days)} ago` : days === 0 ? 'Ends today' : `${dayCount(days)} left`;
+
 // Red from under three days: the last stretch of a sprint is when scope gets cut.
 const URGENT_UNDER = 3;
 
@@ -33,7 +38,7 @@ export function DaysLeft({ days, className }: { days: number | null; className?:
         className,
       )}
     >
-      {days === 0 ? 'Ends today' : `${days} ${days === 1 ? 'day' : 'days'} left`}
+      {daysLeftLabel(days)}
     </span>
   );
 }

@@ -198,6 +198,15 @@ describe('start and finish', () => {
     expect(s.start_date).toBe(new Date().toISOString().slice(0, 10));
     expect(s.days_left).toBeGreaterThan(0);
     expect(s.snapshots).toHaveLength(1);
+    const overrun = await w.call(w.admin, 'PATCH', `/v1/projects/${KEY}/sprints/september-2026`, {
+      start_date: '2000-01-01',
+      end_date: '2000-01-10',
+    });
+    expect(overrun.json().data.days_left).toBeLessThan(-9000);
+    await w.call(w.admin, 'PATCH', `/v1/projects/${KEY}/sprints/september-2026`, {
+      start_date: s.start_date,
+      end_date: '2099-09-30',
+    });
     expect(s.progress.points).toBeGreaterThanOrEqual(8);
     await createSprint('October 2026', { start_date: '2099-10-01', end_date: '2099-10-14' });
     const second = await w.call(w.admin, 'POST', `/v1/projects/${KEY}/sprints/october-2026/start`);

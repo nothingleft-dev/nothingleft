@@ -30,7 +30,7 @@ export const SITEMAP_PAGES = {
   '/docs/issues': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/custom-fields': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/search': { lastmod: '2026-10-13T11:11:10+05:30' },
-  '/docs/agile': { lastmod: '2026-10-13T11:11:10+05:30' },
+  '/docs/agile': { lastmod: '2026-10-14T08:24:59+05:30' },
   '/docs/reports': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/knowledge-base': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/mcp-tools': { lastmod: '2026-10-13T11:11:10+05:30' },
