@@ -1,16 +1,15 @@
-import {
-  PALETTE_HUES,
-  type AddProjectMember,
-  type CreateProject,
-  type MemberRef,
-  type OrgRole,
-  type Pagination,
-  type PaletteHue,
-  type Principal,
-  type Project,
-  type ProjectMember,
-  type ProjectRole,
-  type UpdateProject,
+import type {
+  AddProjectMember,
+  CreateProject,
+  MemberRef,
+  OrgRole,
+  Pagination,
+  PaletteHue,
+  Principal,
+  Project,
+  ProjectMember,
+  ProjectRole,
+  UpdateProject,
 } from '@nothingleft/types';
 import type {
   CustomFieldRow,
@@ -25,6 +24,7 @@ import type {
 import type { Analytics } from '@nothingleft/analytics';
 import { t } from '@nothingleft/i18n';
 import { generateProjectKey, parseProjectKey, uniqueSlug } from '@nothingleft/format';
+import { defaultProjectColor } from '@lib/avatar';
 import { AppError } from '@lib/errors';
 import { bestEffort, type Mailer } from '@lib/email';
 import type { AccessService, OrgAccess, ProjectAccess } from '@services/access';
@@ -48,15 +48,6 @@ export interface ProjectListQuery {
   archived?: boolean | undefined;
   limit: number;
   offset: number;
-}
-
-// Gray is the neutral resting state in the design system, so it is never a default identity colour.
-const AVATAR_HUES = PALETTE_HUES.filter(h => h !== 'gray');
-
-function defaultAvatarColor(key: string): PaletteHue {
-  let hash = 0;
-  for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return AVATAR_HUES[hash % AVATAR_HUES.length] as PaletteHue;
 }
 
 const avatarInitials = (key: string) => key.slice(0, 2);
@@ -161,7 +152,7 @@ export function projectsService(deps: ProjectsDeps) {
       description_md: project.description_md,
       avatar_color: project.avatar_color as PaletteHue,
       avatar_initials: project.avatar_initials,
-      avatar_url: access.marks.project(project.key),
+      avatar_url: access.marks.project(project.key, project.avatar_color as PaletteHue),
       lead: lead ? access.memberRef(lead.user, lead.membership) : null,
       is_archived: project.is_archived,
       time_tracking_enabled: project.time_tracking_enabled,
@@ -312,7 +303,7 @@ export function projectsService(deps: ProjectsDeps) {
           name: input.name,
           slug,
           description_md: input.description_md ?? null,
-          avatar_color: input.avatar_color ?? defaultAvatarColor(key),
+          avatar_color: input.avatar_color ?? defaultProjectColor(key),
           avatar_initials: avatarInitials(key),
           created_by: principal.userId,
         });

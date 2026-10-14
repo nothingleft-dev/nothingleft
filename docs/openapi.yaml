@@ -52,6 +52,11 @@ paths:
           required: true
           description: A person's name, a project key or an organisation name.
           schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: color
+          in: query
+          required: false
+          description: Projects only, ignored otherwise. The project's `avatar_color`; without it the key picks one.
+          schema: { $ref: '#/components/schemas/PaletteHue' }
       responses:
         '200':
           description: The mark.
@@ -7283,7 +7288,7 @@ components:
         description_md: { type: [string, 'null'], description: Markdown. }
         avatar_color: { $ref: '#/components/schemas/PaletteHue' }
         avatar_initials: { type: string }
-        avatar_url: { type: string, description: 'The `/avatars/project` initials on the electric set with dark text, seeded by the project key and computed at read time. `avatar_color` and `avatar_initials` draw the mark while it loads.' }
+        avatar_url: { type: string, description: 'The `/avatars/project` initials on the `avatar_color` hue, seeded by the project key and computed at read time, so a recolour or a key change gives a new URL. `avatar_color` and `avatar_initials` draw the mark while it loads.' }
         lead:
           oneOf:
             - $ref: '#/components/schemas/MemberRef'

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { noopAnalytics } from '@nothingleft/analytics';
-import type { Principal } from '@nothingleft/types';
+import type { PaletteHue, Principal } from '@nothingleft/types';
 import {
   tenantContext,
   type CustomFieldRow,
@@ -92,7 +92,10 @@ function harness(rows: ProjectRow[]) {
     },
   } as unknown as ProjectsRepository;
 
-  const marks = { person: (n: string) => `person:${n}`, project: (k: string) => `project:${k}` } as AvatarMarks;
+  const marks = {
+    person: (n: string) => `person:${n}`,
+    project: (k: string, c: PaletteHue) => `project:${k}:${c}`,
+  } as AvatarMarks;
   const access = {
     ...accessService({
       organizations,

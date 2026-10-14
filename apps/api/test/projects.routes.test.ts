@@ -42,7 +42,7 @@ describe('POST /v1/projects', () => {
       key: 'PP',
       slug: 'partner-portal',
       avatar_initials: 'PP',
-      avatar_url: expect.stringMatching(/\/avatars\/project\?seed=PP$/),
+      avatar_url: expect.stringMatching(/\/avatars\/project\?seed=PP&color=[a-z]+$/),
       is_archived: false,
       my_role: 'project_admin',
       lead: null,
@@ -148,6 +148,7 @@ describe('updating and archiving', () => {
       avatar_color: 'gray',
     });
     expect(res.json().data).toMatchObject({ key: 'PP9', avatar_initials: 'PP', avatar_color: 'gray' });
+    expect(res.json().data.avatar_url).toEndWith('/avatars/project?seed=PP9&color=gray');
     expect(res.json().data.lead.username).toBe(adminName);
     expect((await call(admin, 'PATCH', '/v1/projects/PP9', { key: 'PP' })).statusCode).toBe(409);
     expect((await call(admin, 'PATCH', '/v1/projects/PP9', { lead: 'ghost' })).json().error.code).toBe(

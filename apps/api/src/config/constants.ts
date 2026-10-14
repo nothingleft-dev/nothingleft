@@ -66,8 +66,6 @@ export const ACTIVITY_EXPORT_PAGE_SIZE = 1_000;
 // the API, which cannot read the stylesheet - design/DESIGN-SYSTEM.md § 3.4.
 export const AVATAR_PASTEL_BACKGROUNDS = ['ffe3ea', 'e3edff', 'e2f5e9', 'fdf1d4', 'efe6ff'] as const;
 export const AVATAR_INITIALS_TEXT = '151618';
-// Project marks: loud on purpose, so a project reads apart from a person at a glance.
-export const AVATAR_ELECTRIC_BACKGROUNDS = ['ff2e88', '00e5ff', 'ffe600', '7cff00', 'ff6a00', 'b400ff'] as const;
 // Longer than any name, key or organisation name a mark is seeded from.
 export const AVATAR_SEED_MAX_LENGTH = 200;
 // A mark is a pure function of its URL, so it never needs revalidating.

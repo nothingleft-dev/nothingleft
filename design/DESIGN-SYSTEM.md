@@ -153,7 +153,7 @@ every `solid` on the surface ≥ 3:1, in both themes. Neutrals are also `oklch()
 
 | Role | Where |
 |---|---|
-| `--palette-{hue}-bg` | Tinted fills: tags, letter badges, project avatars, banners |
+| `--palette-{hue}-bg` | Tinted fills: tags, letter badges, banners |
 | `--palette-{hue}-fg` | Text on that fill |
 | `--palette-{hue}-solid` | Dots, priority edges, distribution strips, meters, chart marks |
 
@@ -222,24 +222,36 @@ deviation-signalling colour rule 1 is about — it never competes with a priorit
 or an overdue date for meaning. The set is deliberately pale enough to read on both
 themes without swapping, and the fixed dark text clears 15:1 on every one of the five.
 
-**Projects** use the same `initials` style over a six-colour **electric set**, seeded by
-the project key, so a project mark never reads as a person:
+**Projects** use the same `initials` style on the project's own `avatar_color`, the hue
+picked in project settings, seeded by the project key:
 
 ```
-backgroundColor=ff2e88,00e5ff,ffe600,7cff00,ff6a00,b400ff   textColor=151618   seed=<project key>
+/avatars/project?seed=<project key>&color=<avatar_color>
 ```
 
-The text is the people avatars' dark `151618`, not DiceBear's default white: white on the
-yellow, green and cyan falls under 1.5:1.
+The initials are white at weight 600 on every hue, in the style's plain `alt` variant (the
+default variant overlays a blended, half-opacity copy of the letters, which washes them out
+at sidebar size). The background is the hue's light-theme `solid`, one value for both
+themes, deepened until white clears **APCA Lc 75**. WCAG 2 ratios were not enough: they
+rated dark text on the mid-tone hues (orange through cyan, pink) at 4.5–6:1, while APCA put
+it at Lc 36–46, and at 22 px it read as unreadable. Hues whose `solid` falls short come out a
+step deeper; the rest keep it.
 
-The API builds the URL (`Project.avatar_url`); the hexes live beside the pastel five in
-`apps/api/src/config/constants.ts` (`AVATAR_ELECTRIC_BACKGROUNDS`) and more may be added
-there. `avatar_color` and `avatar_initials` still draw the mark while the image loads.
+`palette.mjs --marks --write` generates the colours twice: as hex in
+`apps/api/src/config/project-mark-colors.ts`, and as `--mark-{hue}` / `--mark-text` in
+`tokens.css`, which `.c-{hue}` exposes as `--c-mark`. The colour picker in project settings
+and the loading stand-in draw from those tokens, so the swatch, the stand-in and the image
+are the same colour. Edit the script, never either output.
 
-These five hexes are the one place a colour lives outside `tokens.css`, because the
-value has to travel inside a URL that a server builds and a CDN renders. They are
-restated in exactly one constant in the API — `AVATAR_PASTEL_BACKGROUNDS` and
-`AVATAR_INITIALS_TEXT` in `apps/api/src/config/constants.ts` — and nowhere else.
+The API builds the URL (`Project.avatar_url`), so a recolour changes the URL and the
+immutable cache never serves the old colour. `avatar_color` and `avatar_initials` draw the
+stand-in while the image loads.
+
+The pastel five and the project mark colours are the one place a colour lives outside
+`tokens.css`, because the mark is an SVG the API renders and cannot read the stylesheet.
+The pastels are restated in exactly one constant — `AVATAR_PASTEL_BACKGROUNDS` and
+`AVATAR_INITIALS_TEXT` in `apps/api/src/config/constants.ts`; the project colours are
+generated, as above. Nowhere else.
 
 Organisations use the `blobs` style seeded by the org name, and are the more saturated
 mark of the two. Initials render underneath as the offline fallback. Real photos
