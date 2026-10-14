@@ -351,7 +351,7 @@ export const SPRINTS_BOARDS_FAQ: FaqEntry[] = [
   {
     question: 'Can we use a board without sprints?',
     answer: [
-      'Not today. A board always shows one sprint, by default the running one. With no sprint running it shows the planned sprint, and with nothing planned it says so and points you to the backlog.',
+      'Yes. Pick All open issues in the sprint picker and the board shows every unresolved issue in the project, in a sprint or not. A project with no sprint running or planned opens its board that way, so a team that never plans a sprint still has a board.',
     ],
   },
   {

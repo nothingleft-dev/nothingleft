@@ -55,11 +55,13 @@ export function useBoardBySlug(slug: string | null) {
   });
 }
 
-export function useBoardView(projectKey: string, board: string, sprint: string, q: string) {
+/** `sprint` null waits: the board does not yet know which sprint `current` stands for. */
+export function useBoardView(projectKey: string, board: string, sprint: string | null, q: string) {
   return useQuery({
-    queryKey: queryKeys.boardView(projectKey, board, sprint, q),
+    queryKey: queryKeys.boardView(projectKey, board, sprint ?? '', q),
+    enabled: sprint !== null,
     refetchInterval: POLL.list,
-    queryFn: () => getBoardView(projectKey, board, { sprint, q }).then(r => r.data),
+    queryFn: () => getBoardView(projectKey, board, { sprint: sprint!, q }).then(r => r.data),
     retry: (count, error) => count < 1 && !(isApiError(error) && (error.status === 400 || error.status === 404)),
     placeholderData: keepPreviousData,
   });

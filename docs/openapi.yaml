@@ -4030,16 +4030,20 @@ paths:
       - $ref: '#/components/parameters/BoardName'
       - $ref: '#/components/parameters/XOrganization'
     get:
-      summary: The board on a sprint
+      summary: The board on a sprint, or on every open issue
       description: |
         Every project member. `sprint=current` (the default) is the active sprint; with none active
-        `sprint` is `null` and there are no cards. `q` filters the cards: column `count` and the
+        `sprint` is `null` and there are no cards. `sprint=open` is every unresolved issue in the
+        project, in a sprint or in the backlog, for a team that does not run sprints: `scope` is
+        `open`, `sprint` is `null`, and resolved columns stay on the board, empty, so a card can
+        still be dragged into them. No sprint is ever given the slug `current`, `open` or
+        `backlog`. `q` filters the cards: column `count` and the
         distribution strip follow it, column `total` (what WIP limits compare with) does not. Cards
         are in drag order, at most 500 (`truncated`). `swimlane_by` / `swimlane_field` override the
         board's own for this read.
       tags: [agile]
       parameters:
-        - { name: sprint, in: query, schema: { type: string, maxLength: 100, default: current } }
+        - { name: sprint, in: query, description: '`current`, `open`, or a sprint''s name or slug.', schema: { type: string, maxLength: 100, default: current } }
         - { name: q, in: query, schema: { type: string, maxLength: 2000 } }
         - { name: swimlane_by, in: query, schema: { $ref: '#/components/schemas/BoardSwimlane' } }
         - { name: swimlane_field, in: query, schema: { type: string, enum: [assignee, priority, type] } }
@@ -8725,9 +8729,10 @@ components:
         - properties:
             data:
               type: object
-              required: [board, sprint, columns, lanes, distribution, unmapped, truncated]
+              required: [board, scope, sprint, columns, lanes, distribution, unmapped, truncated]
               properties:
                 board: { $ref: '#/components/schemas/Board' }
+                scope: { type: string, enum: [sprint, open], description: '`open` for `sprint=open`; `sprint` otherwise, even with no sprint active.' }
                 sprint:
                   oneOf:
                     - { $ref: '#/components/schemas/Sprint' }

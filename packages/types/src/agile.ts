@@ -102,6 +102,16 @@ export type StartSprint = z.infer<typeof StartSprintSchema>;
 
 export const BACKLOG_TARGET = 'backlog';
 
+/** Board view words in a sprint's place: the active sprint, and every unresolved issue in the project. */
+export const BOARD_CURRENT_SPRINT = 'current';
+export const BOARD_OPEN_ISSUES = 'open';
+// Never handed out as a sprint slug, so a sprint named after one cannot be shadowed by it.
+export const RESERVED_SPRINT_SLUGS: ReadonlySet<string> = new Set([
+  BACKLOG_TARGET,
+  BOARD_CURRENT_SPRINT,
+  BOARD_OPEN_ISSUES,
+]);
+
 export const FinishSprintSchema = z.object({
   // "backlog", or the name or slug of a planned sprint.
   move_unfinished_to: SprintNameOrSlugSchema,
@@ -255,7 +265,9 @@ export type BoardLane = z.infer<typeof BoardLaneSchema>;
 
 export const BoardViewSchema = z.object({
   board: BoardSchema,
-  // null when the board was asked for the current sprint and none is active.
+  // `open`: every unresolved issue in the project, whatever its sprint, and `sprint` is null.
+  scope: z.enum(['sprint', 'open']),
+  // null on the open scope, and when the board was asked for the current sprint and none is active.
   sprint: SprintSchema.nullable(),
   columns: z.array(BoardViewColumnSchema),
   lanes: z.array(BoardLaneSchema),

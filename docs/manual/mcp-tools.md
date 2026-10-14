@@ -851,7 +851,7 @@ Changes the order of issues within the backlog or their sprint: places them, in 
 
 ### `get_board`
 
-A board on a sprint (default the active one): each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.
+A board on a sprint (default the active one), or on every unresolved issue in the project with sprint "open": each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.
 
 *Reads only.*
 
@@ -859,7 +859,7 @@ A board on a sprint (default the active one): each column's statuses (or priorit
 |---|---|---|---|
 | `project` | string |  | Project key, e.g. "PP". |
 | `board` | string |  | Board by name or slug, e.g. "pp". |
-| `sprint` | string |  | Default "current", the active sprint. |
+| `sprint` | string |  | Default "current", the active sprint. "open" is every unresolved issue, in a sprint or not. |
 | `query` | string |  | Filter the cards, as in search_issues. |
 | `swimlane_by` | `none` · `values` · `issues` |  | Override the board's swimlanes for this read. |
 | `swimlane_field` | `assignee` · `priority` · `type` |  |  |

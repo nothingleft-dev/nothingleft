@@ -1,6 +1,7 @@
 import { recordSprintEvent } from '@services/notify-outbox';
 import {
   BACKLOG_TARGET,
+  RESERVED_SPRINT_SLUGS,
   SPRINT_GOAL_MAX_BYTES,
   type BacklogMove,
   type CreateSprint,
@@ -213,9 +214,13 @@ export function sprintsService(deps: SprintsDeps) {
     }
   }
 
-  const slugFor = async (project: ProjectAccess, name: string) =>
-    uniqueSlug(name, await sprints.slugsInProject(project.ctx, project.project.id)) ||
-    uniqueSlug('sprint', await sprints.slugsInProject(project.ctx, project.project.id));
+  const slugFor = async (project: ProjectAccess, name: string) => {
+    const taken = new Set([
+      ...(await sprints.slugsInProject(project.ctx, project.project.id)),
+      ...RESERVED_SPRINT_SLUGS,
+    ]);
+    return uniqueSlug(name, taken) || uniqueSlug('sprint', taken);
+  };
 
   /** "backlog", or a planned sprint other than `except`. */
   async function carryTarget(project: ProjectAccess, value: string, except: SprintRow): Promise<SprintRow | null> {

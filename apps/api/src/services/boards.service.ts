@@ -1,5 +1,7 @@
 import {
   BOARD_CARDS_MAX,
+  BOARD_CURRENT_SPRINT,
+  BOARD_OPEN_ISSUES,
   BOARD_SWIMLANE_FIELDS,
   type BoardColumnField,
   type BoardValueCount,
@@ -25,6 +27,7 @@ import type {
   BoardLayout,
   BoardRow,
   BoardsRepository,
+  IssueContainer,
   IssueRow,
   IssuesRepository,
   IssueSearchRepository,
@@ -66,14 +69,12 @@ export interface BoardsDeps {
 }
 
 export interface BoardViewQuery {
-  /** `current` (the default) is the active sprint; otherwise a sprint's name or slug. */
+  /** `current` (the default) is the active sprint, `open` every unresolved issue; otherwise a sprint's name or slug. */
   sprint?: string | undefined;
   q?: string | undefined;
   swimlane_by?: BoardSwimlane | undefined;
   swimlane_field?: BoardSwimlaneField | undefined;
 }
-
-export const CURRENT_SPRINT = 'current';
 
 interface Placed {
   row: IssueRow;
@@ -628,11 +629,13 @@ export function boardsService(deps: BoardsDeps) {
       const layout = presented.layouts.get(row.id)!;
       const { values } = presented;
       const preloaded: CardsPreloaded = { catalogue: sc.catalogue, values };
-      const wanted = query.sprint?.trim() || CURRENT_SPRINT;
-      const sprintRow: SprintRow | null =
-        wanted.toLowerCase() === CURRENT_SPRINT
+      const wanted = (query.sprint?.trim() || BOARD_CURRENT_SPRINT).toLowerCase();
+      const open = wanted === BOARD_OPEN_ISSUES;
+      const sprintRow: SprintRow | null = open
+        ? null
+        : wanted === BOARD_CURRENT_SPRINT
           ? ((await deps.sprints.findActive(project.ctx, project.project.id)) ?? null)
-          : await sprintsService.resolveSprint(project, wanted);
+          : await sprintsService.resolveSprint(project, query.sprint!.trim());
       const sprint = sprintRow
         ? (
             await sprintsService.present(
@@ -657,8 +660,8 @@ export function boardsService(deps: BoardsDeps) {
       let byStatus = new Map<number, number>();
       let totals = new Map<number, number>();
       let matched = 0;
-      if (sprintRow) {
-        const container = { projectId: project.project.id, sprintId: sprintRow.id };
+      if (sprintRow || open) {
+        const container: IssueContainer = { projectId: project.project.id, sprintId: sprintRow?.id ?? 'unresolved' };
         const compiled = await search.compile(principal, sc, query.q);
         const counts = (f: BoardColumnField) =>
           issueSearch
@@ -667,7 +670,11 @@ export function boardsService(deps: BoardsDeps) {
         const countsByColumn = counts(columnField);
         const [result, unfiltered, byColumn, statusCounts] = await Promise.all([
           search.search(principal, sc, { q: query.q, compiled, container, limit: BOARD_CARDS_MAX, offset: 0 }),
-          deps.sprints.valueCounts(project.ctx, [sprintRow.id], columnField),
+          sprintRow
+            ? deps.sprints.valueCounts(project.ctx, [sprintRow.id], columnField)
+            : search
+                .compile(principal, sc, undefined)
+                .then(all => issueSearch.valueCounts(sc.ctx, sc.scope, all.query, container, columnField)),
           countsByColumn,
           columnField === 'status' ? countsByColumn : counts('status'),
         ]);
@@ -706,7 +713,7 @@ export function boardsService(deps: BoardsDeps) {
         preloaded,
       );
 
-      if (sprintRow && (await dailyOnce(deps.redis, `board:${principal.userId}:${row.id}`, now()))) {
+      if ((sprintRow || open) && (await dailyOnce(deps.redis, `board:${principal.userId}:${row.id}`, now()))) {
         deps.analytics.capture(
           'board_viewed',
           { via: principal.via, swimlane_by: by, filtered: Boolean(query.q?.trim()) },
@@ -717,6 +724,7 @@ export function boardsService(deps: BoardsDeps) {
       const mappedIds = new Set(columnOf.keys());
       return {
         board,
+        scope: open ? 'open' : 'sprint',
         sprint,
         columns,
         lanes,

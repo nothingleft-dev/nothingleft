@@ -4,6 +4,8 @@ import {
   BACKLOG_MOVE_MAX_ISSUES,
   BOARD_COLUMNS_MAX,
   BOARD_COLUMN_FIELDS,
+  BOARD_CURRENT_SPRINT,
+  BOARD_OPEN_ISSUES,
   BOARD_SWIMLANE_FIELDS,
   BOARD_SWIMLANES,
   SPRINT_STATES,
@@ -531,14 +533,16 @@ export async function renderBoard(
       ...(args.swimlane_field ? { swimlane_field: args.swimlane_field } : {}),
     },
   });
-  const heading = `**${v.board.name}** board (${code(v.board.slug)}) — ${v.board.project.key}\n${ctx.appBaseUrl}/projects/${v.board.project.key}/board/${v.board.slug}/${v.sprint ? v.sprint.slug : 'current'}`;
-  if (!v.sprint) {
+  const heading = `**${v.board.name}** board (${code(v.board.slug)}) — ${v.board.project.key}\n${ctx.appBaseUrl}/projects/${v.board.project.key}/board/${v.board.slug}/${v.scope === 'open' ? BOARD_OPEN_ISSUES : v.sprint ? v.sprint.slug : BOARD_CURRENT_SPRINT}`;
+  if (!v.sprint && v.scope !== 'open') {
     return join(
       heading,
-      `${v.board.project.key} has no active sprint. start_sprint starts one; get_backlog shows what is planned.`,
+      `${v.board.project.key} has no active sprint. sprint: "${BOARD_OPEN_ISSUES}" shows every unresolved issue on the board; start_sprint starts one; get_backlog shows what is planned.`,
     );
   }
-  const sprintLine = `Sprint **${v.sprint.name}** (${v.sprint.state}) · ${dates(v.sprint)}${v.sprint.days_left !== null ? ` · ${daysLeft(v.sprint.days_left)}` : ''} · ${progressLine(v.sprint)}`;
+  const sprintLine = !v.sprint
+    ? 'All open issues: every unresolved issue in the project, in a sprint or not.'
+    : `Sprint **${v.sprint.name}** (${v.sprint.state}) · ${dates(v.sprint)}${v.sprint.days_left !== null ? ` · ${daysLeft(v.sprint.days_left)}` : ''} · ${progressLine(v.sprint)}`;
   const columns = table(
     ['Column', FIELD_LABELS[v.board.column_field], 'Cards', 'WIP'],
     v.columns.map(c => [
@@ -579,11 +583,13 @@ export const getBoard = defineTool({
   name: 'get_board',
   title: 'Get a board',
   description:
-    "A board on a sprint (default the active one): each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.",
+    "A board on a sprint (default the active one), or on every unresolved issue in the project with sprint \"open\": each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.",
   input: z.strictObject({
     project: arg.project.optional(),
     board: arg.board.optional(),
-    sprint: arg.sprint.optional().describe('Default "current", the active sprint.'),
+    sprint: arg.sprint
+      .optional()
+      .describe('Default "current", the active sprint. "open" is every unresolved issue, in a sprint or not.'),
     query: z.string().max(2000).optional().describe('Filter the cards, as in search_issues.'),
     swimlane_by: z.enum(BOARD_SWIMLANES).optional().describe("Override the board's swimlanes for this read."),
     swimlane_field: z.enum(BOARD_SWIMLANE_FIELDS).optional(),

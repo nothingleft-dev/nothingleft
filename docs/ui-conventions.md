@@ -436,7 +436,8 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 - **Copy** on an issue (the breadcrumb, the modal) copies the key and the title:
   `PP-123 Title`.
 - **No running sprint**: `…/current` shows the planned sprint whose dates hold today, else
-  the first planned one, marked _Not started_ with _Start sprint_ for Project Admins.
+  the first planned one, marked _Not started_ with _Start sprint_ for Project Admins; with
+  nothing planned, _All open issues_ (`…/open`), which the sprint picker also lists first.
 - **A drag stays in its lane.** Moving a card sets the target column's first value of the
   board's column field (status, priority or type) and nothing else; changing lanes would silently change the lane's field, so other lanes
   do not accept the drop.

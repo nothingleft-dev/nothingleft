@@ -276,6 +276,46 @@ describe('start and finish', () => {
     expect(filtered.lanes[0]).toMatchObject({ kind: 'value', key: w.contributor.username, count: 1 });
   });
 
+  test('the open board holds every unresolved issue in the project, in a sprint or not', async () => {
+    const inBacklog = await newIssue({ title: 'Loose card' });
+    const inSprint = await newIssue({ title: 'Sprint card', sprint: 'september-2026' });
+    const resolved = await newIssue({ title: 'Done card', status: 'Fixed' });
+    const res = await w.call(w.observer, 'GET', `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view?sprint=open`);
+    expect(res.statusCode).toBe(200);
+    const view = res.json().data;
+    expect(view.scope).toBe('open');
+    expect(view.sprint).toBeNull();
+    const keys = view.lanes.flatMap((l: { issue: { key: string } | null; cells: { cards: { key: string }[] }[] }) => [
+      ...(l.issue ? [l.issue.key] : []),
+      ...l.cells.flatMap(c => c.cards.map(card => card.key)),
+    ]);
+    expect(keys).toContain(inBacklog);
+    expect(keys).toContain(inSprint);
+    expect(keys).not.toContain(resolved);
+    const done = view.columns.find((c: { resolved: boolean }) => c.resolved);
+    expect(done.total).toBe(0);
+    const filtered = (
+      await w.call(
+        w.observer,
+        'GET',
+        `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view?sprint=open&q=${encodeURIComponent('"Loose card"')}`,
+      )
+    ).json().data;
+    const count = filtered.columns.reduce((n: number, c: { count: number }) => n + c.count, 0);
+    const total = filtered.columns.reduce((n: number, c: { total: number }) => n + c.total, 0);
+    expect(count).toBe(1);
+    expect(total).toBeGreaterThan(count);
+    const current = (await w.call(w.observer, 'GET', `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view`)).json()
+      .data;
+    expect(current.scope).toBe('sprint');
+  });
+
+  test('a sprint named after a board word gets another slug', async () => {
+    for (const name of ['Open', 'Current', 'Backlog']) {
+      expect((await createSprint(name)).slug).toBe(`${name.toLowerCase()}-2`);
+    }
+  });
+
   test('query language: sprint:, #{Sprint}, {No sprint}, group by sprint, bad value', async () => {
     const inSprint = await search('sprint: {September 2026}');
     expect(inSprint.length).toBeGreaterThan(0);
