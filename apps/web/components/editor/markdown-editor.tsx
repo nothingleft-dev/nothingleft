@@ -64,6 +64,8 @@ export interface MarkdownEditorProps {
   label: string;
   placeholder: string;
   variant?: 'description' | 'comment';
+  /** Overrides the variant's minimum height, as a Tailwind class. */
+  minHeight?: string;
   autoFocus?: boolean;
   onSubmit?: () => void;
   onCancel?: () => void;
@@ -81,6 +83,7 @@ export function MarkdownEditor({
   label,
   placeholder,
   variant = 'comment',
+  minHeight: minHeightOverride,
   autoFocus = false,
   onSubmit,
   onCancel,
@@ -326,7 +329,7 @@ export function MarkdownEditor({
       }
     : undefined;
 
-  const minHeight = variant === 'description' ? 'min-h-80' : 'min-h-24';
+  const minHeight = minHeightOverride ?? (variant === 'description' ? 'min-h-80' : 'min-h-24');
 
   return (
     <div

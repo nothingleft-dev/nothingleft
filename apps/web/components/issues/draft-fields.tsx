@@ -491,6 +491,8 @@ export function DraftText({ draft, large, withLinks = false }: DraftTextProps) {
         label="Description"
         placeholder="Add a description. Type @ to mention someone, # to link an issue."
         variant={large ? 'description' : 'comment'}
+        // Room to write in the dialog, capped so the dialog still fits a short window.
+        minHeight={large ? undefined : 'min-h-[min(25rem,40dvh)]'}
         invalid={draft.size.level === 'too_large'}
         uploader={draft.uploader}
       />
