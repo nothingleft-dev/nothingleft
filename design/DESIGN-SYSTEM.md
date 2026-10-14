@@ -442,6 +442,12 @@ under each; vertical hairlines between. Optional small unit (`of 40h`) and delta
 (`+7 vs last week`, green/red by direction × whether up is good). An alert figure
 (overdue) is `--danger-fg`. Max 5 per row.
 
+A linked figure makes its whole cell the link, meter included. Hover and keyboard focus
+wash the cell in `--bg-hover` from hairline to hairline, brighten the label to `--text`
+and fade in a small arrow after it; the figure itself never changes. No underline, no
+scale, nothing moves. A row with any link insets its outer cells 12px so the figure
+clears the wash's edge.
+
 ### Kbd
 11px/500 muted, `--bg-inset`, 1px border with a 2px bottom. Shown inside the primary
 button (`c`), the search input (`/`), and the shortcuts nav item (`?`).
