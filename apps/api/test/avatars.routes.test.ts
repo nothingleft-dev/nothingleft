@@ -29,10 +29,17 @@ describe('GET /avatars/:kind', () => {
     expect(res.body).toStartWith('<svg');
   });
 
+  test('draws a project in the colour its URL names', async () => {
+    const res = await app.inject({ method: 'GET', url: '/avatars/project?seed=PP&color=indigo' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe(renderAvatar('project', 'PP', 'indigo'));
+  });
+
   test.each([
     ['an unknown kind', '/avatars/robot?seed=PP'],
     ['no seed', '/avatars/person'],
     ['an empty seed', '/avatars/person?seed='],
+    ['a colour outside the palette', '/avatars/project?seed=PP&color=magenta'],
     ['an over-long seed', `/avatars/person?seed=${'a'.repeat(AVATAR_SEED_MAX_LENGTH + 1)}`],
   ])('refuses %s with the error envelope', async (_label, url) => {
     const res = await app.inject({ method: 'GET', url });

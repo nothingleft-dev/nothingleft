@@ -235,7 +235,7 @@ worthwhile only under load).
 | `attachments.sweep` | Cron, hourly | Remove attachment rows whose upload never completed |
 | `storage.reconcile` | Cron, nightly | Recompute `storage_used_bytes` from `attachments`, log drift |
 | `notifications.due` | Cron, hourly | Produce `due_soon` and `overdue` rows against each recipient's timezone |
-| `issues.purge` | Cron, nightly | Hard-delete issues soft-deleted more than 14 days ago, with their dependants and objects |
+| `issues.purge` | Cron, nightly | Hard-delete issues and articles soft-deleted more than 14 days ago, with their dependants and objects. Per organisation, 200 at a time: the objects are deleted with no transaction open, then one short transaction removes the rows still due and releases their bytes. A failing bucket leaves that organisation's rows for the next night; each half (issues, then articles) stops after 5 minutes, so a run lasts up to about ten |
 | `notifications.purge` | Cron, nightly | Delete read notifications after 30 days, unread after 90 |
 | `webhooks.purge` | Cron, nightly (v2) | Delete `webhook_deliveries` after 30 days |
 | `org.delete` | Grace period elapsed | Delete an organisation whose deletion was scheduled |

@@ -1,6 +1,7 @@
 import { recordSprintEvent } from '@services/notify-outbox';
 import {
   BACKLOG_TARGET,
+  RESERVED_SPRINT_SLUGS,
   SPRINT_GOAL_MAX_BYTES,
   type BacklogMove,
   type CreateSprint,
@@ -150,7 +151,7 @@ export function sprintsService(deps: SprintsDeps) {
         end_date: row.end_date,
         started_at: row.started_at?.toISOString() ?? null,
         completed_at: row.completed_at?.toISOString() ?? null,
-        days_left: row.state === 'active' && row.end_date ? Math.max(0, daysBetween(today, row.end_date)) : null,
+        days_left: row.state === 'active' && row.end_date ? daysBetween(today, row.end_date) : null,
         progress: {
           issues: f.issues,
           resolved_issues: f.resolved_issues,
@@ -213,9 +214,13 @@ export function sprintsService(deps: SprintsDeps) {
     }
   }
 
-  const slugFor = async (project: ProjectAccess, name: string) =>
-    uniqueSlug(name, await sprints.slugsInProject(project.ctx, project.project.id)) ||
-    uniqueSlug('sprint', await sprints.slugsInProject(project.ctx, project.project.id));
+  const slugFor = async (project: ProjectAccess, name: string) => {
+    const taken = new Set([
+      ...(await sprints.slugsInProject(project.ctx, project.project.id)),
+      ...RESERVED_SPRINT_SLUGS,
+    ]);
+    return uniqueSlug(name, taken) || uniqueSlug('sprint', taken);
+  };
 
   /** "backlog", or a planned sprint other than `except`. */
   async function carryTarget(project: ProjectAccess, value: string, except: SprintRow): Promise<SprintRow | null> {
@@ -513,6 +518,7 @@ export function sprintsService(deps: SprintsDeps) {
         principal,
         project,
         result.entries.map(e => e.row),
+        { catalogue: sc.catalogue },
       );
       if (await dailyOnce(deps.redis, `backlog:${principal.userId}:${project.project.id}`, now())) {
         analytics.capture(
@@ -620,12 +626,11 @@ export function sprintsService(deps: SprintsDeps) {
         { via: principal.via, count: rows.length, sprint_changed: changed.length > 0 },
         { userId: principal.userId, orgId: project.organization.id },
       );
-      const fresh = await Promise.all(rows.map(r => issues.findById(project.ctx, r.id)));
-      return issuesService.dtos(
-        principal,
-        project,
-        fresh.map(r => r!),
+      const fresh = await issues.findByIds(
+        project.ctx,
+        rows.map(r => r.id),
       );
+      return issuesService.dtos(principal, project, fresh);
     },
 
     /** The nightly sprint.snapshot job: yesterday's figures, UTC, for every active sprint. */

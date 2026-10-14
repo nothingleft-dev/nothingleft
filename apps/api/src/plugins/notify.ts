@@ -17,13 +17,12 @@ const notify: FastifyPluginAsync<{ queue: () => JobQueue; report: (error: unknow
   app.addHook('onSend', async (request, reply, payload) => {
     const store = pending.getStore();
     if (!store || store.size === 0 || !MUTATING.has(request.method) || reply.statusCode >= 400) return payload;
-    for (const entry of store.values()) {
-      try {
-        await queue().send('notify.fanout', entry.job, { startAfter: entry.startAfter, singletonKey: entry.key });
-      } catch (error) {
-        report(error);
-      }
-    }
+    const sent = await Promise.allSettled(
+      [...store.values()].map(async entry =>
+        queue().send('notify.fanout', entry.job, { startAfter: entry.startAfter, singletonKey: entry.key }),
+      ),
+    );
+    for (const result of sent) if (result.status === 'rejected') report(result.reason);
     store.clear();
     return payload;
   });

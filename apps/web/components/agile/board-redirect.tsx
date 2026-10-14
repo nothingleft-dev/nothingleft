@@ -3,10 +3,11 @@
 import { useEffect } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
+import { BOARD_CURRENT_SPRINT } from '@nothingleft/types';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
 import { PageSkeleton } from '@components/skeletons';
-import { BoardPage, CURRENT_SPRINT } from '@components/agile/board-page';
+import { BoardPage } from '@components/agile/board-page';
 import { useBoardBySlug, useBoards } from '@hooks/use-boards';
 import { isApiError } from '@lib/api/errors';
 
@@ -17,7 +18,7 @@ export function FirstBoardRedirect({ projectKey }: { projectKey: string }) {
   const first = boards.data?.[0]?.slug;
 
   useEffect(() => {
-    if (first) router.replace(`/projects/${projectKey}/board/${first}/${CURRENT_SPRINT}` as Route);
+    if (first) router.replace(`/projects/${projectKey}/board/${first}/${BOARD_CURRENT_SPRINT}` as Route);
   }, [first, projectKey, router]);
 
   if (boards.isError) return <FormAlert title="This project's boards could not be loaded." />;

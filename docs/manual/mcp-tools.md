@@ -851,7 +851,7 @@ Changes the order of issues within the backlog or their sprint: places them, in 
 
 ### `get_board`
 
-A board on a sprint (default the active one): each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.
+A board on a sprint (default the active one), or on every unresolved issue in the project with sprint "open": each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.
 
 *Reads only.*
 
@@ -859,7 +859,7 @@ A board on a sprint (default the active one): each column's statuses (or priorit
 |---|---|---|---|
 | `project` | string |  | Project key, e.g. "PP". |
 | `board` | string |  | Board by name or slug, e.g. "pp". |
-| `sprint` | string |  | Default "current", the active sprint. |
+| `sprint` | string |  | Default "current", the active sprint. "open" is every unresolved issue, in a sprint or not. |
 | `query` | string |  | Filter the cards, as in search_issues. |
 | `swimlane_by` | `none` · `values` · `issues` |  | Override the board's swimlanes for this read. |
 | `swimlane_field` | `assignee` · `priority` · `type` |  |  |
@@ -1226,7 +1226,7 @@ Changes your own name or timezone (an IANA name such as "Europe/London"), which 
 
 ### `start_csv_import`
 
-Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000 rows and 100 MB). First call: give the CSV as `content` (text up to 1 MB), or `size_bytes` and `sha256` of a file on disk and run the curl command the answer gives. That answers the columns, a sample and a suggested mapping. Then call again with `import` and a `mapping`: a dry run (the default) lists each row that would fail and why; `dry_run: false` creates the issues in the background. Rows that fail are skipped and listed. Needs a Project Admin and a token with admin:project.
+Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000 rows and 50 MB). First call: give the CSV as `content` (text up to 1 MB), or `size_bytes` and `sha256` of a file on disk and run the curl command the answer gives. That answers the columns, a sample and a suggested mapping. Then call again with `import` and a `mapping`: a dry run (the default) lists each row that would fail and why; `dry_run: false` creates the issues in the background. Rows that fail are skipped and listed. Needs a Project Admin and a token with admin:project.
 
 *Changes data.*
 

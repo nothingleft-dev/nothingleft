@@ -510,7 +510,7 @@ export const IMPORT_FIELDS = [
 ] as const;
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 export const CSV_IMPORT_MAX_ROWS = 10_000;
-export const CSV_IMPORT_MAX_BYTES = 100 * 1024 * 1024;
+export const CSV_IMPORT_MAX_BYTES = 50 * 1024 * 1024;
 export const CSV_IMPORT_SAMPLE_ROWS = 5;
 // Beyond this the job keeps counting failed rows but stops listing them.
 export const CSV_IMPORT_ERRORS_KEPT = 1_000;

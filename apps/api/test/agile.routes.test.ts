@@ -198,6 +198,15 @@ describe('start and finish', () => {
     expect(s.start_date).toBe(new Date().toISOString().slice(0, 10));
     expect(s.days_left).toBeGreaterThan(0);
     expect(s.snapshots).toHaveLength(1);
+    const overrun = await w.call(w.admin, 'PATCH', `/v1/projects/${KEY}/sprints/september-2026`, {
+      start_date: '2000-01-01',
+      end_date: '2000-01-10',
+    });
+    expect(overrun.json().data.days_left).toBeLessThan(-9000);
+    await w.call(w.admin, 'PATCH', `/v1/projects/${KEY}/sprints/september-2026`, {
+      start_date: s.start_date,
+      end_date: '2099-09-30',
+    });
     expect(s.progress.points).toBeGreaterThanOrEqual(8);
     await createSprint('October 2026', { start_date: '2099-10-01', end_date: '2099-10-14' });
     const second = await w.call(w.admin, 'POST', `/v1/projects/${KEY}/sprints/october-2026/start`);
@@ -208,10 +217,43 @@ describe('start and finish', () => {
 
   test('the board reads the active sprint: filter-aware counts, WIP totals, lanes', async () => {
     const epic = await newIssue({ type: 'Epic', title: 'Checkout', sprint: 'september-2026' });
-    await newIssue({ parent: epic, sprint: 'september-2026', assignees: [w.contributor.username] });
+    await newIssue({
+      parent: epic,
+      sprint: 'september-2026',
+      assignees: [w.contributor.username],
+      tags: ['board-card'],
+      estimate: '2h',
+      story_points: 3,
+      due_date: '2099-12-01',
+    });
     const res = await w.call(w.observer, 'GET', `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view`);
     expect(res.statusCode).toBe(200);
     const view = res.json().data;
+    const cards: Record<string, unknown>[] = view.lanes.flatMap(
+      (l: { issue: Record<string, unknown> | null; cells: { cards: Record<string, unknown>[] }[] }) => [
+        ...(l.issue ? [l.issue] : []),
+        ...l.cells.flatMap(c => c.cards),
+      ],
+    );
+    expect(cards.length).toBeGreaterThan(1);
+    for (const card of cards) {
+      const issue = (await w.call(w.observer, 'GET', `/v1/issues/${String(card.key)}`)).json().data;
+      expect(card).toEqual({
+        key: issue.key,
+        title: issue.title,
+        status: issue.status,
+        priority: issue.priority,
+        type: issue.type,
+        assignees: issue.assignees,
+        tags: issue.tags,
+        due_date: issue.due_date,
+        story_points: issue.story_points,
+        estimate_minutes: issue.estimate_minutes,
+        parent: issue.parent,
+        subtasks: issue.subtasks,
+        resolved: issue.resolved_at !== null,
+      });
+    }
     expect(view.sprint.slug).toBe('september-2026');
     const total = view.columns.reduce((n: number, c: { total: number }) => n + c.total, 0);
     expect(total).toBe(view.sprint.progress.issues);
@@ -232,6 +274,46 @@ describe('start and finish', () => {
     const count = filtered.columns.reduce((n: number, c: { count: number }) => n + c.count, 0);
     expect(count).toBe(1);
     expect(filtered.lanes[0]).toMatchObject({ kind: 'value', key: w.contributor.username, count: 1 });
+  });
+
+  test('the open board holds every unresolved issue in the project, in a sprint or not', async () => {
+    const inBacklog = await newIssue({ title: 'Loose card' });
+    const inSprint = await newIssue({ title: 'Sprint card', sprint: 'september-2026' });
+    const resolved = await newIssue({ title: 'Done card', status: 'Fixed' });
+    const res = await w.call(w.observer, 'GET', `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view?sprint=open`);
+    expect(res.statusCode).toBe(200);
+    const view = res.json().data;
+    expect(view.scope).toBe('open');
+    expect(view.sprint).toBeNull();
+    const keys = view.lanes.flatMap((l: { issue: { key: string } | null; cells: { cards: { key: string }[] }[] }) => [
+      ...(l.issue ? [l.issue.key] : []),
+      ...l.cells.flatMap(c => c.cards.map(card => card.key)),
+    ]);
+    expect(keys).toContain(inBacklog);
+    expect(keys).toContain(inSprint);
+    expect(keys).not.toContain(resolved);
+    const done = view.columns.find((c: { resolved: boolean }) => c.resolved);
+    expect(done.total).toBe(0);
+    const filtered = (
+      await w.call(
+        w.observer,
+        'GET',
+        `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view?sprint=open&q=${encodeURIComponent('"Loose card"')}`,
+      )
+    ).json().data;
+    const count = filtered.columns.reduce((n: number, c: { count: number }) => n + c.count, 0);
+    const total = filtered.columns.reduce((n: number, c: { total: number }) => n + c.total, 0);
+    expect(count).toBe(1);
+    expect(total).toBeGreaterThan(count);
+    const current = (await w.call(w.observer, 'GET', `/v1/projects/${KEY}/boards/${KEY.toLowerCase()}/view`)).json()
+      .data;
+    expect(current.scope).toBe('sprint');
+  });
+
+  test('a sprint named after a board word gets another slug', async () => {
+    for (const name of ['Open', 'Current', 'Backlog']) {
+      expect((await createSprint(name)).slug).toBe(`${name.toLowerCase()}-2`);
+    }
   });
 
   test('query language: sprint:, #{Sprint}, {No sprint}, group by sprint, bad value', async () => {

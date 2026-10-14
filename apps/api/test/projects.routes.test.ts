@@ -42,7 +42,7 @@ describe('POST /v1/projects', () => {
       key: 'PP',
       slug: 'partner-portal',
       avatar_initials: 'PP',
-      avatar_url: expect.stringMatching(/\/avatars\/project\?seed=PP$/),
+      avatar_url: expect.stringMatching(/\/avatars\/project\?seed=PP&color=[a-z]+$/),
       is_archived: false,
       my_role: 'project_admin',
       lead: null,
@@ -148,6 +148,7 @@ describe('updating and archiving', () => {
       avatar_color: 'gray',
     });
     expect(res.json().data).toMatchObject({ key: 'PP9', avatar_initials: 'PP', avatar_color: 'gray' });
+    expect(res.json().data.avatar_url).toEndWith('/avatars/project?seed=PP9&color=gray');
     expect(res.json().data.lead.username).toBe(adminName);
     expect((await call(admin, 'PATCH', '/v1/projects/PP9', { key: 'PP' })).statusCode).toBe(409);
     expect((await call(admin, 'PATCH', '/v1/projects/PP9', { lead: 'ghost' })).json().error.code).toBe(
@@ -173,5 +174,41 @@ describe('updating and archiving', () => {
       await call(admin, 'GET', `/v1/organizations/${slug}/activity?kind=project_archived&kind=project_unarchived`)
     ).json().data;
     expect(log.map((r: { kind: string }) => r.kind)).toEqual(['project_unarchived', 'project_archived']);
+  });
+});
+
+describe('the project list', () => {
+  test('each entry carries its lead and time fields exactly as reading that project alone does', async () => {
+    const adminName = (await call(admin, 'GET', `/v1/organizations/${slug}`)).json().data.membership.username;
+    expect((await call(admin, 'POST', '/v1/projects', { name: 'Timed', key: 'TT' })).statusCode).toBe(201);
+    for (const name of ['Original estimate', 'Logged']) {
+      const field = await call(admin, 'POST', '/v1/projects/TT/custom-fields', { name, type: 'duration' });
+      expect(field.statusCode).toBe(201);
+    }
+    await call(admin, 'POST', '/v1/projects/TT/members', { username: memberName, role: 'contributor' });
+    const timed = await call(admin, 'PATCH', '/v1/projects/TT', {
+      lead: `@${memberName}`,
+      estimation_field: 'original-estimate',
+      spent_time_field: 'logged',
+    });
+    expect(timed.statusCode).toBe(200);
+    expect((await call(admin, 'PATCH', '/v1/projects/PP', { lead: `@${adminName}` })).statusCode).toBe(200);
+    expect((await call(admin, 'PATCH', '/v1/projects/PP9', { lead: `@${adminName}` })).statusCode).toBe(200);
+
+    const listed = (await call(admin, 'GET', '/v1/projects')).json().data as { key: string }[];
+    expect(listed.map(p => p.key).sort()).toEqual(['PP', 'PP9', 'TT']);
+    for (const entry of listed) {
+      expect(entry).toEqual((await call(admin, 'GET', `/v1/projects/${entry.key}`)).json().data);
+    }
+    expect(listed.find(p => p.key === 'TT')).toMatchObject({
+      lead: { username: memberName, former_member: false },
+      estimation_field: { slug: 'original-estimate', name: 'Original estimate' },
+      spent_time_field: { slug: 'logged', name: 'Logged' },
+    });
+    expect(listed.find(p => p.key === 'PP')).toMatchObject({
+      lead: { username: adminName },
+      estimation_field: null,
+      spent_time_field: null,
+    });
   });
 });

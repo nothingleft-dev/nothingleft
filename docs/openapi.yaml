@@ -52,6 +52,11 @@ paths:
           required: true
           description: A person's name, a project key or an organisation name.
           schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: color
+          in: query
+          required: false
+          description: Projects only, ignored otherwise. The project's `avatar_color`; without it the key picks one.
+          schema: { $ref: '#/components/schemas/PaletteHue' }
       responses:
         '200':
           description: The mark.
@@ -3068,7 +3073,7 @@ paths:
       description: |
         Reserves an import and presigns the upload, like an attachment: `PUT` the file to
         `upload_url` with every `upload_headers` entry within 15 minutes, then
-        `POST …/imports/{id}/complete`. UTF-8, a header row, at most 100 MB and 10,000 rows. The
+        `POST …/imports/{id}/complete`. UTF-8, a header row, at most 50 MB and 10,000 rows. The
         file lives in the platform's private bucket until its import ends, and never counts toward
         the quota. Project Admins and up (*Import issues from CSV*); a token needs `admin:project`.
       tags: [imports]
@@ -4025,16 +4030,20 @@ paths:
       - $ref: '#/components/parameters/BoardName'
       - $ref: '#/components/parameters/XOrganization'
     get:
-      summary: The board on a sprint
+      summary: The board on a sprint, or on every open issue
       description: |
         Every project member. `sprint=current` (the default) is the active sprint; with none active
-        `sprint` is `null` and there are no cards. `q` filters the cards: column `count` and the
+        `sprint` is `null` and there are no cards. `sprint=open` is every unresolved issue in the
+        project, in a sprint or in the backlog, for a team that does not run sprints: `scope` is
+        `open`, `sprint` is `null`, and resolved columns stay on the board, empty, so a card can
+        still be dragged into them. No sprint is ever given the slug `current`, `open` or
+        `backlog`. `q` filters the cards: column `count` and the
         distribution strip follow it, column `total` (what WIP limits compare with) does not. Cards
         are in drag order, at most 500 (`truncated`). `swimlane_by` / `swimlane_field` override the
         board's own for this read.
       tags: [agile]
       parameters:
-        - { name: sprint, in: query, schema: { type: string, maxLength: 100, default: current } }
+        - { name: sprint, in: query, description: '`current`, `open`, or a sprint''s name or slug.', schema: { type: string, maxLength: 100, default: current } }
         - { name: q, in: query, schema: { type: string, maxLength: 2000 } }
         - { name: swimlane_by, in: query, schema: { $ref: '#/components/schemas/BoardSwimlane' } }
         - { name: swimlane_field, in: query, schema: { type: string, enum: [assignee, priority, type] } }
@@ -7283,7 +7292,7 @@ components:
         description_md: { type: [string, 'null'], description: Markdown. }
         avatar_color: { $ref: '#/components/schemas/PaletteHue' }
         avatar_initials: { type: string }
-        avatar_url: { type: string, description: 'The `/avatars/project` initials on the electric set with dark text, seeded by the project key and computed at read time. `avatar_color` and `avatar_initials` draw the mark while it loads.' }
+        avatar_url: { type: string, description: 'The `/avatars/project` initials on the `avatar_color` hue, seeded by the project key and computed at read time, so a recolour or a key change gives a new URL. `avatar_color` and `avatar_initials` draw the mark while it loads.' }
         lead:
           oneOf:
             - $ref: '#/components/schemas/MemberRef'
@@ -8067,7 +8076,7 @@ components:
       required: [filename, size, sha256]
       properties:
         filename: { type: string, maxLength: 255, example: backlog.csv }
-        size: { type: integer, minimum: 1, description: Bytes; at most 100 MB. }
+        size: { type: integer, minimum: 1, description: Bytes; at most 50 MB. }
         sha256: { type: string, description: Base64 SHA-256 of the file, signed into the upload. }
     ImportMapping:
       type: object
@@ -8558,7 +8567,7 @@ components:
             end_date: { type: [string, 'null'], format: date }
             started_at: { type: [string, 'null'], format: date-time }
             completed_at: { type: [string, 'null'], format: date-time }
-            days_left: { type: [integer, 'null'], description: "Active sprints only: calendar days from the caller's today to the end date, never below 0." }
+            days_left: { type: [integer, 'null'], description: "Active sprints only: calendar days from the caller's today to the end date; 0 on the end date, negative once it has passed and the sprint is still open." }
             progress:
               type: object
               required: [issues, resolved_issues, points, resolved_points, remaining_estimate_minutes, by_status, mine]
@@ -8720,9 +8729,10 @@ components:
         - properties:
             data:
               type: object
-              required: [board, sprint, columns, lanes, distribution, unmapped, truncated]
+              required: [board, scope, sprint, columns, lanes, distribution, unmapped, truncated]
               properties:
                 board: { $ref: '#/components/schemas/Board' }
+                scope: { type: string, enum: [sprint, open], description: '`open` for `sprint=open`; `sprint` otherwise, even with no sprint active.' }
                 sprint:
                   oneOf:
                     - { $ref: '#/components/schemas/Sprint' }
@@ -9049,7 +9059,10 @@ components:
           description: Null means every project the owner can reach. An empty list means every project the token was restricted to has been deleted, and it reaches none. Keys, not ids.
           items: { type: string }
         expires_at: { type: [string, 'null'], format: date-time }
-        last_used_at: { type: [string, 'null'], format: date-time }
+        last_used_at:
+          type: [string, 'null']
+          format: date-time
+          description: Set on the first call, then moved at most once every five minutes, so it is accurate to five minutes after the first call.
         created_at: { type: string, format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
     DeepHealthEnvelope:

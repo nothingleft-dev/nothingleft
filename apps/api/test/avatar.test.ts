@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { AVATAR_ELECTRIC_BACKGROUNDS, AVATAR_INITIALS_TEXT, AVATAR_PASTEL_BACKGROUNDS } from '@config/constants';
-import { avatarKeyOwner, avatarMarks, avatarObjectKey, renderAvatar } from '@lib/avatar';
+import { AVATAR_INITIALS_TEXT, AVATAR_PASTEL_BACKGROUNDS } from '@config/constants';
+import { PROJECT_MARK_COLORS } from '@config/project-mark-colors';
+import { avatarKeyOwner, avatarMarks, avatarObjectKey, defaultProjectColor, renderAvatar } from '@lib/avatar';
 
 describe('generated marks', () => {
   test('a person draws from the pastel set with fixed dark text, the same for the same name', () => {
@@ -12,10 +13,20 @@ describe('generated marks', () => {
     expect(renderAvatar('person', 'Jordan Rivera')).toBe(svg);
   });
 
-  test('a project draws from the electric set, an organisation is a blob', () => {
-    const project = renderAvatar('project', 'PP');
-    expect(AVATAR_ELECTRIC_BACKGROUNDS.some(c => project.includes(`fill="#${c}"`))).toBe(true);
+  test('a project is drawn in its chosen colour, an organisation is a blob', () => {
+    const project = renderAvatar('project', 'PP', 'teal');
+    expect(project).toContain(`fill="#${PROJECT_MARK_COLORS.teal.background}"`);
+    expect(project).toContain('fill="#ffffff"');
+    expect(project).toContain('font-weight="600"');
+    expect(project).not.toContain('mix-blend-mode');
+    expect(renderAvatar('project', 'PP', 'violet')).toContain(`fill="#${PROJECT_MARK_COLORS.violet.background}"`);
     expect(renderAvatar('organization', 'Acme Corporation')).toContain('<path');
+  });
+
+  test("a project mark without a colour takes the key's default, never gray", () => {
+    const fallback = defaultProjectColor('PP');
+    expect(fallback).not.toBe('gray');
+    expect(renderAvatar('project', 'PP')).toBe(renderAvatar('project', 'PP', fallback));
   });
 
   test('a mark loads nothing from elsewhere', () => {
@@ -27,7 +38,7 @@ describe('generated marks', () => {
   test('mark URLs point at this API, never a third party', () => {
     const marks = avatarMarks('https://api.example.test/');
     expect(marks.person('Jordan Rivera')).toBe('https://api.example.test/avatars/person?seed=Jordan%20Rivera');
-    expect(marks.project('PP')).toBe('https://api.example.test/avatars/project?seed=PP');
+    expect(marks.project('PP', 'teal')).toBe('https://api.example.test/avatars/project?seed=PP&color=teal');
     expect(marks.organization('A&B')).toBe('https://api.example.test/avatars/organization?seed=A%26B');
   });
 });

@@ -13,7 +13,7 @@ import {
   type UsersRepository,
 } from '@nothingleft/db';
 import type { Analytics } from '@nothingleft/analytics';
-import { SESSION_ROLLING_REFRESH_MS } from '@config/constants';
+import { PAT_LAST_USED_RESOLUTION_MS, SESSION_ROLLING_REFRESH_MS } from '@config/constants';
 import { sha256 } from '@lib/crypto';
 
 /** The slice of the Redis client this service uses; typed structurally so nothing
@@ -139,7 +139,7 @@ export function authService({ users, sessions, tokens, redis, analytics }: AuthD
     const user = await users.findById(ctx, row.user_id);
     if (!user || user.deactivated_at || user.deleted_at) return null;
 
-    await tokens.markUsed(ctx, row.id);
+    await tokens.markUsed(ctx, row.id, PAT_LAST_USED_RESOLUTION_MS);
     const principal: Principal = {
       via: 'pat',
       userId: row.user_id,

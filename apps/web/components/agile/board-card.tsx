@@ -335,7 +335,8 @@ function CardDueDate({ card, today, canEdit }: { card: Card; today: string; canE
 
 interface NewCardProps {
   projectKey: string;
-  sprint: string;
+  /** null: the backlog. */
+  sprint: string | null;
   /** The column's field and first value, which the new issue takes. */
   field: BoardColumnField;
   value: string;

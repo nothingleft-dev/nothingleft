@@ -3,6 +3,7 @@ import { projectSchemaRepository } from '../src/repositories/project-schema.repo
 import { projectsRepository } from '../src/repositories/projects.repository.ts';
 import { recentSearchesRepository } from '../src/repositories/recent-searches.repository.ts';
 import { savedViewsRepository } from '../src/repositories/saved-views.repository.ts';
+import { recent_searches } from '../src/schema/index.ts';
 import { inRolledBackTx, seedIssueWorld } from './fixtures.ts';
 
 const view = (owner: number, name: string, extra: object = {}) => ({
@@ -56,21 +57,64 @@ describe('savedViewsRepository tenant isolation', () => {
 });
 
 describe('recentSearchesRepository tenant isolation', () => {
+  const window = 5 * 60_000;
+  const at = (s: number) => new Date(Date.UTC(2026, 8, 24, 0, 0, s));
+  const minutes = (m: number) => new Date(Date.UTC(2026, 8, 24, 0, m, 0));
+
   test('record bumps and prunes per user and organisation; list and clear stay in one organisation', async () => {
     await inRolledBackTx(async tx => {
       const repo = recentSearchesRepository(tx);
       const { ctxA, ctxB, alice } = await seedIssueWorld(tx);
-      const at = (s: number) => new Date(Date.UTC(2026, 8, 24, 0, 0, s));
-      await repo.record(ctxA, alice, 'one', 2, at(1));
-      await repo.record(ctxA, alice, 'two', 2, at(2));
-      await repo.record(ctxA, alice, 'one', 2, at(3));
-      await repo.record(ctxA, alice, 'three', 2, at(4));
+      await repo.record(ctxA, alice, 'one', 2, minutes(0), window);
+      await repo.record(ctxA, alice, 'two', 2, minutes(1), window);
+      await repo.record(ctxA, alice, 'one', 2, minutes(10), window);
+      await repo.record(ctxA, alice, 'three', 2, minutes(11), window);
       const rows = await repo.list(ctxA, alice, 10);
       expect(rows.map(r => r.query)).toEqual(['three', 'one']);
       expect(rows[1]!.use_count).toBe(2);
       expect(await repo.list(ctxB, alice, 10)).toEqual([]);
       expect(await repo.clear(ctxB, alice)).toBe(0);
       expect(await repo.clear(ctxA, alice)).toBe(2);
+    });
+  });
+
+  test('a repeat inside the coalescing window writes nothing; one after it bumps once', async () => {
+    await inRolledBackTx(async tx => {
+      const repo = recentSearchesRepository(tx);
+      const { ctxA, alice } = await seedIssueWorld(tx);
+      await repo.record(ctxA, alice, 'poll', 5, minutes(0), window);
+      await repo.record(ctxA, alice, 'poll', 5, at(30), window);
+      await repo.record(ctxA, alice, 'poll', 5, minutes(4), window);
+      let [row] = await repo.list(ctxA, alice, 10);
+      expect(row).toMatchObject({ use_count: 1, last_used_at: minutes(0) });
+
+      await repo.record(ctxA, alice, 'poll', 5, minutes(6), window);
+      [row] = await repo.list(ctxA, alice, 10);
+      expect(row).toMatchObject({ use_count: 2, last_used_at: minutes(6) });
+    });
+  });
+
+  test('a new query inserts at once and prunes; a repeat does not prune', async () => {
+    await inRolledBackTx(async tx => {
+      const repo = recentSearchesRepository(tx);
+      const { ctxA, alice } = await seedIssueWorld(tx);
+      await repo.record(ctxA, alice, 'one', 2, at(1), window);
+      await repo.record(ctxA, alice, 'two', 2, at(2), window);
+      await repo.record(ctxA, alice, 'three', 2, at(3), window);
+      expect((await repo.list(ctxA, alice, 10)).map(r => r.query)).toEqual(['three', 'two']);
+
+      // Over the keep limit by a row inserted elsewhere: only an insert prunes it.
+      await tx.insert(recent_searches).values({
+        org_id: ctxA.orgId,
+        user_id: alice,
+        query_hash: Buffer.from('x'),
+        query: 'extra',
+        last_used_at: at(0),
+      });
+      await repo.record(ctxA, alice, 'three', 2, minutes(10), window);
+      expect(await repo.list(ctxA, alice, 10)).toHaveLength(3);
+      await repo.record(ctxA, alice, 'four', 2, minutes(11), window);
+      expect((await repo.list(ctxA, alice, 10)).map(r => r.query)).toEqual(['four', 'three']);
     });
   });
 });

@@ -848,6 +848,10 @@ describe('agile', () => {
     expect(await ok(t.contributor, 'get_project', { project: KEY })).toContain('Active sprint:');
     const noSprint = await ok(t.contributor, 'get_board', { project: KEY, board: 'flow' });
     expect(noSprint).toContain('has no active sprint');
+    expect(noSprint).toContain('sprint: "open"');
+    const openBoard = await ok(t.contributor, 'get_board', { project: KEY, board: 'flow', sprint: 'open' });
+    expect(openBoard).toContain('All open issues');
+    expect(openBoard).toContain('/board/flow/open');
     const asked = await tool(t.projectAdmin, 'delete_board', { project: KEY, board: 'Flow' }, 'declines');
     expect(asked.code).toBe('mcp.confirm_declined');
     expect(await ok(t.projectAdmin, 'delete_board', { project: KEY, board: 'Flow' })).toContain(

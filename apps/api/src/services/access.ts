@@ -17,6 +17,7 @@ import {
   type OrganizationRow,
   type OrganizationsRepository,
   type OrgMemberRow,
+  type ProjectMemberRow,
   type ProjectRow,
   type ProjectsRepository,
   type TenantContext,
@@ -123,15 +124,32 @@ export function accessService({
     return access;
   }
 
+  const projectNotFound = (key: string) => new AppError('project.not_found', 404, { key }, 'key');
+
   async function projectAccessFor(
     principal: Principal,
     org: OrgAccess,
     project: ProjectRow | undefined,
     key: string,
   ): Promise<ProjectAccess> {
-    const notFound = () => new AppError('project.not_found', 404, { key }, 'key');
-    if (!project) throw notFound();
-    const explicit = await projects.findMember(org.ctx, project.id, principal.userId);
+    if (!project) throw projectNotFound(key);
+    return decideProject(
+      principal,
+      org,
+      project,
+      await projects.findMember(org.ctx, project.id, principal.userId),
+      key,
+    );
+  }
+
+  function decideProject(
+    principal: Principal,
+    org: OrgAccess,
+    project: ProjectRow,
+    explicit: ProjectMemberRow | undefined,
+    key: string,
+  ): ProjectAccess {
+    const notFound = () => projectNotFound(key);
     const scope: Scope = {
       ...org.scope,
       projectRole: (explicit?.role as ProjectRole | undefined) ?? null,
@@ -214,6 +232,31 @@ export function accessService({
     async project(principal: Principal, key: string, hints: OrgHints = {}): Promise<ProjectAccess> {
       const org = await this.current(principal, { ...hints, projectKey: key });
       return projectAccessFor(principal, org, await projects.findByKey(org.ctx, key), key);
+    },
+
+    /** Several keys in the organisation the first resolves to; each key, in order, fails as `project` then `require` would. */
+    async projects(
+      principal: Principal,
+      keys: readonly string[],
+      hints: OrgHints = {},
+      capability?: Capability,
+    ): Promise<ProjectAccess[]> {
+      if (keys.length === 0) return [];
+      const org = await this.current(principal, { ...hints, projectKey: keys[0] });
+      const rows = new Map((await projects.findByKeys(org.ctx, keys)).map(p => [p.key, p]));
+      const members = await projects.findMembers(
+        org.ctx,
+        [...rows.values()].map(p => p.id),
+        principal.userId,
+      );
+      const memberOf = new Map(members.map(m => [m.project_id, m]));
+      return keys.map(key => {
+        const project = rows.get(key);
+        if (!project) throw projectNotFound(key);
+        const one = decideProject(principal, org, project, memberOf.get(project.id), key);
+        if (capability) this.require(principal, capability, one.scope);
+        return one;
+      });
     },
 
     async projectById(principal: Principal, org: OrgAccess, projectId: number): Promise<ProjectAccess> {

@@ -2,6 +2,7 @@ import {
   ISSUE_CSV_COLUMNS,
   ISSUE_REF_PICKER_LIMIT,
   ISSUE_RESTORE_WINDOW_DAYS,
+  type BoardCard,
   type BulkUpdateIssues,
   type BulkUpdateResult,
   type CreateIssue,
@@ -33,7 +34,6 @@ import {
 } from '@nothingleft/types';
 import {
   systemContext,
-  tenantContext,
   type AttachmentsRepository,
   type CommentsRepository,
   type CustomFieldsRepository,
@@ -72,8 +72,9 @@ import {
   writeLinks,
   type LinkName,
 } from '@services/issue-link-writer';
-import { claimDrafts, releaseStorage } from '@services/attachment-writer';
-import { isByoUnavailable, type ObjectStores } from '@services/object-stores';
+import { claimDrafts } from '@services/attachment-writer';
+import type { ObjectStores } from '@services/object-stores';
+import { purgeDeleted } from '@services/deleted-purge';
 import { applyTags, wantedTags, type WantedTag } from '@services/issue-tag-writer';
 import {
   appliesTo,
@@ -168,6 +169,12 @@ interface ProjectValues {
   types: IssueTypeRow[];
 }
 
+/** What a caller already holds for the rows' projects; whatever is given is not loaded again. */
+interface Preloaded {
+  catalogue?: FieldCatalogue | undefined;
+  values?: ProjectValues | undefined;
+}
+
 /** Input resolved to rows and ids; `undefined` still means "not supplied". */
 interface Resolved {
   title?: string | undefined;
@@ -224,6 +231,29 @@ const sameName = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 const byUsername = (a: string, b: string) => a.localeCompare(b);
 
 const LINK_KINDS = new Set<string>(['linked', 'unlinked']);
+
+const statusRef = (status: WorkflowStatusRow) => ({
+  name: status.name,
+  category: status.category as StatusCategory,
+  color: status.color as LabelColor,
+  short_label: status.short_label,
+});
+const priorityRef = (priority: PriorityRow) => ({
+  name: priority.name,
+  color: priority.color as LabelColor,
+  short_label: priority.short_label,
+});
+const typeRef = (type: IssueTypeRow) => ({
+  name: type.name,
+  icon: type.icon,
+  color: type.color as LabelColor,
+  short_label: type.short_label,
+});
+const tagRef = ({ tag }: { tag: { name: string; slug: string; color: string } }) => ({
+  name: tag.name,
+  slug: tag.slug,
+  color: tag.color as LabelColor,
+});
 
 // Redacted rather than dropped, so the history's count and paging read the same for every reader.
 function redactLink(value: unknown, readable: ReadonlyMap<string, ProjectRow>): unknown {
@@ -338,21 +368,42 @@ export function issuesService(deps: IssuesDeps) {
     return { statuses, priorities, types };
   }
 
+  const groupByIssue = <T extends { issue_id: number }>(rows: readonly T[]): Map<number, T[]> => {
+    const out = new Map<number, T[]>();
+    for (const row of rows) {
+      const list = out.get(row.issue_id);
+      if (list) list.push(row);
+      else out.set(row.issue_id, [row]);
+    }
+    return out;
+  };
+
+  const byId = <T extends { id: number }>(rows: readonly T[]) => new Map(rows.map(r => [r.id, r]));
+
+  const schemaOf = async (ctx: TenantContext, projectIds: number[], given?: ProjectValues) => {
+    if (given) return given;
+    const [statuses, priorities, types] = await Promise.all([
+      schema.listForProjects(ctx, 'statuses', projectIds),
+      schema.listForProjects(ctx, 'priorities', projectIds),
+      schema.listForProjects(ctx, 'types', projectIds),
+    ]);
+    return { statuses, priorities, types };
+  };
+
   /** Rows from any readable projects of one organisation → DTOs, in the order given. */
   async function hydrateMany(
     principal: Principal,
     ctx: TenantContext,
     rows: IssueRow[],
     projectsById: ReadonlyMap<number, Pick<ProjectRow, 'key' | 'name'>>,
+    preloaded: Preloaded = {},
   ): Promise<Issue[]> {
     const unique = [...new Map(rows.map(r => [r.id, r])).values()];
     const ids = unique.map(r => r.id);
     const projectIds = [...new Set(unique.map(r => r.project_id))];
     const sprintIds = [...new Set(unique.flatMap(r => (r.sprint_id === null ? [] : [r.sprint_id])))];
     const [
-      statuses,
-      priorities,
-      types,
+      values,
       assignees,
       people,
       signals,
@@ -366,9 +417,7 @@ export function issuesService(deps: IssuesDeps) {
       catalogue,
       fieldValues,
     ] = await Promise.all([
-      schema.listForProjects(ctx, 'statuses', projectIds),
-      schema.listForProjects(ctx, 'priorities', projectIds),
-      schema.listForProjects(ctx, 'types', projectIds),
+      schemaOf(ctx, projectIds, preloaded.values),
       issues.listAssignees(ctx, ids),
       issues.findPeople(
         ctx,
@@ -385,41 +434,38 @@ export function issuesService(deps: IssuesDeps) {
       deps.sprints.findByIds(ctx, sprintIds),
       issues.subtaskProgress(ctx, ids),
       issues.storyPointsRollup(ctx, ids),
-      loadCatalogue(deps.customFields, ctx, projectIds),
+      preloaded.catalogue ?? loadCatalogue(deps.customFields, ctx, projectIds),
       deps.customFields.listValues(ctx, ids),
     ]);
     const valuePeople = await issues.findPeople(ctx, userIdsIn(fieldValues));
     const person = new Map([...people, ...valuePeople].map(p => [p.user.id, p]));
     const refs = new Map([...person].map(([id, p]) => [id, memberRef(p)]));
-    const sprintById = new Map(sprintRows.map(sp => [sp.id, sp]));
+    const sprintById = byId(sprintRows);
+    const statusById = byId(values.statuses);
+    const priorityById = byId(values.priorities);
+    const typeById = byId(values.types);
+    const assigneesOf = groupByIssue(assignees);
+    const tagsOf = groupByIssue(tagRows);
+    const valuesOf = groupByIssue(fieldValues);
 
     return rows.map(row => {
       const { key, name } = projectsById.get(row.project_id)!;
-      const status = statuses.find(s => s.id === row.status_id)!;
-      const priority = priorities.find(p => p.id === row.priority_id)!;
-      const type = types.find(t => t.id === row.type_id)!;
       const parentNumber = row.parent_id === null ? undefined : parents.get(row.parent_id);
+      const ownValues = valuesOf.get(row.id) ?? [];
       return {
         key: formatIssueKey(key, row.key_number),
         project: { key, name },
         title: row.title,
         description_md: row.description_md,
-        status: {
-          name: status.name,
-          category: status.category as StatusCategory,
-          color: status.color as LabelColor,
-          short_label: status.short_label,
-        },
-        priority: { name: priority.name, color: priority.color as LabelColor, short_label: priority.short_label },
-        type: { name: type.name, icon: type.icon, color: type.color as LabelColor, short_label: type.short_label },
-        assignees: assignees.filter(a => a.issue_id === row.id).map(memberRef),
+        status: statusRef(statusById.get(row.status_id)!),
+        priority: priorityRef(priorityById.get(row.priority_id)!),
+        type: typeRef(typeById.get(row.type_id)!),
+        assignees: (assigneesOf.get(row.id) ?? []).map(memberRef),
         created_by: memberRef(person.get(row.created_by)),
         updated_by: memberRef(person.get(row.updated_by)),
         parent: parentNumber === undefined ? null : formatIssueKey(key, parentNumber),
-        tags: tagRows
-          .filter(t => t.issue_id === row.id)
-          .map(({ tag }) => ({ name: tag.name, slug: tag.slug, color: tag.color as LabelColor })),
-        estimate_minutes: effectiveEstimate(catalogue, row, fieldValues),
+        tags: (tagsOf.get(row.id) ?? []).map(tagRef),
+        estimate_minutes: effectiveEstimate(catalogue, row, ownValues),
         spent_minutes: row.spent_minutes,
         story_points: row.story_points,
         story_points_rollup: rollups.get(row.id) ?? null,
@@ -432,12 +478,7 @@ export function issuesService(deps: IssuesDeps) {
         comment_count: row.comment_count,
         watcher_count: watchers.get(row.id) ?? 0,
         attachment_count: files.get(row.id) ?? 0,
-        custom_fields: issueCustomFields(
-          catalogue,
-          row,
-          fieldValues.filter(v => v.issue_id === row.id),
-          refs,
-        ),
+        custom_fields: issueCustomFields(catalogue, row, ownValues, refs),
         me: signals.get(row.id) ?? { starred: false, voted: false, watching: false },
         created_at: row.created_at.toISOString(),
         updated_at: row.updated_at.toISOString(),
@@ -449,10 +490,14 @@ export function issuesService(deps: IssuesDeps) {
     });
   }
 
-  function effectiveEstimate(cat: FieldCatalogue, row: IssueRow, values: readonly IssueFieldValueRow[]): number | null {
+  function effectiveEstimate(
+    cat: FieldCatalogue,
+    row: IssueRow,
+    ownValues: readonly IssueFieldValueRow[],
+  ): number | null {
     const fieldId = cat.roles.get(row.project_id)?.estimation ?? null;
     if (fieldId === null) return row.estimate_minutes;
-    const value = values.find(v => v.issue_id === row.id && v.field_id === fieldId)?.value_number;
+    const value = ownValues.find(v => v.field_id === fieldId)?.value_number;
     return value === undefined || value === null ? null : value;
   }
 
@@ -492,8 +537,57 @@ export function issuesService(deps: IssuesDeps) {
     return { plan, vc, redirected };
   }
 
-  const hydrate = (principal: Principal, project: ProjectAccess, rows: IssueRow[]) =>
-    hydrateMany(principal, project.ctx, rows, new Map([[project.project.id, project.project]]));
+  const hydrate = (principal: Principal, project: ProjectAccess, rows: IssueRow[], preloaded?: Preloaded) =>
+    hydrateMany(principal, project.ctx, rows, new Map([[project.project.id, project.project]]), preloaded);
+
+  /** One project's rows → board cards, in the order given: only what a card shows is loaded. */
+  async function boardCards(
+    project: ProjectAccess,
+    rows: IssueRow[],
+    preloaded: Preloaded & { catalogue: FieldCatalogue },
+  ): Promise<BoardCard[]> {
+    if (rows.length === 0) return [];
+    const { ctx } = project;
+    const { catalogue } = preloaded;
+    const ids = [...new Set(rows.map(r => r.id))];
+    const estimated = catalogue.roles.get(project.project.id)?.estimation != null;
+    const [values, assignees, parents, tagRows, subtasks, fieldValues] = await Promise.all([
+      schemaOf(ctx, [project.project.id], preloaded.values),
+      issues.listAssignees(ctx, ids),
+      issues.keyNumbers(
+        ctx,
+        rows.flatMap(r => (r.parent_id === null ? [] : [r.parent_id])),
+      ),
+      tags.listForIssues(ctx, ids),
+      issues.subtaskProgress(ctx, ids),
+      estimated ? deps.customFields.listValues(ctx, ids) : [],
+    ]);
+    const statusById = byId(values.statuses);
+    const priorityById = byId(values.priorities);
+    const typeById = byId(values.types);
+    const assigneesOf = groupByIssue(assignees);
+    const tagsOf = groupByIssue(tagRows);
+    const valuesOf = groupByIssue(fieldValues);
+    const key = project.project.key;
+    return rows.map(row => {
+      const parentNumber = row.parent_id === null ? undefined : parents.get(row.parent_id);
+      return {
+        key: formatIssueKey(key, row.key_number),
+        title: row.title,
+        status: statusRef(statusById.get(row.status_id)!),
+        priority: priorityRef(priorityById.get(row.priority_id)!),
+        type: typeRef(typeById.get(row.type_id)!),
+        assignees: (assigneesOf.get(row.id) ?? []).map(memberRef),
+        tags: (tagsOf.get(row.id) ?? []).map(tagRef),
+        due_date: row.due_date,
+        story_points: row.story_points,
+        estimate_minutes: effectiveEstimate(catalogue, row, valuesOf.get(row.id) ?? []),
+        parent: parentNumber === undefined ? null : formatIssueKey(key, parentNumber),
+        subtasks: subtasks.get(row.id) ?? { resolved: 0, total: 0 },
+        resolved: row.resolved_at !== null,
+      };
+    });
+  }
 
   const one = async (principal: Principal, project: ProjectAccess, row: IssueRow) =>
     (await hydrate(principal, project, [row]))[0]!;
@@ -927,6 +1021,7 @@ export function issuesService(deps: IssuesDeps) {
         sc.ctx,
         result.entries.map(e => e.row),
         new Map(sc.projects.map(p => [p.id, p])),
+        { catalogue: sc.catalogue },
       );
       analytics.capture(
         'issues_searched',
@@ -1022,20 +1117,23 @@ export function issuesService(deps: IssuesDeps) {
       };
       async function* rows(): AsyncIterable<string> {
         yield csvLine([...columns]);
+        const preloaded: Preloaded = { catalogue: sc.catalogue };
         for (let offset = 0; offset < ISSUE_EXPORT_MAX_ROWS; offset += ISSUE_EXPORT_PAGE_SIZE) {
-          const batch = await issueSearch.search(sc.ctx, sc.scope, compiled.query, {
+          const wanted = Math.min(ISSUE_EXPORT_PAGE_SIZE, ISSUE_EXPORT_MAX_ROWS - offset);
+          // One row past the page says whether another page exists, so a full last page fetches no empty one.
+          const batch = await issueSearch.page(sc.ctx, sc.scope, compiled.query, {
             sort: compiled.sort,
-            limit: Math.min(ISSUE_EXPORT_PAGE_SIZE, ISSUE_EXPORT_MAX_ROWS - offset),
+            limit: wanted + 1,
             offset,
           });
-          const dtos = await hydrateMany(
-            principal,
+          if (batch.length === 0) return;
+          preloaded.values ??= await schemaOf(
             sc.ctx,
-            batch.entries.map(e => e.row),
-            projectsById,
+            sc.projects.map(p => p.id),
           );
+          const dtos = await hydrateMany(principal, sc.ctx, batch.slice(0, wanted), projectsById, preloaded);
           for (const dto of dtos) yield csvLine(columns.map(c => cell(dto, c)));
-          if (batch.entries.length < ISSUE_EXPORT_PAGE_SIZE) return;
+          if (batch.length <= wanted) return;
         }
       }
       analytics.capture(
@@ -1576,6 +1674,7 @@ export function issuesService(deps: IssuesDeps) {
     dto: one,
     dtos: hydrate,
     dtosMany: hydrateMany,
+    boardCards,
     refsOf,
     keyIn,
     readableProjects: (principal: Principal, org: OrgAccess) => search.readableProjects(principal, org),
@@ -1587,29 +1686,16 @@ export function issuesService(deps: IssuesDeps) {
         systemContext('the nightly purge has no actor and spans every organisation'),
         cutoff,
       );
-      let purged = 0;
-      for (const orgId of orgIds) {
-        const ctx = tenantContext(orgId);
-        try {
-          purged += await inTransaction(async repos => {
-            // Objects first: a row deleted before its object would leave the file unreachable and unbilled, forever.
-            const files = await repos.attachments.onIssuesDeletedBefore(ctx, cutoff);
-            await deps.stores.deleteObjects(ctx, files);
-            await releaseStorage(
-              repos,
-              ctx,
-              files.filter(f => f.deleted_at === null),
-              access.storageLimit,
-            );
-            return repos.issues.purgeDeletedBefore(ctx, cutoff);
-          });
-        } catch (error) {
-          // One organisation's storage outage must not keep every other organisation's deleted issues.
-          // A failing customer bucket waits for its admins, who were already told; nothing to report.
-          if (!isByoUnavailable(error)) analytics.captureException(error, { org_id: orgId });
-        }
-      }
-      return purged;
+      return purgeDeleted(
+        { inTransaction, stores: deps.stores, analytics, storageLimit: access.storageLimit, now },
+        orgIds,
+        {
+          claim: (repos, ctx, limit) => repos.issues.idsDeletedBefore(ctx, cutoff, limit),
+          files: (repos, ctx, ids) => repos.attachments.onIssuesDeletedBefore(ctx, cutoff, ids),
+          purge: (repos, ctx, ids) => repos.issues.purgeDeletedBefore(ctx, cutoff, ids),
+          holder: file => file.issue_id,
+        },
+      );
     },
   };
 }

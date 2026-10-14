@@ -1,6 +1,11 @@
 import { and, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { resolveDatePeriod, type Query, type SortKey } from '@nothingleft/query';
-import { STATUS_CATEGORIES, type IssueGroupBy, type StatusCategory } from '@nothingleft/types';
+import {
+  RESOLVED_STATUS_CATEGORIES,
+  STATUS_CATEGORIES,
+  type IssueGroupBy,
+  type StatusCategory,
+} from '@nothingleft/types';
 import type { Queryable } from '../client.ts';
 import {
   custom_field_options,
@@ -34,11 +39,11 @@ export interface IssueGroupRow {
   count: number;
 }
 
-/** One backlog or sprint of one project, listed in its drag order instead of the query's. */
+/** One backlog or sprint of one project, or all its open issues, listed in drag order instead of the query's. */
 export interface IssueContainer {
   projectId: number;
-  /** null: the backlog. */
-  sprintId: number | null;
+  /** null: the backlog. `'unresolved'`: every unresolved issue in the project, whatever its sprint. */
+  sprintId: number | null | 'unresolved';
 }
 
 export interface IssueSearchOptions {
@@ -92,10 +97,19 @@ const BY_ASSIGNEE_MAX = 20;
 
 type Rows<T> = { rows: T[] };
 
+const unresolvedStatus = sql`${issues.status_id} in (select s.id from ${workflow_statuses} s where s.org_id = ${issues.org_id} and s.category not in (${sql.join(
+  RESOLVED_STATUS_CATEGORIES.map(c => sql`${c}`),
+  sql`, `,
+)}))`;
+
 const inContainer = (c: IssueContainer): SQL =>
   and(
     eq(issues.project_id, c.projectId),
-    c.sprintId === null ? isNull(issues.sprint_id) : eq(issues.sprint_id, c.sprintId),
+    c.sprintId === 'unresolved'
+      ? unresolvedStatus
+      : c.sprintId === null
+        ? isNull(issues.sprint_id)
+        : eq(issues.sprint_id, c.sprintId),
   )!;
 
 // Nulls last: an issue nobody has dragged falls back to its age.
@@ -198,6 +212,23 @@ export function issueSearchRepository(db: Queryable) {
         reachable: groups.reduce((sum, g) => sum + Math.min(g.count, options.groupLimit ?? g.count), 0),
         groups,
       };
+    },
+
+    /** One page of the query in `search`'s order, without the count a paged list needs. */
+    async page(
+      ctx: TenantContext,
+      scope: SearchScope,
+      query: Query,
+      options: { sort: readonly SortKey[]; limit: number; offset: number },
+    ): Promise<IssueRow[]> {
+      const compiled = compiler(ctx, scope);
+      return db
+        .select(issueColumns)
+        .from(issues)
+        .where(compiled.where(query))
+        .orderBy(...compiled.orderBy(query, options.sort))
+        .limit(options.limit)
+        .offset(options.offset);
     },
 
     /** Filter-aware counts per value of `field` within one container: board columns and the distribution strip. */

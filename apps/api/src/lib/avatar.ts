@@ -1,13 +1,9 @@
 import { Avatar, Style } from '@dicebear/core';
 import blobs from '@dicebear/styles/blobs.json' with { type: 'json' };
 import initials from '@dicebear/styles/initials.json' with { type: 'json' };
-import {
-  AVATAR_ELECTRIC_BACKGROUNDS,
-  AVATAR_INITIALS_TEXT,
-  AVATAR_PASTEL_BACKGROUNDS,
-  GRAVATAR_PROBE_TIMEOUT_MS,
-} from '@config/constants';
-import type { AvatarMimeType } from '@nothingleft/types';
+import { AVATAR_INITIALS_TEXT, AVATAR_PASTEL_BACKGROUNDS, GRAVATAR_PROBE_TIMEOUT_MS } from '@config/constants';
+import { PROJECT_MARK_COLORS } from '@config/project-mark-colors';
+import { PALETTE_HUES, type AvatarMimeType, type PaletteHue } from '@nothingleft/types';
 
 export const AVATAR_KINDS = ['person', 'project', 'organization'] as const;
 export type AvatarKind = (typeof AVATAR_KINDS)[number];
@@ -15,28 +11,48 @@ export type AvatarKind = (typeof AVATAR_KINDS)[number];
 const hex = (colors: readonly string[]) => colors.map(c => `#${c}`);
 const initialsStyle = new Style(initials);
 
-const STYLES: Record<AvatarKind, { style: Style; options: Record<string, unknown> }> = {
-  person: {
-    style: initialsStyle,
-    options: { backgroundColor: hex(AVATAR_PASTEL_BACKGROUNDS), textColor: hex([AVATAR_INITIALS_TEXT]) },
-  },
-  // Seeded by the key, so a rename keeps the mark and a key change moves it with the issue keys.
-  project: {
-    style: initialsStyle,
-    options: { backgroundColor: hex(AVATAR_ELECTRIC_BACKGROUNDS), textColor: hex([AVATAR_INITIALS_TEXT]) },
-  },
-  organization: { style: new Style(blobs), options: { size: 64, borderRadius: 0 } },
-};
+// Gray is the neutral resting state in the design system, so it is never a default identity colour.
+const DEFAULT_PROJECT_HUES = PALETTE_HUES.filter(h => h !== 'gray');
+
+export function defaultProjectColor(key: string): PaletteHue {
+  let hash = 0;
+  for (const char of key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return DEFAULT_PROJECT_HUES[hash % DEFAULT_PROJECT_HUES.length] as PaletteHue;
+}
+
+function styleFor(
+  kind: AvatarKind,
+  seed: string,
+  color?: PaletteHue,
+): { style: Style; options: Record<string, unknown> } {
+  switch (kind) {
+    case 'person':
+      return {
+        style: initialsStyle,
+        options: { backgroundColor: hex(AVATAR_PASTEL_BACKGROUNDS), textColor: hex([AVATAR_INITIALS_TEXT]) },
+      };
+    case 'project': {
+      const { background, text } = PROJECT_MARK_COLORS[color ?? defaultProjectColor(seed)];
+      // The default variant overlays a blended, half-opacity copy of the letters, unreadable at sidebar size.
+      return {
+        style: initialsStyle,
+        options: { backgroundColor: [background], textColor: [text], initialsVariant: ['alt'], fontWeight: 600 },
+      };
+    }
+    case 'organization':
+      return { style: new Style(blobs), options: { size: 64, borderRadius: 0 } };
+  }
+}
 
 /** Rendered here rather than by a hosted service, so no name, key or organisation leaves for a third party. */
-export function renderAvatar(kind: AvatarKind, seed: string): string {
-  const { style, options } = STYLES[kind];
+export function renderAvatar(kind: AvatarKind, seed: string, color?: PaletteHue): string {
+  const { style, options } = styleFor(kind, seed, color);
   return new Avatar(style, { ...options, seed }).toString();
 }
 
 export interface AvatarMarks {
   person(name: string): string;
-  project(key: string): string;
+  project(key: string, color: PaletteHue): string;
   organization(name: string): string;
 }
 
@@ -45,7 +61,8 @@ export function avatarMarks(apiBaseUrl: string): AvatarMarks {
     `${apiBaseUrl.replace(/\/$/, '')}/avatars/${kind}?seed=${encodeURIComponent(seed)}`;
   return {
     person: name => url('person', name),
-    project: key => url('project', key),
+    // Seeded by the key, so a rename keeps the mark and a key change moves it with the issue keys.
+    project: (key, color) => `${url('project', key)}&color=${color}`,
     organization: name => url('organization', name),
   };
 }

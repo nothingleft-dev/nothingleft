@@ -3,7 +3,7 @@ import { api } from '@lib/api/client';
 
 const imports = (key: string) => `/v1/projects/${encodeURIComponent(key)}/imports`;
 
-// The server reads the whole file before answering; 100 MB takes longer than the usual ten seconds.
+// The server reads the whole file before answering; 50 MB takes longer than the usual ten seconds.
 const READ_TIMEOUT_MS = 120_000;
 
 export const listImports = (key: string) => api.get<ImportJob[]>(imports(key));

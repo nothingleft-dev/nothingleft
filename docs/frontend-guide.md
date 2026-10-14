@@ -791,8 +791,9 @@ ui-conventions.md § Board. How the pieces fit:
 - **The strip** is the API's status `distribution` on a status board; on a priority or type
   board `boardDistribution` counts the view's cards (plus `unmapped`) by that field, so no
   second request is made.
-- **No running sprint**: `BoardPage` asks the view for a planned stand-in (`plannedStandIn`)
-  instead of `current`, so the board is never blank while a sprint is only planned.
+- **No running sprint**: `BoardPage` resolves `current` itself (`currentTarget`) once the
+  sprints load: the active sprint, else a planned stand-in, else `open`, so the board is
+  never blank. The view waits for that answer rather than flashing an empty board.
 - **Board settings** send the whole ordered `columns` list on every change
   (`PATCH …/boards/{board}`), drawn early through `useUpdateBoard`'s `optimistic`.
 

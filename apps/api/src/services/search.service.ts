@@ -1,3 +1,4 @@
+import type { Analytics } from '@nothingleft/analytics';
 import {
   checkValues,
   dateInZone,
@@ -12,6 +13,7 @@ import {
   type CustomAttributeType,
   type Query,
   type Registry,
+  type SortKey,
   type ValueProvider,
   type Vocabulary,
   type Weekday,
@@ -45,7 +47,7 @@ import {
   type UsersRepository,
 } from '@nothingleft/db';
 import { t, type MessageKey } from '@nothingleft/i18n';
-import { RECENT_SEARCHES_KEPT, SUGGEST_VALUES_MAX } from '@config/constants';
+import { RECENT_SEARCH_COALESCE_MS, RECENT_SEARCHES_KEPT, SUGGEST_VALUES_MAX } from '@config/constants';
 import { AppError } from '@lib/errors';
 import type { AccessService, OrgAccess, ProjectAccess } from '@services/access';
 import { can } from '@services/permissions';
@@ -85,6 +87,7 @@ export interface SearchDeps {
   savedViews: SavedViewsRepository;
   recentSearches: RecentSearchesRepository;
   customFields: CustomFieldsRepository;
+  analytics: Analytics;
   now?: () => Date;
 }
 
@@ -99,6 +102,12 @@ export interface SearchContext {
   /** The custom fields of `projects`, and the registry that knows their slugs. */
   catalogue: FieldCatalogue;
   registry: Registry;
+}
+
+export interface CompiledSearch {
+  query: Query;
+  sort: SortKey[];
+  text: string;
 }
 
 const EMPTY_QUERY: Query = { clauses: [] };
@@ -148,7 +157,7 @@ function countCustom(query: Query, registry: Registry): number {
 }
 
 export function searchService(deps: SearchDeps) {
-  const { access, users, projects, issues, issueSearch, savedViews, recentSearches, customFields } = deps;
+  const { access, users, projects, issues, issueSearch, savedViews, recentSearches, customFields, analytics } = deps;
   const now = deps.now ?? (() => new Date());
 
   function wrap<T>(body: () => T, field = 'q'): T {
@@ -187,19 +196,7 @@ export function searchService(deps: SearchDeps) {
       ...new Set((typeof projectKeys === 'string' ? [projectKeys] : (projectKeys ?? [])).map(k => k.toUpperCase())),
     ];
     if (keys.length > 0) {
-      const found: ProjectAccess[] = [];
-      for (const key of keys) {
-        const one = await access.project(
-          principal,
-          key,
-          found[0] ? { ...hints, slug: found[0].organization.slug } : hints,
-        );
-        access.require(principal, 'issue.read', one.scope);
-        if (found[0] && one.organization.id !== found[0].organization.id) {
-          throw new AppError('project.not_found', 404, { key }, 'key');
-        }
-        found.push(one);
-      }
+      const found = await access.projects(principal, keys, hints, 'issue.read');
       project = found.length === 1 ? found[0]! : null;
       org = found[0]!;
       scoped = found.map(f => f.project);
@@ -259,7 +256,7 @@ export function searchService(deps: SearchDeps) {
     text: string | undefined,
     sortText?: string,
     options: { asView?: { name: string; query: Query }; field?: string } = {},
-  ) {
+  ): Promise<CompiledSearch> {
     const { asView, field = 'q' } = options;
     const trimmed = text?.trim() ?? '';
     const registry = sc.registry;
@@ -339,6 +336,8 @@ export function searchService(deps: SearchDeps) {
       input: {
         q?: string | undefined;
         sort?: string | undefined;
+        /** `compile` of this `q` and `sort`, when the caller already ran it. */
+        compiled?: CompiledSearch | undefined;
         groupBy?: IssueGroupBy | undefined;
         groupLimit?: number | undefined;
         container?: IssueContainer | undefined;
@@ -349,7 +348,7 @@ export function searchService(deps: SearchDeps) {
       },
     ): Promise<IssueSearchResult & { groupsDto: IssueGroup[] | undefined; customAttributeCount: number }> {
       checkGroupBy(sc, input.groupBy);
-      const compiled = await compile(principal, sc, input.q, input.sort);
+      const compiled = input.compiled ?? (await compile(principal, sc, input.q, input.sort));
       const result = await issueSearch.search(sc.ctx, sc.scope, compiled.query, {
         sort: compiled.sort,
         groupBy: input.groupBy,
@@ -358,8 +357,19 @@ export function searchService(deps: SearchDeps) {
         limit: input.limit,
         offset: input.offset,
       });
-      if (compiled.text && principal.via === 'session' && input.record !== false) {
-        await recentSearches.record(sc.ctx, principal.userId, compiled.text, RECENT_SEARCHES_KEPT, sc.scope.now);
+      if (compiled.text && principal.via === 'session' && input.record !== false && input.offset === 0) {
+        try {
+          await recentSearches.record(
+            sc.ctx,
+            principal.userId,
+            compiled.text,
+            RECENT_SEARCHES_KEPT,
+            sc.scope.now,
+            RECENT_SEARCH_COALESCE_MS,
+          );
+        } catch (error) {
+          analytics.captureException(error, { user_id: principal.userId, org_id: sc.ctx.orgId });
+        }
       }
       return {
         ...result,

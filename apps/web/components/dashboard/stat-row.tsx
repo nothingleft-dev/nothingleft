@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import type { Route } from 'next';
 import type { CSSProperties, ReactNode } from 'react';
 import { Skeleton } from '@components/ui/skeleton';
@@ -19,12 +20,13 @@ export interface Stat {
   delta?: { text: string; good: boolean | null } | null;
   /** Every number is a link to the list that produced it — DESIGN-SYSTEM § 8. */
   href?: Route;
+  /** Inside the link when `href` is set, so never interactive there. */
   below?: ReactNode;
 }
 
 export type StatRowState = 'loading' | 'ready' | 'failed' | 'stale';
 
-/** DESIGN-SYSTEM § 7: one ruled band, figures 22px/600 tabular, hairlines between, never boxes. */
+/** DESIGN-SYSTEM § 7: one ruled band, figures 22px/600 tabular, hairlines between, never boxes; a linked cell is one target. */
 export function StatRow({
   stats,
   state = 'ready',
@@ -35,6 +37,8 @@ export function StatRow({
   onRetry?: () => void;
 }) {
   const known = state === 'ready' || state === 'stale';
+  // A hovered cell is washed edge to edge, so linked rows inset their outer cells to keep the figure off the wash's edge.
+  const inset = stats.some(stat => stat.href);
   return (
     <div className="flex flex-col">
       <div
@@ -52,7 +56,7 @@ export function StatRow({
               {state === 'loading' ? (
                 <Skeleton className="my-1 h-5 w-12" />
               ) : known ? (
-                <span className="group-hover/stat:underline group-hover/stat:underline-offset-4">{stat.value}</span>
+                <span>{stat.value}</span>
               ) : (
                 <span className="text-text-muted" aria-label="Not available">
                   –
@@ -86,27 +90,37 @@ export function StatRow({
               ) : null}
             </span>
           );
-          const label = <span className="text-xs text-text-secondary">{stat.label}</span>;
-          return (
-            <div
-              key={stat.label}
-              className={cn(
-                'flex flex-col gap-0.5 border-r py-3 pr-4 [&:not(:first-child)]:pl-4 last:border-r-0',
-                'max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(2n+1)]:pl-0 max-sm:[&:nth-child(n+3)]:border-t',
-                i === 0 && 'pl-0',
-              )}
-            >
+          const label = (
+            <span className="flex items-center gap-1 text-xs text-text-secondary transition-colors group-hover/stat:text-text group-focus-visible/stat:text-text">
+              {stat.label}
               {stat.href && known ? (
-                <Link href={stat.href} className="group/stat -mx-1 flex flex-col gap-0.5 rounded-xs px-1">
-                  {figure}
-                  {label}
-                </Link>
-              ) : (
-                <>
-                  {figure}
-                  {label}
-                </>
-              )}
+                <ArrowRight
+                  aria-hidden
+                  className="size-3 opacity-0 transition-opacity group-hover/stat:opacity-100 group-focus-visible/stat:opacity-100"
+                />
+              ) : null}
+            </span>
+          );
+          const cell = cn(
+            'flex flex-col gap-0.5 border-r py-3 pr-4 pl-4 last:border-r-0',
+            'max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(n+3)]:border-t',
+            inset ? 'max-sm:[&:nth-child(2n+1)]:pl-3' : 'max-sm:[&:nth-child(2n+1)]:pl-0',
+            i === 0 && (inset ? 'pl-3' : 'pl-0'),
+          );
+          return stat.href && known ? (
+            <Link
+              key={stat.label}
+              href={stat.href}
+              className={cn(cell, 'group/stat transition-colors hover:bg-hover focus-visible:bg-hover')}
+            >
+              {figure}
+              {label}
+              {stat.below}
+            </Link>
+          ) : (
+            <div key={stat.label} className={cell}>
+              {figure}
+              {label}
               {known ? stat.below : null}
             </div>
           );

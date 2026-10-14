@@ -14,6 +14,7 @@ const ROUTE_WORDS = new Set([
   'issues',
   'my-issues',
   'new-issue',
+  'open',
   'organization',
   'project',
   'projects',

@@ -84,7 +84,7 @@ describe('upload and preview', () => {
   test('a file over the size limit, one not in UTF-8 and one with too many rows are refused', async () => {
     const big = await w.call(w.admin, 'POST', `/v1/projects/${KEY}/imports`, {
       filename: 'huge.csv',
-      size: 100 * 1024 * 1024 + 1,
+      size: 50 * 1024 * 1024 + 1,
       sha256: sha(new Uint8Array(1)),
     });
     expect(big.statusCode).toBe(400);
@@ -225,6 +225,16 @@ describe('the import job', () => {
     const history = (await w.call(w.admin, 'GET', `/v1/issues/${one.key}/activity`)).json().data;
     expect(history.some((h: { kind: string }) => h.kind === 'created')).toBe(true);
     expect(await titles()).toContain('=SUM(A1)');
+  });
+
+  test('a run moves the organisation’s report data version', async () => {
+    const { id } = await upload('Title\nVersioned one\nVersioned two\n');
+    await complete(id);
+    expect((await start(id, { title: 'Title' })).statusCode).toBe(202);
+    const versionKey = `report:v:${w.repos.ctx.orgId}`;
+    const before = Number((await w.app.redis.get(versionKey)) ?? 0);
+    expect(await runImports()).toBe(2);
+    expect(Number(await w.app.redis.get(versionKey))).toBeGreaterThan(before);
   });
 
   test('a run cut short resumes at the first unwritten row', async () => {

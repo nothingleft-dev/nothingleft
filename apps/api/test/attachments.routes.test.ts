@@ -526,6 +526,62 @@ describe('jobs', () => {
     expect((await org()).storage.used_bytes).toBe(0);
   });
 
+  async function expiredIssueWithFile() {
+    await setUsed(0);
+    const key = await newIssue();
+    const file = await upload(w.contributor, { issue: key });
+    await w.call(w.admin, 'DELETE', `/v1/issues/${key}`);
+    const id = await w.repos.issueId(Number(key.split('-')[1]));
+    await w.repos.issues.update(w.repos.ctx, id, { deleted_at: new Date(Date.now() - 15 * DAY_MS) });
+    return { id, file, objectKey: bucket.objectKeyOf(file.id) };
+  }
+
+  async function duringPlatformDelete(meanwhile: (key: string) => Promise<void>, run: () => Promise<unknown>) {
+    const platform = bucket.storage.private!;
+    const original = platform.delete.bind(platform);
+    platform.delete = async key => {
+      await meanwhile(key);
+      await original(key);
+    };
+    try {
+      await run();
+    } finally {
+      platform.delete = original;
+    }
+  }
+
+  test('issues.purge leaves the rows and the bytes of an organisation whose bucket fails', async () => {
+    const { id, file, objectKey } = await expiredIssueWithFile();
+    await duringPlatformDelete(
+      async key => {
+        if (key === objectKey) throw Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' });
+      },
+      () => w.app.jobHandlers['issues.purge'](),
+    );
+
+    expect((await w.repos.issues.findById(w.repos.ctx, id))?.id).toBe(id);
+    expect(await attachmentsRepository(w.db).findByPublicId(w.repos.ctx, file.id)).toBeDefined();
+    expect((await org()).storage.used_bytes).toBe(1000);
+
+    await w.app.jobHandlers['issues.purge']();
+    expect(await w.repos.issues.findById(w.repos.ctx, id)).toBeUndefined();
+    expect((await org()).storage.used_bytes).toBe(0);
+  });
+
+  test('issues.purge spares an issue restored while its objects were being deleted, and keeps its bytes', async () => {
+    const { id, file, objectKey } = await expiredIssueWithFile();
+    await duringPlatformDelete(
+      async key => {
+        if (key === objectKey) await w.repos.issues.update(w.repos.ctx, id, { deleted_at: null });
+      },
+      () => w.app.jobHandlers['issues.purge'](),
+    );
+
+    expect((await w.repos.issues.findById(w.repos.ctx, id))?.deleted_at).toBeNull();
+    expect(await attachmentsRepository(w.db).findByPublicId(w.repos.ctx, file.id)).toBeDefined();
+    expect((await org()).storage.used_bytes).toBe(1000);
+  });
+
   test('attachments.sweep removes abandoned uploads, stale drafts and deleted files, objects first', async () => {
     const repo = attachmentsRepository(w.db);
     const old = new Date(Date.now() - 3 * DAY_MS);

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { ReportName } from '@nothingleft/types';
 import { PageHeader } from '@components/page-header';
+import { daysLeftLabel } from '@components/agile/sprint-dates';
 import { useActiveSprints } from '@hooks/use-sprints';
 import { useProject } from '@hooks/use-projects';
 import { useRecordProjectVisit } from '@hooks/use-project-visit';
@@ -68,7 +69,9 @@ export function ReportIndex({ project }: { project?: string }) {
                 const hint =
                   report.name === 'burndown' && project
                     ? active
-                      ? `${active.name}, ${active.days_left ?? 0} ${active.days_left === 1 ? 'day' : 'days'} left`
+                      ? active.days_left === null
+                        ? active.name
+                        : `${active.name}, ${daysLeftLabel(active.days_left).toLowerCase()}`
                       : 'No active sprint; choose one'
                     : null;
                 return (

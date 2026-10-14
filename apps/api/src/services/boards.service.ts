@@ -1,5 +1,7 @@
 import {
   BOARD_CARDS_MAX,
+  BOARD_CURRENT_SPRINT,
+  BOARD_OPEN_ISSUES,
   BOARD_SWIMLANE_FIELDS,
   type BoardColumnField,
   type BoardValueCount,
@@ -15,7 +17,6 @@ import {
   type BoardSwimlaneField,
   type BoardView,
   type CreateBoard,
-  type Issue,
   type LabelColor,
   type Principal,
   type StatusCategory,
@@ -26,6 +27,7 @@ import type {
   BoardLayout,
   BoardRow,
   BoardsRepository,
+  IssueContainer,
   IssueRow,
   IssuesRepository,
   IssueSearchRepository,
@@ -42,6 +44,7 @@ import { t } from '@nothingleft/i18n';
 import { AppError } from '@lib/errors';
 import { withUniqueAs } from '@lib/pg-errors';
 import type { AccessService, ProjectAccess } from '@services/access';
+import type { FieldCatalogue } from '@services/custom-field-values';
 import { dailyOnce, type DailyOnceStore } from '@services/daily-once';
 import type { IssuesService } from '@services/issues.service';
 import type { SearchService } from '@services/search.service';
@@ -66,18 +69,16 @@ export interface BoardsDeps {
 }
 
 export interface BoardViewQuery {
-  /** `current` (the default) is the active sprint; otherwise a sprint's name or slug. */
+  /** `current` (the default) is the active sprint, `open` every unresolved issue; otherwise a sprint's name or slug. */
   sprint?: string | undefined;
   q?: string | undefined;
   swimlane_by?: BoardSwimlane | undefined;
   swimlane_field?: BoardSwimlaneField | undefined;
 }
 
-export const CURRENT_SPRINT = 'current';
-
 interface Placed {
   row: IssueRow;
-  issue: Issue;
+  card: BoardCard;
 }
 
 const isResolved = (category: string) => (RESOLVED_STATUS_CATEGORIES as readonly string[]).includes(category);
@@ -91,6 +92,8 @@ interface ProjectValues {
   priorities: PriorityRow[];
   types: IssueTypeRow[];
 }
+
+type CardsPreloaded = { catalogue: FieldCatalogue; values: ProjectValues };
 
 const valuesFor = (values: ProjectValues, field: BoardColumnField): ValueRow[] =>
   field === 'status' ? values.statuses : field === 'priority' ? values.priorities : values.types;
@@ -171,6 +174,10 @@ export function boardsService(deps: BoardsDeps) {
 
   async function present(project: ProjectAccess, rows: BoardRow[]): Promise<Board[]> {
     if (rows.length === 0) return [];
+    return (await presentWith(project, rows)).boards;
+  }
+
+  async function presentWith(project: ProjectAccess, rows: BoardRow[]) {
     const [layouts, values, people] = await Promise.all([
       boards.layout(
         project.ctx,
@@ -182,13 +189,14 @@ export function boardsService(deps: BoardsDeps) {
         rows.map(r => r.created_by),
       ),
     ]);
-    return rows.map(row => {
+    const dtos = rows.map(row => {
       const p = people.find(x => x.user.id === row.created_by);
       const creator = p
         ? access.memberRef(p.user, p.membership)
         : { username: '', name: '', avatar_url: null, former_member: true, deactivated: false };
       return dto(project, row, layouts.get(row.id)!, values, creator);
     });
+    return { boards: dtos, layouts, values };
   }
 
   async function resolveBoard(project: ProjectAccess, value: string): Promise<BoardRow> {
@@ -339,27 +347,8 @@ export function boardsService(deps: BoardsDeps) {
     return uniqueSlug(name, taken) || uniqueSlug(`${project.project.key}-board`, taken);
   };
 
-  function card(issue: Issue): BoardCard {
-    return {
-      key: issue.key,
-      title: issue.title,
-      status: issue.status,
-      priority: issue.priority,
-      type: issue.type,
-      assignees: issue.assignees,
-      tags: issue.tags,
-      due_date: issue.due_date,
-      story_points: issue.story_points,
-      estimate_minutes: issue.estimate_minutes,
-      parent: issue.parent,
-      subtasks: issue.subtasks,
-      resolved: issue.resolved_at !== null,
-    };
-  }
-
   /** Cards into lanes, each lane split by column, in the cards' drag order. */
   async function lanesOf(
-    principal: Principal,
     project: ProjectAccess,
     by: BoardSwimlane,
     field: BoardSwimlaneField | null,
@@ -368,6 +357,7 @@ export function boardsService(deps: BoardsDeps) {
     columnNames: string[],
     columnOf: Map<number, string>,
     columnField: BoardColumnField,
+    preloaded: CardsPreloaded,
   ): Promise<BoardLane[]> {
     type Draft = Omit<BoardLane, 'cells' | 'count'> & { order: number; cards: Placed[] };
     const drafts = new Map<string, Draft>();
@@ -388,14 +378,11 @@ export function boardsService(deps: BoardsDeps) {
     if (by === 'none') {
       drafts.set('all', { kind: 'all', key: null, label: '', issue: null, member: null, order: 0, cards: onBoard });
     } else if (by === 'values') {
-      const list =
-        field === 'priority'
-          ? await schema.list(project.ctx, 'priorities', project.project.id)
-          : await schema.list(project.ctx, 'types', project.project.id);
+      const list = field === 'priority' ? preloaded.values.priorities : preloaded.values.types;
       for (const placed of onBoard) {
-        const { issue } = placed;
+        const { card } = placed;
         if (field === 'assignee') {
-          const first = [...issue.assignees].sort((a, b) => a.username.localeCompare(b.username))[0];
+          const first = [...card.assignees].sort((a, b) => a.username.localeCompare(b.username))[0];
           if (!first) {
             uncategorized.cards.push(placed);
             continue;
@@ -409,7 +396,7 @@ export function boardsService(deps: BoardsDeps) {
             order: 0,
           })).cards.push(placed);
         } else {
-          const name = field === 'priority' ? issue.priority.name : issue.type.name;
+          const name = field === 'priority' ? card.priority.name : card.type.name;
           laneFor(name.toLowerCase(), () => ({
             kind: 'value',
             key: name,
@@ -430,18 +417,16 @@ export function boardsService(deps: BoardsDeps) {
       // A card of a lane type heads its own lane rather than sitting in a column.
       const headIds = onBoard.filter(p => typeIds.has(p.row.type_id)).map(p => p.row.id);
       const laneIds = [...new Set([...laneOf.values(), ...headIds])];
-      const laneRows = (await Promise.all(laneIds.map(id => issues.findById(project.ctx, id)))).filter(
-        (r): r is NonNullable<typeof r> => r !== undefined && r.deleted_at === null,
-      );
-      const laneDtos = await issuesService.dtos(principal, project, laneRows);
-      const laneById = new Map(laneRows.map((r, i) => [r.id, laneDtos[i]!]));
+      const laneRows = (await issues.findByIds(project.ctx, laneIds)).filter(r => r.deleted_at === null);
+      const laneCards = await issuesService.boardCards(project, laneRows, preloaded);
+      const laneById = new Map(laneRows.map((r, i) => [r.id, laneCards[i]!]));
       const open = (id: number) => {
         const lane = laneById.get(id)!;
         return laneFor(lane.key, () => ({
           kind: 'issue',
           key: lane.key,
           label: lane.title,
-          issue: card(lane),
+          issue: lane,
           member: null,
           order: 0,
         }));
@@ -468,7 +453,7 @@ export function boardsService(deps: BoardsDeps) {
       count: lane.cards.length,
       cells: columnNames.map(column => ({
         column,
-        cards: lane.cards.filter(p => columnOf.get(valueOf(p.row, columnField)) === column).map(p => card(p.issue)),
+        cards: lane.cards.filter(p => columnOf.get(valueOf(p.row, columnField)) === column).map(p => p.card),
       })),
     }));
   }
@@ -639,13 +624,18 @@ export function boardsService(deps: BoardsDeps) {
       const sc = await search.context(principal, hints, key);
       const project = sc.project!;
       const row = await resolveBoard(project, value);
-      const board = (await present(project, [row]))[0]!;
-      const layout = (await boards.layout(project.ctx, [row.id])).get(row.id)!;
-      const wanted = query.sprint?.trim() || CURRENT_SPRINT;
-      const sprintRow: SprintRow | null =
-        wanted.toLowerCase() === CURRENT_SPRINT
+      const presented = await presentWith(project, [row]);
+      const board = presented.boards[0]!;
+      const layout = presented.layouts.get(row.id)!;
+      const { values } = presented;
+      const preloaded: CardsPreloaded = { catalogue: sc.catalogue, values };
+      const wanted = (query.sprint?.trim() || BOARD_CURRENT_SPRINT).toLowerCase();
+      const open = wanted === BOARD_OPEN_ISSUES;
+      const sprintRow: SprintRow | null = open
+        ? null
+        : wanted === BOARD_CURRENT_SPRINT
           ? ((await deps.sprints.findActive(project.ctx, project.project.id)) ?? null)
-          : await sprintsService.resolveSprint(project, wanted);
+          : await sprintsService.resolveSprint(project, query.sprint!.trim());
       const sprint = sprintRow
         ? (
             await sprintsService.present(
@@ -662,7 +652,6 @@ export function boardsService(deps: BoardsDeps) {
       const by = query.swimlane_by ?? board.swimlane_by;
       const field = by === 'values' ? (query.swimlane_field ?? board.swimlane_field ?? 'assignee') : null;
       checkLanesAgainstColumns(by, field, columnField);
-      const values = await valuesOf(project);
       const columnOf = new Map<number, string>();
       for (const c of layout.columns) for (const id of c.value_ids) columnOf.set(id, c.name);
 
@@ -671,24 +660,31 @@ export function boardsService(deps: BoardsDeps) {
       let byStatus = new Map<number, number>();
       let totals = new Map<number, number>();
       let matched = 0;
-      if (sprintRow) {
-        const container = { projectId: project.project.id, sprintId: sprintRow.id };
-        const [result, unfiltered, compiled] = await Promise.all([
-          search.search(principal, sc, { q: query.q, container, limit: BOARD_CARDS_MAX, offset: 0 }),
-          deps.sprints.valueCounts(project.ctx, [sprintRow.id], columnField),
-          search.compile(principal, sc, query.q),
-        ]);
+      if (sprintRow || open) {
+        const container: IssueContainer = { projectId: project.project.id, sprintId: sprintRow?.id ?? 'unresolved' };
+        const compiled = await search.compile(principal, sc, query.q);
         const counts = (f: BoardColumnField) =>
           issueSearch
             .valueCounts(sc.ctx, sc.scope, compiled.query, container, f)
             .then(rows => new Map(rows.map(c => [c.value_id, c.n])));
-        filtered = await counts(columnField);
-        byStatus = columnField === 'status' ? filtered : await counts('status');
+        const countsByColumn = counts(columnField);
+        const [result, unfiltered, byColumn, statusCounts] = await Promise.all([
+          search.search(principal, sc, { q: query.q, compiled, container, limit: BOARD_CARDS_MAX, offset: 0 }),
+          sprintRow
+            ? deps.sprints.valueCounts(project.ctx, [sprintRow.id], columnField)
+            : search
+                .compile(principal, sc, undefined)
+                .then(all => issueSearch.valueCounts(sc.ctx, sc.scope, all.query, container, columnField)),
+          countsByColumn,
+          columnField === 'status' ? countsByColumn : counts('status'),
+        ]);
+        filtered = byColumn;
+        byStatus = statusCounts;
         totals = new Map(unfiltered.map(c => [c.value_id, c.n]));
         matched = result.total;
         const rows = result.entries.map(e => e.row);
-        const dtos = await issuesService.dtos(principal, project, rows);
-        placed = rows.map((row, i) => ({ row, issue: dtos[i]! }));
+        const cards = await issuesService.boardCards(project, rows, preloaded);
+        placed = rows.map((row, i) => ({ row, card: cards[i]! }));
       }
       const onBoard = placed.filter(p => columnOf.has(valueOf(p.row, columnField)));
       const sum = (counts: Map<number, number>, ids: number[]) => ids.reduce((n, id) => n + (counts.get(id) ?? 0), 0);
@@ -706,7 +702,6 @@ export function boardsService(deps: BoardsDeps) {
       });
 
       const lanes = await lanesOf(
-        principal,
         project,
         by,
         field,
@@ -715,9 +710,10 @@ export function boardsService(deps: BoardsDeps) {
         board.columns.map(c => c.name),
         columnOf,
         columnField,
+        preloaded,
       );
 
-      if (sprintRow && (await dailyOnce(deps.redis, `board:${principal.userId}:${row.id}`, now()))) {
+      if ((sprintRow || open) && (await dailyOnce(deps.redis, `board:${principal.userId}:${row.id}`, now()))) {
         deps.analytics.capture(
           'board_viewed',
           { via: principal.via, swimlane_by: by, filtered: Boolean(query.q?.trim()) },
@@ -728,6 +724,7 @@ export function boardsService(deps: BoardsDeps) {
       const mappedIds = new Set(columnOf.keys());
       return {
         board,
+        scope: open ? 'open' : 'sprint',
         sprint,
         columns,
         lanes,

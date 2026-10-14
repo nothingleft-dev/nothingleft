@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { noopAnalytics } from '@nothingleft/analytics';
 import type { SessionRow, UserRow } from '@nothingleft/db';
-import { SESSION_ROLLING_REFRESH_MS } from '@config/constants';
+import { PAT_LAST_USED_RESOLUTION_MS, SESSION_ROLLING_REFRESH_MS } from '@config/constants';
 import { sha256 } from '@lib/crypto';
 import { authService, type AuthDeps, type SessionCache } from '@services/auth.service';
 
@@ -141,5 +141,32 @@ describe('the session cache', () => {
 
     expect(await lookup(auth, 'token-43')).toMatchObject({ sessionId: 43, currentOrgId: 9 });
     expect(await lookup(auth, 'token-43')).toMatchObject({ sessionId: 43, currentOrgId: 9 });
+  });
+});
+
+describe('personal access token lookup', () => {
+  test('stamps last_used_at through the five-minute resolution', async () => {
+    const marked: { id: number; resolutionMs: number }[] = [];
+    const row = { id: 3, user_id: 7, scopes: ['issues:read'], project_ids: null };
+    const auth = authService({
+      users: {
+        findById: async (_c: unknown, id: number) => ({
+          id,
+          deactivated_at: null,
+          deleted_at: null,
+          created_at: new Date(),
+        }),
+      } as unknown as AuthDeps['users'],
+      sessions: {} as AuthDeps['sessions'],
+      tokens: {
+        findLiveByTokenHash: async () => row,
+        markUsed: async (_c: unknown, id: number, resolutionMs: number) => void marked.push({ id, resolutionMs }),
+      } as unknown as AuthDeps['tokens'],
+      redis: { get: async () => null, set: async () => 'OK', del: async () => {} },
+      analytics: noopAnalytics,
+    });
+
+    expect(await auth.resolvePrincipal({ kind: 'pat', token: 'nl_pat_x' })).toMatchObject({ via: 'pat', tokenId: 3 });
+    expect(marked).toEqual([{ id: 3, resolutionMs: PAT_LAST_USED_RESOLUTION_MS }]);
   });
 });

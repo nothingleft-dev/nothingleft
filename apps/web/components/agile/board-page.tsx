@@ -21,14 +21,16 @@ import {
 } from '@dnd-kit/core';
 import { toast } from 'sonner';
 import { Check, ChevronDown, ChevronRight, ChevronsLeftRight, ListOrdered, Settings } from 'lucide-react';
-import type {
-  Board,
-  BoardCard as Card,
-  BoardLane,
-  BoardValueCount,
-  BoardView,
-  BoardViewColumn,
-  Sprint,
+import {
+  BOARD_CURRENT_SPRINT,
+  BOARD_OPEN_ISSUES,
+  type Board,
+  type BoardCard as Card,
+  type BoardLane,
+  type BoardValueCount,
+  type BoardView,
+  type BoardViewColumn,
+  type Sprint,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Command, CommandGroup, CommandItem, CommandList } from '@components/ui/command';
@@ -58,26 +60,25 @@ import { todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { deactivatedInk } from '@components/former-member-chip';
 
-export const CURRENT_SPRINT = 'current';
-
 /**
- * With nothing running, `current` shows the planned sprint whose dates hold today, else the
- * first planned one, rather than an empty board; starting it stays an explicit step.
+ * What `current` reads: the active sprint; with nothing running, the planned sprint whose dates
+ * hold today, else the first planned one; with nothing planned either, every open issue. Starting
+ * a planned sprint stays an explicit step. null until the sprints have loaded.
  */
-function plannedStandIn(sprints: readonly Sprint[] | undefined, today: string): Sprint | null {
-  if (!sprints || sprints.some(s => s.state === 'active')) return null;
+function currentTarget(sprints: readonly Sprint[] | undefined, today: string): string | null {
+  if (!sprints) return null;
+  if (sprints.some(s => s.state === 'active')) return BOARD_CURRENT_SPRINT;
   const planned = sprints.filter(s => s.state === 'planned');
-  return (
+  const standIn =
     planned.find(s => s.start_date !== null && s.end_date !== null && s.start_date <= today && today <= s.end_date) ??
-    planned[0] ??
-    null
-  );
+    planned[0];
+  return standIn?.slug ?? BOARD_OPEN_ISSUES;
 }
 
 interface BoardPageProps {
   projectKey: string;
   boardSlug: string;
-  /** `current`, or a sprint's slug. */
+  /** `current`, `open`, or a sprint's slug. */
   sprint: string;
   /** The route prefix the board lives under: the canonical `/projects/PROJ/board` or the short `/board`. */
   base: string;
@@ -127,8 +128,8 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
   const canPlan = roles.canEdit(projectKey);
   const canManage = roles.canAdmin(projectKey);
   const sprints = useSprints(projectKey);
-  const standIn = sprint === CURRENT_SPRINT ? plannedStandIn(sprints.data, today) : null;
-  const view = useBoardView(projectKey, boardSlug, standIn?.slug ?? sprint, q);
+  const target = sprint === BOARD_CURRENT_SPRINT ? currentTarget(sprints.data, today) : sprint;
+  const view = useBoardView(projectKey, boardSlug, target, q);
   const boards = useBoards(projectKey);
   const [starting, setStarting] = useState<Sprint | null>(null);
   const [finishing, setFinishing] = useState<Sprint | null>(null);
@@ -168,6 +169,7 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
 
   const data = view.data;
   const current = data?.sprint ?? null;
+  const openIssues = data?.scope === 'open';
   const planned = (sprints.data ?? []).filter(s => s.state === 'planned');
 
   return (
@@ -177,7 +179,7 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
         <BoardSwitcher
           boards={boards.data ?? []}
           current={data?.board ?? null}
-          onPick={slug => router.push(`${base}/${slug}/${CURRENT_SPRINT}` as Route)}
+          onPick={slug => router.push(`${base}/${slug}/${BOARD_CURRENT_SPRINT}` as Route)}
         />
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" asChild>
@@ -201,9 +203,19 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
         <SprintPicker
           sprints={sprints.data ?? []}
           current={current}
+          openIssues={openIssues}
           loading={sprints.isPending}
-          onPick={s => goToSprint(s.state === 'active' ? CURRENT_SPRINT : s.slug)}
+          onPick={s => goToSprint(s.state === 'active' ? BOARD_CURRENT_SPRINT : s.slug)}
+          onPickOpen={() => goToSprint(BOARD_OPEN_ISSUES)}
         />
+        {openIssues && data ? (
+          <StatusDistribution
+            statuses={boardDistribution(data)}
+            field={data.board.column_field}
+            noun="cards"
+            className="min-w-[220px] flex-1 [&>div:first-child]:max-w-[320px]"
+          />
+        ) : null}
         {current ? (
           <>
             <SprintDates sprint={current} className="text-xs" />
@@ -242,7 +254,7 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
         ) : null}
       </div>
 
-      <div className={cn('max-w-2xl', data && !current && 'hidden')}>
+      <div className={cn('max-w-2xl', data && !current && !openIssues && 'hidden')}>
         <QueryBar value={q} onCommit={commit} problem={problem} placeholder="Filter cards · assignee: me type: Bug" />
       </div>
 
@@ -257,7 +269,7 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
 
       {view.isPending || !data ? (
         <BoardSkeleton />
-      ) : current === null ? (
+      ) : current === null && !openIssues ? (
         <EmptyState
           title={`${data.board.project.name} has no active sprint.`}
           description={
@@ -351,6 +363,8 @@ function BoardSwitcher({
   );
 }
 
+const OPEN_ISSUES_LABEL = 'All open issues';
+
 const STATE_GROUPS = [
   ['active', 'Active'],
   ['planned', 'Planned'],
@@ -360,30 +374,48 @@ const STATE_GROUPS = [
 function SprintPicker({
   sprints,
   current,
+  openIssues,
   loading,
   onPick,
+  onPickOpen,
 }: {
   sprints: readonly Sprint[];
   current: Sprint | null;
+  openIssues: boolean;
   loading: boolean;
   onPick: (sprint: Sprint) => void;
+  onPickOpen: () => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" aria-label="Sprint">
-          <span className={cn(!current && 'text-text-secondary')}>{current?.name ?? 'No active sprint'}</span>
+          <span className={cn(!current && !openIssues && 'text-text-secondary')}>
+            {current?.name ?? (openIssues ? OPEN_ISSUES_LABEL : 'No active sprint')}
+          </span>
           <ChevronDown className="text-text-muted" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0">
         <Command>
           <CommandList>
+            <CommandGroup>
+              <CommandItem
+                value={BOARD_OPEN_ISSUES}
+                onSelect={() => {
+                  setOpen(false);
+                  onPickOpen();
+                }}
+              >
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate">{OPEN_ISSUES_LABEL}</span>
+                  <span className="text-2xs text-text-secondary">Every unresolved issue, in a sprint or not</span>
+                </span>
+                <Check className={cn('size-icon-sm', openIssues ? 'opacity-100' : 'opacity-0')} />
+              </CommandItem>
+            </CommandGroup>
             {loading ? <p className="px-3 py-2 text-xs text-text-muted">Loading sprints…</p> : null}
-            {!loading && sprints.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-text-secondary">No sprints yet. Plan one from the backlog.</p>
-            ) : null}
             {STATE_GROUPS.map(([state, heading]) => {
               const group = sprints.filter(s => s.state === state);
               if (group.length === 0) return null;
@@ -438,7 +470,8 @@ function UnmappedNotice({ view, canManage, projectKey }: { view: BoardView; canM
 interface BoardGridProps {
   projectKey: string;
   view: BoardView;
-  sprint: Sprint;
+  /** null on the open-issues board: new cards go to the backlog. */
+  sprint: Sprint | null;
   canPlan: boolean;
   today: string;
   filtered: boolean;
@@ -467,7 +500,7 @@ function BoardGrid({ projectKey, view, sprint, canPlan, today, filtered, onOpen 
 
   const template = view.columns.map(c => (collapsed.has(c.name) ? '40px' : 'minmax(248px, 1fr)')).join(' ');
   const minWidth = view.columns.reduce((sum, c) => sum + (collapsed.has(c.name) ? 40 : 248), 0);
-  const canCreate = canPlan && sprint.state !== 'completed';
+  const canCreate = canPlan && sprint?.state !== 'completed';
 
   const onDragStart = (event: DragStartEvent) => setDragging(event.active.data.current as CardData);
   const onDragEnd = (event: DragEndEvent) => {
@@ -544,7 +577,7 @@ function BoardGrid({ projectKey, view, sprint, canPlan, today, filtered, onOpen 
                           {canCreate && column.values[0] ? (
                             <NewCard
                               projectKey={projectKey}
-                              sprint={sprint.slug}
+                              sprint={sprint?.slug ?? null}
                               field={view.board.column_field}
                               value={column.values[0].name}
                               lane={lane}

@@ -80,11 +80,19 @@ export function personalAccessTokensRepository(db: Queryable) {
       return row ? (await withProjectIds([row]))[0] : undefined;
     },
 
-    async markUsed(_ctx: SystemContext, id: number): Promise<void> {
+    async markUsed(_ctx: SystemContext, id: number, resolutionMs: number): Promise<void> {
       await db
         .update(personal_access_tokens)
-        .set({ last_used_at: new Date() })
-        .where(eq(personal_access_tokens.id, id));
+        .set({ last_used_at: sql`now()` })
+        .where(
+          and(
+            eq(personal_access_tokens.id, id),
+            or(
+              isNull(personal_access_tokens.last_used_at),
+              sql`${personal_access_tokens.last_used_at} < now() - make_interval(secs => ${resolutionMs / 1000})`,
+            ),
+          ),
+        );
     },
 
     async listForUser(_ctx: SystemContext, userId: number): Promise<PersonalAccessTokenWithProjects[]> {

@@ -409,6 +409,20 @@ export function organizationsRepository(db: Queryable) {
       return row;
     },
 
+    async findMembersByUserIds(
+      ctx: TenantContext,
+      userIds: readonly number[],
+      options: { includeRemoved?: boolean } = {},
+    ): Promise<MemberWithUser[]> {
+      if (userIds.length === 0) return [];
+      const byIds = and(eq(org_members.org_id, ctx.orgId), inArray(org_members.user_id, [...new Set(userIds)]));
+      return db
+        .select({ membership: org_members, user: users })
+        .from(org_members)
+        .innerJoin(users, eq(users.id, org_members.user_id))
+        .where(options.includeRemoved ? byIds : and(byIds, isNull(org_members.removed_at)));
+    },
+
     /** Lowercased, removed members included: their handles stay reserved. */
     async listUsernamesWithPrefix(ctx: TenantContext, prefix: string): Promise<string[]> {
       const rows = await db

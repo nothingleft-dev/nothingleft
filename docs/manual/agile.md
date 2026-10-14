@@ -87,7 +87,8 @@ and menus appear only for Project Admins.
 
 ## Boards
 
-A board shows one sprint - by default the active one - as columns of cards.
+A board shows one sprint - by default the active one - or every open issue in the project,
+as columns of cards.
 
 - **Columns** are statuses, priorities or types - you choose which in the board's settings.
   A column can hold several values (_Open_ and _Reopened_, say); a status column whose
@@ -125,7 +126,8 @@ running, `/projects/PP/board/pp/sprint-17` stays on that one - and `/board/pp/cu
 the short form.
 
 - **The header** has the sprint picker (running, planned and finished sprints), its dates,
-  the days left (red under three days), _Start sprint_ or _Finish sprint_ for Project
+  the days left (red under three days, _Ended 4 days ago_ once the end date has passed and
+  the sprint is still open), _Start sprint_ or _Finish sprint_ for Project
   Admins, a strip counting the cards by what the columns show - statuses, or priorities or
   types on a board set up that way; hover a segment for _6 cards in status In Progress_ - and
   the story points resolved.
@@ -150,8 +152,13 @@ the short form.
 
 When no sprint is running, the board shows the planned sprint whose dates include today
 (or the first planned one), marked _Not started_, with _Start sprint_ for Project Admins.
-With nothing planned either, it says so and points to the backlog. The sprint picker opens
-any planned or finished sprint.
+With nothing planned either, it shows _All open issues_. The sprint picker opens any planned
+or finished sprint, and _All open issues_ at the top.
+
+**All open issues** is the board for a team that does not run sprints: every unresolved
+issue in the project, in a sprint or in the backlog. Resolved issues (_Done_, _Duplicate_,
+_Won't fix_ and the rest) leave it, so the resolved columns stay empty; drag a card into one
+to resolve it. A card added from the board goes to the backlog. The address ends in `/open`.
 
 ### On the dashboard
 
