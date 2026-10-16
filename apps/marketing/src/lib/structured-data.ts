@@ -1,5 +1,6 @@
 import type { FaqEntry } from './faq';
 import { GITHUB_URL, SIGN_UP_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from './site';
+import { WALKTHROUGH } from './walkthrough';
 
 export type JsonLd = Record<string, unknown>;
 
@@ -92,6 +93,24 @@ export function techArticle(path: string, headline: string, description: string,
     mainEntityOfPage: { '@id': `${SITE_URL}${path}#webpage` },
     about: { '@id': SOFTWARE_ID },
     ...(dateModified && { dateModified }),
+  };
+}
+
+export function walkthroughVideo(): JsonLd {
+  return {
+    '@type': 'VideoObject',
+    '@id': `${SITE_URL}/#walkthrough`,
+    name: WALKTHROUGH.name,
+    description: WALKTHROUGH.description,
+    thumbnailUrl: WALKTHROUGH.posterUrl,
+    contentUrl: WALKTHROUGH.videoUrl,
+    uploadDate: WALKTHROUGH.uploadDate,
+    duration: WALKTHROUGH.duration,
+    width: WALKTHROUGH.width,
+    height: WALKTHROUGH.height,
+    inLanguage: 'en',
+    publisher: { '@id': ORGANIZATION_ID },
+    about: { '@id': SOFTWARE_ID },
   };
 }
 

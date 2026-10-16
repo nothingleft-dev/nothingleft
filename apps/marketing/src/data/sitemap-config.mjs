@@ -3,7 +3,7 @@
 // To drop a page, delete its entry and mark the page `noindex` in schema-config if it must leave search too.
 
 export const SITEMAP_PAGES = {
-  '/': { lastmod: '2026-10-13T11:11:10+05:30' },
+  '/': { lastmod: '2026-10-16T20:30:00+05:30' },
   '/pricing': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/features/mcp-ai-agents': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/features/issue-tracking': { lastmod: '2026-10-13T11:11:10+05:30' },

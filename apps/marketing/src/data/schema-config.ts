@@ -21,7 +21,14 @@ import { SITE_DESCRIPTION } from '@lib/site';
 import { SITEMAP_PAGES } from './sitemap-config.mjs';
 
 export type SchemaNode =
-  'Organization' | 'WebSite' | 'WebPage' | 'SoftwareApplication' | 'FAQPage' | 'BreadcrumbList' | 'TechArticle';
+  | 'Organization'
+  | 'WebSite'
+  | 'WebPage'
+  | 'SoftwareApplication'
+  | 'FAQPage'
+  | 'BreadcrumbList'
+  | 'TechArticle'
+  | 'VideoObject';
 
 export interface PageSchema {
   title: string;
@@ -41,7 +48,7 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
   '/': {
     title: 'Nothing Left | Project Tracking for People and Agents',
     description: SITE_DESCRIPTION,
-    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage'],
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'VideoObject', 'FAQPage'],
     faq: HOME_FAQ,
   },
   '/pricing': {

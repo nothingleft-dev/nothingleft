@@ -4,6 +4,7 @@ import { initDemo } from './demo';
 import { initFaq } from './faq';
 import { initMenu } from './menu';
 import { initCopyButtons, initTabs } from './tabs';
+import { initWalkthrough } from './walkthrough';
 import { initWorkflow } from './workflow';
 
 // One component that fails to start must not stop the others.
@@ -14,6 +15,7 @@ for (const init of [
   initDemo,
   initFaq,
   initWorkflow,
+  initWalkthrough,
   initTabs,
   initCopyButtons,
 ]) {

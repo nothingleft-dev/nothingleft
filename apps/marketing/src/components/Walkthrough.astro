@@ -1,0 +1,50 @@
+---
+import { WALKTHROUGH } from '@lib/walkthrough';
+---
+
+<section id="walkthrough" class="border-t border-line bg-app" aria-labelledby="walkthrough-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[640px]">
+      <h2 id="walkthrough-title" class="h2">
+        See a sprint move in two minutes.
+      </h2>
+      <p class="prose mt-5">
+        Watch an AI agent update a real sprint through MCP, then follow the work to Done in the app.
+      </p>
+    </div>
+    <div class="walk mt-10 md:mt-12" id="walk" data-state="idle">
+      <video
+        class="walk-video"
+        id="walk-video"
+        preload="none"
+        playsinline
+        width={WALKTHROUGH.width}
+        height={WALKTHROUGH.height}
+        aria-label={WALKTHROUGH.name}
+      >
+        <source src={WALKTHROUGH.videoUrl} type="video/mp4" />
+      </video>
+      <button
+        type="button"
+        class="walk-cover"
+        id="walk-play"
+        aria-label={`Play the product walkthrough, ${WALKTHROUGH.durationLabel}`}
+      >
+        <img
+          class="walk-poster"
+          src={WALKTHROUGH.posterUrl}
+          width={WALKTHROUGH.width}
+          height={WALKTHROUGH.height}
+          alt={WALKTHROUGH.posterAlt}
+          loading="lazy"
+          decoding="async"
+        />
+        <span class="walk-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.6-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14Z" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  </div>
+</section>
