@@ -1,9 +1,7 @@
 'use client';
 
-import type { Route } from 'next';
 import { useCallback, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { SignInSchema, type Me, type TwoFactorChallenge } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
@@ -12,27 +10,24 @@ import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { EmailUs } from '@components/email-us';
 import { safeNextPath } from '@components/auth/next-path';
+import { enterApp } from '@components/auth/enter-app';
 import { useAuthForm } from '@components/auth/use-auth-form';
 import { TwoFactorStep } from '@components/auth/two-factor-step';
 import { signIn } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
-import { queryKeys } from '@lib/query/keys';
 import { viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 export function SignInForm() {
-  const router = useRouter();
-  const client = useQueryClient();
   const params = useSearchParams();
   const next = params.get('next');
   const deactivated = params.get('deactivated') === '1';
   const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const [expired, setExpired] = useState<string | null>(null);
 
-  const finish = (me: Me) => {
+  const finish = () => {
     trackAuthConversion('login', 'email');
-    client.setQueryData(queryKeys.me(), me);
-    router.replace(safeNextPath(next) as Route);
+    enterApp(safeNextPath(next));
   };
 
   const form = useAuthForm({
@@ -48,7 +43,7 @@ export function SignInForm() {
       if ('two_factor_required' in result) {
         setExpired(null);
         setChallenge(result);
-      } else finish(result);
+      } else finish();
     },
   });
 

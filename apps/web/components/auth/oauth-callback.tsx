@@ -2,26 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { Route } from 'next';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
+import { useMutation } from '@tanstack/react-query';
 import { OAuthProviderSchema, type OAuthNotice, type OAuthProvider, type OAuthSignIn } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { AuthHeading } from '@components/auth/auth-card';
 import { FormAlert } from '@components/auth/form-alert';
 import { takeOAuthNext } from '@components/auth/next-path';
+import { enterApp } from '@components/auth/enter-app';
 import { completeOAuth } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
-import { queryKeys } from '@lib/query/keys';
 import { formatDate, viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 const LABELS: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 
 export function OAuthCallback({ provider: raw }: { provider: string }) {
-  const router = useRouter();
-  const client = useQueryClient();
   const params = useSearchParams();
   const parsed = OAuthProviderSchema.safeParse(raw);
   const provider = parsed.success ? parsed.data : null;
@@ -35,13 +32,12 @@ export function OAuthCallback({ provider: raw }: { provider: string }) {
       completeOAuth(input.provider, { code: input.code, state: input.state, timezone: viewerTimeZone() }).then(
         r => r.data,
       ),
-    onSuccess: ({ me, created, notice }: OAuthSignIn, input) => {
+    onSuccess: ({ created, notice }: OAuthSignIn, input) => {
       trackAuthConversion(created ? 'sign_up' : 'login', input.provider);
-      client.setQueryData(queryKeys.me(), me);
       const next = takeOAuthNext();
       // The notice is explained here, once, before moving on; it is not stored anywhere.
       if (notice) setNotice({ notice, next });
-      else router.replace(next as Route);
+      else enterApp(next);
     },
   });
 
@@ -87,7 +83,7 @@ export function OAuthCallback({ provider: raw }: { provider: string }) {
           proven they own this address. We emailed you the same explanation.
         </FormAlert>
         <div className="flex flex-col gap-2">
-          <Button className="w-full" onClick={() => router.replace(notice.next as Route)}>
+          <Button className="w-full" onClick={() => enterApp(notice.next)}>
             Continue
           </Button>
           <Button asChild variant="outline" className="w-full">
