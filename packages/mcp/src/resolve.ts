@@ -103,8 +103,9 @@ export async function usernameIn(ctx: ToolContext, projectKey: string, org: stri
   return (await usernamesIn(ctx, projectKey, org, [input]))[0]!;
 }
 
-/** What the resolvers above may call on any tool's behalf, beyond the endpoints the tool itself declares. */
+/** What the resolvers above and the tool context may call on any tool's behalf, beyond the endpoints the tool itself declares. */
 export const RESOLUTION_ENDPOINTS = [
+  'GET /v1/me',
   'GET /v1/organizations',
   'GET /v1/projects/{key}',
   'GET /v1/organizations/{slug}/members',

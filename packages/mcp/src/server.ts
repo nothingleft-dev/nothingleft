@@ -13,7 +13,7 @@ import {
 } from '@modelcontextprotocol/server';
 import type { z } from 'zod';
 import { t } from '@nothingleft/i18n';
-import type { Organization } from '@nothingleft/types';
+import type { Me, Organization } from '@nothingleft/types';
 import { apiClient, type ApiClient, type Fetch } from './api.ts';
 import { ToolError, type ToolErrorBody } from './errors.ts';
 import { errorMarkdown, join } from './render.ts';
@@ -22,6 +22,7 @@ import { TOOLS } from './tools/index.ts';
 import { RESOURCES } from './resources/index.ts';
 import { PROMPTS } from './prompts/index.ts';
 import type { PromptDefinition, ResourceDefinition } from './surface.ts';
+import type { TimeZoneCache } from './time-zones.ts';
 import type { ToolContext, ToolDefinition } from './tool.ts';
 
 export type ToolName = (typeof TOOLS)[number]['name'];
@@ -49,6 +50,8 @@ export interface McpServerOptions {
   requestId?: string;
   version?: string;
   onToolCall?: (event: ToolCallEvent) => void;
+  /** Shared across requests by a long-lived handler; without one, each call looks the timezone up. */
+  timeZones?: TimeZoneCache;
 }
 
 /**
@@ -166,11 +169,24 @@ function contextFor(options: McpServerOptions): { ctx: ToolContext; api: ApiClie
     ...(options.requestId ? { requestId: options.requestId } : {}),
   });
   let orgs: Promise<Organization[]> | undefined;
+  let zone: Promise<string> | undefined;
   const memos = new Map<string, Promise<unknown>>();
   const ctx: ToolContext = {
     api,
     appBaseUrl: options.appBaseUrl,
     organizations: () => (orgs ??= api.get<Organization[]>('/v1/organizations').then(r => r.data)),
+    timeZone: () =>
+      (zone ??= (async () => {
+        const known = options.timeZones?.get(options.userId);
+        if (known) return known;
+        const { data: me } = await api.get<Me>('/v1/me');
+        options.timeZones?.set(options.userId, me.timezone);
+        return me.timezone;
+      })()),
+    rememberTimeZone: next => {
+      zone = Promise.resolve(next);
+      options.timeZones?.set(options.userId, next);
+    },
     memo: <T>(key: string, load: () => Promise<T>) => {
       if (!memos.has(key)) memos.set(key, load());
       return memos.get(key) as Promise<T>;

@@ -615,6 +615,14 @@ describe('configuration', () => {
     );
   });
 
+  test("instants read in the token owner's timezone, from the call after they change it", async () => {
+    const key = await newIssue();
+    await ok(t.observer, 'update_profile', { timezone: 'UTC' });
+    expect(await ok(t.observer, 'get_issue', { issue: key })).toMatch(/\| Created \| [^|]+[ap]m UTC by /);
+    await ok(t.observer, 'update_profile', { timezone: 'Asia/Kolkata' });
+    expect(await ok(t.observer, 'get_issue', { issue: key })).toMatch(/\| Created \| [^|]+[ap]m GMT\+5:30 by /);
+  });
+
   test('create_org makes you its owner', async () => {
     const text = await ok(t.observer, 'create_org', { name: 'Side Project' });
     expect(text).toContain('Created **Side Project**');

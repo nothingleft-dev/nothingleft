@@ -4,7 +4,7 @@ import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
-import { code, date, facts, join, roleLabel, table } from '../render.ts';
+import { code, day, facts, join, roleLabel, table } from '../render.ts';
 
 const scopeInput = {
   org: arg.org,
@@ -32,7 +32,23 @@ const roles = (args: {
   ...(args.project_role ? { project_role: arg.PROJECT_ROLES[args.project_role] } : {}),
 });
 
-const expires = (i: Invitation) => (i.expires_at ? date(i.expires_at) : 'never');
+const offsetMs = (timeZone: string, at: number) => {
+  const name = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' })
+    .formatToParts(at)
+    .find(p => p.type === 'timeZoneName')!.value;
+  const [, sign, h, m] = /GMT([+-])(\d{2}):(\d{2})/.exec(name) ?? [];
+  return sign ? (sign === '-' ? -1 : 1) * (Number(h) * 60 + Number(m)) * 60_000 : 0;
+};
+
+/** The last second of a calendar day in the token owner's timezone, so the link expires on the day they named. */
+function endOfDay(day: string, timeZone: string): string {
+  const wall = Date.parse(`${day}T23:59:59Z`);
+  // Twice, because the offset at the guess can differ from the offset at the answer across a DST change.
+  const guess = wall - offsetMs(timeZone, wall);
+  return new Date(wall - offsetMs(timeZone, guess)).toISOString();
+}
+
+const expires = (i: Invitation, zone: string) => (i.expires_at ? day(i.expires_at, zone) : 'never');
 
 export const inviteMember = defineTool({
   name: 'invite_member',
@@ -49,6 +65,7 @@ export const inviteMember = defineTool({
     'POST /v1/projects/{key}/invitations/emails',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const where = await target(ctx, args);
     const { data } = await ctx.api.send<Invitation[]>('POST', `${where.base}/emails`, {
       body: { emails: args.emails, ...roles(args) },
@@ -64,7 +81,7 @@ export const inviteMember = defineTool({
             roleLabel(i.org_role),
             i.project_key ?? '—',
             i.project_role ? roleLabel(i.project_role) : '—',
-            expires(i),
+            expires(i, zone),
           ]),
         ),
       ),
@@ -89,7 +106,7 @@ export const createInviteLink = defineTool({
     expires_on: z.iso
       .date()
       .optional()
-      .describe('Last day the link works, as YYYY-MM-DD (UTC). Default: it never expires.'),
+      .describe('Last day the link works, as YYYY-MM-DD in your timezone. Default: it never expires.'),
     allowed_email_domain: z
       .string()
       .trim()
@@ -105,12 +122,13 @@ export const createInviteLink = defineTool({
     'POST /v1/projects/{key}/invitations/links',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const where = await target(ctx, args);
     const { data: link } = await ctx.api.send<Invitation>('POST', `${where.base}/links`, {
       body: {
         ...roles(args),
         ...(args.max_uses ? { max_uses: args.max_uses } : {}),
-        ...(args.expires_on ? { expires_at: `${args.expires_on}T23:59:59Z` } : {}),
+        ...(args.expires_on ? { expires_at: endOfDay(args.expires_on, zone) } : {}),
         ...(args.allowed_email_domain ? { allowed_email_domain: args.allowed_email_domain } : {}),
       },
       ...(where.org ? { org: where.org } : {}),
@@ -124,7 +142,7 @@ export const createInviteLink = defineTool({
           ['Project', link.project_key],
           ['Project role', link.project_role ? roleLabel(link.project_role) : null],
           ['Uses', link.max_uses === null ? `${link.use_count}, unlimited` : `${link.use_count} of ${link.max_uses}`],
-          ['Expires', expires(link)],
+          ['Expires', expires(link, zone)],
           ['Email domain', link.allowed_email_domain],
         ]),
       ),

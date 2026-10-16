@@ -5,7 +5,7 @@ import { path } from '../api.ts';
 import { defineTool } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
 import { resolveUsername } from '../resolve.ts';
-import { code, date, facts, handle, join, more, roleLabel, table } from '../render.ts';
+import { code, day, facts, handle, join, more, roleLabel, table } from '../render.ts';
 
 const memberRole = (m: Pick<Member, 'is_owner' | 'org_role'>) => roleLabel(m.is_owner ? 'owner' : m.org_role);
 const nameOrDash = (ref: { name: string; username: string }) => (ref.name !== ref.username ? ref.name : '—');
@@ -25,6 +25,7 @@ export const listMembers = defineTool({
   kind: 'read',
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}/members', 'GET /v1/projects/{key}/members'],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const limit = args.limit ?? arg.DEFAULT_LIMIT;
     const offset = args.offset ?? 0;
 
@@ -50,7 +51,7 @@ export const listMembers = defineTool({
                   nameOrDash(m),
                   roleLabel(m.role),
                   roleLabel(m.org_role),
-                  date(m.added_at),
+                  day(m.added_at, zone),
                 ]),
               )
             : null,
@@ -75,7 +76,7 @@ export const listMembers = defineTool({
                 handle(m.username),
                 nameOrDash(m),
                 memberRole(m),
-                date(m.joined_at),
+                day(m.joined_at, zone),
                 ...(withEmail ? [m.email ?? '—'] : []),
               ]),
             )
@@ -95,6 +96,7 @@ export const getMember = defineTool({
   kind: 'read',
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}/members/{username}'],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const org = await resolveOrganization(ctx, args.org);
     const { data: m } = await ctx.api.get<Member>(
       path`/v1/organizations/${org.slug}/members/${await resolveUsername(ctx, org, args.user)}`,
@@ -105,7 +107,7 @@ export const getMember = defineTool({
         facts([
           ['Email', m.email],
           ['Org role', memberRole(m)],
-          ['Joined', date(m.joined_at)],
+          ['Joined', day(m.joined_at, zone)],
           ['Invited by', m.invited_by ? handle(m.invited_by) : null],
           ['Former member', m.former_member ? 'Yes — removed from the organisation' : null],
         ]),

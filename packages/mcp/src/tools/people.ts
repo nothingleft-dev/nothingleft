@@ -7,7 +7,7 @@ import { ToolError } from '../errors.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
 import { calendarOf, projectOrganization, resolveUsername } from '../resolve.ts';
-import { code, date, facts, instant, join, person, roleLabel, table } from '../render.ts';
+import { code, day, facts, instant, join, person, roleLabel, table } from '../render.ts';
 import { duration } from '../render-issue.ts';
 
 const removalInput = z.strictObject({
@@ -134,7 +134,7 @@ const label = (i: Invitation) => i.email ?? i.url ?? `invitation ${i.id}`;
 const roles = (i: Invitation) =>
   i.project_key ? `${roleLabel(i.project_role ?? 'contributor')} in ${i.project_key}` : roleLabel(i.org_role);
 
-function invitationFacts(i: Invitation) {
+function invitationFacts(i: Invitation, zone: string) {
   return facts([
     ['Kind', i.kind === 'email' ? 'Email invitation' : 'Share link'],
     ['Status', i.status],
@@ -142,9 +142,9 @@ function invitationFacts(i: Invitation) {
     ['Link', i.url],
     ['Uses', i.kind === 'email' ? null : `${i.use_count}${i.max_uses ? ` of ${i.max_uses}` : ''}`],
     ['Email domain', i.allowed_email_domain],
-    ['Expires', i.expires_at ? date(i.expires_at) : 'never'],
-    ['Created', `${instant(i.created_at)} by ${person(i.created_by)}`],
-    ['Revoked', i.revoked_at ? instant(i.revoked_at) : null],
+    ['Expires', i.expires_at ? day(i.expires_at, zone) : 'never'],
+    ['Created', `${instant(i.created_at, zone)} by ${person(i.created_by)}`],
+    ['Revoked', i.revoked_at ? instant(i.revoked_at, zone) : null],
   ]);
 }
 
@@ -161,6 +161,7 @@ export const listInvitations = defineTool({
     'GET /v1/projects/{key}/invitations',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const { org, key, invitations } = await listFor(ctx, args);
     return {
       markdown: join(
@@ -173,7 +174,7 @@ export const listInvitations = defineTool({
                 i.status,
                 roles(i),
                 i.kind === 'email' ? '—' : `${i.use_count}${i.max_uses ? `/${i.max_uses}` : ''}`,
-                i.expires_at ? date(i.expires_at) : 'never',
+                i.expires_at ? day(i.expires_at, zone) : 'never',
                 person(i.created_by),
               ]),
             )
@@ -197,6 +198,7 @@ export const getInvitation = defineTool({
     'GET /v1/organizations/{slug}/invitations/{id}/uses',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const { org, invitation } = await findInvitation(ctx, args);
     const id = String(invitation.id);
     const [{ data: i }, { data: uses }] = await Promise.all([
@@ -206,9 +208,9 @@ export const getInvitation = defineTool({
     return {
       markdown: join(
         `**${label(i)}**`,
-        invitationFacts(i),
+        invitationFacts(i, zone),
         uses.length
-          ? `**Joined through it**\n${uses.map(u => `- ${person(u)} · ${instant(u.used_at)}`).join('\n')}`
+          ? `**Joined through it**\n${uses.map(u => `- ${person(u)} · ${instant(u.used_at, zone)}`).join('\n')}`
           : 'Nobody has joined through it.',
       ),
     };
@@ -238,7 +240,7 @@ export const revokeInvitation = defineTool({
       'DELETE',
       path`/v1/organizations/${org.slug}/invitations/${String(invitation.id)}`,
     );
-    return { markdown: join(`Revoked **${label(i)}**.`, invitationFacts(i)) };
+    return { markdown: join(`Revoked **${label(i)}**.`, invitationFacts(i, await ctx.timeZone())) };
   },
 });
 
@@ -265,6 +267,6 @@ export const rotateInviteLink = defineTool({
       'POST',
       path`/v1/organizations/${org.slug}/invitations/${String(invitation.id)}/rotate`,
     );
-    return { markdown: join(`New link: ${i.url}`, invitationFacts(i)) };
+    return { markdown: join(`New link: ${i.url}`, invitationFacts(i, await ctx.timeZone())) };
   },
 });

@@ -95,7 +95,9 @@ export async function renderSprint(ctx: ToolContext, project: string, sprint: st
           ]),
         )}`
       : null,
-    issues.data.length ? `**Issues**, in board order\n${issueTable(issues.data)}` : '_No issues in this sprint._',
+    issues.data.length
+      ? `**Issues**, in board order\n${issueTable(issues.data, await ctx.timeZone())}`
+      : '_No issues in this sprint._',
     more(issues.pagination, issues.data.length),
   );
 }
@@ -386,7 +388,9 @@ export const moveToSprint = defineTool({
     const target = args.sprint.trim().toLowerCase() === BACKLOG ? null : args.sprint;
     const moved = await moveIssues(ctx, args, target);
     const where = moved[0]?.sprint ? `sprint ${moved[0].sprint.name}` : 'the backlog';
-    return { markdown: join(`Moved ${moved.length} to ${where}, ${placeLine(args)}.`, issueTable(moved)) };
+    return {
+      markdown: join(`Moved ${moved.length} to ${where}, ${placeLine(args)}.`, issueTable(moved, await ctx.timeZone())),
+    };
   },
 });
 
@@ -408,7 +412,12 @@ export const reorderBacklog = defineTool({
   endpoints: ['POST /v1/projects/{key}/backlog/move'],
   async run(ctx, args) {
     const moved = await moveIssues(ctx, args, undefined);
-    return { markdown: join(`Reordered ${moved.map(i => i.key).join(', ')} ${placeLine(args)}.`, issueTable(moved)) };
+    return {
+      markdown: join(
+        `Reordered ${moved.map(i => i.key).join(', ')} ${placeLine(args)}.`,
+        issueTable(moved, await ctx.timeZone()),
+      ),
+    };
   },
 });
 

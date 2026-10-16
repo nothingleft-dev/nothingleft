@@ -1329,7 +1329,7 @@ Creates a share link that lets anyone who opens it join the organisation, or a p
 | `org_role` | `Member` · `Org Admin` |  | Role in the organisation. Default Member. |
 | `project_role` | `Observer` · `Contributor` · `Project Admin` |  | Role in `project`. Default Contributor. Needs `project`. |
 | `max_uses` | number |  | How many people may join with it. Default unlimited. |
-| `expires_on` | string |  | Last day the link works, as YYYY-MM-DD (UTC). Default: it never expires. |
+| `expires_on` | string |  | Last day the link works, as YYYY-MM-DD in your timezone. Default: it never expires. |
 | `allowed_email_domain` | string |  | Only accounts with an email at this domain may join, e.g. "acme.com". |
 
 ### `manage_roles`

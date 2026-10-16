@@ -4,7 +4,7 @@ import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { defineTool } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
-import { code, date, facts, join, more, person, table } from '../render.ts';
+import { code, day, facts, join, more, person, table } from '../render.ts';
 
 const size = (bytes: number) =>
   bytes < 1024 * 1024 ? `${Math.max(1, Math.ceil(bytes / 1024))} KB` : `${(bytes / 1024 ** 2).toFixed(1)} MB`;
@@ -42,6 +42,7 @@ export const listFiles = defineTool({
     'GET /v1/organizations/{slug}/storage/files',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const org = await resolveOrganization(ctx, args.org);
     const limit = args.limit ?? arg.DEFAULT_LIMIT;
     const offset = args.offset ?? 0;
@@ -71,12 +72,12 @@ export const listFiles = defineTool({
           ? table(
               ['File', 'Size', 'On', 'Stored', 'Uploaded by', 'Added'],
               files.map(f => [
-                code(f.filename) + (f.purges_at ? ` · deleted, gone ${date(f.purges_at)}` : ''),
+                code(f.filename) + (f.purges_at ? ` · deleted, gone ${day(f.purges_at, zone)}` : ''),
                 size(f.size_bytes),
                 heldBy(f),
                 where(f),
                 person(f.created_by),
-                date(f.created_at),
+                day(f.created_at, zone),
               ]),
             )
           : 'No files.',

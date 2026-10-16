@@ -517,7 +517,7 @@ export const setFieldValues = defineTool({
       return {
         markdown: join(
           issueHeading(issue, ctx.appBaseUrl, 'Updated'),
-          customFieldFacts(issue, calendar) ?? '_No custom fields apply to this issue._',
+          customFieldFacts(issue, await ctx.timeZone(), calendar) ?? '_No custom fields apply to this issue._',
         ),
       };
     }

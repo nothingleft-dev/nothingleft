@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { t } from '@nothingleft/i18n';
-import type { Issue, Me, WorkItem } from '@nothingleft/types';
+import type { Issue, WorkItem } from '@nothingleft/types';
 import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { ToolError } from '../errors.ts';
@@ -18,8 +18,7 @@ async function calendarFor(ctx: ToolContext, key: string, org: string | undefine
 
 /** Today where the caller lives: a work date is a calendar date, and "today" is theirs, not UTC's. */
 async function today(ctx: ToolContext): Promise<string> {
-  const { data: me } = await ctx.api.get<Me>('/v1/me');
-  return new Intl.DateTimeFormat('en-CA', { timeZone: me.timezone }).format(new Date());
+  return new Intl.DateTimeFormat('en-CA', { timeZone: await ctx.timeZone() }).format(new Date());
 }
 
 const rows = (items: WorkItem[], calendar: Parameters<typeof duration>[1]) =>
