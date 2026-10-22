@@ -9,7 +9,7 @@ import Limits from '@components/solutions/self-hosting/Limits.astro';
 import OwnBucket from '@components/solutions/self-hosting/OwnBucket.astro';
 import Responsibilities from '@components/solutions/self-hosting/Responsibilities.astro';
 import Base from '@layouts/Base.astro';
-import { SELF_HOSTING_FAQ } from '@lib/solutions/self-hosting';
+import { COMPOSE_GUIDE_PATH, SELF_HOSTING_FAQ } from '@lib/solutions/self-hosting';
 import { GITHUB_URL, LICENSE_URL, SIGN_UP_URL } from '@lib/site';
 ---
 
@@ -31,7 +31,12 @@ import { GITHUB_URL, LICENSE_URL, SIGN_UP_URL } from '@lib/site';
         ↗
       </span>
     </a>
-    <span class="sh-pending text-sm">Install guide coming with launch</span>
+    <a class="link text-sm" href={COMPOSE_GUIDE_PATH}>
+      Install guide
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
     <p slot="note" class="mt-5 text-xs text-fg-3">
       No reduced community edition: plans are limit presets, not feature gates.
     </p>
@@ -45,17 +50,23 @@ import { GITHUB_URL, LICENSE_URL, SIGN_UP_URL } from '@lib/site';
   <Faq
     entries={SELF_HOSTING_FAQ}
     title="Questions before you run it yourself."
-    intro="Licence, data location and what the repository gives you today. The install guide fills in the rest at launch."
+    intro="Licence, data location, where to install it and who can sign up."
     signup={false}
   />
   <CallToAction
     title="Read the code before you run it."
-    body="The source, the licence and the compose file are public. The install guide ships with launch; until then, the hosted beta runs the same build."
+    body="The source, the licence and the install guides are public. Try it on your own machine first, or join the hosted beta, which runs the same build."
   >
     <a class="btn" href={GITHUB_URL}>
       View the source on GitHub
       <span class="arr" aria-hidden="true">
         ↗
+      </span>
+    </a>
+    <a class="link text-sm" href={COMPOSE_GUIDE_PATH}>
+      Install guide
+      <span class="arr" aria-hidden="true">
+        →
       </span>
     </a>
     <a class="link text-sm" href={SIGN_UP_URL}>
@@ -66,19 +77,3 @@ import { GITHUB_URL, LICENSE_URL, SIGN_UP_URL } from '@lib/site';
     </a>
   </CallToAction>
 </Base>
-
-<style>
-  .sh-pending {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-secondary);
-  }
-  .sh-pending::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    border: 1.5px solid var(--border-strong);
-  }
-</style>

@@ -56,6 +56,14 @@ export const DOC_GROUPS: DocGroup[] = [
     ],
   },
   {
+    title: 'Self-hosting',
+    description: 'Run the whole app yourself, on one machine with Docker Compose or on AWS.',
+    docs: [
+      { slug: 'self-hosting', label: 'Self-hosting with Docker Compose' },
+      { slug: 'self-hosting-aws', label: 'Deploying on AWS' },
+    ],
+  },
+  {
     title: 'Reference',
     description: 'Shortcuts for every page, and the REST API the app and agents share.',
     docs: [

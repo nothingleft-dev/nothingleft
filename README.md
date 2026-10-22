@@ -4,6 +4,8 @@ An MCP-first project management tool — issues, agile boards, time tracking,
 custom fields, reports and a private knowledge base, built so an LLM agent
 can do everything a human can, through the same API.
 
+[![Nothing Left product walkthrough, 2 minutes: an AI agent moves an issue into a sprint through MCP, then the team follows the work to Done](https://static.nothingleft.dev/marketing/video/product-demo-poster.webp)](https://nothingleft.dev/#walkthrough)
+
 **Status: beta.** Core product workflows are implemented; import/export, the public
 marketing/docs site and launch polish are still to come.
 
@@ -14,6 +16,15 @@ For anything visual, see [design/DESIGN-SYSTEM.md](./design/DESIGN-SYSTEM.md).
 
 [CLAUDE.md](./CLAUDE.md) is the working agreement every coding session reads
 first.
+
+## Self-hosting
+
+Run the whole app yourself, from this repository:
+
+- [Self-hosting with Docker Compose](./docs/manual/self-hosting.md): a trial on one machine,
+  or a server with HTTPS.
+- [Deploying on AWS](./docs/manual/self-hosting-aws.md): ECS Fargate behind a load balancer,
+  with RDS, ElastiCache, S3 and SES.
 
 ## Security
 

@@ -11,6 +11,6 @@ export const SITE_DESCRIPTION =
 // Shared by the agent index and the Markdown product overview.
 export const PRODUCT_CONTEXT = [
   'Nothing Left is in beta. The hosted service has no subscription charge for teams of any size during beta. The first 20 members of every organisation stay free forever; pricing for additional seats has not been announced, and any future charge will come with advance notice. Each organisation includes 5 GB of platform file storage, with an option to connect its own R2 or S3 bucket.',
-  'The code is licensed under AGPL-3.0. Hosted and self-hosted installations use the same build, with no reduced community edition. The production install guide is planned for launch; the repository’s Docker Compose file runs the development data services, not the complete application.',
+  'The code is licensed under AGPL-3.0. Hosted and self-hosted installations use the same build, with no reduced community edition. The repository’s Docker Compose file runs the complete application on one machine, and install guides cover Docker Compose and AWS. There is no setting that turns sign-up off on a self-hosted install.',
   'AI agents connect through the Model Context Protocol (MCP), using personal access tokens constrained by token scopes and the user’s permissions. An agent is optional: the web app also supports the core workflows directly.',
 ].join('\n\n');

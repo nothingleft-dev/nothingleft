@@ -1,0 +1,16 @@
+# Allowlist: the build context is the repository root, and only the workspaces go in.
+*
+!package.json
+!bun.lock
+!tsconfig.json
+!apps/
+!packages/
+**/node_modules
+**/.next
+**/.turbo
+**/.env
+**/.env.*
+**/logs
+**/*.tsbuildinfo
+apps/marketing/*
+!apps/marketing/package.json

@@ -76,7 +76,17 @@ const SELF_HOSTED_WORK = [
               <li>{item}</li>
             ))}
           </ul>
-          <p class="mt-4 text-xs text-fg-2">The install guide ships with launch.</p>
+          <p class="mt-4 text-xs text-fg-2">
+            Install guides for{' '}
+            <a class="link font-normal" href="/docs/self-hosting">
+              Docker Compose
+            </a>{' '}
+            and{' '}
+            <a class="link font-normal" href="/docs/self-hosting-aws">
+              AWS
+            </a>
+            .
+          </p>
         </div>
         <div class="panel-foot flex flex-wrap items-center gap-x-6 gap-y-3">
           <a class="link text-sm" href={SELF_HOSTING_PATH}>

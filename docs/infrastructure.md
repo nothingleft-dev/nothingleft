@@ -73,6 +73,26 @@ and RustFS speaks the same S3 API, presigned URLs and SHA-256 checksums included
 `cd apps/api && bun run storage:init` creates both buckets, makes the public one
 readable and allows browser `PUT`s from `APP_BASE_URL`; CI runs the same container.
 
+### Running it yourself
+
+Two install guides, both in the user manual: [Self-hosting with Docker
+Compose](./manual/self-hosting.md) and [Deploying on AWS](./manual/self-hosting-aws.md). What
+they build on:
+
+| Path | What |
+|---|---|
+| `apps/api/Dockerfile` | One image for the API and its one-off jobs: `bun run --cwd /app/packages/db db:migrate`, `bun run storage:init`, `bun run account`. Production mode, JSON logs |
+| `apps/web/Dockerfile` | The web app as a standalone Next.js server. `NEXT_PUBLIC_*` are build arguments, so each install builds its own |
+| `docker-compose.yml` | No profile: the backing services. `--profile app`: `migrate` and `storage-init`, then `api`, `web` and Mailpit. `--profile proxy`: Caddy with automatic HTTPS. Every port but Caddy's binds to `127.0.0.1` |
+| `infra/docker/.env.example` | The Compose settings and secrets, copied to `infra/docker/.env` and passed with `--env-file` |
+| `infra/docker/postgres-init.sh` | Creates `nothingleft_app` when the database volume is first created, before the first migration |
+| `infra/docker/Caddyfile` | `APP_HOST` → web, `API_HOST` → api, `STORAGE_HOST` → storage |
+| `.dockerignore` | An allowlist: the root manifests, `apps/` and `packages/`, without `node_modules`, builds or env files |
+
+Decided 21 Oct 2026: images are built from source by whoever installs, not published to a
+registry. The AWS guide adds the RDS certificate bundle to the API image in a two-line derived
+build and names it in the connection string (`sslrootcert`), so `verify-full` holds.
+
 ## Environment configuration
 
 Local settings live in `apps/api/.env` and `apps/web/.env`; copy each
@@ -103,12 +123,13 @@ DATABASE_URL                  postgres://…   direct — migrations, pg-boss
 DATABASE_URL_POOLED           postgres://…   pooled — application queries
 REDIS_URL                     rediss://…
 S3_ENDPOINT                   https://<account>.r2.cloudflarestorage.com
+S3_BROWSER_ENDPOINT           unset          where browsers reach the same store when the API reaches it privately (Docker Compose); presigned URLs are signed for it
 S3_REGION                     auto
 S3_PRIVATE_BUCKET             nl-private    attachments (quota-counted, BYO-replaceable); export archives and import files (neither)
 BYO_ALLOW_ANY_ENDPOINT        false         development and tests only: a BYO connection may name its own endpoint; production refuses to boot with it
 S3_PUBLIC_BUCKET              nl-public     avatars only — public read, never BYO
 S3_PUBLIC_BUCKET_BASE_URL     https://static.nothingleft.dev
-S3_ACCESS_KEY_ID
+S3_ACCESS_KEY_ID              both or neither; neither signs with the runtime's role (ECS task role) through the SDK's default chain
 S3_SECRET_ACCESS_KEY
 ENCRYPTION_MASTER_KEY         32 bytes, base64 — seals two-factor secrets (6b) and BYO storage secrets (6c, purpose `byo_storage`, the connection's row as additional data), and signs MCP confirmation state (purpose `mcp-confirm`); required in production, never rotated (no rotation in v1)
 SESSION_COOKIE_DOMAIN         .nothingleft.dev  required whenever the web app and the API are on different hosts: the web app's proxy reads the session cookie
@@ -152,7 +173,10 @@ the API makes. The audit log is immutable only against the application role,
 so that role must not be a superuser, must not own any table, and must not be a
 member of the owner role or of any role that does.
 
-Create the role before the first migration runs. The initial migration revokes
+Create the role before the first migration runs. Docker Compose does it in
+`infra/docker/postgres-init.sh`; on a managed database the admin user creates both roles and
+the database ([manual/self-hosting-aws.md § 5](./manual/self-hosting-aws.md#5-database-roles)).
+The initial migration revokes
 `UPDATE` and `DELETE` on `org_activity` only if the role already exists, and
 creating it afterwards does not re-run that statement. If the role was created
 late, or a broad grant was issued after the migration, run the grant script
@@ -175,6 +199,15 @@ GRANT SELECT, INSERT ON org_activity TO nothingleft_app;
 `UPDATE, DELETE` alone would leave. The default-privileges line covers tables a
 later migration creates; `org_activity` already exists by then, so the explicit
 revoke-and-grant above is what protects it.
+
+The initial migration also runs `CREATE EXTENSION IF NOT EXISTS pg_stat_statements`, which
+needs a superuser. Where the owner is not one (RDS, most managed Postgres), the admin user
+creates the extension in the database first and the migration's statement is a no-op.
+
+A restore with `pg_restore` into a database whose default privileges already grant
+`nothingleft_app` `UPDATE` and `DELETE` brings those back on `org_activity`: `pg_dump` records
+the grants the table had, not the ones it lacked. Run the revoke-and-grant above after every
+restore.
 
 **Verify after provisioning, and after every migration that touches grants.**
 In `psql` as the owner, `\dp org_activity` lists the table's access privileges:

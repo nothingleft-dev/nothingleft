@@ -5,8 +5,10 @@ import { GITHUB_URL, LICENSE_URL } from '@lib/site';
 export const COMPOSE_URL = `${GITHUB_URL}/blob/main/docker-compose.yml`;
 export const INFRASTRUCTURE_DOC_URL = `${GITHUB_URL}/blob/main/docs/infrastructure.md`;
 export const STORAGE_MANUAL_PATH = '/docs/storage';
+export const COMPOSE_GUIDE_PATH = '/docs/self-hosting';
+export const AWS_GUIDE_PATH = '/docs/self-hosting-aws';
 
-// Shown from `services:` on, exactly as committed; the header comment is local-development advice.
+// Shown from `services:` on, exactly as committed; the header comment repeats setup steps the guide owns.
 export const COMPOSE_SERVICES = composeFile.slice(composeFile.indexOf('services:')).trimEnd();
 
 export interface ServiceNode {
@@ -75,7 +77,7 @@ export const TIERS: ArchitectureTier[] = [
         name: 'Redis',
         tech: 'Any Redis 6 or later',
         body: [
-          'Session cache, rate-limit counters, report caches and idempotency replays. It is not the job queue. Outside localhost, REDIS_URL must use TLS (rediss://).',
+          'Session cache, rate-limit counters, report caches and idempotency replays. It is not the job queue. Outside localhost and the Compose stack, REDIS_URL must use TLS (rediss://).',
         ],
         source: 'docs/backend-guide.md · docs/tech-stack.md · apps/api/.env.example',
       },
@@ -171,7 +173,7 @@ export const CONFIG_TABS: ConfigTab[] = [
   {
     id: 'compose',
     name: 'docker-compose.yml',
-    where: 'The data tier only, as committed.',
+    where: 'The whole system, as committed.',
     html: escapeHtml(COMPOSE_SERVICES),
   },
   {
@@ -225,22 +227,22 @@ export const RESPONSIBILITIES: Responsibility[] = [
   {
     area: 'Running the services',
     hosted: 'We run the web app, the API with /mcp, the database, Redis and the buckets.',
-    self: 'You run the web app and the API, and provide PostgreSQL, Redis and an S3-compatible store.',
+    self: 'You run the web app, the API, PostgreSQL, Redis and an S3-compatible store. Docker Compose starts all of them on one machine.',
   },
   {
     area: 'Upgrades',
     hosted: 'We deploy them. Migrations run before a new API version takes traffic.',
-    self: 'You pull the new source, migrate and restart. The steps ship with the install guide.',
+    self: 'You pull the new source, rebuild and restart. Migrations run before the new API starts; each guide has the steps.',
   },
   {
     area: 'Backups',
     hosted: 'Ours, for the hosted database and platform storage. A bucket you connect is yours.',
-    self: 'Yours: PostgreSQL and both buckets. Guidance ships with the install guide.',
+    self: 'Yours: PostgreSQL and both buckets, plus the encryption key. Each guide says what to keep and how.',
   },
   {
     area: 'Email',
     hosted: 'Account, security, invitation and storage email is sent for you.',
-    self: 'You pick a mail provider (Resend, Zoho CPaaS or any SMTP server), supply its credentials and set EMAIL_FROM. Without credentials, mail is logged, not sent.',
+    self: 'You pick a mail provider (Resend, Zoho CPaaS or any SMTP server), supply its credentials and set EMAIL_FROM. In production the API does not start without them; a trial on your laptop catches mail in Mailpit.',
   },
   {
     area: 'File storage',
@@ -281,11 +283,25 @@ export const SELF_HOSTING_FAQ: FaqEntry[] = [
     ],
   },
   {
-    question: 'Is docker-compose.yml a production install?',
+    question: 'Does docker-compose.yml run the whole app?',
     answer: [
-      'No. It runs the data tier, PostgreSQL 16, Redis 7 and an S3-compatible store, with development credentials. It does not run the web app or the API. The install guide, with production steps, ships with launch.',
+      'Yes. Its app profile builds the web app and the API from source and starts them with PostgreSQL 16, Redis 7, RustFS for S3-compatible storage and Mailpit to catch email on a trial. Migrations run before the API starts. On a server, the proxy profile adds Caddy for HTTPS.',
+      'Settings live in one file, infra/docker/.env. The guide covers a trial on your laptop, a server, upgrades and backups.',
     ],
-    link: { href: COMPOSE_URL, label: 'Read the compose file', external: true },
+    link: { href: COMPOSE_GUIDE_PATH, label: 'Self-hosting with Docker Compose' },
+  },
+  {
+    question: 'Can we run it on AWS?',
+    answer: [
+      'Yes. The web app and the API run as containers on ECS Fargate, with RDS for PostgreSQL, ElastiCache for Valkey, two S3 buckets and SES for mail. A load balancer is the only way in; everything else sits in private subnets.',
+    ],
+    link: { href: AWS_GUIDE_PATH, label: 'Deploying on AWS' },
+  },
+  {
+    question: 'Can we turn off sign-up?',
+    answer: [
+      'No. Anyone who can open the web app can create an account and their own organisation, and there is no setting that turns this off. To keep an install to your team, put it where only your team can reach it: a private network, a VPN or a firewall rule.',
+    ],
   },
   {
     question: 'Can our agents connect to a self-hosted install?',

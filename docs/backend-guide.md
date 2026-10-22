@@ -26,7 +26,9 @@ inside `apps/api`; database workspace scripts pass
 `--env-file=../../apps/api/.env`. CI can inject environment variables
 normally. The web app has its own `apps/web/.env` and example; there is no
 root `.env`. `docker-compose.yml` exists for self-hosting and offline work
-and is not the default.
+and is not the default: alone it starts the backing services, and its `app` profile runs the
+whole system from `apps/api/Dockerfile` and `apps/web/Dockerfile`
+([manual/self-hosting.md](./manual/self-hosting.md)).
 
 ## Workspaces
 

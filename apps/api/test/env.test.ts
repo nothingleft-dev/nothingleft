@@ -142,3 +142,17 @@ describe('LOG_TARGETS posthog', () => {
     expect(loadEnv({ ...base, POSTHOG_KEY: 'phc_test' }).LOG_TARGETS).toEqual(['json', 'posthog']);
   });
 });
+
+describe('S3 key pair', () => {
+  const base = { ...source, REDIS_URL: 'redis://localhost:6379', S3_ENDPOINT: 'https://s3.eu-west-1.amazonaws.com' };
+
+  test('both or neither: neither leaves signing to the runtime role', () => {
+    expect(loadEnv(base).S3_ACCESS_KEY_ID).toBeUndefined();
+    expect(loadEnv({ ...base, S3_ACCESS_KEY_ID: 'key', S3_SECRET_ACCESS_KEY: 'secret' }).S3_ACCESS_KEY_ID).toBe('key');
+  });
+
+  test('refuses half a pair', () => {
+    expect(() => loadEnv({ ...base, S3_ACCESS_KEY_ID: 'key' })).toThrow('S3_SECRET_ACCESS_KEY');
+    expect(() => loadEnv({ ...base, S3_SECRET_ACCESS_KEY: 'secret' })).toThrow('S3_SECRET_ACCESS_KEY');
+  });
+});

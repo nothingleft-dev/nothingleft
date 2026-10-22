@@ -1,5 +1,3 @@
-import { GITHUB_URL } from './site';
-
 export interface FaqLink {
   href: string;
   label: string;
@@ -48,9 +46,9 @@ export const HOME_FAQ: FaqEntry[] = [
   {
     question: 'Can we self-host?',
     answer: [
-      'Yes. The code is AGPL-3.0 and the hosted service runs the same build: PostgreSQL, S3-compatible storage, the web app, the API and the MCP server. Seat and storage limits are environment settings you can change. The install guide ships with launch.',
+      'Yes. The code is AGPL-3.0 and the hosted service runs the same build: PostgreSQL, S3-compatible storage, the web app, the API and the MCP server. Seat and storage limits are environment settings you can change. One Docker Compose command runs all of it, and a second guide covers AWS.',
     ],
-    link: { href: GITHUB_URL, label: 'Source on GitHub', external: true },
+    link: { href: '/docs/self-hosting', label: 'Self-hosting guide' },
   },
   {
     question: 'Which integrations exist today?',
