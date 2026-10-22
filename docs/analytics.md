@@ -147,7 +147,7 @@ rendered from `components/site-scripts.tsx` after hydration, so the server never
 
 ### Self-hosters
 
-`apps/api/.env.example` and `docker-compose.yml` ship with:
+`apps/api/.env.example` and `infra/docker/.env.example` (the Docker Compose settings) ship with:
 
 ```
 POSTHOG_ANALYTICS_ENABLED=false

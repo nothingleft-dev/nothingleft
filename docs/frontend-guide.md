@@ -35,6 +35,11 @@ renders without it.
 folder. The API's CORS origin is `APP_BASE_URL`, so the ports must match
 what `apps/api/.env` says.
 
+`apps/web/Dockerfile` builds the self-hosted image. It sets `NEXT_STANDALONE=true`, which
+switches `next.config.ts` to `output: 'standalone'` traced from the repository root; the hosted
+build leaves it unset and keeps the platform's own output. `NEXT_PUBLIC_*` values arrive as
+build arguments, so every install builds its own image.
+
 ## Layout
 
 ```

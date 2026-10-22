@@ -1,7 +1,11 @@
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { createMcpServer, type McpServerOptions } from './server.ts';
+import { timeZoneCache } from './time-zones.ts';
 
-export interface McpHttpOptions extends Omit<McpServerOptions, 'token' | 'userId' | 'requestId' | 'onToolCall'> {
+export interface McpHttpOptions extends Omit<
+  McpServerOptions,
+  'token' | 'userId' | 'requestId' | 'onToolCall' | 'timeZones'
+> {
   onToolCall?: (event: Parameters<NonNullable<McpServerOptions['onToolCall']>>[0], caller: Caller) => void;
 }
 
@@ -16,6 +20,7 @@ export interface Caller {
  * outlives the request and GET/DELETE (session operations) answer 405.
  */
 export function mcpHttpHandler({ onToolCall, ...options }: McpHttpOptions) {
+  const timeZones = timeZoneCache();
   const handler = createMcpHandler(({ authInfo }) => {
     const caller = authInfo!.extra as unknown as Caller;
     return createMcpServer({
@@ -23,6 +28,7 @@ export function mcpHttpHandler({ onToolCall, ...options }: McpHttpOptions) {
       token: caller.token,
       userId: caller.userId,
       requestId: caller.requestId,
+      timeZones,
       ...(onToolCall ? { onToolCall: event => onToolCall(event, caller) } : {}),
     });
   });

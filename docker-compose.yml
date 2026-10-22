@@ -1,6 +1,11 @@
-# Offline / self-hosting stack — see docs/infrastructure.md#avoiding-vendor-lock-in.
-# Default local development uses Neon + Upstash via apps/api/.env and does not need this.
-# To run the API against it, `docker compose up -d postgres redis`, then in apps/api/.env:
+# The whole system on one machine: docs/manual/self-hosting.md. Copy infra/docker/.env.example to
+# infra/docker/.env, fill in its secrets, then
+#
+#   docker compose --env-file infra/docker/.env --profile app up -d --build
+#
+# Without a profile, only the backing services start, for local development and tests. Default
+# local development uses Neon + Upstash via apps/api/.env and does not need them. To run the API
+# from source against them, `docker compose up -d postgres redis`, then in apps/api/.env:
 #
 #   DATABASE_URL=postgres://nothingleft:nothingleft@localhost:5432/nothingleft
 #   DATABASE_URL_POOLED=postgres://nothingleft:nothingleft@localhost:5432/nothingleft
@@ -12,6 +17,21 @@
 #
 # To keep dev on Neon and run only the tests here, put those lines in apps/api/.env.test
 # instead (copy apps/api/.env.test.example) and migrate with `bun run db:migrate:test`.
+
+x-api-image: &api-image
+  image: nothingleft-api
+  build: { context: ., dockerfile: apps/api/Dockerfile }
+
+x-backing: &backing
+  DATABASE_URL: postgres://nothingleft:${POSTGRES_PASSWORD:-nothingleft}@postgres:5432/nothingleft
+  DATABASE_URL_POOLED: postgres://nothingleft_app:${APP_DB_PASSWORD:-nothingleft_app}@postgres:5432/nothingleft
+  REDIS_URL: redis://redis:6379
+
+x-storage: &storage
+  S3_ENDPOINT: http://storage:9000
+  S3_ACCESS_KEY_ID: nothingleft
+  S3_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-nothingleft-secret}
+
 services:
   postgres:
     image: postgres:16
@@ -23,25 +43,107 @@ services:
       - log_min_duration_statement=200
     environment:
       POSTGRES_USER: nothingleft
-      POSTGRES_PASSWORD: nothingleft
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nothingleft}
       POSTGRES_DB: nothingleft
-    ports: ['5432:5432']
-    volumes: ['postgres-data:/var/lib/postgresql/data']
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-nothingleft_app}
+    ports: ['127.0.0.1:5432:5432']
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'nothingleft', '-d', 'nothingleft']
+      interval: 2s
+      retries: 30
 
   redis:
     image: redis:7
-    ports: ['6379:6379']
+    ports: ['127.0.0.1:6379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      retries: 30
 
-  # S3-compatible stand-in for R2 (MinIO no longer publishes images). Create the buckets once
-  # with `cd apps/api && bun run storage:init` after putting the S3_* lines in .env or .env.test.
+  # S3-compatible stand-in for R2 (MinIO no longer publishes images). The app profile creates the
+  # buckets; from source, run `cd apps/api && bun run storage:init` after putting the S3_* lines in .env.
   storage:
     image: rustfs/rustfs:latest
     environment:
       RUSTFS_ACCESS_KEY: nothingleft
-      RUSTFS_SECRET_KEY: nothingleft-secret
-    ports: ['9000:9000']
+      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY:-nothingleft-secret}
+    ports: ['127.0.0.1:9000:9000']
     volumes: ['storage-data:/data']
+    healthcheck:
+      test: ['CMD', 'curl', '-fs', 'http://localhost:9000/health']
+      interval: 2s
+      retries: 30
+
+  migrate:
+    <<: *api-image
+    profiles: [app]
+    working_dir: /app/packages/db
+    command: [bun, run, db:migrate]
+    environment: *backing
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  storage-init:
+    <<: *api-image
+    profiles: [app]
+    command: [bun, run, storage:init]
+    env_file: [{ path: infra/docker/.env, required: false }]
+    environment:
+      <<: [*backing, *storage]
+    depends_on:
+      storage: { condition: service_healthy }
+
+  api:
+    <<: *api-image
+    profiles: [app]
+    restart: unless-stopped
+    env_file: [{ path: infra/docker/.env, required: false }]
+    environment:
+      <<: [*backing, *storage]
+    ports: ['127.0.0.1:4000:4000']
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      storage-init: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  web:
+    image: nothingleft-web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${API_BASE_URL:-http://localhost:4000}
+        NEXT_PUBLIC_SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+    profiles: [app]
+    restart: unless-stopped
+    ports: ['127.0.0.1:3000:3000']
+    depends_on: [api]
+
+  # Catches every email at http://localhost:8025 until a real mail server is configured.
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [app]
+    ports: ['127.0.0.1:8025:8025']
+
+  # TLS for a server: certificates for APP_HOST, API_HOST and STORAGE_HOST, issued automatically.
+  caddy:
+    image: caddy:2
+    profiles: [proxy]
+    restart: unless-stopped
+    environment:
+      APP_HOST: ${APP_HOST:-}
+      API_HOST: ${API_HOST:-}
+      STORAGE_HOST: ${STORAGE_HOST:-}
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./infra/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [web, api, storage]
 
 volumes:
   postgres-data:
   storage-data:
+  caddy-data:

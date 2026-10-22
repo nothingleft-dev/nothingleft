@@ -145,15 +145,17 @@ export function classifyStorageError(error: unknown): ByoCheckReason {
 function s3Client(options: {
   endpoint: string;
   region: string;
-  accessKeyId: string;
-  secretAccessKey: string;
+  accessKeyId?: string | undefined;
+  secretAccessKey?: string | undefined;
   pathStyle: boolean;
   customer: boolean;
 }): S3Client {
+  const { accessKeyId, secretAccessKey } = options;
   return new S3Client({
     endpoint: options.endpoint,
     region: options.region,
-    credentials: { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey },
+    // Without a key pair the SDK's default chain applies: a container or instance role.
+    ...(accessKeyId && secretAccessKey ? { credentials: { accessKeyId, secretAccessKey } } : {}),
     forcePathStyle: options.pathStyle,
     // Otherwise the SDK signs a CRC32 of an empty body into every presigned PUT.
     requestChecksumCalculation: 'WHEN_REQUIRED',
@@ -170,22 +172,24 @@ function s3Client(options: {
 
 export function createStorage(env: Env): Storage {
   const { S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_PUBLIC_BUCKET, S3_PUBLIC_BUCKET_BASE_URL } = env;
-  const client =
-    S3_ENDPOINT && S3_ACCESS_KEY_ID && S3_SECRET_ACCESS_KEY
-      ? s3Client({
-          endpoint: S3_ENDPOINT,
-          region: env.S3_REGION,
-          accessKeyId: S3_ACCESS_KEY_ID,
-          secretAccessKey: S3_SECRET_ACCESS_KEY,
-          pathStyle: true, // MinIO, RustFS and R2 all address buckets by path, not by subdomain
-          customer: false,
-        })
-      : null;
+  const platformClient = (endpoint: string) =>
+    s3Client({
+      endpoint,
+      region: env.S3_REGION,
+      accessKeyId: S3_ACCESS_KEY_ID,
+      secretAccessKey: S3_SECRET_ACCESS_KEY,
+      pathStyle: true, // MinIO, RustFS and R2 all address buckets by path, not by subdomain
+      customer: false,
+    });
+  const client = S3_ENDPOINT ? platformClient(S3_ENDPOINT) : null;
+  // A presigned URL is signed for its host, so it names the address the browser reaches.
+  const signer = client && env.S3_BROWSER_ENDPOINT ? platformClient(env.S3_BROWSER_ENDPOINT) : client;
 
-  const privateStore = client && env.S3_PRIVATE_BUCKET ? s3Private(client, env.S3_PRIVATE_BUCKET) : null;
+  const privateStore =
+    client && signer && env.S3_PRIVATE_BUCKET ? s3Private(client, env.S3_PRIVATE_BUCKET, signer) : null;
   const connect = (c: BucketConnection) => s3Private(s3Client({ ...c, customer: true }), c.bucket);
 
-  if (!client || !S3_PUBLIC_BUCKET || !S3_PUBLIC_BUCKET_BASE_URL) {
+  if (!client || !signer || !S3_PUBLIC_BUCKET || !S3_PUBLIC_BUCKET_BASE_URL) {
     return {
       configured: false,
       presignPublicPut: unconfigured,
@@ -203,7 +207,7 @@ export function createStorage(env: Env): Storage {
 
     presignPublicPut: (key, spec, expiresIn) =>
       getSignedUrl(
-        client,
+        signer,
         new PutObjectCommand({
           Bucket: S3_PUBLIC_BUCKET,
           Key: key,
@@ -240,7 +244,7 @@ export function createStorage(env: Env): Storage {
   };
 }
 
-function s3Private(client: S3Client, bucket: string): PrivateStore {
+function s3Private(client: S3Client, bucket: string, signer = client): PrivateStore {
   return {
     bucket,
 
@@ -253,7 +257,7 @@ function s3Private(client: S3Client, bucket: string): PrivateStore {
         ChecksumSHA256: spec.sha256,
       });
       // Headers, not query parameters: storage then refuses a body whose length or hash differs.
-      const url = await getSignedUrl(client, command, {
+      const url = await getSignedUrl(signer, command, {
         expiresIn,
         signableHeaders: new Set(['content-type', 'x-amz-checksum-sha256']),
         unhoistableHeaders: new Set(['x-amz-checksum-sha256']),
@@ -278,7 +282,7 @@ function s3Private(client: S3Client, bucket: string): PrivateStore {
         ResponseContentType: spec.contentType,
         ResponseContentDisposition: spec.disposition,
       });
-      return getSignedUrl(client, command, { expiresIn });
+      return getSignedUrl(signer, command, { expiresIn });
     },
 
     async delete(key) {

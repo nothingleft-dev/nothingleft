@@ -525,7 +525,7 @@ export const YOUTRACK_FAQ: FaqEntry[] = [
   {
     question: 'Can we self-host, as with YouTrack Server?',
     answer: [
-      'Yes. The code is AGPL-3.0, and a self-hosted install runs the same build as the hosted service, MCP included. Seat and storage limits are settings you choose. The install guide ships with launch.',
+      'Yes. The code is AGPL-3.0, and a self-hosted install runs the same build as the hosted service, MCP included. Seat and storage limits are settings you choose. Install guides cover Docker Compose and AWS.',
     ],
     link: { href: DOCS.selfHosting, label: 'Self-hosting' },
   },

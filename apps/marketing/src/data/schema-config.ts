@@ -21,7 +21,14 @@ import { SITE_DESCRIPTION } from '@lib/site';
 import { SITEMAP_PAGES } from './sitemap-config.mjs';
 
 export type SchemaNode =
-  'Organization' | 'WebSite' | 'WebPage' | 'SoftwareApplication' | 'FAQPage' | 'BreadcrumbList' | 'TechArticle';
+  | 'Organization'
+  | 'WebSite'
+  | 'WebPage'
+  | 'SoftwareApplication'
+  | 'FAQPage'
+  | 'BreadcrumbList'
+  | 'TechArticle'
+  | 'VideoObject';
 
 export interface PageSchema {
   title: string;
@@ -41,7 +48,7 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
   '/': {
     title: 'Nothing Left | Project Tracking for People and Agents',
     description: SITE_DESCRIPTION,
-    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage'],
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'VideoObject', 'FAQPage'],
     faq: HOME_FAQ,
   },
   '/pricing': {
@@ -138,8 +145,6 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Self-hosting', path: '/solutions/self-hosting' }],
     faq: SELF_HOSTING_FAQ,
-    // Out of search until the install guide ships with launch.
-    noindex: true,
   },
   '/support': {
     title: 'Nothing Left Support | Docs, Feedback and Contact',
@@ -363,6 +368,30 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
       'How file storage works: the 5 GB platform limit, usage warnings, finding what takes space, and connecting your own R2 or S3 bucket.',
     nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Storage', path: '/docs/storage' }],
+  },
+  '/docs/self-hosting': {
+    title: 'Self-hosting with Docker Compose | Nothing Left Docs',
+    headline: 'Self-hosting with Docker Compose',
+    description:
+      'Run the whole of Nothing Left on one machine with Docker Compose: a trial on your laptop, a server with HTTPS, settings, upgrades, backups and troubleshooting.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [
+      HOME_CRUMB,
+      { name: 'Docs', path: '/docs' },
+      { name: 'Self-hosting with Docker Compose', path: '/docs/self-hosting' },
+    ],
+  },
+  '/docs/self-hosting-aws': {
+    title: 'Deploying on AWS | Nothing Left Docs',
+    headline: 'Deploying on AWS',
+    description:
+      'Run Nothing Left on AWS with ECS Fargate, RDS for PostgreSQL, ElastiCache, S3 and SES behind one load balancer, step by step in the console or the AWS CLI.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [
+      HOME_CRUMB,
+      { name: 'Docs', path: '/docs' },
+      { name: 'Deploying on AWS', path: '/docs/self-hosting-aws' },
+    ],
   },
   '/docs/keyboard-shortcuts': {
     title: 'Keyboard shortcuts | Nothing Left Docs',

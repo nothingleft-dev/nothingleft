@@ -52,6 +52,7 @@ export const listNotifications = defineTool({
     'GET /v1/projects/{key}/articles/{slug}/notifications',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const limit = args.limit ?? arg.DEFAULT_LIMIT;
     const scope = args.org ? { org: args.org } : {};
     if (args.issue || args.article) {
@@ -66,7 +67,7 @@ export const listNotifications = defineTool({
           res.data.length
             ? table(
                 ['', 'When', 'Kind', 'What happened'],
-                res.data.map(n => [read(n), instant(n.created_at), n.kind, n.summary]),
+                res.data.map(n => [read(n), instant(n.created_at, zone), n.kind, n.summary]),
               )
             : 'Nothing yet.',
           moreByCursor(res.pagination, res.data.length),
@@ -95,7 +96,7 @@ export const listNotifications = defineTool({
       return [
         ...(orgs.size > 1 ? [code(g.subject.organization.slug)] : []),
         subjectCell(g),
-        instant(g.latest_at),
+        instant(g.latest_at, zone),
         g.unread_count ? `${g.unread_count} of ${g.count}` : `0 of ${g.count}`,
         lines.join('; '),
       ];

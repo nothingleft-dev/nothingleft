@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { SignUpSchema, type InvitationPreview, type Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -26,6 +27,7 @@ interface InviteSignUpProps {
 }
 
 export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSignUpProps) {
+  const router = useRouter();
   const client = useQueryClient();
   // An email invitation already proves the address, so it is fixed and marked verified.
   const fixedEmail = preview.kind === 'email' ? preview.email : null;
@@ -42,6 +44,8 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
     onSuccess: (me: Me) => {
       trackAuthConversion('sign_up', 'email');
       client.setQueryData(queryKeys.me(), me);
+      // The flow continues on this page, so only the router's signed-out prefetches are dropped.
+      router.refresh();
       onSignedUp();
     },
   });

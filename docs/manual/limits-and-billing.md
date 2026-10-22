@@ -100,4 +100,5 @@ Both take a positive whole number. Set them to whatever suits your install and
 restart the API. A bucket connected by an organisation lifts its storage limit
 on a self-hosted install too.
 
-The install guide ships with launch.
+To install it, see [Self-hosting with Docker Compose](./self-hosting.md) or [Deploying on
+AWS](./self-hosting-aws.md).

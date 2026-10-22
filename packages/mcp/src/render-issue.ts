@@ -10,7 +10,7 @@ import type {
   IssueRef,
   MemberRef,
 } from '@nothingleft/types';
-import { date, facts, handle, instant, join, person, table, untrusted } from './render.ts';
+import { date, day, facts, handle, instant, join, person, table, untrusted } from './render.ts';
 
 export const DESCRIPTION_PAGE = 8192;
 
@@ -39,7 +39,12 @@ export function issueRow(issue: Issue): string[] {
 }
 
 /** The list table, plus a column for each custom field slug in `slugs` that any row carries. */
-export function issueTable(issues: readonly Issue[], slugs: readonly string[] = [], calendar?: WorkCalendar): string {
+export function issueTable(
+  issues: readonly Issue[],
+  zone: string,
+  slugs: readonly string[] = [],
+  calendar?: WorkCalendar,
+): string {
   const extra = slugs.flatMap(slug => {
     const entry = issues.flatMap(i => i.custom_fields).find(f => f.slug === slug);
     return entry ? [{ slug, name: entry.name }] : [];
@@ -50,7 +55,7 @@ export function issueTable(issues: readonly Issue[], slugs: readonly string[] = 
       ...issueRow(issue),
       ...extra.map(e => {
         const entry = issue.custom_fields.find(f => f.slug === e.slug);
-        return entry ? customFieldText(entry, issue.key, calendar) : '—';
+        return entry ? customFieldText(entry, issue.key, zone, calendar) : '—';
       }),
     ]),
   );
@@ -77,7 +82,12 @@ export function mine(issue: Issue): string | null {
 }
 
 /** One custom field of an issue as a fact row: the value, or the field's empty label. */
-export function customFieldText(entry: IssueCustomFieldValue, issueKey: string, calendar?: WorkCalendar): string {
+export function customFieldText(
+  entry: IssueCustomFieldValue,
+  issueKey: string,
+  zone: string,
+  calendar?: WorkCalendar,
+): string {
   const value: unknown = entry.value;
   if (value === null || (Array.isArray(value) && value.length === 0)) return entry.empty_label;
   switch (entry.type) {
@@ -96,7 +106,7 @@ export function customFieldText(entry: IssueCustomFieldValue, issueKey: string, 
     case 'date':
       return date(value as string);
     case 'datetime':
-      return instant(value as string);
+      return instant(value as string, zone);
     case 'markdown': {
       const text = String(value);
       const from = { author: 'a contributor', place: `the “${entry.name}” field of ${issueKey}` };
@@ -109,12 +119,12 @@ export function customFieldText(entry: IssueCustomFieldValue, issueKey: string, 
   }
 }
 
-export const customFieldFacts = (issue: Issue, calendar?: WorkCalendar): string | null =>
+export const customFieldFacts = (issue: Issue, zone: string, calendar?: WorkCalendar): string | null =>
   issue.custom_fields.length
-    ? facts(issue.custom_fields.map(f => [f.name, customFieldText(f, issue.key, calendar)]))
+    ? facts(issue.custom_fields.map(f => [f.name, customFieldText(f, issue.key, zone, calendar)]))
     : null;
 
-export function issueFacts(issue: Issue, calendar?: WorkCalendar): string {
+export function issueFacts(issue: Issue, zone: string, calendar?: WorkCalendar): string {
   return facts([
     ['Project', `${issue.project.key} — ${issue.project.name}`],
     ['Type', issue.type.name],
@@ -132,18 +142,20 @@ export function issueFacts(issue: Issue, calendar?: WorkCalendar): string {
     ['Spent time', issue.spent_minutes > 0 ? duration(issue.spent_minutes, calendar) : null],
     ['Start date', issue.start_date ? date(issue.start_date) : null],
     ['Due date', issue.due_date ? date(issue.due_date) : null],
-    ...issue.custom_fields.map((f): [string, string] => [f.name, customFieldText(f, issue.key, calendar)]),
+    ...issue.custom_fields.map((f): [string, string] => [f.name, customFieldText(f, issue.key, zone, calendar)]),
     ['Votes', issue.vote_count > 0 ? String(issue.vote_count) : null],
     ['Watchers', issue.watcher_count > 0 ? String(issue.watcher_count) : null],
     ['Comments', issue.comment_count > 0 ? String(issue.comment_count) : null],
     ['Attachments', issue.attachment_count > 0 ? String(issue.attachment_count) : null],
     ['You', mine(issue)],
-    ['Created', `${instant(issue.created_at)} by ${person(issue.created_by)}`],
-    ['Updated', `${instant(issue.updated_at)} by ${person(issue.updated_by)}`],
-    ['Resolved', issue.resolved_at ? instant(issue.resolved_at) : null],
+    ['Created', `${instant(issue.created_at, zone)} by ${person(issue.created_by)}`],
+    ['Updated', `${instant(issue.updated_at, zone)} by ${person(issue.updated_by)}`],
+    ['Resolved', issue.resolved_at ? instant(issue.resolved_at, zone) : null],
     [
       'Deleted',
-      issue.deleted_at ? `${instant(issue.deleted_at)} — restorable until ${instant(issue.restorable_until)}` : null,
+      issue.deleted_at
+        ? `${instant(issue.deleted_at, zone)} — restorable until ${instant(issue.restorable_until, zone)}`
+        : null,
     ],
   ]);
 }
@@ -154,12 +166,15 @@ export const issueHeading = (issue: Issue, appBaseUrl: string, verb?: string) =>
 type DescribedIssue = Pick<Issue, 'key' | 'description_md' | 'updated_by' | 'updated_at'>;
 
 /** A description cut at `length` characters, with the marker that says how to read on. */
-export function descriptionPage(issue: DescribedIssue, offset = 0, length = DESCRIPTION_PAGE): string {
+export function descriptionPage(issue: DescribedIssue, zone: string, offset = 0, length = DESCRIPTION_PAGE): string {
   const text = issue.description_md ?? '';
   const page = text.slice(offset, offset + length);
   const end = offset + page.length;
   const framed = page
-    ? untrusted({ author: handle(issue.updated_by.username), date: date(issue.updated_at), place: issue.key }, page)
+    ? untrusted(
+        { author: handle(issue.updated_by.username), date: day(issue.updated_at, zone), place: issue.key },
+        page,
+      )
     : null;
   if (offset === 0 && end >= text.length) return framed ?? '';
   const kb = (n: number) => `${Math.max(1, Math.round(n / 1024))} KB`;
@@ -172,11 +187,11 @@ export function descriptionPage(issue: DescribedIssue, offset = 0, length = DESC
 
 type ShownComment = Pick<Comment, 'id' | 'author' | 'created_at' | 'edited_at' | 'body_md'>;
 
-export function commentBlock(c: ShownComment, place: string): string {
-  const edited = c.edited_at ? ` · edited ${instant(c.edited_at)}` : '';
+export function commentBlock(c: ShownComment, place: string, zone: string): string {
+  const edited = c.edited_at ? ` · edited ${instant(c.edited_at, zone)}` : '';
   return join(
-    `**Comment ${c.id}** · ${person(c.author)} · ${instant(c.created_at)}${edited}`,
-    untrusted({ author: handle(c.author.username), date: date(c.edited_at ?? c.created_at), place }, c.body_md),
+    `**Comment ${c.id}** · ${person(c.author)} · ${instant(c.created_at, zone)}${edited}`,
+    untrusted({ author: handle(c.author.username), date: day(c.edited_at ?? c.created_at, zone), place }, c.body_md),
   );
 }
 
@@ -202,10 +217,10 @@ function linkSide(value: unknown): string {
 }
 
 /** One history entry as a line; snapshots are names already, `people` puts full names on usernames. */
-export function activityLine(a: IssueActivity, calendar?: WorkCalendar): string {
+export function activityLine(a: IssueActivity, zone: string, calendar?: WorkCalendar): string {
   const names = new Map(a.people.map(p => [p.username, p]));
   const who = a.actor.username ? person({ ...a.actor, username: a.actor.username }) : a.actor.name;
-  const at = instant(a.updated_at);
+  const at = instant(a.updated_at, zone);
   const nv = a.new_value as Record<string, unknown> | null;
   const ov = a.old_value as Record<string, unknown> | null;
   const what = (() => {

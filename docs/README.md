@@ -56,6 +56,8 @@ names only — never real ones.
 | [manual/import-export.md](./manual/import-export.md) | Importing issues from CSV (the file, mapping columns, the dry run and per-row errors, the import), exporting the whole organisation, asking an agent |
 | [manual/members.md](./manual/members.md) | Members, and removing someone: what the dialog counts, reassigning open issues, moving saved views, what stays |
 | [manual/keyboard-shortcuts.md](./manual/keyboard-shortcuts.md) | Every keyboard shortcut and where it works |
+| [manual/self-hosting.md](./manual/self-hosting.md) | Self-hosting with Docker Compose: a trial on one machine, a server with Caddy and HTTPS, settings, upgrades, backups and restore, troubleshooting |
+| [manual/self-hosting-aws.md](./manual/self-hosting-aws.md) | Deploying on AWS: ECS Fargate behind an Application Load Balancer, RDS, ElastiCache, two S3 buckets, SES, Secrets Manager; each step in the console and the CLI |
 
 ## Outside `docs/`
 

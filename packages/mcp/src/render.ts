@@ -5,20 +5,51 @@ import type { ToolErrorBody } from './errors.ts';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** `19 Sep 2026`, from a calendar date or the UTC date of an instant. */
+/** `19 Sep 2026`, from a calendar date. An instant's day depends on the zone: `day`. */
 export function date(iso: string | null): string {
   if (!iso) return '—';
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   return `${d} ${MONTHS[m! - 1]} ${y}`;
 }
 
-/** `25 Sep 2026, 8:48pm UTC`. The agent's timezone is unknown, so the zone is always named. */
-export function instant(iso: string | null): string {
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function partsIn(timeZone: string, at: Date) {
+  let format = formatters.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hourCycle: 'h12',
+      timeZoneName: 'shortOffset',
+    });
+    formatters.set(timeZone, format);
+  }
+  return Object.fromEntries(format.formatToParts(at).map(p => [p.type, p.value])) as Record<
+    Intl.DateTimeFormatPartTypes,
+    string
+  >;
+}
+
+/** `16 Oct 2026`: the day an instant fell on in the token owner's timezone. */
+export function day(iso: string | null, timeZone: string): string {
   if (!iso) return '—';
-  const at = new Date(iso);
-  const h = at.getUTCHours();
-  const minutes = String(at.getUTCMinutes()).padStart(2, '0');
-  return `${date(iso)}, ${h % 12 || 12}:${minutes}${h < 12 ? 'am' : 'pm'} UTC`;
+  const p = partsIn(timeZone, new Date(iso));
+  return `${p.day} ${MONTHS[Number(p.month) - 1]} ${p.year}`;
+}
+
+/**
+ * `16 Oct 2026, 12:01am GMT+5:30`, in the token owner's timezone. The offset is named because the
+ * agent may run elsewhere, and an abbreviation such as IST names three zones.
+ */
+export function instant(iso: string | null, timeZone: string): string {
+  if (!iso) return '—';
+  const p = partsIn(timeZone, new Date(iso));
+  const zone = /^GMT(\+0)?$/.test(p.timeZoneName) ? 'UTC' : p.timeZoneName;
+  return `${p.day} ${MONTHS[Number(p.month) - 1]} ${p.year}, ${p.hour}:${p.minute}${p.dayPeriod.toLowerCase()} ${zone}`;
 }
 
 const ROLE_LABELS: Record<string, string> = {

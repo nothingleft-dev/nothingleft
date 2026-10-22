@@ -30,10 +30,11 @@ export const listComments = defineTool({
       ...scope(args.org),
       query: { limit: args.limit ?? arg.DEFAULT_LIMIT, cursor: args.cursor },
     });
+    const zone = await ctx.timeZone();
     return {
       markdown: join(
         `**${target.label}** — ${res.pagination?.total ?? res.data.length} comments`,
-        ...res.data.map(c => commentBlock(c, target.label)),
+        ...res.data.map(c => commentBlock(c, target.label, zone)),
         moreByCursor(res.pagination, res.data.length),
       ),
     };
@@ -58,7 +59,9 @@ export const addComment = defineTool({
       ...scope(args.org),
       body: { body_md: args.body },
     });
-    return { markdown: join(`Commented on **${target.label}**.`, commentBlock(data, target.label)) };
+    return {
+      markdown: join(`Commented on **${target.label}**.`, commentBlock(data, target.label, await ctx.timeZone())),
+    };
   },
 });
 
@@ -79,7 +82,12 @@ export const updateComment = defineTool({
       ...scope(args.org),
       body: { body_md: args.body },
     });
-    return { markdown: join(`Edited comment ${data.id} on **${target.label}**.`, commentBlock(data, target.label)) };
+    return {
+      markdown: join(
+        `Edited comment ${data.id} on **${target.label}**.`,
+        commentBlock(data, target.label, await ctx.timeZone()),
+      ),
+    };
   },
 });
 

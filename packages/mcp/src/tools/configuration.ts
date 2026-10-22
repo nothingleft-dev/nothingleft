@@ -24,14 +24,14 @@ import { ToolError } from '../errors.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
 import { calendarOf, resolveUsername, usernameIn } from '../resolve.ts';
-import { code, date, facts, instant, join, moreByCursor, person, roleLabel, table, untrusted } from '../render.ts';
+import { code, day, facts, instant, join, moreByCursor, person, roleLabel, table, untrusted } from '../render.ts';
 import { duration } from '../render-issue.ts';
 import { activeSprintLine, agileMap } from './agile.ts';
 import { customFieldsSection } from './custom-fields.ts';
 
 const scope = (org: string | undefined) => (org ? { org } : {});
 
-export function projectFacts(p: Project) {
+export function projectFacts(p: Project, zone: string) {
   return facts([
     ['Lead', p.lead ? person(p.lead) : 'none'],
     ['Your role', roleLabel(p.my_role)],
@@ -39,8 +39,8 @@ export function projectFacts(p: Project) {
     ['Estimation field', p.estimation_field ? `${p.estimation_field.name} (\`${p.estimation_field.slug}\`)` : null],
     ['Spent time field', p.spent_time_field ? `${p.spent_time_field.name} (\`${p.spent_time_field.slug}\`)` : null],
     ['Archived', p.is_archived ? 'Yes — read-only' : 'No'],
-    ['Created', date(p.created_at)],
-    ['Updated', date(p.updated_at)],
+    ['Created', day(p.created_at, zone)],
+    ['Updated', day(p.updated_at, zone)],
   ]);
 }
 
@@ -63,7 +63,7 @@ export async function projectOverview(ctx: ToolContext, key: string, org: string
   ]);
   return join(
     `**${p.key}** — ${p.name}\n${ctx.appBaseUrl}/projects/${p.key}`,
-    projectFacts(p),
+    projectFacts(p, await ctx.timeZone()),
     figures ? `Issues: ${figuresLine(figures)}` : null,
     sprint,
     figures?.by_assignee.length
@@ -176,7 +176,7 @@ export const describeProjectSchema = defineTool({
   },
 });
 
-function orgFacts(o: Organization) {
+function orgFacts(o: Organization, zone: string) {
   const calendar = calendarOf(o);
   return facts([
     ['Plan', o.plan],
@@ -193,7 +193,7 @@ function orgFacts(o: Organization) {
     ],
     ['Working day', duration(o.workday_minutes, calendar)],
     ['Working week', `${o.workweek_days} days, starting ${WEEKDAYS[o.week_starts_on]}`],
-    ['Created', date(o.created_at)],
+    ['Created', day(o.created_at, zone)],
   ]);
 }
 
@@ -210,7 +210,7 @@ export const getOrg = defineTool({
   async run(ctx, args) {
     const org = await resolveOrganization(ctx, args.org);
     const { data: o } = await ctx.api.get<Organization>(path`/v1/organizations/${org.slug}`);
-    return { markdown: join(`**${o.name}** (${code(o.slug)})`, orgFacts(o)) };
+    return { markdown: join(`**${o.name}** (${code(o.slug)})`, orgFacts(o, await ctx.timeZone())) };
   },
 });
 
@@ -239,7 +239,7 @@ export const updateOrgSettings = defineTool({
     if (args.week_starts_on) body['week_starts_on'] = WEEKDAYS.indexOf(args.week_starts_on);
     if (!Object.keys(body).length) throw ToolError.local('mcp.nothing_to_change', { tool: 'update_org_settings' });
     const { data: o } = await ctx.api.send<Organization>('PATCH', path`/v1/organizations/${org.slug}`, { body });
-    return { markdown: join(`Updated **${o.name}** (${code(o.slug)})`, orgFacts(o)) };
+    return { markdown: join(`Updated **${o.name}** (${code(o.slug)})`, orgFacts(o, await ctx.timeZone())) };
   },
 });
 
@@ -274,6 +274,7 @@ export const getOrgActivity = defineTool({
   kind: 'read',
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}/activity'],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const org = await resolveOrganization(ctx, args.org);
     const kinds = new URLSearchParams();
     for (const k of args.kinds ?? []) kinds.append('kind', k);
@@ -296,7 +297,7 @@ export const getOrgActivity = defineTool({
           ? table(
               ['When', 'Who', 'What', 'Target', 'Change'],
               res.data.map(a => [
-                instant(a.created_at),
+                instant(a.created_at, zone),
                 a.actor
                   ? a.actor.username
                     ? person({ ...a.actor, username: a.actor.username })
@@ -329,7 +330,7 @@ export const createOrg = defineTool({
     return {
       markdown: join(
         `Created **${o.name}** (${code(o.slug)}). Create its first project with create_project.`,
-        orgFacts(o),
+        orgFacts(o, await ctx.timeZone()),
       ),
     };
   },
@@ -361,7 +362,7 @@ export const createProject = defineTool({
     return {
       markdown: join(
         `Created project **${p.key}** — ${p.name} in ${org.name}\n${ctx.appBaseUrl}/projects/${p.key}`,
-        projectFacts(p),
+        projectFacts(p, await ctx.timeZone()),
       ),
     };
   },
@@ -430,7 +431,7 @@ export const updateProject = defineTool({
     }
     if (args.archived === true) await ctx.api.send('POST', path`/v1/projects/${key}/archive`, s);
     const { data: p } = await ctx.api.get<Project>(path`/v1/projects/${key}`, s);
-    return { markdown: join(`Updated **${p.key}** — ${p.name}`, projectFacts(p)) };
+    return { markdown: join(`Updated **${p.key}** — ${p.name}`, projectFacts(p, await ctx.timeZone())) };
   },
 });
 
@@ -596,6 +597,7 @@ export const updateProfile = defineTool({
   async run(ctx, args) {
     if (!args.name && !args.timezone) throw ToolError.local('mcp.nothing_to_change', { tool: 'update_profile' });
     const { data: me } = await ctx.api.send<Me>('PATCH', '/v1/me', { body: args });
+    ctx.rememberTimeZone(me.timezone);
     return { markdown: `Your profile: **${me.name}** · timezone ${me.timezone}.` };
   },
 });

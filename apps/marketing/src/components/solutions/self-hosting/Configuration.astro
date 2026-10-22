@@ -1,28 +1,47 @@
 ---
-import { COMPOSE_URL, CONFIG_TABS, INFRASTRUCTURE_DOC_URL } from '@lib/solutions/self-hosting';
+import {
+  AWS_GUIDE_PATH,
+  COMPOSE_GUIDE_PATH,
+  COMPOSE_URL,
+  CONFIG_TABS,
+  INFRASTRUCTURE_DOC_URL,
+} from '@lib/solutions/self-hosting';
 ---
 
 <section class="border-t border-line bg-app" aria-labelledby="sh-config-title">
   <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
     <div class="lg:col-span-5">
       <h2 id="sh-config-title" class="h2">
-        What the repository gives you today.
+        What the repository gives you.
       </h2>
       <p class="prose mt-5 max-w-[46ch]">
         <a class="link" href={COMPOSE_URL}>
           docker-compose.yml
         </a>{' '}
-        starts the data tier: PostgreSQL 16, Redis 7 and RustFS as the S3-compatible store, with development
-        credentials. It does not run the web app or the API, and it is not a production install.
+        runs the whole system on one machine: the web app, the API, PostgreSQL 16, Redis 7 and RustFS as the
+        S3-compatible store, with Caddy for HTTPS on a server. You build the images from source, and your settings live
+        in one file, <code>infra/docker/.env</code>.
       </p>
-      <p class="mt-4 text-sm">
+      <div class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+        <a class="link" href={COMPOSE_GUIDE_PATH}>
+          Self-hosting with Docker Compose
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link" href={AWS_GUIDE_PATH}>
+          Deploying on AWS
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
         <a class="link" href={INFRASTRUCTURE_DOC_URL}>
           Every variable and what it does
           <span class="arr ext" aria-hidden="true">
             ↗
           </span>
         </a>
-      </p>
+      </div>
 
       <div class="rule-list mt-8">
         <div class="py-5">

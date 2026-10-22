@@ -94,12 +94,12 @@ ${faqMarkdown(PRICING_FAQ)}
     path: '/solutions/self-hosting',
     label: 'Self-hosting',
     description:
-      'AGPL-3.0, the shared hosted/self-hosted build, infrastructure responsibilities and install-guide availability.',
+      'AGPL-3.0, the shared hosted/self-hosted build, infrastructure responsibilities and the install guides.',
     body: `# Self-hosting Nothing Left
 
 > Run the tracker and its agent interface on your infrastructure. The software is open source under AGPL-3.0 and uses the same build as the hosted service.
 
-The production install guide ships with launch. The repository's Docker Compose file runs development data services only; it does not run the web app or API.
+The repository's Docker Compose file runs the whole system on one machine: the web app, the API with MCP, PostgreSQL, Redis and S3-compatible storage. You build the images from source. [Self-hosting with Docker Compose](/docs/self-hosting) covers a trial, a server with HTTPS, upgrades and backups; [Deploying on AWS](/docs/self-hosting-aws) covers ECS Fargate, RDS, ElastiCache, S3 and SES.
 
 ## Architecture
 
@@ -121,6 +121,8 @@ ${faqMarkdown(SELF_HOSTING_FAQ)}
 
 - [Source repository](${GITHUB_URL})
 - [AGPL-3.0 licence](${LICENSE_URL}): The licence text is authoritative.
+- [Self-hosting with Docker Compose](/docs/self-hosting)
+- [Deploying on AWS](/docs/self-hosting-aws)
 - [Storage manual](/docs/storage)
 - [Connecting an AI agent](/docs/mcp)`,
   },

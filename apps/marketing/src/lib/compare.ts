@@ -56,10 +56,9 @@ export function displayDate(iso: string): string {
   return `${day} ${MONTHS[(month ?? 1) - 1]} ${year}`;
 }
 
-// One wording for every comparison page: the code is open and the build is the same, but
-// self-hosting stays Limited until the install guide ships with launch.
+// One wording for every comparison page.
 export const OUR_SELF_HOSTING: MatrixCell = {
-  support: 'limited',
-  note: 'AGPL-3.0 code, the same build as the hosted service, with seat and storage limits as settings. The install guide ships with launch.',
-  source: { label: 'Self-hosting', href: '/solutions/self-hosting' },
+  support: 'yes',
+  note: 'AGPL-3.0 code, the same build as the hosted service, with seat and storage limits as settings. Guides for Docker Compose and AWS.',
+  source: { label: 'Self-hosting guide', href: '/docs/self-hosting' },
 };

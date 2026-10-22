@@ -7,7 +7,7 @@ import { ToolError } from '../errors.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
 import { resolveUsername, usernameIn } from '../resolve.ts';
-import { code, date, facts, handle, join, roleLabel } from '../render.ts';
+import { code, day, facts, handle, join, roleLabel } from '../render.ts';
 
 const NONE = 'None';
 const input = z.strictObject({
@@ -79,6 +79,7 @@ export const manageRoles = defineTool({
   ],
   describeAction: async (ctx, args) => describe(await plan(ctx, args)),
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const change = await plan(ctx, args);
 
     if (change.kind === 'org') {
@@ -121,7 +122,7 @@ export const manageRoles = defineTool({
           : `${handle(m.username)} was added to project ${change.key} as **${roleLabel(m.role)}**.`,
         facts([
           ['Org role', roleLabel(m.org_role)],
-          ['Member of the project since', date(m.added_at)],
+          ['Member of the project since', day(m.added_at, zone)],
         ]),
       ),
     };

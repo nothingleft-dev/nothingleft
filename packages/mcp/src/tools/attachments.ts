@@ -5,7 +5,7 @@ import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { ToolError } from '../errors.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
-import { code, date, join, person, table } from '../render.ts';
+import { code, day, join, person, table } from '../render.ts';
 import { articleTarget, commentTarget } from './articles.ts';
 
 const scope = (org: string | undefined) => (org ? { org } : {});
@@ -94,6 +94,7 @@ export const listAttachments = defineTool({
     'GET /v1/projects/{key}/articles/{slug}/comments/{id}/attachments',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const target = await commentTarget(ctx, args);
     if (target.kind === 'article' && args.work_item) {
       throw ToolError.local('mcp.work_item_needs_issue', {}, { field: 'work_item' });
@@ -113,7 +114,7 @@ export const listAttachments = defineTool({
                 where(f),
                 f.inline ? 'yes' : '',
                 person(f.created_by),
-                date(f.created_at),
+                day(f.created_at, zone),
                 f.id,
               ]),
             )

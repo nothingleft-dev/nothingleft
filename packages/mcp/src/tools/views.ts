@@ -17,14 +17,14 @@ const visibility = z
 const sortText = (v: SavedView) => v.sort.map(s => `${s.attribute} ${s.direction}`).join(', ');
 const where = (v: SavedView) => (v.visibility === 'project' ? `project ${v.project?.key}` : v.visibility);
 
-function viewFacts(v: SavedView) {
+function viewFacts(v: SavedView, zone: string) {
   return facts([
     ['Query', code(v.query || ' ')],
     ['Sort', v.sort.length ? sortText(v) : null],
     ['Shared with', where(v)],
     ['Owner', person(v.owner)],
     ['You can edit', v.can_edit ? 'Yes' : 'No'],
-    ['Updated', instant(v.updated_at)],
+    ['Updated', instant(v.updated_at, zone)],
   ]);
 }
 
@@ -41,10 +41,11 @@ export async function viewResults(
     query: { q: v.query, ...(v.sort.length ? { sort: sortText(v) } : {}), limit, offset },
   });
   const total = res.pagination?.total ?? res.data.length;
+  const zone = await ctx.timeZone();
   return join(
     `**${v.name}** — ${total} ${total === 1 ? 'issue' : 'issues'}`,
-    viewFacts(v),
-    res.data.length ? issueTable(res.data) : null,
+    viewFacts(v, zone),
+    res.data.length ? issueTable(res.data, zone) : null,
     more(res.pagination, res.data.length),
   );
 }
@@ -111,7 +112,7 @@ export const createView = defineTool({
         ...(args.sort ? { sort: args.sort } : {}),
       },
     });
-    return { markdown: join(`Saved view **${v.name}**.`, viewFacts(v)) };
+    return { markdown: join(`Saved view **${v.name}**.`, viewFacts(v, await ctx.timeZone())) };
   },
 });
 
@@ -140,7 +141,7 @@ export const updateView = defineTool({
       ...scope(args.org),
       body,
     });
-    return { markdown: join(`Updated saved view **${v.name}**.`, viewFacts(v)) };
+    return { markdown: join(`Updated saved view **${v.name}**.`, viewFacts(v, await ctx.timeZone())) };
   },
 });
 

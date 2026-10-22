@@ -11,7 +11,7 @@ import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { ToolError } from '../errors.ts';
 import { resolveOrganization } from '../organizations.ts';
-import { code, date, facts, instant, join, person, table } from '../render.ts';
+import { code, day, facts, instant, join, person, table } from '../render.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
 import { digest, shellQuote } from './attachments.ts';
 
@@ -40,7 +40,7 @@ function errorRows(errors: readonly ImportRowError[], total: number): string | n
   );
 }
 
-function jobMarkdown(job: ImportJob): string {
+function jobMarkdown(job: ImportJob, zone: string): string {
   return join(
     `**Import ${job.id}** of ${code(job.filename)} into ${job.project} — ${job.status}`,
     facts([
@@ -48,8 +48,8 @@ function jobMarkdown(job: ImportJob): string {
       ['Created', String(job.created_issues)],
       ['Failed rows', String(job.failed_rows)],
       ['Started by', person(job.created_by)],
-      ['Started', job.started_at ? instant(job.started_at) : null],
-      ['Finished', job.completed_at ? instant(job.completed_at) : null],
+      ['Started', job.started_at ? instant(job.started_at, zone) : null],
+      ['Finished', job.completed_at ? instant(job.completed_at, zone) : null],
     ]),
     job.error ? job.error.message : null,
     errorRows(job.errors, job.failed_rows),
@@ -92,7 +92,7 @@ async function run(
   }
   const { data } = await ctx.api.send<ImportJob>('POST', path`/v1/projects/${key}/imports/${String(id)}/start`, body);
   return join(
-    jobMarkdown(data),
+    jobMarkdown(data, await ctx.timeZone()),
     `The issues are created in the background. get_import_status with import: ${id} shows progress and the rows that failed.`,
   );
 }
@@ -197,13 +197,14 @@ export const getImportStatus = defineTool({
   kind: 'read',
   endpoints: ['GET /v1/projects/{key}/imports', 'GET /v1/projects/{key}/imports/{id}'],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const key = args.project.toUpperCase();
     if (args.import !== undefined) {
       const { data } = await ctx.api.get<ImportJob>(
         path`/v1/projects/${key}/imports/${String(args.import)}`,
         scope(args.org),
       );
-      return { markdown: jobMarkdown(data) };
+      return { markdown: jobMarkdown(data, await ctx.timeZone()) };
     }
     const { data } = await ctx.api.get<ImportJob[]>(path`/v1/projects/${key}/imports`, scope(args.org));
     return {
@@ -220,7 +221,7 @@ export const getImportStatus = defineTool({
                 String(j.created_issues),
                 String(j.failed_rows),
                 person(j.created_by),
-                date(j.created_at),
+                day(j.created_at, zone),
               ]),
             )
           : null,
@@ -230,6 +231,7 @@ export const getImportStatus = defineTool({
 });
 
 async function exportMarkdown(ctx: ToolContext, job: ExportJob): Promise<string> {
+  const zone = await ctx.timeZone();
   const link = job.download_url ? await ctx.api.location(job.download_url) : null;
   return join(
     `**Export ${job.id}** — ${job.status}`,
@@ -238,8 +240,8 @@ async function exportMarkdown(ctx: ToolContext, job: ExportJob): Promise<string>
       ['Files', job.file_count === null ? null : String(job.file_count)],
       ['Files missing', job.missing_file_count ? String(job.missing_file_count) : null],
       ['Requested by', person(job.created_by)],
-      ['Requested', instant(job.created_at)],
-      ['Download until', job.expires_at ? instant(job.expires_at) : null],
+      ['Requested', instant(job.created_at, zone)],
+      ['Download until', job.expires_at ? instant(job.expires_at, zone) : null],
     ]),
     job.error ? job.error.message : null,
     link ? `Download link, valid for five minutes:\n${link}` : null,
@@ -283,6 +285,7 @@ export const getExportStatus = defineTool({
     'GET /v1/organizations/{slug}/exports/{id}/download',
   ],
   async run(ctx, args) {
+    const zone = await ctx.timeZone();
     const org = await resolveOrganization(ctx, args.org);
     if (args.export !== undefined) {
       const { data } = await ctx.api.get<ExportJob>(path`/v1/organizations/${org.slug}/exports/${String(args.export)}`);
@@ -300,8 +303,8 @@ export const getExportStatus = defineTool({
                 j.status,
                 j.size_bytes === null ? '' : size(j.size_bytes),
                 person(j.created_by),
-                date(j.created_at),
-                j.expires_at ? date(j.expires_at) : '',
+                day(j.created_at, zone),
+                j.expires_at ? day(j.expires_at, zone) : '',
               ]),
             )
           : null,

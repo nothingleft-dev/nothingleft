@@ -66,7 +66,13 @@ async function answer(
   ...notes: (string | null)[]
 ) {
   const calendar = await calendarFor(ctx, issue.key, org).catch(() => undefined);
-  return { markdown: join(issueHeading(issue, ctx.appBaseUrl, verb), issueFacts(issue, calendar), ...notes) };
+  return {
+    markdown: join(
+      issueHeading(issue, ctx.appBaseUrl, verb),
+      issueFacts(issue, await ctx.timeZone(), calendar),
+      ...notes,
+    ),
+  };
 }
 
 const groupSummary = (groups: IssueGroup[] | undefined) =>
@@ -130,7 +136,7 @@ export const searchIssues = defineTool({
       markdown: join(
         `**${total} ${total === 1 ? 'issue' : 'issues'}**${args.query.trim() ? ` for ${code(args.query.trim())}` : ''}`,
         groupSummary(res.meta?.['groups'] as IssueGroup[] | undefined),
-        res.data.length ? issueTable(res.data, slugs) : null,
+        res.data.length ? issueTable(res.data, await ctx.timeZone(), slugs) : null,
         more(res.pagination, res.data.length),
       ),
     };
@@ -188,7 +194,7 @@ export async function renderIssue(
 ): Promise<string> {
   const s = scope(opts.org);
   const issue = await fetchIssue(ctx, key, opts.org);
-  const [links, articles, comments, watchers, voters, files, calendar] = await Promise.all([
+  const [links, articles, comments, watchers, voters, files, calendar, zone] = await Promise.all([
     ctx.api.get<IssueLinkGroup[]>(path`/v1/issues/${key}/links`, s).then(r => r.data),
     ctx.api.get<ArticleSummary[]>(path`/v1/issues/${key}/articles`, s).then(r => r.data),
     opts.comments > 0 && issue.comment_count > 0
@@ -198,13 +204,14 @@ export async function renderIssue(
     opts.include.includes('voters') ? ctx.api.get<MemberRef[]>(path`/v1/issues/${key}/voters`, s) : null,
     opts.include.includes('attachments') ? ctx.api.get<Attachment[]>(path`/v1/issues/${key}/attachments`, s) : null,
     calendarFor(ctx, key, opts.org).catch(() => undefined),
+    ctx.timeZone(),
   ]);
 
   const shownComments = comments ? comments.data.slice(-opts.comments) : [];
   const earlier = issue.comment_count - shownComments.length;
   return join(
     issueHeading(issue, ctx.appBaseUrl),
-    issueFacts(issue, calendar),
+    issueFacts(issue, zone, calendar),
     linkLines(links) ? `**Links**\n${linkLines(links)}` : null,
     referencedByLines(articles),
     watchers ? `**Watchers:** ${watchers.data.map(person).join(', ') || 'none'}` : null,
@@ -218,11 +225,11 @@ export async function renderIssue(
         : '**Files:** none'
       : null,
     '---',
-    issue.description_md ? descriptionPage(issue, 0, opts.descriptionLength) : '_No description._',
+    issue.description_md ? descriptionPage(issue, zone, 0, opts.descriptionLength) : '_No description._',
     shownComments.length
       ? join(
           `---\n\n**Latest comments**${earlier > 0 ? ` (${earlier} earlier — list_comments)` : ''}`,
-          ...shownComments.map(c => commentBlock(c, key)),
+          ...shownComments.map(c => commentBlock(c, key, zone)),
         )
       : null,
   );
@@ -256,7 +263,7 @@ export const getIssueDescription = defineTool({
           args.offset + (args.length ?? DESCRIPTION_PAGE),
           text.length,
         )} of ${text.length}`,
-        descriptionPage(issue, args.offset, args.length ?? DESCRIPTION_PAGE),
+        descriptionPage(issue, await ctx.timeZone(), args.offset, args.length ?? DESCRIPTION_PAGE),
       ),
     };
   },
@@ -612,6 +619,7 @@ export const getIssueActivity = defineTool({
       query: { limit: args.limit ?? arg.DEFAULT_LIMIT, cursor: args.cursor },
     });
     const calendar = await calendarFor(ctx, key, args.org).catch(() => undefined);
+    const zone = await ctx.timeZone();
     const actors = [...new Set(res.data.map(a => (a.actor.username ? handle(a.actor.username) : a.actor.name)))];
     return {
       markdown: join(
@@ -619,7 +627,7 @@ export const getIssueActivity = defineTool({
         res.data.length
           ? untrusted(
               { author: actors.join(', '), place: `the history of ${key}` },
-              res.data.map(a => activityLine(a, calendar)).join('\n'),
+              res.data.map(a => activityLine(a, zone, calendar)).join('\n'),
             )
           : 'Nothing recorded.',
         moreByCursor(res.pagination, res.data.length),

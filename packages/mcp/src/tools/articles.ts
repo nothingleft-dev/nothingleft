@@ -15,7 +15,7 @@ import { defineTool, type ToolContext } from '../tool.ts';
 import {
   authorsOf,
   code,
-  date,
+  day,
   errorMarkdown,
   facts,
   handle,
@@ -90,19 +90,22 @@ export async function articleSlug(
 
 const statusLabel = (s: string) => (s === 'published' ? 'Published' : 'Draft');
 
-function articleFacts(a: Article): string {
+function articleFacts(a: Article, zone: string): string {
   return facts([
     ['Status', statusLabel(a.status)],
     ['Path', a.path.length ? a.path.map(p => p.title).join(' › ') : 'Top level'],
     ['Tags', a.tags.length ? a.tags.map(tag => tag.name).join(', ') : null],
     ['Sub-articles', a.child_count ? String(a.child_count) : null],
-    ['Created', `${instant(a.created_at)} by ${person(a.created_by)}`],
-    ['Updated', `${instant(a.updated_at)} by ${person(a.updated_by)}`],
-    ['Published', a.published_at ? instant(a.published_at) : null],
+    ['Created', `${instant(a.created_at, zone)} by ${person(a.created_by)}`],
+    ['Updated', `${instant(a.updated_at, zone)} by ${person(a.updated_by)}`],
+    ['Published', a.published_at ? instant(a.published_at, zone) : null],
     ['Comments', a.comment_count ? String(a.comment_count) : null],
     ['Files', a.attachment_count ? String(a.attachment_count) : null],
     ['You', [a.me.starred ? 'starred' : null, a.me.watching ? 'watching' : null].filter(Boolean).join(', ') || null],
-    ['Deleted', a.deleted_at ? `${instant(a.deleted_at)} — restorable until ${instant(a.restorable_until)}` : null],
+    [
+      'Deleted',
+      a.deleted_at ? `${instant(a.deleted_at, zone)} — restorable until ${instant(a.restorable_until, zone)}` : null,
+    ],
   ]);
 }
 
@@ -112,12 +115,12 @@ const heading = (a: Article, appBaseUrl: string, verb?: string) =>
 type ShownArticle = Pick<Article, 'slug' | 'project' | 'updated_by' | 'updated_at'>;
 
 /** A body cut at `length` characters, with the marker that says how to read on. */
-function bodyPage(text: string, a: ShownArticle, offset: number, length: number): string {
+function bodyPage(text: string, a: ShownArticle, zone: string, offset: number, length: number): string {
   const page = text.slice(offset, offset + length);
   const end = offset + page.length;
   const framed = page
     ? untrusted(
-        { author: handle(a.updated_by.username), date: date(a.updated_at), place: `${a.project.key}/${a.slug}` },
+        { author: handle(a.updated_by.username), date: day(a.updated_at, zone), place: `${a.project.key}/${a.slug}` },
         page,
       )
     : null;
@@ -149,15 +152,16 @@ export async function renderArticle(
         ).data.slice(-opts.comments)
       : [];
   const offset = opts.offset ?? 0;
+  const zone = await ctx.timeZone();
   return join(
     offset === 0 ? heading(a, ctx.appBaseUrl) : `**${a.title}** — ${a.project.key}/${code(a.slug)}`,
-    offset === 0 ? articleFacts(a) : null,
+    offset === 0 ? articleFacts(a, zone) : null,
     '---',
-    a.body_md ? bodyPage(a.body_md, a, offset, opts.length) : '_No text yet._',
+    a.body_md ? bodyPage(a.body_md, a, zone, offset, opts.length) : '_No text yet._',
     comments.length
       ? join(
           `---\n\n**Latest comments**${a.comment_count > comments.length ? ` (${a.comment_count - comments.length} earlier — list_comments)` : ''}`,
-          ...comments.map(c => commentBlock(c, `${a.project.key}/${a.slug}`)),
+          ...comments.map(c => commentBlock(c, `${a.project.key}/${a.slug}`, zone)),
         )
       : null,
   );
@@ -165,10 +169,10 @@ export async function renderArticle(
 
 async function answer(ctx: ToolContext, key: string, slug: string, org: string | undefined, verb: string) {
   const { data } = await ctx.api.get<Article>(path`/v1/projects/${key}/articles/${slug}`, scope(org));
-  return { markdown: join(heading(data, ctx.appBaseUrl, verb), articleFacts(data)) };
+  return { markdown: join(heading(data, ctx.appBaseUrl, verb), articleFacts(data, await ctx.timeZone())) };
 }
 
-const summaryTable = (rows: ArticleSummary[]) =>
+const summaryTable = (rows: ArticleSummary[], zone: string) =>
   untrusted(
     { author: authorsOf(rows.map(r => r.updated_by)), place: 'the knowledge base search' },
     table(
@@ -179,7 +183,7 @@ const summaryTable = (rows: ArticleSummary[]) =>
         r.title,
         statusLabel(r.status),
         r.tags.map(tag => tag.name).join(', '),
-        date(r.updated_at),
+        day(r.updated_at, zone),
         r.excerpt.slice(0, 160),
       ]),
     ),
@@ -201,13 +205,14 @@ export const listArticles = defineTool({
     const key = projectKey(args.project);
     const nodes = await tree(ctx, key, args.org, args.deleted);
     if (args.deleted) {
+      const zone = await ctx.timeZone();
       return {
         markdown: join(
           `**${key}** — ${nodes.length} deleted ${nodes.length === 1 ? 'article' : 'articles'} you could restore`,
           nodes.length
             ? table(
                 ['Article', 'Title', 'Deleted', 'Restorable until'],
-                nodes.map(n => [n.slug, n.title, instant(n.deleted_at), instant(n.restorable_until)]),
+                nodes.map(n => [n.slug, n.title, instant(n.deleted_at, zone), instant(n.restorable_until, zone)]),
               )
             : null,
         ),
@@ -301,7 +306,7 @@ export const searchArticles = defineTool({
     return {
       markdown: join(
         `**${total} ${total === 1 ? 'article' : 'articles'}** for ${code(args.query || ' ')}`,
-        res.data.length ? summaryTable(res.data) : null,
+        res.data.length ? summaryTable(res.data, await ctx.timeZone()) : null,
         more(res.pagination, res.data.length),
       ),
     };
@@ -347,7 +352,8 @@ export const search = defineTool({
             : null),
         data.issues.total > data.issues.items.length ? 'search_issues pages the rest.' : null,
         `**Articles** — ${data.articles.total}`,
-        refusal(data.articles.error) ?? (data.articles.items.length ? summaryTable(data.articles.items) : null),
+        refusal(data.articles.error) ??
+          (data.articles.items.length ? summaryTable(data.articles.items, await ctx.timeZone()) : null),
         data.articles.total > data.articles.items.length ? 'search_articles pages the rest.' : null,
       ),
     };
@@ -386,7 +392,7 @@ export const createArticle = defineTool({
         ...(args.after ? { after: args.after } : {}),
       },
     });
-    return { markdown: join(heading(data, ctx.appBaseUrl, 'Created'), articleFacts(data)) };
+    return { markdown: join(heading(data, ctx.appBaseUrl, 'Created'), articleFacts(data, await ctx.timeZone())) };
   },
 });
 
@@ -530,7 +536,7 @@ export const deleteArticle = defineTool({
       query: args.children ? { children: args.children } : {},
     });
     return {
-      markdown: `Deleted **${data.title}** (${key}/${code(data.slug)}) — restorable until ${instant(data.restorable_until)} with restore_article.`,
+      markdown: `Deleted **${data.title}** (${key}/${code(data.slug)}) — restorable until ${instant(data.restorable_until, await ctx.timeZone())} with restore_article.`,
     };
   },
 });
@@ -559,7 +565,7 @@ export const restoreArticle = defineTool({
       path`/v1/projects/${key}/articles/${slug}/restore`,
       scope(args.org),
     );
-    return { markdown: join(heading(data, ctx.appBaseUrl, 'Restored'), articleFacts(data)) };
+    return { markdown: join(heading(data, ctx.appBaseUrl, 'Restored'), articleFacts(data, await ctx.timeZone())) };
   },
 });
 

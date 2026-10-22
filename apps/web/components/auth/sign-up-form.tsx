@@ -1,8 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
-import { SignUpSchema, type Me } from '@nothingleft/types';
+import { SignUpSchema } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
@@ -10,15 +8,12 @@ import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PasswordStrength } from '@components/auth/password-strength';
 import { useAuthForm } from '@components/auth/use-auth-form';
+import { enterApp } from '@components/auth/enter-app';
 import { signUp } from '@lib/api/auth';
-import { queryKeys } from '@lib/query/keys';
 import { viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
 
 export function SignUpForm() {
-  const router = useRouter();
-  const client = useQueryClient();
-
   const form = useAuthForm({
     schema: SignUpSchema,
     initial: { name: '', email: '', password: '' },
@@ -28,12 +23,11 @@ export function SignUpForm() {
       password: 'Passwords need at least 8 characters.',
     },
     submit: values => signUp({ ...values, timezone: viewerTimeZone() }).then(r => r.data),
-    onSuccess: (me: Me) => {
+    onSuccess: () => {
       trackAuthConversion('sign_up', 'email');
-      client.setQueryData(queryKeys.me(), me);
       // Path C starts at the profile step, which is also where the verification gate
       // lives — onboarding.md § Path C.
-      router.replace('/welcome');
+      enterApp('/welcome');
     },
   });
 

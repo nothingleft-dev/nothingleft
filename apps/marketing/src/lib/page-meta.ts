@@ -8,6 +8,7 @@ import {
   organization,
   softwareApplication,
   techArticle,
+  walkthroughVideo,
   webPage,
   website,
   type JsonLd,
@@ -45,6 +46,7 @@ export function pageMeta(pathname: string): PageMeta {
     SoftwareApplication: softwareApplication,
     TechArticle: () => techArticle(path, schema.headline ?? schema.title, schema.description, lastmod),
     FAQPage: () => (schema.faq ? faqPage(path, schema.faq) : undefined),
+    VideoObject: walkthroughVideo,
     BreadcrumbList: () => (schema.breadcrumb ? breadcrumb(schema.breadcrumb) : undefined),
   };
   // A page may list FAQPage before its questions are written; it emits once they exist.

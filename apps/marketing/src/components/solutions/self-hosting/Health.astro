@@ -1,5 +1,5 @@
 ---
-import { HEALTH_EXCERPT } from '@lib/solutions/self-hosting';
+import { AWS_GUIDE_PATH, COMPOSE_GUIDE_PATH, HEALTH_EXCERPT } from '@lib/solutions/self-hosting';
 ---
 
 <section class="border-t border-line" aria-labelledby="sh-health-title">
@@ -10,8 +10,8 @@ import { HEALTH_EXCERPT } from '@lib/solutions/self-hosting';
       </h2>
       <ol class="steps-list mt-6 prose">
         <li>
-          Apply the migrations once, before the first start: <code>bun run db:migrate</code> in <code>packages/db</code>
-          .
+          <strong>Migrations.</strong> They apply before the API starts: Docker Compose runs its <code>migrate</code>{' '}
+          job on every start, and the AWS guide runs a one-off migrate task.
         </li>
         <li>
           <strong>Liveness.</strong> <code>/health</code> answers as soon as the process is up. It checks no dependency
@@ -43,17 +43,32 @@ import { HEALTH_EXCERPT } from '@lib/solutions/self-hosting';
           <h3 class="h3">Upgrades</h3>
           <p class="prose mt-2 text-base">
             The hosted service applies migrations before a new API version takes traffic, and CI checks that every
-            schema change ships with its migration and that they apply to an empty database. A self-hosted upgrade
-            procedure ships with the install guide.
+            schema change ships with its migration and that they apply to an empty database. On your own install, an
+            upgrade is a pull of the new source and a rebuild, with the database migrated before the new API starts.
+            Take a backup first.
           </p>
         </div>
         <div class="py-5">
           <h3 class="h3">Backups</h3>
           <p class="prose mt-2 text-base">
-            Durable state lives in PostgreSQL and the two buckets; Redis holds caches and counters. Backup and restore
-            guidance ships with the install guide. We will not describe a procedure we have not tested.
+            Durable state lives in PostgreSQL and the two buckets; Redis holds caches and counters. Keep the encryption
+            key with your backups: without it, two-factor and storage secrets cannot be read.
           </p>
         </div>
+      </div>
+      <div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+        <a class="link" href={`${COMPOSE_GUIDE_PATH}#upgrading`}>
+          Upgrades and backups with Docker Compose
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+        <a class="link" href={`${AWS_GUIDE_PATH}#upgrading`}>
+          Upgrades and backups on AWS
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
       </div>
     </div>
   </div>

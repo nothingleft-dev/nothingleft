@@ -53,9 +53,11 @@ const EnvSchema = z.object({
     })
     .optional(),
 
-  // Object storage. Absent locally until MinIO or R2 is configured; the avatar routes
-  // answer storage.not_configured rather than failing at boot.
+  // Object storage. Absent locally until an S3-compatible store is configured; the avatar routes
+  // answer storage.not_configured rather than failing at boot. No key pair: the runtime role signs.
   S3_ENDPOINT: z.string().url().optional(),
+  // Where browsers reach the same store, when the API reaches it at a private address. Unset: S3_ENDPOINT.
+  S3_BROWSER_ENDPOINT: z.string().url().optional(),
   S3_REGION: z.string().default('auto'),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
@@ -127,6 +129,10 @@ const CheckedEnvSchema = EnvSchema.refine(e => e.NODE_ENV !== 'production' || e.
   .refine(e => e.NODE_ENV !== 'production' || e.EMAIL_PROVIDER !== 'smtp' || e.SMTP_HOST !== undefined, {
     path: ['SMTP_HOST'],
     message: 'required in production: without it, mail would be logged instead of sent',
+  })
+  .refine(e => (e.S3_ACCESS_KEY_ID === undefined) === (e.S3_SECRET_ACCESS_KEY === undefined), {
+    path: ['S3_SECRET_ACCESS_KEY'],
+    message: 'S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY are set together, or both unset to use the runtime role',
   })
   .refine(e => (e.SMTP_USER === undefined) === (e.SMTP_PASSWORD === undefined), {
     path: ['SMTP_PASSWORD'],

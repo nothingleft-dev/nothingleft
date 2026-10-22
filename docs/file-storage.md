@@ -46,6 +46,13 @@ CSV (both always on the platform and outside the quota — [§ CSV imports](#csv
 - The `web/` and `api/` prefixes exist so a listing shows at a glance which
   side wrote an object.
 
+Both buckets sit on one store at `S3_ENDPOINT`. The API signs with `S3_ACCESS_KEY_ID` and
+`S3_SECRET_ACCESS_KEY`, or, with both unset, with whatever the SDK's default chain finds: an ECS
+task role, an instance role, `AWS_*` variables (decided 21 Oct 2026, so an AWS install keeps no
+storage keys). Presigned URLs are signed for `S3_BROWSER_ENDPOINT` when it is set, since a
+signature covers the host: under Docker Compose the API reaches the store at
+`http://storage:9000`, which no browser can.
+
 ## Avatars
 
 The chain, in priority order — the first that exists wins:

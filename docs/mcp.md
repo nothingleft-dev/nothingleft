@@ -83,8 +83,13 @@ Decided with the owner on 25 Sep 2026.
 - A single object is a title line plus a two-column facts table; rows with no value are
   left out. A list is a table. Descriptions follow verbatim after a rule.
 - A table cell escapes `|` and folds line breaks, so a value cannot break its row.
-- Dates read `19 Sep 2026`; instants `25 Sep 2026, 8:48pm UTC` — the agent's timezone is
-  unknown, so the zone is always named. A person is `@casey (Casey Kim)`, or `@casey`
+- Dates read `19 Sep 2026`; instants `16 Oct 2026, 12:01am GMT+5:30`, in the token
+  owner's timezone from `GET /v1/me`, so "today" in a result is the person's today. The
+  offset is always named, because the agent may run elsewhere and an abbreviation such as
+  IST names three zones. The day an instant fell on (an attribution date, a list's "Added")
+  uses the same zone; calendar dates are never converted. A handler keeps each owner's
+  timezone for a minute, so a burst of calls costs one lookup against the PAT's rate limit,
+  and `update_profile` replaces it at once. A person is `@casey (Casey Kim)`, or `@casey`
   when the name adds nothing.
 - Lists default to 20 rows, at most 50, and end with `Showing 21–40 of 57. Pass offset:
   40 for more.` when there is more.

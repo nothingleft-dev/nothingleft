@@ -517,7 +517,7 @@ export const ASANA_FAQ: FaqEntry[] = [
   {
     question: 'Can we self-host Nothing Left?',
     answer: [
-      'Yes. The code is AGPL-3.0 and a self-hosted install runs the same build as the hosted service. Your team runs and maintains it: upgrades, backups, email and uptime. The install guide ships with launch.',
+      'Yes. The code is AGPL-3.0 and a self-hosted install runs the same build as the hosted service. Your team runs and maintains it: upgrades, backups, email and uptime. Install guides cover Docker Compose and AWS.',
     ],
     link: { href: PATHS.selfHosting, label: 'Self-hosting' },
   },

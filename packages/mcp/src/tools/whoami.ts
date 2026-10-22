@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Me, Project } from '@nothingleft/types';
 import { defineTool } from '../tool.ts';
 import { orgRoleOf } from '../organizations.ts';
-import { code, date, handle, join, list, roleLabel, table } from '../render.ts';
+import { code, day, handle, join, list, roleLabel, table } from '../render.ts';
 
 const PROJECTS_PER_ORG = 100;
 
@@ -20,6 +20,7 @@ export const whoami = defineTool({
   kind: 'read',
   endpoints: ['GET /v1/me', 'GET /v1/organizations', 'GET /v1/projects'],
   async run(ctx) {
+    const zone = await ctx.timeZone();
     const [{ data: me }, orgs] = await Promise.all([ctx.api.get<Me>('/v1/me'), ctx.organizations()]);
     const projects = await Promise.all(
       orgs.map(async o => {
@@ -32,7 +33,7 @@ export const whoami = defineTool({
     const tokenLine = token
       ? `Token **${token.name}** ${code(`${token.token_prefix}…`)} · ${list(token.scopes)} · ${projectReach(
           token.project_keys,
-        )} · ${token.expires_at ? `expires ${date(token.expires_at)}` : 'no expiry'}`
+        )} · ${token.expires_at ? `expires ${day(token.expires_at, zone)}` : 'no expiry'}`
       : null;
 
     const rows = orgs.map((o, i) => {
