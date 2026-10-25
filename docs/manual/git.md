@@ -42,6 +42,9 @@ the repository, shared by every project it is linked to:
 - **Every project**: let the repository reference issues of every project, for a repository many
   teams share.
 
+Because these two settings reach every project the repository serves, turning *Every project* on
+or off, or changing *Merged into* for a repository another project also uses, is for an Org Admin.
+
 Linking can read in recent history: the open pull requests and those updated in the last 90 days,
 and the branches whose names mention an issue. The free plan links 10 repositories per project.
 

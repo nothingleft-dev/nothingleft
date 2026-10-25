@@ -235,8 +235,12 @@ const linkSettings = {
   match_all_projects: z
     .boolean()
     .optional()
-    .describe('Match every project key in the organisation, not only the projects it is linked to (a monorepo).'),
-  merge_base_branches: branchesArg,
+    .describe(
+      'Match every project key in the organisation, not only the projects it is linked to (a monorepo). Org Admins only.',
+    ),
+  merge_base_branches: branchesArg.describe(
+    "Branches a merge into counts as merged, globs allowed; null follows the default branch. Shared by every project the repository serves, so an Org Admin's to change once another project uses it.",
+  ),
 };
 
 function linkedSummary(r: ProjectRepository, key: string): string {

@@ -7387,8 +7387,8 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/LinkRepository' } } }
       responses:
         '201': { description: 'The linked repository.', content: { application/json: { schema: { $ref: '#/components/schemas/ProjectRepositoryEnvelope' } } } }
-        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { description: '`project.not_found`, `git.repository_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '403': { description: '`forbidden`, or `git.repository_shared` (`field: match_all_projects` or `merge_base_branches`): matching every project, or changing the branches of a repository another project also uses, needs an Org Admin.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '409': { description: '`git.repository_already_linked`, `git.repository_removed`, `git.repository_ambiguous`, `git.repository_limit_reached`, `project.archived`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
     patch:
       summary: Change a linked repository's settings
@@ -7399,7 +7399,7 @@ paths:
         content: { application/json: { schema: { $ref: '#/components/schemas/UpdateRepositoryLink' } } }
       responses:
         '200': { description: 'The linked repository.', content: { application/json: { schema: { $ref: '#/components/schemas/ProjectRepositoryEnvelope' } } } }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { description: '`forbidden`, or `git.repository_shared`: matching every project, or changing the branches of a repository another project also uses, needs an Org Admin.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '404': { description: '`project.not_found`, `git.repository_not_linked`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
     delete:
       summary: Unlink a repository from the project
@@ -10545,7 +10545,7 @@ components:
         delivery_id: { type: string }
         event: { type: string, example: pull_request }
         status: { type: string, enum: [pending, done, ignored, failed] }
-        error: { type: [string, 'null'], description: 'Ignored: `repository_unknown`, `repository_not_linked`, `connection_revoked`, `event_unused`. Failed: `provider_unreachable`, `provider_rate_limited`, `token_invalid`, `payload_truncated`, `internal`.' }
+        error: { type: [string, 'null'], description: 'Ignored: `repository_unknown`, `repository_not_linked`, `repository_removed`, `connection_revoked`, `connection_suspended`, `event_unused`. Failed: `provider_unreachable`, `provider_rate_limited`, `token_invalid`, `payload_truncated`, `internal`.' }
         attempts: { type: integer }
         received_at: { type: string, format: date-time }
         processed_at: { type: [string, 'null'], format: date-time }

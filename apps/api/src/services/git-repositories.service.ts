@@ -23,7 +23,15 @@ import type {
   TenantContext,
 } from '@nothingleft/db';
 import { AppError } from '@lib/errors';
-import { connectionAuth, connectionName, providerFailure, providerOf, unsealHook, webhookUrl } from '@git/connection';
+import {
+  connectionAuth,
+  connectionName,
+  providerFailure,
+  providerOf,
+  unsealHook,
+  webhookUrl,
+  repositoryHookSecret,
+} from '@git/connection';
 import { GitProviderError } from '@git/http';
 import type { ProviderRegistry } from '@git/providers/index';
 import type { JobQueue } from '@lib/jobs';
@@ -203,7 +211,10 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
     }
     const hook = unsealHook(masterKey, connection)!;
     const auth = connectionAuth(masterKey, connection);
-    const target = { url: webhookUrl(deps.apiBaseUrl, connection.provider, hook.hook_id), secret: hook.secret };
+    const target = {
+      url: webhookUrl(deps.apiBaseUrl, connection.provider, hook.hook_id),
+      secret: repositoryHookSecret(hook.secret, repo.provider_repo_id),
+    };
     try {
       if (repo.provider_webhook_id && (await provider.webhookExists(auth, repo, repo.provider_webhook_id))) {
         await provider.updateWebhook(auth, repo, repo.provider_webhook_id, target);
@@ -243,6 +254,35 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
     return project;
   }
 
+  /**
+   * `match_all_projects` and `merge_base_branches` belong to the repository, so they reach every
+   * project it serves: matching every project, or changing branches a repository shares with
+   * another project, is an Org Admin's to change.
+   */
+  async function guardShared(
+    project: ProjectAccess,
+    principal: Principal,
+    repo: GitRepositoryRow,
+    input: { match_all_projects?: boolean | undefined; merge_base_branches?: string[] | null | undefined },
+  ) {
+    const matching = input.match_all_projects !== undefined && input.match_all_projects !== repo.match_all_projects;
+    const branches =
+      input.merge_base_branches !== undefined &&
+      JSON.stringify(input.merge_base_branches) !== JSON.stringify(repo.merge_base_branches);
+    if (!matching && !branches) return;
+    const shared =
+      repo.match_all_projects ||
+      (await repositories.projectLinks(project.ctx, [repo.id])).some(l => l.project_id !== project.project.id);
+    if ((matching || shared) && !can(principal, 'org.git.manage', project.scope)) {
+      throw new AppError(
+        'git.repository_shared',
+        403,
+        { repository: repo.full_name },
+        matching ? 'match_all_projects' : 'merge_base_branches',
+      );
+    }
+  }
+
   async function recordLink(
     project: ProjectAccess,
     principal: Principal,
@@ -269,9 +309,9 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
     async backfill(job: GitBackfillJob): Promise<number> {
       const ctx = tenantContext(job.org_id);
       const repo = await repositories.findById(ctx, job.repository_id);
-      if (!repo) return 0;
+      if (!repo || repo.removed_at) return 0;
       const connection = await connections.findById(ctx, repo.connection_id);
-      if (!connection || connection.revoked_at) return 0;
+      if (!connection || connection.revoked_at || connection.status === 'suspended') return 0;
       const started = now().toISOString();
       const state = (s: Partial<GitBackfill>): GitBackfill => ({
         state: 'running',
@@ -312,6 +352,7 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
       const since = at.getTime() - RECONCILE_ACTIVE_DAYS * 24 * 60 * 60 * 1000;
       let applied = 0;
       for (const connection of await connections.listLiveAll(systemContext('git.reconcile spans every organisation'))) {
+        if (connection.status === 'suspended') continue;
         const ctx = tenantContext(connection.org_id);
         const provider = providerOf(providers, connection.provider);
         const auth = connectionAuth(masterKey, connection);
@@ -320,7 +361,7 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
           { connectionIds: [connection.id], linked: true },
           { limit: 10_000, offset: 0 },
         );
-        for (const repo of rows.filter(r => r.last_event_at && r.last_event_at.getTime() >= since)) {
+        for (const repo of rows.filter(r => !r.removed_at && r.last_event_at && r.last_event_at.getTime() >= since)) {
           try {
             if (repo.provider_webhook_id && provider.supports.webhook_registration && auth.token) {
               const present = await provider.webhookExists(auth, repo, repo.provider_webhook_id);
@@ -402,6 +443,7 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
       const { repo, connection } = await resolveLive(project.ctx, ref, input.connection);
       if (repo.removed_at)
         throw new AppError('git.repository_removed', 409, { repository: repo.full_name }, 'repository');
+      await guardShared(project, principal, repo, input);
       const limit = planLimits(project.organization.plan as OrgPlan).git_repositories_per_project;
       if (limit !== null && (await repositories.countForProject(project.ctx, project.project.id)) >= limit) {
         throw new AppError('git.repository_limit_reached', 409, { limit });
@@ -455,6 +497,7 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
     ): Promise<ProjectRepository> {
       const project = await manageProject(principal, key, hints);
       const { repo } = await resolveLinked(project, ref, input.connection);
+      await guardShared(project, principal, repo, input);
       await repositories.update(
         project.ctx,
         repo.id,

@@ -16,6 +16,7 @@ import {
   JOB_GIT_PURGE_CRON,
   JOB_GIT_RECONCILE_CRON,
   JOB_GIT_TOKEN_EXPIRY_CRON,
+  JOB_GIT_RECOVER_CRON,
 } from '@config/constants';
 import type { GitEventsJob } from '@services/git-ingest.service';
 import type { GitBackfillJob } from '@services/git-repositories.service';
@@ -36,6 +37,7 @@ export interface JobHandlers {
   'git.purge': (now?: Date) => Promise<number>;
   'git.reconcile': (now?: Date) => Promise<number>;
   'git.token_expiry': (now?: Date) => Promise<number>;
+  'git.recover': (now?: Date) => Promise<number>;
 }
 
 export type FanoutJob =
@@ -158,6 +160,7 @@ const SCHEDULES: Record<keyof JobHandlers, string> = {
   'git.purge': JOB_GIT_PURGE_CRON,
   'git.reconcile': JOB_GIT_RECONCILE_CRON,
   'git.token_expiry': JOB_GIT_TOKEN_EXPIRY_CRON,
+  'git.recover': JOB_GIT_RECOVER_CRON,
 };
 
 const QUEUE_OPTIONS: Partial<Record<keyof QueuedHandlers, { expireInSeconds: number }>> = {

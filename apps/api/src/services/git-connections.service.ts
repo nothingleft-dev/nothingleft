@@ -41,6 +41,7 @@ import {
   sealToken,
   unsealHook,
   webhookUrl,
+  repositoryHookSecret,
 } from '@git/connection';
 import { GitProviderError } from '@git/http';
 import type { ConnectionAuth, GitProvider } from '@git/provider';
@@ -170,9 +171,11 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
 
   /** Lists what the connection can see now; a partial list never marks anything removed. */
   async function discover(ctx: TenantContext, row: GitConnectionRow, provider: GitProvider, auth: ConnectionAuth) {
-    const repos = await provider.listRepositories(auth);
+    const { repos, complete } = await provider.listRepositories(auth);
     const at = now();
     await repositories.upsertDiscovered(ctx, row.id, repos, at);
+    // A listing cut short says nothing about what it did not reach: only a full one marks the rest removed.
+    if (!complete) return;
     await repositories.markRemovedExcept(
       ctx,
       row.id,
@@ -502,7 +505,7 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
 
       if (input.dry_run) {
         if (!described) throw new AppError('git.token_required', 422, {}, 'token');
-        const repos = await call(provider.kind, () => provider.listRepositories(auth));
+        const { repos } = await call(provider.kind, () => provider.listRepositories(auth));
         return {
           provider: provider.kind,
           base_url: baseUrl,
@@ -658,8 +661,9 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
       const provider = providerOf(providers, row.provider);
       if (provider.supports.webhook_registration && row.token_ciphertext) {
         const auth = connectionAuth(masterKey, row);
-        const target = { url: webhookUrl(deps.apiBaseUrl, row.provider, hook.hook_id), secret };
+        const url = webhookUrl(deps.apiBaseUrl, row.provider, hook.hook_id);
         for (const repo of await repositories.listHooked(org.ctx, row.id)) {
+          const target = { url, secret: repositoryHookSecret(secret, repo.provider_repo_id) };
           const ok = await provider
             .updateWebhook(auth, repo, repo.provider_webhook_id!, target)
             .then(() => true)

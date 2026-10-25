@@ -133,6 +133,23 @@ export function nextLink(headers: Headers, from: string): string | null {
   return null;
 }
 
+const PAGES_MAX = 100;
+const PAGINATION_DEADLINE_MS = 120_000;
+
+/**
+ * One pagination's budget: a page cap, no page twice, and a deadline, so a provider that answers
+ * with endless (or cyclic) `next` links cannot keep a request or a worker busy for ever.
+ */
+export function pageBudget(): (url: string) => boolean {
+  const seen = new Set<string>();
+  const started = Date.now();
+  return url => {
+    if (seen.has(url) || seen.size >= PAGES_MAX || Date.now() - started > PAGINATION_DEADLINE_MS) return false;
+    seen.add(url);
+    return true;
+  };
+}
+
 /** Follows `Link` pages until `limit` items or the last page; `pick` takes the items from a page. */
 export async function gitPages<P, T>(
   fetch: GitFetch,
@@ -142,8 +159,9 @@ export async function gitPages<P, T>(
   limit: number,
 ): Promise<{ items: T[]; complete: boolean }> {
   const items: T[] = [];
+  const more = pageBudget();
   let next: string | null = withQuery(url, req.query);
-  while (next && items.length < limit) {
+  while (next && items.length < limit && more(next)) {
     const res: GitResponse<P> = await gitRequest<P>(fetch, next, { ...req, query: undefined });
     items.push(...pick(res.data));
     next = nextLink(res.headers, next);

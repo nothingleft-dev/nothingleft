@@ -306,32 +306,46 @@ export function automationsService(deps: AutomationsDeps) {
         changes: null,
       });
 
-    for (const rule of rules) {
+    /** One rule on the issue: `true` once the evaluation is over (it changed the issue, or the issue is gone). */
+    async function consider(rule: AutomationRow): Promise<boolean> {
       if (!project || project.is_archived) {
         await record(rule, 'skipped', 'archived_project');
-        continue;
+        return false;
       }
-      const current = statuses.find(s => s.id === issue.status_id)!;
-      if (!(await conditionsHold(ctx, rule, issue, current, facts))) {
+      const current = statuses.find(s => s.id === issue!.status_id)!;
+      if (!(await conditionsHold(ctx, rule, issue!, current, facts))) {
         await record(rule, 'skipped', 'condition_not_met');
-        continue;
+        return false;
       }
       const target = findStatus(statuses, String((rule.action_params as { status?: unknown }).status ?? ''));
       if (!target) {
         await record(rule, 'skipped', 'status_missing');
-        continue;
+        return false;
       }
-      if (target.id === issue.status_id) {
+      if (target.id === issue!.status_id) {
         await record(rule, 'skipped', 'already_in_status');
-        continue;
+        return false;
       }
-      const outcome = await setStatus(ctx, rule, issueId, statuses, target, firing);
+      const outcome = await setStatus(ctx, rule, issueId, statuses, target, firing, facts);
       if (outcome === 'applied') {
         deps.analytics.capture('automation_run', { trigger: firing.trigger, result: 'applied' }, { orgId: ctx.orgId });
+        return true;
+      }
+      if (outcome === 'gone') return true;
+      await record(rule, 'skipped', outcome === 'stale' ? 'condition_not_met' : 'already_in_status');
+      return false;
+    }
+
+    for (const rule of rules) {
+      try {
+        if (await consider(rule)) return;
+      } catch (error) {
+        // The status write rolled back; the run log says the rule failed rather than staying silent.
+        deps.analytics.captureException(error, { org_id: ctx.orgId });
+        deps.analytics.capture('automation_run', { trigger: firing.trigger, result: 'failed' }, { orgId: ctx.orgId });
+        await record(rule, 'failed', null).catch(() => undefined);
         return;
       }
-      if (outcome === 'gone') return;
-      await record(rule, 'skipped', 'already_in_status');
     }
   }
 
@@ -358,7 +372,8 @@ export function automationsService(deps: AutomationsDeps) {
     statuses: readonly WorkflowStatusRow[],
     target: WorkflowStatusRow,
     firing: Pick<AutomationFiring, 'ref' | 'cause' | 'causedBy'>,
-  ): Promise<'applied' | 'already' | 'gone'> {
+    facts: FiringFacts,
+  ): Promise<'applied' | 'already' | 'gone' | 'stale'> {
     const at = now();
     return deps.inTransaction(async r => {
       const current = await r.issues.lockById(ctx, issueId);
@@ -367,6 +382,13 @@ export function automationsService(deps: AutomationsDeps) {
       if (current.status_id === target.id) return 'already';
       const before = statuses.find(s => s.id === current.status_id);
       if (!before) return 'gone';
+      // What was read before the lock may have changed: the rule is judged again on the locked issue.
+      const [live, project] = await Promise.all([
+        r.automations.findById(ctx, rule.id),
+        r.projects.findById(ctx, current.project_id),
+      ]);
+      if (!live?.is_enabled || !project || project.is_archived) return 'stale';
+      if (!(await conditionsHold(ctx, live, current, before, facts))) return 'stale';
       const changes = { status: { from: before.name, to: target.name } };
       const run = await r.automations.recordRun(ctx, {
         automation_id: rule.id,

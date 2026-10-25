@@ -245,6 +245,7 @@ worthwhile only under load).
 | `git.purge` | Cron, nightly at 03:20 (7) | Delete webhook deliveries older than 7 days; checks of commits that head no pull request after 7 days; superseded commits after 30; commits and pull requests no live link has needed for 90 days, with their link rows; automation runs after 90 days |
 | `git.backfill` | A repository linked with `backfill` (7) | Read in the repository's open pull requests and those updated in the last 90 days (at most 1,000), each with its commits, and the branches whose names reference an issue; progress on `git_repositories.backfill_state`. History only: never runs automations |
 | `git.token_expiry` | Cron, hourly at :10 (7) | A connection's token expiring within 7 days: email the Org Admins once (`token_warned_at`). Expired: move the connection to `token_expired`, which emails them again |
+| `git.recover` | Cron, hourly at :25 (7) | Queue a drain for every repository with a delivery still pending 15 minutes after it arrived (and due): one stored whose queueing failed is applied even if no later delivery arrives |
 | `git.rematch_authors` | A git identity claimed or verified (7) | Attribute the account's unattributed commits and pull requests in every organisation it belongs to |
 | `git.reconcile` | Cron, nightly at 02:40 (7) | For every linked repository with a delivery in the last 30 days: re-read each pull request still open here, as if its event arrived again, and check the webhook the server registered is still there (`missing` otherwise). Catches deliveries the provider never sent |
 

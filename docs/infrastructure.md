@@ -143,7 +143,7 @@ GITHUB_APP_SLUG               characters; the slug names the install page; the c
 GITHUB_APP_CLIENT_ID          callback confirm the person can administer the installation, so the app must request
 GITHUB_APP_CLIENT_SECRET      user authorisation during installation
 GITHUB_APP_BASE_URL           https://github.com, or a GitHub Enterprise Server origin
-GIT_ALLOW_PRIVATE_HOSTS       false         a self-managed GitLab or GitHub Enterprise on a private network may be connected; off, every provider request first resolves its host and refuses a private, loopback, link-local or otherwise reserved address (IPv4, and IPv6 including mapped and NAT64 forms). Checked per request, not pinned, so a host re-pointed between the check and the connection is the remaining window; provider calls follow no redirects and no page link to another origin
+GIT_ALLOW_PRIVATE_HOSTS       false         a self-managed GitLab or GitHub Enterprise on a private network may be connected; off, every provider request first resolves its host and refuses a private, loopback, link-local or otherwise reserved address (IPv4, and IPv6 including mapped and NAT64 forms). Checked per request, not pinned, so a host re-pointed between the check and the connection is the remaining window (accepted for v1, owner 25 Oct 2026); provider calls follow no redirects and no page link to another origin
 EMAIL_PROVIDER                resend (default) | zoho | smtp — how mail is sent
 RESEND_API_KEY                provider resend: required in production; unset elsewhere, mail is logged instead of sent (with its body only in development)
 ZOHO_EMAIL_API_KEY            provider zoho: the Send Mail token, with or without its `Zoho-enczapikey ` prefix; required in production

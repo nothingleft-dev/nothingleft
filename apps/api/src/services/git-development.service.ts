@@ -346,7 +346,7 @@ export function gitDevelopmentService(deps: GitDevelopmentDeps) {
   async function fromUrl(ctx: TenantContext, projectId: number, raw: string) {
     const url = new URL(raw);
     const live = await connections.list(ctx);
-    const hosted = live.filter(c => new URL(c.base_url).host === url.host);
+    const hosted = live.filter(c => c.status !== 'suspended' && new URL(c.base_url).host === url.host);
     if (hosted.length === 0) throw new AppError('git.url_not_connected', 422, {}, 'url');
     for (const connection of hosted) {
       const parsed = providerOf(providers, connection.provider).pullRequestFromUrl(url);

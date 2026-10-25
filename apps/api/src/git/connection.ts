@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { t } from '@nothingleft/i18n';
 import {
   GIT_TOKEN_EXPIRY_WARNING_DAYS,
@@ -13,6 +14,14 @@ import type { ConnectionAuth, GitProvider } from '@git/provider';
 import type { ProviderRegistry } from '@git/providers/index';
 
 const aad = (connectionId: number) => `git_connections:${connectionId}`;
+
+/**
+ * The token of the hook registered on one repository. A connection's hooks share its secret, so a
+ * hook whose payload a project maintainer can template could otherwise speak for any repository.
+ */
+export function repositoryHookSecret(connectionSecret: string, providerRepoId: string): string {
+  return createHmac('sha256', connectionSecret).update(`repository:${providerRepoId}`).digest('hex');
+}
 
 export interface HookParts {
   hook_id: string;

@@ -15,7 +15,15 @@ import {
   type RepositoryEventType,
   type ReviewState,
 } from '@git/events';
-import { gitPages, gitRequest, GitProviderError, nextLink, type GitRequest, type GitResponse } from '@git/http';
+import {
+  gitPages,
+  gitRequest,
+  GitProviderError,
+  nextLink,
+  pageBudget,
+  type GitRequest,
+  type GitResponse,
+} from '@git/http';
 import {
   BRANCHES_MAX,
   PULL_REQUEST_COMMITS_MAX,
@@ -546,19 +554,25 @@ export function githubProvider(deps: ProviderDeps & { app: GitHubAppConfig | nul
     return withAuth(auth, headers => gitRequest<T>(deps.fetch, `${apiBase(auth.base_url)}${path}`, { headers, query }));
   }
 
-  function pages(
+  function paged(
     auth: ConnectionAuth,
     path: string,
     query: GitRequest['query'],
     pick: (page: unknown) => unknown[],
     limit: number,
-  ): Promise<unknown[]> {
-    return withAuth(auth, async headers => {
-      const url = `${apiBase(auth.base_url)}${path}`;
-      const { items } = await gitPages<unknown, unknown>(deps.fetch, url, { headers, query: query ?? {} }, pick, limit);
-      return items;
-    });
+  ): Promise<{ items: unknown[]; complete: boolean }> {
+    return withAuth(auth, headers =>
+      gitPages<unknown, unknown>(
+        deps.fetch,
+        `${apiBase(auth.base_url)}${path}`,
+        { headers, query: query ?? {} },
+        pick,
+        limit,
+      ),
+    );
   }
+
+  const pages = async (...args: Parameters<typeof paged>) => (await paged(...args)).items;
 
   async function getPullRequest(auth: ConnectionAuth, repo: RepoRef, number: number) {
     const res = await orNullWhenGone(get<unknown>(auth, `${repoPath(repo)}/pulls/${number}`));
@@ -577,7 +591,8 @@ export function githubProvider(deps: ProviderDeps & { app: GitHubAppConfig | nul
     const headers = { ...API_HEADERS, authorization: `Bearer ${userToken}` };
     let next: string | null = `${apiBase(base)}/user/installations?per_page=100`;
     let account: unknown = null;
-    while (next && !account) {
+    const more = pageBudget();
+    while (next && !account && more(next)) {
       const res: GitResponse<unknown> = await gitRequest<unknown>(deps.fetch, next, { headers });
       account =
         at(
@@ -693,23 +708,23 @@ export function githubProvider(deps: ProviderDeps & { app: GitHubAppConfig | nul
     },
 
     async listRepositories(auth) {
-      const items =
+      const { items, complete } =
         auth.auth_kind === 'app_installation'
-          ? await pages(
+          ? await paged(
               auth,
               '/installation/repositories',
               { per_page: 100 },
               page => list(at(page, 'repositories')),
               REPOSITORIES_MAX,
             )
-          : await pages(
+          : await paged(
               auth,
               '/user/repos',
               { per_page: 100, affiliation: 'owner,collaborator,organization_member' },
               list,
               REPOSITORIES_MAX,
             );
-      return items.flatMap(item => parsed(() => providerRepo(item)));
+      return { repos: items.flatMap(item => parsed(() => providerRepo(item))), complete };
     },
 
     async getRepository(auth, repo) {
@@ -722,9 +737,10 @@ export function githubProvider(deps: ProviderDeps & { app: GitHubAppConfig | nul
     listPullRequests(auth, repo, since, limit) {
       return withAuth(auth, async headers => {
         const found: NormalizedPullRequest[] = [];
+        const more = pageBudget();
         let next: string | null =
           `${apiBase(auth.base_url)}${repoPath(repo)}/pulls?state=all&sort=updated&direction=desc&per_page=100`;
-        while (next && found.length < limit) {
+        while (next && found.length < limit && more(next)) {
           const res: GitResponse<unknown> = await gitRequest<unknown>(deps.fetch, next, { headers });
           let reachedOld = false;
           for (const pr of list(res.data).flatMap(item => parsed(() => pullRequest(item)))) {

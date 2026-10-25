@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { repositoryHookSecret } from '@git/connection';
+import { gitFixture, signedDelivery } from './git-fixtures.ts';
 import { gitWorld, type GitWorld } from './git-world.ts';
 
 const KEY = 'API';
@@ -64,6 +66,22 @@ describe('a GitLab merge request', () => {
     const before = w.provider.calls.filter(c => c.url.includes('/repository/compare')).length;
     await deliver('push.feature', 'push-again');
     expect(w.provider.calls.filter(c => c.url.includes('/repository/compare')).length).toBe(before + 1);
+  });
+
+  test("one project's hook cannot speak for another project on the same connection", async () => {
+    const fixture = gitFixture('gitlab', 'merge_request.merge');
+    const body = structuredClone(fixture.body) as { project: Record<string, unknown> };
+    body.project = { ...body.project, id: 203, path_with_namespace: 'acme/secret' };
+    const { headers, payload } = signedDelivery('gitlab', fixture, repositoryHookSecret(hook.secret, '202'), {
+      delivery: 'forged-1',
+      body,
+    });
+    const res = await w.app.inject({ method: 'POST', url: new URL(hook.url).pathname, headers, payload });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error.code).toBe('git.signature_invalid');
+    // The connection's own secret no longer opens any hook either.
+    const shared = signedDelivery('gitlab', fixture, hook.secret, { delivery: 'forged-2' });
+    expect((await w.app.inject({ method: 'POST', url: new URL(hook.url).pathname, ...shared })).statusCode).toBe(401);
   });
 
   test('a project with no linked repository shows nothing git-related', async () => {

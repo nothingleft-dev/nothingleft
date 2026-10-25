@@ -32,7 +32,7 @@ import {
 import { sha256 } from '@lib/crypto';
 import { AppError } from '@lib/errors';
 import type { JobQueue } from '@lib/jobs';
-import { connectionAuth, connectionName, providerOf, unsealHook } from '@git/connection';
+import { connectionAuth, connectionName, providerOf, unsealHook, repositoryHookSecret } from '@git/connection';
 import type { NormalizedEvent } from '@git/events';
 import { GitProviderError } from '@git/http';
 import type { DeliveryHeaders, GitProvider } from '@git/provider';
@@ -83,6 +83,7 @@ export interface GitIngestDeps {
 
 const sys = systemContext('a webhook delivery names no organisation until its connection is found');
 const DRAIN_BATCH = 200;
+const RECOVER_AFTER_MS = 15 * 60_000;
 
 const ENTITY_EVENTS = new Set<NormalizedEvent['type']>([
   'branch.created',
@@ -234,6 +235,15 @@ export function gitIngestService(deps: GitIngestDeps) {
     const entities = normalized.filter(isEntityEvent);
     if (entities.length === 0) return { status: 'done', error: null, repository_id: row.repository_id };
 
+    // Read again: a lifecycle event in this or an earlier delivery may have suspended or revoked it.
+    const current = await connections.findById(ctx, connection.id);
+    if (!current || current.revoked_at) {
+      return { status: 'ignored', error: 'connection_revoked', repository_id: row.repository_id };
+    }
+    if (current.status === 'suspended') {
+      return { status: 'ignored', error: 'connection_suspended', repository_id: row.repository_id };
+    }
+
     let repository = row.repository_id ? await repositories.findById(ctx, row.repository_id) : undefined;
     if (!repository && row.provider_repo_id) {
       repository = await repositories.findByProviderId(ctx, connection.id, row.provider_repo_id);
@@ -244,6 +254,7 @@ export function gitIngestService(deps: GitIngestDeps) {
       }
     }
     if (!repository) return { status: 'ignored', error: 'repository_unknown', repository_id: null };
+    if (repository.removed_at) return { status: 'ignored', error: 'repository_removed', repository_id: repository.id };
     if ((await repositories.projectLinks(ctx, [repository.id])).length === 0) {
       return { status: 'ignored', error: 'repository_not_linked', repository_id: repository.id };
     }
@@ -325,7 +336,7 @@ export function gitIngestService(deps: GitIngestDeps) {
       ? await repositories.findByProviderId(ctx, connection.id, route.provider_repo_id)
       : undefined;
     const stored = storable(provider, delivery.event_name, input.rawBody, payload);
-    const row = await events.insert(ctx, {
+    await events.insert(ctx, {
       connection_id: connection.id,
       repository_id: repository?.id ?? null,
       provider_repo_id: route.provider_repo_id,
@@ -348,15 +359,22 @@ export function gitIngestService(deps: GitIngestDeps) {
         );
       }
     }
-    if (row) {
-      await enqueue(
-        { org_id: connection.org_id, connection_id: connection.id, provider_repo_id: route.provider_repo_id },
-        input.now,
-      );
-    }
+    // A redelivery of a stored event schedules its drain too: the first attempt may have stored it
+    // and then failed to queue. The stately queue keeps one waiting run per key either way.
+    await enqueue(
+      { org_id: connection.org_id, connection_id: connection.id, provider_repo_id: route.provider_repo_id },
+      input.now,
+    );
   }
 
   return {
+    /** Hourly: queues a drain for any key whose pending deliveries nothing has picked up. */
+    async recoverPending(at = new Date()): Promise<number> {
+      const keys = await events.stalePendingKeys(sys, new Date(at.getTime() - RECOVER_AFTER_MS), at);
+      for (const key of keys) await enqueue(key, at);
+      return keys.length;
+    },
+
     async knowsHook(kind: string, hookId: string): Promise<boolean> {
       const connection = await connections.findByHookHash(sys, sha256(hookId));
       return connection !== undefined && connection.provider === kind;
@@ -382,12 +400,20 @@ export function gitIngestService(deps: GitIngestDeps) {
         const connection = await connections.findByHookHash(sys, sha256(input.hookId));
         if (!connection || connection.provider !== provider.kind) throw new AppError('not_found', 404);
         const hook = unsealHook(masterKey, connection);
-        delivery = hook ? provider.verifyWebhook(input.headers, input.rawBody, hook.secret) : null;
+        payload = parse(input.rawBody);
+        // A hook the server registered carries its repository's own token: the repository the
+        // payload names must be the one that hook was registered on.
+        const repoId = provider.supports.webhook_registration ? provider.route('', payload).provider_repo_id : null;
+        const secret = !hook
+          ? null
+          : provider.supports.webhook_registration
+            ? repoId && repositoryHookSecret(hook.secret, repoId)
+            : hook.secret;
+        delivery = secret ? provider.verifyWebhook(input.headers, input.rawBody, secret) : null;
         if (!delivery) {
           await countSignatureFailure(connection);
           throw new AppError('git.signature_invalid', 401);
         }
-        payload = parse(input.rawBody);
         targets = [connection];
       } else {
         const app = provider.app;

@@ -1947,7 +1947,10 @@ describe('development', () => {
     expect(await ok(t.admin, 'resync_repository', { repository: 'acme/api', rehook: true })).toContain('active');
 
     const fixture = gitFixture('gitlab', 'push.feature');
-    const { headers, payload } = signedDelivery('gitlab', fixture, webhook_secret, { delivery: 'mcp-1' });
+    const { headers, payload } = signedDelivery('gitlab', fixture, webhook_secret, {
+      delivery: 'mcp-1',
+      registeredHook: true,
+    });
     await w.app.inject({ method: 'POST', url: new URL(webhook_url).pathname, headers, payload });
     const queue = w.app.jobQueue as RecordingQueue;
     for (const job of queue.pending.splice(0)) await runQueued(w.app.queuedHandlers, job);
@@ -1965,7 +1968,11 @@ describe('development', () => {
     mr.object_attributes['title'] = `${issue}: Fix login`;
     mr.object_attributes['description'] = `Implements ${issue}`;
     mr.object_attributes['source_branch'] = 'feature';
-    const opened = signedDelivery('gitlab', mrFixture, webhook_secret, { delivery: 'mcp-mr-1', body: mr });
+    const opened = signedDelivery('gitlab', mrFixture, webhook_secret, {
+      delivery: 'mcp-mr-1',
+      body: mr,
+      registeredHook: true,
+    });
     await w.app.inject({ method: 'POST', url: new URL(webhook_url).pathname, ...opened });
     for (const job of queue.pending.splice(0)) await runQueued(w.app.queuedHandlers, job);
     expect(await ok(t.observer, 'get_issue', { issue })).toContain('**Development:** in review · 1 pull request');

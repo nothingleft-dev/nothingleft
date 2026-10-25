@@ -1330,8 +1330,8 @@ Links a connected repository so its branches, commits and pull requests that men
 | `project` | string | yes | Project key, e.g. "PP". |
 | `repository` | string | yes | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
 | `connection` | string |  | The connection, when two have a repository of that name. |
-| `match_all_projects` | boolean |  | Match every project key in the organisation, not only the projects it is linked to (a monorepo). |
-| `merge_base_branches` | list of string or null |  | Branches a merge into counts as merged, globs allowed ("main", "release/*"); null follows the default branch. |
+| `match_all_projects` | boolean |  | Match every project key in the organisation, not only the projects it is linked to (a monorepo). Org Admins only. |
+| `merge_base_branches` | list of string or null |  | Branches a merge into counts as merged, globs allowed; null follows the default branch. Shared by every project the repository serves, so an Org Admin's to change once another project uses it. |
 | `backfill` | boolean |  | Read in existing pull requests and branches now. Default true. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
@@ -1346,8 +1346,8 @@ Changes which branches count as merged into, or whether the repository matches e
 | `project` | string | yes | Project key, e.g. "PP". |
 | `repository` | string | yes | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
 | `connection` | string |  | The connection, when two have a repository of that name. |
-| `match_all_projects` | boolean |  | Match every project key in the organisation, not only the projects it is linked to (a monorepo). |
-| `merge_base_branches` | list of string or null |  | Branches a merge into counts as merged, globs allowed ("main", "release/*"); null follows the default branch. |
+| `match_all_projects` | boolean |  | Match every project key in the organisation, not only the projects it is linked to (a monorepo). Org Admins only. |
+| `merge_base_branches` | list of string or null |  | Branches a merge into counts as merged, globs allowed; null follows the default branch. Shared by every project the repository serves, so an Org Admin's to change once another project uses it. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
 ### `unlink_repository`

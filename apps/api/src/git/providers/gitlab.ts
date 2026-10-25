@@ -16,7 +16,7 @@ import {
   type RepoRef,
   type ReviewState,
 } from '@git/events';
-import { gitPages, gitRequest, GitProviderError, nextLink, type GitRequest } from '@git/http';
+import { gitPages, gitRequest, GitProviderError, nextLink, pageBudget, type GitRequest } from '@git/http';
 import {
   BRANCHES_MAX,
   PULL_REQUEST_COMMITS_MAX,
@@ -456,25 +456,26 @@ export function gitlabProvider(deps: ProviderDeps): GitProvider {
     return res.data;
   }
 
-  async function pages(auth: ConnectionAuth, path: string, query: GitRequest['query'], limit: number) {
-    const { items } = await gitPages<unknown, Json>(
+  function paged(auth: ConnectionAuth, path: string, query: GitRequest['query'], limit: number) {
+    return gitPages<unknown, Json>(
       fetch,
       api(auth, path),
       { headers: authHeaders(auth), query: { per_page: PAGE, ...query } },
       list,
       limit,
     );
-    return items;
   }
 
-  async function listRepositories(auth: ConnectionAuth): Promise<ProviderRepo[]> {
-    const projects = await pages(
+  const pages = async (...args: Parameters<typeof paged>) => (await paged(...args)).items;
+
+  async function listRepositories(auth: ConnectionAuth): Promise<{ repos: ProviderRepo[]; complete: boolean }> {
+    const { items, complete } = await paged(
       auth,
       '/projects',
       { membership: true, min_access_level: 20, simple: false },
       REPOSITORIES_MAX,
     );
-    return projects.flatMap(p => restRepo(p) ?? []);
+    return { repos: items.flatMap(p => restRepo(p) ?? []), complete };
   }
 
   function hookBody(target: { url: string; secret: string }) {
@@ -553,7 +554,7 @@ export function gitlabProvider(deps: ProviderDeps): GitProvider {
     },
 
     async describeConnection(auth) {
-      const [token, user, repos] = await Promise.all([
+      const [token, user, { repos }] = await Promise.all([
         orNull(get<Json>(auth, '/personal_access_tokens/self')),
         get<Json>(auth, '/user'),
         listRepositories(auth),
@@ -611,7 +612,8 @@ export function gitlabProvider(deps: ProviderDeps): GitProvider {
       let total: number | null = null;
       let next: string | null = api(auth, `${project(repo)}/merge_requests/${number}/commits`);
       let query: GitRequest['query'] = { per_page: PAGE };
-      while (next && newestFirst.length < PULL_REQUEST_COMMITS_MAX) {
+      const more = pageBudget();
+      while (next && newestFirst.length < PULL_REQUEST_COMMITS_MAX && more(next)) {
         const res: { data: unknown; headers: Headers } = await gitRequest<unknown>(fetch, next, {
           headers,
           ...(query ? { query } : {}),

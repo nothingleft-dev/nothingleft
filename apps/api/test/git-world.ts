@@ -225,6 +225,7 @@ export async function gitWorld(key: string, opts: { withApp?: boolean } & BuildO
     const { headers, payload } = signedDelivery(kind, fixture, o.secret ?? APP_WEBHOOK_SECRET, {
       ...(o.delivery ? { delivery: o.delivery } : {}),
       body,
+      registeredHook: kind === 'gitlab',
     });
     const url = o.hookUrl ? new URL(o.hookUrl).pathname : `/v1/git/webhooks/${kind}`;
     return world.app.inject({ method: 'POST', url, headers, payload });

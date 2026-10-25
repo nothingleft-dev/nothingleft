@@ -295,7 +295,12 @@ only (`auth.session_required` for a PAT), as is rotating a webhook secret, which
 **Seeing what can be linked** is checked in a project: an Org Admin lists every repository of the
 organisation's connections; anyone else names a project they administer (the link picker always
 has one). A repository's settings (`merge_base_branches`, `match_all_projects`) belong to the
-repository, so a Project Admin of any project it is linked to may change them. Nothing is linked
+repository and reach every project it serves, so turning *match every project* on or off is an
+Org Admin's, and so is changing the branches of a repository another project also uses; a Project
+Admin changes the branches only while their project is the repository's only one
+(`git.repository_shared` otherwise, decided 25 Oct 2026 after the security audit). Automations act
+only on issues of a project the repository serves now: a link kept from before an unlink is
+history, not authority. Nothing is linked
 or unlinked in an archived project. **Linking a pull request by hand** takes one from a repository
 the issue's project can reference — linked to it, or set to match every project — and no other:
 a repository the connection merely sees, or one linked to another project, answers

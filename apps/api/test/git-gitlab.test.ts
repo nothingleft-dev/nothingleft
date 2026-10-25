@@ -622,7 +622,7 @@ describe('API', () => {
             }
           : { status: 200, body: [project(204, 'acme/old', { archived: true })] },
     });
-    const repos = await provider.listRepositories(auth);
+    const { repos } = await provider.listRepositories(auth);
     expect(repos.map(r => r.full_name)).toEqual(['acme/api', 'acme/web', 'acme/old']);
     expect(repos[1]).toMatchObject({ default_branch: '', is_private: false });
     expect(repos[2]!.is_archived).toBe(true);

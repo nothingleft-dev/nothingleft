@@ -67,7 +67,8 @@ export interface GitProvider {
   trim(eventName: string, payload: unknown): unknown;
 
   describeConnection(auth: ConnectionAuth): Promise<ConnectionDescription>;
-  listRepositories(auth: ConnectionAuth): Promise<ProviderRepo[]>;
+  /** `complete` is false when the listing stopped early (a cap or a page budget): what is missing is unknown, not gone. */
+  listRepositories(auth: ConnectionAuth): Promise<{ repos: ProviderRepo[]; complete: boolean }>;
   /** Null when the provider no longer has it (deleted, or the connection lost access). */
   getRepository(auth: ConnectionAuth, repo: RepoRef): Promise<ProviderRepo | null>;
   getPullRequest(auth: ConnectionAuth, repo: RepoRef, number: number): Promise<NormalizedPullRequest | null>;

@@ -1,3 +1,4 @@
+import { repositoryHookSecret } from '@git/connection';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { gitlabProject, gitWorld, type GitWorld } from './git-world.ts';
 
@@ -310,7 +311,8 @@ describe('connection upkeep', () => {
     expect(res.statusCode).toBe(200);
     const secret = res.json().data.webhook_secret;
     const put = w.provider.calls.findLast(c => c.method === 'PUT' && /\/projects\/202\/hooks\/\d+$/.test(c.url))!;
-    expect((put.body as { token: string }).token).toBe(secret);
+    // Each hook gets its repository's own token, derived from the connection's new secret.
+    expect((put.body as { token: string }).token).toBe(repositoryHookSecret(secret, '202'));
     const app = await w.call(w.admin, 'POST', `${connections()}/github:acme-inc/rotate-secret`);
     expect(app.json().error.code).toBe('git.mode_unsupported');
   });

@@ -585,6 +585,8 @@ export const GIT_EVENT_IGNORED = [
   'repository_unknown',
   'repository_not_linked',
   'connection_revoked',
+  'connection_suspended',
+  'repository_removed',
   'event_unused',
 ] as const;
 export type GitEventIgnored = (typeof GIT_EVENT_IGNORED)[number];

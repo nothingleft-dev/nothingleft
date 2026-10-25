@@ -577,7 +577,7 @@ describe('API with a personal token', () => {
               },
             },
     });
-    const repos = await gh.listRepositories(MANUAL);
+    const { repos } = await gh.listRepositories(MANUAL);
     expect(repos.map(r => r.provider_repo_id)).toEqual(['1', '2', '3']);
     expect(repos[1]).toMatchObject({ is_private: true, default_branch: 'main' });
     const first = new URL(calls[0]!.url);
@@ -602,7 +602,7 @@ describe('API with a personal token', () => {
         ],
       },
     });
-    expect((await gh.listRepositories(INSTALLED)).map(r => r.full_name)).toEqual(['acme-inc/web']);
+    expect((await gh.listRepositories(INSTALLED)).repos.map(r => r.full_name)).toEqual(['acme-inc/web']);
     expect(calls[1]!.headers.authorization).toBe('Bearer ghs_x');
   });
 

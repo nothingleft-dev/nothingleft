@@ -77,26 +77,40 @@ interface Scope {
 
 export type Snapshot = Record<string, unknown>;
 
+/** A provider-sent URL kept only on the repository's own host: history renders it as a link. */
+function onRepositoryHost(url: string | null, repo: Pick<GitRepositoryRow, 'html_url'>): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+      parsed.origin === new URL(repo.html_url).origin
+      ? url
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** What the issue's history says the link is to: readable values, never ids. */
-export function prSnapshot(repo: Pick<GitRepositoryRow, 'full_name'>, pr: GitPullRequestRow): Snapshot {
+export function prSnapshot(repo: Pick<GitRepositoryRow, 'full_name' | 'html_url'>, pr: GitPullRequestRow): Snapshot {
   return {
     kind: 'pull_request',
     repo: repo.full_name,
     number: pr.number,
     title: pr.title,
-    url: pr.html_url,
+    url: onRepositoryHost(pr.html_url, repo),
     state: pr.state,
     review: pr.review_state,
     ci: pr.ci_state,
   };
 }
 
-const commitSnapshot = (repo: Pick<GitRepositoryRow, 'full_name'>, c: GitCommitRow): Snapshot => ({
+const commitSnapshot = (repo: Pick<GitRepositoryRow, 'full_name' | 'html_url'>, c: GitCommitRow): Snapshot => ({
   kind: 'commit',
   repo: repo.full_name,
   sha: c.sha,
   title: c.message_subject,
-  url: c.html_url,
+  url: onRepositoryHost(c.html_url, repo),
 });
 
 const branchSnapshot = (repo: Pick<GitRepositoryRow, 'full_name' | 'html_url'>, name: string): Snapshot => ({
@@ -980,11 +994,23 @@ export function gitLinksService(deps: GitLinksDeps) {
       row: GitWebhookEventRow,
     ): Promise<EntityOutcome> {
       const scope = await scopeOf(ctx, repo);
+      const serves = new Set(scope.projectIdByKey.values());
       for (const event of events) {
         const fired = await applyOne(ctx, connection, repo, scope, event, now());
         // Rules run after the event's writes commit, and only for a delivery received live or replayed with them.
-        if (row.run_automations && deps.automations) {
-          for (const firing of fired) await deps.automations().fire(ctx, firing);
+        if (!row.run_automations || !deps.automations) continue;
+        for (const firing of fired) {
+          // A link kept from before the repository was unlinked from a project is history, not authority.
+          const owners = new Map(
+            (
+              await links.issuesByIds(
+                ctx,
+                firing.issues.map(i => i.issueId),
+              )
+            ).map(i => [i.id, i.project_id]),
+          );
+          const issues = firing.issues.filter(i => serves.has(owners.get(i.issueId) ?? -1));
+          if (issues.length > 0) await deps.automations().fire(ctx, { ...firing, issues });
         }
       }
       return { status: 'done' };

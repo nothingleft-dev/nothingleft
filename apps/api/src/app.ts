@@ -1023,6 +1023,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
       (await gitIngest.purge(now)) + (await gitLinker.purge(now)) + (await automations.purge(now)),
     'git.reconcile': now => gitRepositories.reconcileAll(now),
     'git.token_expiry': now => gitConnections.checkTokenExpiry(now),
+    'git.recover': now => gitIngest.recoverPending(now),
   };
   const queuedHandlers: QueuedHandlers = {
     'notify.fanout': (job, now) => fanout.fanout(job, now),

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { isPrivateAddress, isPublicUrl } from '@lib/network';
 import { maskHookId } from '@lib/logger';
 import type { GitProviderError } from '@git/http';
-import { gitPages, gitRequest, guardedFetch } from '@git/http';
+import { gitPages, gitRequest, guardedFetch, type GitFetch } from '@git/http';
 import { fakeFetch } from './git-fake-fetch.ts';
 
 const reason = async (p: Promise<unknown>) => ((await p.catch((e: unknown) => e)) as GitProviderError).reason;
@@ -83,6 +83,29 @@ describe('provider requests', () => {
     expect(await reason(gitPages(fetch, 'https://git.example.com/api/v4/projects', {}, (p: unknown[]) => p, 100))).toBe(
       'invalid',
     );
+  });
+
+  test('empty pages linking to themselves, or on for ever, end within the page budget', async () => {
+    const calls: string[] = [];
+    const cyclic: GitFetch = async input => {
+      calls.push(String(input));
+      return new Response('[]', { status: 200, headers: { link: '<https://git.example.com/p>; rel="next"' } });
+    };
+    const once = await gitPages(cyclic, 'https://git.example.com/p', {}, (p: unknown[]) => p, 1);
+    expect(once).toEqual({ items: [], complete: false });
+    expect(calls.length).toBe(1);
+
+    let n = 0;
+    const endless: GitFetch = async () => {
+      n += 1;
+      return new Response('[]', {
+        status: 200,
+        headers: { link: `<https://git.example.com/p?page=${n + 1}>; rel="next"` },
+      });
+    };
+    const capped = await gitPages(endless, 'https://git.example.com/p', {}, (p: unknown[]) => p, 1);
+    expect(capped.complete).toBe(false);
+    expect(n).toBe(100);
   });
 
   test('a response over 10 MB is refused', async () => {

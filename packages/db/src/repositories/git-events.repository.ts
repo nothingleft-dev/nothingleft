@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { GitEventStatus } from '@nothingleft/types';
 import type { Queryable } from '../client.ts';
 import { git_webhook_events, type GitWebhookEventRow, type NewGitWebhookEventRow } from '../schema/index.ts';
@@ -66,6 +66,29 @@ export function gitEventsRepository(db: Queryable) {
     },
 
     /** The oldest event of that key still to apply: a drain applies them in the order received. */
+    /** Queue keys with a pending delivery received before `before` and due by `at`, across organisations. */
+    async stalePendingKeys(
+      _ctx: SystemContext,
+      before: Date,
+      at: Date,
+    ): Promise<{ org_id: number; connection_id: number; provider_repo_id: string | null }[]> {
+      return db
+        .selectDistinct({
+          org_id: git_webhook_events.org_id,
+          connection_id: git_webhook_events.connection_id,
+          provider_repo_id: git_webhook_events.provider_repo_id,
+        })
+        .from(git_webhook_events)
+        .where(
+          and(
+            eq(git_webhook_events.status, 'pending'),
+            lt(git_webhook_events.received_at, before),
+            or(isNull(git_webhook_events.next_attempt_at), lte(git_webhook_events.next_attempt_at, at)),
+          ),
+        )
+        .limit(1_000);
+    },
+
     async nextPending(ctx: TenantContext, key: GitEventQueueKey): Promise<GitWebhookEventRow | undefined> {
       const [row] = await db
         .select()

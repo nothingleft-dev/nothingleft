@@ -2276,7 +2276,9 @@ git_connections(
   account_login text, account_avatar_url text NULL, account_url text,
   token_ciphertext text NULL,           -- sealed, purpose git_connection
   hook_id_hash bytea NULL UNIQUE,       -- SHA-256 of the hook URL's id
-  hook_secret_ciphertext text NULL,     -- sealed {hook_id, secret}, purpose git_hook
+  hook_secret_ciphertext text NULL,     -- sealed {hook_id, secret}, purpose git_hook; a hook the server
+                                        -- registers on a repository gets HMAC(secret, 'repository:'||provider id),
+                                        -- so one repository's hook cannot speak for another
   status text DEFAULT 'active' CHECK in ('active','suspended','token_expired','failing','revoked'),
   last_error text NULL CHECK in ('signature','processing','token_invalid','token_expired','suspended','uninstalled'),
   last_event_at timestamptz NULL,
@@ -2408,7 +2410,9 @@ verified one is unique. A claim queues `git.rematch_authors`, which sets `author
 organisation the account is in; removing a claim sets back to NULL what it matches, then
 re-matches from the account's remaining identities and verified address. An Org Admin removes only
 a claimed login, never a verified email. Confirmation links are limited to one per address per ten
-minutes and five an hour per account. Reviewers inside `git_pull_requests.reviewers` are matched
+minutes and five an hour per account. A login is unique per provider host across every
+organisation and needs no proof; accepted for v1 (owner, 25 Oct 2026), with provider-verified
+logins the planned successor. Reviewers inside `git_pull_requests.reviewers` are matched
 when written and are not re-matched.
 
 **What is stored.** A branch, commit or pull request is stored only when it references an issue
@@ -2455,7 +2459,14 @@ the account's verified email, then a claimed email or login; else the provider's
 received; a duplicate delivery id inserts nothing. A delivery over 1 MB is stored trimmed
 (per-commit file lists dropped, the first 100 commits kept) or, if still too large, as `{}`,
 with `truncated`. A failed apply is retried after 1, 4, 16 and 64 minutes and is `failed` after
-the fifth attempt; a replay resets `attempts` and `processed_at`.
+the fifth attempt; a replay resets `attempts` and `processed_at`. Every accepted delivery, a
+duplicate included, schedules its repository's drain, and `git.recover` (hourly) schedules any
+still pending after 15 minutes, so one stored whose queueing failed is not stranded. Branches,
+commits and pull requests are applied only while the connection is live and not suspended and the
+repository is still available to it (`connection_suspended`, `repository_removed` otherwise);
+lifecycle events (suspend, unsuspend, rename, removal) always apply. Discovery marks repositories
+removed only after a complete listing; every provider listing stops at 100 pages, a page seen
+twice, or two minutes.
 
 ### Automations
 

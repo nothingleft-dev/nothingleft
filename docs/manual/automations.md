@@ -34,8 +34,9 @@ it was when the event was sent.
   not just `ACME-12`. *Pull request merged* acts only on these unless you say otherwise.
 - **Into these branches** - a merge into `main` or `release/*`. Left out, the repository's merge
   branches count (its default branch, unless the repository says otherwise).
-- **All linked pull requests merged** - when ACME-12 has two pull requests, the first merge
-  leaves it alone. On by default for *Pull request merged*.
+- **No other pull request still open** - when ACME-12 has two open pull requests, the first merge
+  leaves it alone. A pull request closed without merging counts as abandoned, not as unfinished
+  work, so it never holds the issue open. On by default for *Pull request merged*.
 - **No other open pull requests** - a pull request closed without merging moves the issue back
   only if nothing else is still open for it. On by default for *Pull request closed*.
 - **Draft or not**, **to the default branch**, and **at least this many subtasks**.
@@ -49,7 +50,7 @@ status of your project:
 | --- | --- |
 | Start work on branch | A new branch for an issue not yet started moves it to your first *started* status (In Progress) |
 | Review on pull request | A pull request marked ready for review moves the issue to *In Review*, if your project has that status |
-| Close on merge | Merging the pull request that closes the issue, once all its pull requests are merged, moves it to your first *done* status (Fixed) |
+| Close on merge | Merging the pull request that closes the issue, once none of its other pull requests is still open, moves it to your first *done* status (Fixed) |
 | Reopen on revert | A merged revert moves a done issue to *Reopened* |
 | Resolve parent when subtasks are done | Resolving the last open subtask moves the parent to your first *done* status |
 
