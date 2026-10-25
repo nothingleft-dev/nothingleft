@@ -11,7 +11,8 @@ export type BuiltinColumnId =
   | 'created'
   | 'estimate'
   | 'points'
-  | 'votes';
+  | 'votes'
+  | 'development';
 
 /** A custom field's column is `custom:<slug>`, the form saved views and the CSV export use. */
 export type ColumnId = BuiltinColumnId | `custom:${string}`;
@@ -42,6 +43,7 @@ export const COLUMNS: readonly ColumnDef[] = [
   { id: 'estimate', label: 'Estimate', width: '72px', align: 'right', csv: 'estimation', sort: 'estimation' },
   { id: 'points', label: 'Story points', width: '84px', align: 'right', csv: 'story_points', sort: '{story points}' },
   { id: 'votes', label: 'Votes', width: '56px', align: 'right', csv: 'vote_count', sort: 'votes' },
+  { id: 'development', label: 'Development', width: '176px' },
 ];
 
 export const DEFAULT_COLUMNS: readonly ColumnId[] = ['status', 'assignee', 'due', 'updated'];
@@ -85,9 +87,9 @@ export const customColumnDef = ({ slug, name, type, decimals }: CustomColumn): C
   decimals,
 });
 
-/** The built-in columns, then the custom fields in their field order. */
-export const columnDefs = (custom: readonly CustomColumn[] = []): ColumnDef[] => [
-  ...COLUMNS,
+/** The built-in columns, then the custom fields in their field order. Development only where git is on (plan § 14). */
+export const columnDefs = (custom: readonly CustomColumn[] = [], git = false): ColumnDef[] => [
+  ...COLUMNS.filter(c => git || c.id !== 'development'),
   ...custom.map(customColumnDef),
 ];
 

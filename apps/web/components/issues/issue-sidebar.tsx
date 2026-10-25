@@ -14,6 +14,7 @@ import { MemberAvatar } from '@components/issues/member-avatar';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand } from '@components/issues/pickers';
 import { SidebarField } from '@components/issues/sidebar-field';
+import { DevelopmentField } from '@components/git/development-field';
 import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import type { TimeTracking } from '@components/issues/issue-activity';
 import { SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
@@ -46,9 +47,18 @@ interface IssueSidebarProps {
   canEdit: boolean;
   time: TimeTracking;
   timeZone?: string;
+  onOpenDevelopment?: () => void;
+  onLinkPullRequest?: () => void;
 }
 
-export function IssueSidebar({ issue, canEdit, time, timeZone }: IssueSidebarProps) {
+export function IssueSidebar({
+  issue,
+  canEdit,
+  time,
+  timeZone,
+  onOpenDevelopment,
+  onLinkPullRequest,
+}: IssueSidebarProps) {
   const [editing, setEditing] = useState<Editor>(null);
   const [draftAssignees, setDraftAssignees] = useState<string[]>([]);
   const [estimateError, setEstimateError] = useState<string | null>(null);
@@ -380,6 +390,10 @@ export function IssueSidebar({ issue, canEdit, time, timeZone }: IssueSidebarPro
       ) : null}
 
       <SidebarCustomFields issue={issue} canEdit={canEdit} timeZone={timeZone} />
+
+      {issue.project.git_enabled ? (
+        <DevelopmentField issue={issue} onOpen={onOpenDevelopment} onLink={onLinkPullRequest} />
+      ) : null}
 
       <div className="mx-2 mt-2 border-t pt-4 pb-1 text-2xs font-medium text-text-muted">Watching</div>
       <WatchersField issueKey={issue.key} count={issue.watcher_count} />
