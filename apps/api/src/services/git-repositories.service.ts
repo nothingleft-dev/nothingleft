@@ -12,6 +12,7 @@ import {
   type ProjectRepository,
   type UpdateRepositoryLink,
 } from '@nothingleft/types';
+import { systemContext, tenantContext } from '@nothingleft/db';
 import type {
   GitConnectionRow,
   GitConnectionsRepository,
@@ -23,7 +24,10 @@ import type {
 } from '@nothingleft/db';
 import { AppError } from '@lib/errors';
 import { connectionAuth, connectionName, providerFailure, providerOf, unsealHook, webhookUrl } from '@git/connection';
+import { GitProviderError } from '@git/http';
 import type { ProviderRegistry } from '@git/providers/index';
+import type { JobQueue } from '@lib/jobs';
+import type { GitLinksService } from '@services/git-links.service';
 import { can } from '@services/permissions';
 import type { AccessService, OrgAccess, ProjectAccess } from '@services/access';
 import type { InTenantTransaction } from '@services/transaction';
@@ -40,8 +44,17 @@ export interface GitRepositoriesDeps {
   analytics: Analytics;
   masterKey: Buffer;
   apiBaseUrl: string;
+  linker: Pick<GitLinksService, 'backfill' | 'reconcile'>;
+  queue: () => JobQueue;
   now?: () => Date;
 }
+
+export interface GitBackfillJob {
+  org_id: number;
+  repository_id: number;
+}
+
+const RECONCILE_ACTIVE_DAYS = 30;
 
 export function gitRepositoriesService(deps: GitRepositoriesDeps) {
   const { access, providers, connections, repositories, organizations, projects, inTransaction, masterKey } = deps;
@@ -252,6 +265,76 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
   return {
     effectiveBranches,
 
+    /** Reads a newly linked repository's recent pull requests and branches in, recording progress on the row. */
+    async backfill(job: GitBackfillJob): Promise<number> {
+      const ctx = tenantContext(job.org_id);
+      const repo = await repositories.findById(ctx, job.repository_id);
+      if (!repo) return 0;
+      const connection = await connections.findById(ctx, repo.connection_id);
+      if (!connection || connection.revoked_at) return 0;
+      const started = now().toISOString();
+      const state = (s: Partial<GitBackfill>): GitBackfill => ({
+        state: 'running',
+        pull_requests: 0,
+        branches: 0,
+        started_at: started,
+        finished_at: null,
+        error: null,
+        ...s,
+      });
+      await repositories.update(ctx, repo.id, { backfill_state: state({}) }, now());
+      try {
+        const done = await deps.linker.backfill(ctx, connection, repo);
+        await repositories.update(
+          ctx,
+          repo.id,
+          { backfill_state: state({ state: 'done', ...done, finished_at: now().toISOString() }) },
+          now(),
+        );
+        return done.pull_requests + done.branches;
+      } catch (error) {
+        const failure = error instanceof GitProviderError ? error.reason : 'internal';
+        await repositories.update(
+          ctx,
+          repo.id,
+          { backfill_state: state({ state: 'failed', error: failure, finished_at: now().toISOString() }) },
+          now(),
+        );
+        return 0;
+      }
+    },
+
+    /**
+     * Nightly: for every linked repository with a delivery in the last 30 days, re-reads its
+     * metadata, checks the hook we registered is still there, and re-reads its open pull requests.
+     */
+    async reconcileAll(at = now()): Promise<number> {
+      const since = at.getTime() - RECONCILE_ACTIVE_DAYS * 24 * 60 * 60 * 1000;
+      let applied = 0;
+      for (const connection of await connections.listLiveAll(systemContext('git.reconcile spans every organisation'))) {
+        const ctx = tenantContext(connection.org_id);
+        const provider = providerOf(providers, connection.provider);
+        const auth = connectionAuth(masterKey, connection);
+        const { rows } = await repositories.list(
+          ctx,
+          { connectionIds: [connection.id], linked: true },
+          { limit: 10_000, offset: 0 },
+        );
+        for (const repo of rows.filter(r => r.last_event_at && r.last_event_at.getTime() >= since)) {
+          try {
+            if (repo.provider_webhook_id && provider.supports.webhook_registration && auth.token) {
+              const present = await provider.webhookExists(auth, repo, repo.provider_webhook_id);
+              if (!present) await repositories.update(ctx, repo.id, { webhook_status: 'missing' }, at);
+            }
+            applied += await deps.linker.reconcile(ctx, connection, repo);
+          } catch {
+            // One repository the provider refuses tonight does not stop the others.
+          }
+        }
+      }
+      return applied;
+    },
+
     async list(
       principal: Principal,
       slug: string,
@@ -336,6 +419,24 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
       };
       if (Object.keys(settings).length) await repositories.update(project.ctx, repo.id, settings, now());
       await ensureHook(project.ctx, connection, repo);
+      if (input.backfill) {
+        const queued: GitBackfill = {
+          state: 'queued',
+          pull_requests: 0,
+          branches: 0,
+          started_at: null,
+          finished_at: null,
+          error: null,
+        };
+        await repositories.update(project.ctx, repo.id, { backfill_state: queued }, now());
+        await deps
+          .queue()
+          .send(
+            'git.backfill',
+            { org_id: project.ctx.orgId, repository_id: repo.id },
+            { startAfter: now(), singletonKey: `git-backfill:${repo.id}` },
+          );
+      }
       await recordLink(project, principal, 'repository_linked', repo);
       deps.analytics.capture(
         'git_repository_linked',

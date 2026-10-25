@@ -296,7 +296,10 @@ only (`auth.session_required` for a PAT), as is rotating a webhook secret, which
 organisation's connections; anyone else names a project they administer (the link picker always
 has one). A repository's settings (`merge_base_branches`, `match_all_projects`) belong to the
 repository, so a Project Admin of any project it is linked to may change them. Nothing is linked
-or unlinked in an archived project. A delivery from org A's connection can only reach org A's
+or unlinked in an archived project. **Linking a pull request by hand** takes one from a repository
+the issue's project can reference — linked to it, or set to match every project — and no other:
+a repository the connection merely sees, or one linked to another project, answers
+`git.url_not_connected`, so a Contributor cannot read its pull requests into their project. A delivery from org A's connection can only reach org A's
 repositories and issues: the webhook routes resolve the connection first, by its hook id or its
 app installation, and every lookup after that is within it.
 

@@ -9,6 +9,8 @@ export const ActivityActorSchema = z.object({
   former_member: z.boolean(),
   // The account is deactivated: the real name still renders, greyed out.
   deactivated: z.boolean(),
+  // The system, not a person: a git event or an automation. Renders with the bot's name and mark.
+  system: z.boolean().optional(),
 });
 export type ActivityActor = z.infer<typeof ActivityActorSchema>;
 

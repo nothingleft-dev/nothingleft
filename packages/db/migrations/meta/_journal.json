@@ -15,6 +15,13 @@
       "when": 1792896743095,
       "tag": "0001_git_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792899913255,
+      "tag": "0002_git_links",
+      "breakpoints": true
     }
   ]
 }

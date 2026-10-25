@@ -11,6 +11,9 @@ import {
   GitRepositorySchema,
   GitWebhookEventDetailSchema,
   GitWebhookEventSchema,
+  GitPullRequestDetailSchema,
+  IssueDevelopmentSchema,
+  LinkPullRequestSchema,
   LinkRepositorySchema,
   ProjectRepositorySchema,
   ReplayGitEventSchema,
@@ -23,6 +26,7 @@ import { GIT_CONNECT_STATE_TTL_SECONDS } from '@config/constants';
 import { orgHints } from '@lib/request';
 import { requireAuth } from '@middleware/auth';
 import type { GitConnectionsService } from '@services/git-connections.service';
+import type { GitDevelopmentService } from '@services/git-development.service';
 import type { GitIngestService } from '@services/git-ingest.service';
 import type { GitRepositoriesService } from '@services/git-repositories.service';
 
@@ -30,6 +34,7 @@ type Deps = {
   connections: GitConnectionsService;
   repositories: GitRepositoriesService;
   ingest: GitIngestService;
+  development: GitDevelopmentService;
   cookie: { secure: boolean; domain?: string | undefined };
 };
 
@@ -45,6 +50,10 @@ const OrgRepositoryParams = SlugParams.extend({ repository: RepositoryRef });
 const ProjectParams = z.object({ key: z.string().min(1).max(20) });
 const ProjectRepositoryParams = ProjectParams.extend({ repository: RepositoryRef });
 const EventParams = SlugParams.extend({ id: z.coerce.number().int().positive() });
+const IssueParams = z.object({ key: z.string().min(1).max(40) });
+const LinkParams = IssueParams.extend({ link_id: z.coerce.number().int().positive() });
+const PullRequestParams = z.object({ repository: RepositoryRef, number: z.coerce.number().int().positive() });
+const DevelopmentResponse = successEnvelope(IssueDevelopmentSchema);
 
 const ConnectCallbackSchema = z.object({
   state: z.string().min(1).max(200),
@@ -61,7 +70,10 @@ const page = (query: { limit: number; offset: number }, total: number, length: n
   has_more: query.offset + length < total,
 });
 
-const gitRoutes: FastifyPluginAsyncZod<Deps> = async (app, { connections, repositories, ingest, cookie }) => {
+const gitRoutes: FastifyPluginAsyncZod<Deps> = async (
+  app,
+  { connections, repositories, ingest, development, cookie },
+) => {
   app.addHook('preHandler', requireAuth);
 
   const stateCookie = {
@@ -281,6 +293,43 @@ const gitRoutes: FastifyPluginAsyncZod<Deps> = async (app, { connections, reposi
           request.params.key,
           request.params.repository,
           request.query.connection,
+          orgHints(request),
+        ),
+      ),
+  );
+
+  app.get(
+    '/v1/issues/:key/development',
+    { schema: { params: IssueParams, response: { 200: DevelopmentResponse } } },
+    async (request, reply) =>
+      reply.ok(await development.development(request.principal!, request.params.key, orgHints(request))),
+  );
+
+  app.post(
+    '/v1/issues/:key/development/links',
+    { schema: { params: IssueParams, body: LinkPullRequestSchema, response: { 200: DevelopmentResponse } } },
+    async (request, reply) =>
+      reply.ok(await development.link(request.principal!, request.params.key, request.body, orgHints(request))),
+  );
+
+  app.delete(
+    '/v1/issues/:key/development/links/:link_id',
+    { schema: { params: LinkParams, response: { 200: DevelopmentResponse } } },
+    async (request, reply) =>
+      reply.ok(
+        await development.unlink(request.principal!, request.params.key, request.params.link_id, orgHints(request)),
+      ),
+  );
+
+  app.get(
+    '/v1/git/pull-requests/:repository/:number',
+    { schema: { params: PullRequestParams, response: { 200: successEnvelope(GitPullRequestDetailSchema) } } },
+    async (request, reply) =>
+      reply.ok(
+        await development.pullRequest(
+          request.principal!,
+          request.params.repository,
+          request.params.number,
           orgHints(request),
         ),
       ),

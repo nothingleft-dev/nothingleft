@@ -49,6 +49,7 @@ export async function claimDrafts(repos: Repos, claim: Claim, publicIds: readonl
   const wanted = [...new Set(publicIds ?? [])];
   if (wanted.length === 0) return;
   const { ctx, issueId, actorId } = claim.change;
+  if (actorId === null) throw new Error('only a person claims draft uploads');
   const drafts = await claimable(repos, ctx, actorId, wanted);
   await requireRoomOnIssue(repos, ctx, issueId, drafts.length, claim.key);
 

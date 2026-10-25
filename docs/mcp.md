@@ -403,7 +403,8 @@ bucket's secret or act on it, all are session only, and three confirm with step-
 
 ## Built in 7 (git integration)
 
-25 Oct 2026, first milestone (connections). Ten tools; 105 in all.
+25 Oct 2026, first milestone (connections): ten tools. Second milestone (links): four more; 109 in
+all.
 
 - **Connections are read and repaired, never created, by an agent.** Connecting carries a
   token or a provider's install flow, so `POST …/git/connections`, the install start and
@@ -423,6 +424,14 @@ bucket's secret or act on it, all are session only, and three confirm with step-
   back a webhook the server registered, with `rehook: true`. All `admin:org`.
 - **The webhook routes are a new exempt category, `integration_inbound`**: called by the
   provider, never by a person.
+- **`get_issue_development` answers "is PH-675 merged?"**: the issue's pull requests by
+  repository with state, CI, review and whether each closes it, its branches and commits; provider
+  text fenced as untrusted data. `get_issue` adds one *Development* line when the project has a
+  linked repository, and nothing otherwise. `get_pull_request` (`acme/web#42`) adds every check and
+  the linked issues the caller can read; it needs `org` when the caller has several organisations,
+  since a pull request carries no project key.
+- **`link_pull_request` takes the pull request's URL**; `unlink_pull_request` takes `acme/web#42`,
+  finds the link on the issue's panel and asks first. Both `issues:write`, Contributor and up.
 
 ## Authentication
 
@@ -681,7 +690,9 @@ link when ready) — `admin:org`.
 
 ### Development
 
-Built in 7 — [§ Built in 7](#built-in-7-git-integration). `list_git_connections`,
+Built in 7 — [§ Built in 7](#built-in-7-git-integration). `get_issue_development`,
+`get_pull_request` (`issues:read`); `link_pull_request`, `unlink_pull_request` (confirmation) —
+`issues:write`; `list_git_connections`,
 `refresh_git_connection`, `remove_git_connection` (confirmation), `resync_repository`,
 `list_git_events`, `replay_git_event` — `admin:org`; `list_repositories`, `link_repository`,
 `update_repository_link`, `unlink_repository` (confirmation) — `admin:project` (reading what is

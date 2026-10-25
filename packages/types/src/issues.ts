@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GitDevelopmentSummarySchema } from './git.ts';
 import { AttachmentIdsSchema } from './attachments.ts';
 import {
   ISSUE_ACTIVITY_KINDS,
@@ -45,7 +46,8 @@ export type SubtaskProgress = z.infer<typeof SubtaskProgressSchema>;
 
 export const IssueSchema = z.object({
   key: z.string(),
-  project: z.object({ key: z.string(), name: z.string() }),
+  // git_enabled: the project has a linked repository; everything git-related is hidden otherwise.
+  project: z.object({ key: z.string(), name: z.string(), git_enabled: z.boolean() }),
   title: z.string(),
   description_md: z.string().nullable(),
   status: IssueStatusRefSchema,
@@ -72,6 +74,8 @@ export const IssueSchema = z.object({
   attachment_count: z.number().int(),
   watcher_count: z.number().int(),
   custom_fields: z.array(IssueCustomFieldValueSchema),
+  // Null when the project is not git-enabled.
+  development: GitDevelopmentSummarySchema.nullable(),
   // The caller's own personal signals.
   me: z.object({ starred: z.boolean(), voted: z.boolean(), watching: z.boolean() }),
   created_at: z.string(),

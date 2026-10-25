@@ -627,7 +627,7 @@ export function githubProvider(deps: ProviderDeps & { app: GitHubAppConfig | nul
   return {
     kind: 'github',
     defaultBaseUrl: GITHUB_COM,
-    supports: { checks: true, reviews: true, compare: true, webhook_registration: false },
+    supports: { checks: true, reviews: true, compare: true, webhook_registration: false, reports_forced_push: true },
     app: appInstall,
 
     verifyWebhook(headers, rawBody, secret) {
@@ -654,6 +654,11 @@ export function githubProvider(deps: ProviderDeps & { app: GitHubAppConfig | nul
       } catch {
         return [];
       }
+    },
+
+    pullRequestFromUrl(url) {
+      const match = /^\/([^/]+\/[^/]+)\/pull\/(\d{1,9})(?:\/|$)/.exec(url.pathname);
+      return match ? { full_name: decodeURIComponent(match[1]!), number: Number(match[2]) } : null;
     },
 
     repositoryFromPayload(_eventName, payload) {

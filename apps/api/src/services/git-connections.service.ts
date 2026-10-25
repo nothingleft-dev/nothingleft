@@ -333,7 +333,12 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
           connect_kind: connectKinds[0]!,
           connect_kinds: connectKinds,
           default_base_url: p.app?.configured ? p.app.baseUrl : p.defaultBaseUrl,
-          supports: { ...p.supports },
+          supports: {
+            checks: p.supports.checks,
+            reviews: p.supports.reviews,
+            compare: p.supports.compare,
+            webhook_registration: p.supports.webhook_registration,
+          },
         };
       });
     },

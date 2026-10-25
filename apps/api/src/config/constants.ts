@@ -126,3 +126,4 @@ export const GIT_EVENT_RETENTION_DAYS = 7;
 export const GIT_CONNECT_STATE_TTL_SECONDS = 10 * 60;
 export const GIT_PURGE_BATCH = 5_000;
 export const JOB_GIT_PURGE_CRON = '20 3 * * *'; // nightly, 03:20 UTC: git.purge
+export const JOB_GIT_RECONCILE_CRON = '40 2 * * *'; // nightly, 02:40 UTC: git.reconcile

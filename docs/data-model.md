@@ -176,6 +176,10 @@ The full list of these integrity keys:
 | `git_repositories` | `(id, org_id)` | `(connection_id, org_id)` → `git_connections` |
 | `project_repositories` | — | `(project_id, org_id)` → `projects`; `(repository_id, org_id)` → `git_repositories` |
 | `git_webhook_events` | — | `(connection_id, org_id)` → `git_connections`; `(repository_id, org_id)` → `git_repositories` |
+| `git_branches`, `git_commits`, `git_pull_requests` | `(id, org_id)` | `(repository_id, org_id)` → `git_repositories` |
+| `git_checks` | — | `(repository_id, org_id)` → `git_repositories` |
+| `git_pull_request_commits` | — | `(pull_request_id, org_id)` → `git_pull_requests`; `(commit_id, org_id)` → `git_commits` |
+| `issue_git_links` | — | `(issue_id, org_id)` → `issues`; `(repository_id, org_id)` → `git_repositories` |
 
 Every one cascades on delete, except the value-table, parent and sprint keys on
 `issues`, the parent key on `articles`, the work-type key on `work_items`, the option key on `issue_field_values`, the
@@ -1188,12 +1192,14 @@ As built in 1d (owner decisions, 24 Sep 2026):
 
 ```
 issue_activity(
-  id, org_id, issue_id, actor_id,
+  id, org_id, issue_id,
+  actor_id NULL,                     -- NULL: the system (a git event, an automation); 7
   change_group_id  uuid,           -- v7, one per save; groups its rows
   kind: 'created' | 'field_changed' | 'commented' | 'comment_edited' |
         'comment_deleted' | 'linked' | 'unlinked' | 'attached' |
         'detached' | 'time_logged' | 'tagged' | 'untagged' |
-        'sprint_changed' | 'parent_changed' | 'deleted' | 'restored',
+        'sprint_changed' | 'parent_changed' | 'deleted' | 'restored' |
+        'git_linked' | 'git_unlinked' | 'git_pr_changed',
   field        text NULL,          -- e.g. 'status', 'assignee', 'custom:severity'
   old_value    jsonb NULL,
   new_value    jsonb NULL,
@@ -1262,6 +1268,17 @@ the row records why, and it coalesces like any other change. The API answers eac
 row with `people`, the members its snapshots name by username resolved at read time
 (former members included), so a removed assignee still renders by name — custom user and
 multi-user fields' rows included (Phase 4).
+
+**Git** (7, 25 Oct 2026). `git_linked` / `git_unlinked` record a branch, commit or pull request
+joining or leaving the issue, with `new_value` / `old_value` a snapshot of it — `{"kind":
+"pull_request", "repo": "acme/web", "number": 42, "title": "…", "url": "…", "state": "open",
+"review": "approved", "ci": "passing", "sources": ["pr_title"], "intent": "closes"}`; a commit has
+`sha` and `title`, a branch `name`. `git_pr_changed` records a linked pull request's state, review
+or CI moving, `old_value` and `new_value` the snapshot before and after, and **coalesces per pull
+request** over the same five-minute window: twelve matrix jobs make one row, and a change that
+returns to where it started erases the row. Rows written by the system have `actor_id` NULL and
+render as the bot (`actor.system` in the catalogue, a generated mark); a link made or removed by
+hand carries the person. A system row never coalesces with a person's.
 
 **Immutable** once outside the coalescing window. Never updated, never deleted
 otherwise. It renders the issue history
@@ -2332,6 +2349,91 @@ returned by any route; the hook secret is shown once, at creation and at rotatio
 id is looked up by its hash, like a token, but is sealed beside the secret too, because
 registering the hook on a repository linked later needs the URL again.
 
+Second milestone (links, 25 Oct 2026, migration `0002_git_links`):
+
+```
+git_branches(id, org_id, repository_id, name, head_sha NULL, created_at, updated_at, deleted_at NULL,
+  UNIQUE (id, org_id), UNIQUE (repository_id, name))
+git_commits(id, org_id, repository_id, sha, message_subject, message_full NULL (first 4 KB),
+  author_name, author_email, author_login NULL, author_provider_id NULL, author_user_id → users NULL,
+  committed_at, html_url, superseded_at NULL, created_at,
+  UNIQUE (id, org_id), UNIQUE (repository_id, sha))
+git_pull_requests(id, org_id, repository_id, number, title,
+  state CHECK in ('draft','open','merged','closed'),
+  author_login NULL, author_provider_id NULL, author_avatar_url NULL, author_user_id → users NULL,
+  head_repo_full_name NULL, head_ref, head_sha, base_ref, merge_commit_sha NULL,
+  merged_by_login NULL, merged_by_user_id → users NULL, is_revert, html_url,
+  review_state CHECK in ('none','review_requested','approved','changes_requested'), reviewers jsonb,
+  ci_state CHECK in ('none','running','passing','failing'), ci_summary jsonb,
+  commits_fetched_for_sha NULL, commits_total NULL, additions/deletions/changed_files NULL,
+  provider_updated_at, opened_at, merged_at NULL, closed_at NULL, created_at, updated_at,
+  UNIQUE (id, org_id), UNIQUE (repository_id, number))
+git_pull_request_commits(pull_request_id, commit_id, org_id, PRIMARY KEY (pull_request_id, commit_id))
+git_checks(id, org_id, repository_id, sha, external_id, name,
+  status CHECK in ('queued','in_progress','completed'), conclusion NULL CHECK in (…GitHub's eight…),
+  details_url NULL, started_at NULL, completed_at NULL, updated_at,
+  UNIQUE (repository_id, sha, external_id))
+issue_git_links(id, org_id, issue_id, repository_id,
+  target_type CHECK in ('branch','commit','pull_request'), target_id,
+  sources text[], intent CHECK in ('mention','closes','revert'), removed_sources text[] DEFAULT '{}',
+  created_by → users NULL, created_at, updated_at, removed_at NULL, removed_by → users NULL,
+  UNIQUE (issue_id, target_type, target_id))
+git_identities(id, user_id → users, provider, base_url, provider_user_id NULL, login NULL, email NULL,
+  verified_by CHECK in ('provider','email','claim'), verified_at NULL, created_at,
+  UNIQUE (provider, base_url, provider_user_id) WHERE provider_user_id IS NOT NULL,
+  UNIQUE (provider, base_url, lower(login)) WHERE login IS NOT NULL,
+  UNIQUE (lower(email)) WHERE email IS NOT NULL AND verified_at IS NOT NULL,
+  CHECK (num_nonnulls(provider_user_id, login, email) >= 1))
+```
+
+Every repository-owned table keys `(repository_id, org_id)` → `git_repositories` and cascades;
+`git_pull_request_commits` keys both sides the same way; `issue_git_links` keys `(issue_id,
+org_id)` → `issues` and `(repository_id, org_id)` → `git_repositories`. `target_id` names a row of
+the table `target_type` says, so it has no foreign key: `git.purge` deletes a commit or pull
+request and its link rows in one statement. `git_identities` has no `org_id`, as `users` has
+none: an identity is a person's, and matches inside an organisation only while its owner is a
+member there.
+
+**What is stored.** A branch, commit or pull request is stored only when it references an issue
+of a project the repository is linked to (every project of the organisation with
+`match_all_projects`), or belongs to a pull request that does; a push naming no issue writes
+nothing but its delivery row. Nothing is ever created from git: a key whose number does not exist
+is dropped; a soft-deleted issue's links are kept and hidden until it is restored.
+
+**References.** A key matches case-insensitively when not glued to other text:
+`(?<![A-Za-z0-9_-])(KEYS)-(\d{1,7})(?![A-Za-z0-9_/])`, so `feat/ph-675-login`, `[PH-675]` and
+`(ph-675)` match and `alpha-ph-675`, `ph-675x`, `ph-675/notes` do not; the web app's own issue
+URLs count too. A closing keyword (`close`, `fix`, `resolve`, `implement` and their `-s`/`-d`
+forms, optional colon) closes its own run of keys, `Fixes PH-1, PH-2 and PH-3`. A pull request
+body's code is not read; at most 50 references per text (`packages/format`, `findIssueReferences`).
+
+**Links follow their sources.** Each link records which texts named the issue (`branch_name`,
+`commit_message`, `pr_title`, `pr_body`, `pr_commits`, `merge_commit`, `manual`); every event
+recomputes the sources it knows and keeps the rest. A link left with none is removed
+(`removed_at`, `git_unlinked`); `manual` goes only by a person. A link a person removes keeps
+`removed_sources`, and comes back only for a source it did not have then — for a pull request's
+commits, commits pushed after the unlink (recorded as `pr_commits@<head sha>`). A link the system
+removed (its last source went) comes back as soon as any source names the issue again. A merged pull
+request's merge commit is linked to every issue the pull request is (`merge_commit`), so a squash
+whose message lost the key still shows what landed. A force push supersedes the commits the
+provider's compare says are gone (`superseded_at`), which unlinks their `commit_message` links;
+GitLab does not say a push was forced, so every push to a stored branch is compared there.
+
+**Order and staleness.** A pull request event older than the stored row's `provider_updated_at`
+changes nothing (the nightly reconcile catches up); checks are keyed by commit and kept for any commit of a linked repository (a check may arrive
+before the pull request moves to its commit), and a report older than the stored one is dropped,
+so a late event for an old head never moves the current rollup.
+
+**Rollups** are computed when read, from the live links: CI per pull request over its head's
+checks (`failing` > `running` > `passing` > `none`), review as the latest review per reviewer
+(`changes_requested` > `approved` with none pending > `review_requested` > `none`), and the issue's
+badge (`reverted`, `merged`, `ci_failing`, `changes_requested`, `approved`, `in_review`, `draft`,
+`branch_active`, `none`), carried on the issue and the board card.
+
+**Authors.** A commit or pull request author maps to a member, at write time, by provider user id
+(a claimed identity, or sign-in's GitHub id on github.com, read only), a GitHub `noreply` address,
+the account's verified email, then a claimed email or login; else the provider's login shows.
+
 **Deliveries.** Every accepted delivery is a row, applied by a per-repository job in the order
 received; a duplicate delivery id inserts nothing. A delivery over 1 MB is stored trimmed
 (per-commit file lists dropped, the first 100 commits kept) or, if still too large, as `{}`,
@@ -2374,6 +2476,7 @@ Nothing in the product deletes these on a user's behalf, so a job does.
 | `notifications` | read 30 days after reading, unread 90 days after writing | `notifications.purge`, nightly at 03:15 UTC |
 | `webhook_deliveries` (v2) | 30 days | `webhooks.purge`, nightly |
 | `git_webhook_events` | 7 days after `received_at`, whatever their status (7) | `git.purge`, nightly at 03:20 UTC |
+| `git_checks`, `git_commits`, `git_pull_requests` | checks of a commit that heads no pull request after 7 days; superseded commits after 30; commits and pull requests no live link has needed for 90 days, with their link rows (7) | `git.purge`, nightly at 03:20 UTC |
 | `one_time_tokens` | on expiry | `tokens.gc`, hourly |
 | `sessions` | on expiry | `session.gc`, hourly |
 

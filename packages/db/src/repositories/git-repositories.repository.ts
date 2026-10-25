@@ -3,6 +3,7 @@ import type { Queryable } from '../client.ts';
 import {
   git_repositories,
   project_repositories,
+  projects,
   type GitRepositoryRow,
   type NewGitRepositoryRow,
   type ProjectRepositoryRow,
@@ -130,6 +131,14 @@ export function gitRepositoriesRepository(db: Queryable) {
         .from(git_repositories)
         .where(and(inOrg(ctx), eq(git_repositories.id, id)));
       return row;
+    },
+
+    async findByIds(ctx: TenantContext, ids: readonly number[]): Promise<GitRepositoryRow[]> {
+      if (ids.length === 0) return [];
+      return db
+        .select()
+        .from(git_repositories)
+        .where(and(inOrg(ctx), inArray(git_repositories.id, [...ids])));
     },
 
     async findByProviderId(
@@ -305,6 +314,27 @@ export function gitRepositoriesRepository(db: Queryable) {
             inArray(project_repositories.repository_id, [...repositoryIds]),
           ),
         );
+    },
+
+    /**
+     * The projects a repository's references may name: those it is linked to, or with
+     * `everyProject` (the monorepo setting) every project of the organisation.
+     */
+    async scopeProjects(
+      ctx: TenantContext,
+      repositoryId: number,
+      everyProject: boolean,
+    ): Promise<{ id: number; key: string; is_archived: boolean }[]> {
+      const columns = { id: projects.id, key: projects.key, is_archived: projects.is_archived };
+      if (everyProject) return db.select(columns).from(projects).where(eq(projects.org_id, ctx.orgId));
+      return db
+        .select(columns)
+        .from(projects)
+        .innerJoin(
+          project_repositories,
+          and(eq(project_repositories.project_id, projects.id), eq(project_repositories.org_id, projects.org_id)),
+        )
+        .where(and(eq(projects.org_id, ctx.orgId), eq(project_repositories.repository_id, repositoryId)));
     },
 
     /** Linked repositories of a connection whose webhook we registered, for re-registration and removal. */

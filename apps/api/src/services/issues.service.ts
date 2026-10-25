@@ -1,3 +1,4 @@
+import type { DevelopmentReader } from '@services/git-development';
 import {
   ISSUE_CSV_COLUMNS,
   ISSUE_REF_PICKER_LIMIT,
@@ -115,6 +116,7 @@ export interface IssuesDeps {
   attachments: AttachmentsRepository;
   sprints: SprintsRepository;
   customFields: CustomFieldsRepository;
+  development: DevelopmentReader;
   /** Injected so coalescing can be tested across its window without waiting. */
   now?: () => Date;
 }
@@ -416,6 +418,7 @@ export function issuesService(deps: IssuesDeps) {
       rollups,
       catalogue,
       fieldValues,
+      development,
     ] = await Promise.all([
       schemaOf(ctx, projectIds, preloaded.values),
       issues.listAssignees(ctx, ids),
@@ -436,6 +439,7 @@ export function issuesService(deps: IssuesDeps) {
       issues.storyPointsRollup(ctx, ids),
       preloaded.catalogue ?? loadCatalogue(deps.customFields, ctx, projectIds),
       deps.customFields.listValues(ctx, ids),
+      deps.development.summaries(ctx, unique),
     ]);
     const valuePeople = await issues.findPeople(ctx, userIdsIn(fieldValues));
     const person = new Map([...people, ...valuePeople].map(p => [p.user.id, p]));
@@ -454,7 +458,7 @@ export function issuesService(deps: IssuesDeps) {
       const ownValues = valuesOf.get(row.id) ?? [];
       return {
         key: formatIssueKey(key, row.key_number),
-        project: { key, name },
+        project: { key, name, git_enabled: development.enabled.has(row.project_id) },
         title: row.title,
         description_md: row.description_md,
         status: statusRef(statusById.get(row.status_id)!),
@@ -479,6 +483,7 @@ export function issuesService(deps: IssuesDeps) {
         watcher_count: watchers.get(row.id) ?? 0,
         attachment_count: files.get(row.id) ?? 0,
         custom_fields: issueCustomFields(catalogue, row, ownValues, refs),
+        development: development.byIssue.get(row.id) ?? null,
         me: signals.get(row.id) ?? { starred: false, voted: false, watching: false },
         created_at: row.created_at.toISOString(),
         updated_at: row.updated_at.toISOString(),
@@ -551,7 +556,7 @@ export function issuesService(deps: IssuesDeps) {
     const { catalogue } = preloaded;
     const ids = [...new Set(rows.map(r => r.id))];
     const estimated = catalogue.roles.get(project.project.id)?.estimation != null;
-    const [values, assignees, parents, tagRows, subtasks, fieldValues] = await Promise.all([
+    const [values, assignees, parents, tagRows, subtasks, fieldValues, development] = await Promise.all([
       schemaOf(ctx, [project.project.id], preloaded.values),
       issues.listAssignees(ctx, ids),
       issues.keyNumbers(
@@ -561,6 +566,7 @@ export function issuesService(deps: IssuesDeps) {
       tags.listForIssues(ctx, ids),
       issues.subtaskProgress(ctx, ids),
       estimated ? deps.customFields.listValues(ctx, ids) : [],
+      deps.development.summaries(ctx, rows),
     ]);
     const statusById = byId(values.statuses);
     const priorityById = byId(values.priorities);
@@ -585,6 +591,7 @@ export function issuesService(deps: IssuesDeps) {
         parent: parentNumber === undefined ? null : formatIssueKey(key, parentNumber),
         subtasks: subtasks.get(row.id) ?? { resolved: 0, total: 0 },
         resolved: row.resolved_at !== null,
+        development: development.byIssue.get(row.id)?.rollup ?? null,
       };
     });
   }
@@ -1603,10 +1610,9 @@ export function issuesService(deps: IssuesDeps) {
           return {
             id: r.activity.id,
             kind: r.activity.kind as IssueActivityKind,
-            actor: {
-              ...access.memberRef(r.actor, r.actor_membership),
-              username: r.actor_membership?.username ?? null,
-            },
+            actor: r.actor
+              ? { ...access.memberRef(r.actor, r.actor_membership), username: r.actor_membership?.username ?? null }
+              : access.systemActor(),
             change_group_id: r.activity.change_group_id,
             field: r.activity.field,
             old_value: shown(r.activity.kind, r.activity.old_value ?? null),

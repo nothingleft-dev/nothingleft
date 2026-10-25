@@ -7515,6 +7515,83 @@ paths:
         '401': { description: '`git.signature_invalid`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /v1/issues/{key}/development:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    get:
+      summary: The branches, commits and pull requests that reference the issue
+      description: |
+        Anyone who reads the issue; a token needs `issues:read`. Grouped by repository: pull
+        requests with their commits (superseded ones left out), branches with no open pull request
+        of their own, and commits that belong to none of the pull requests shown. Every URL is on its
+        connection's host; titles and messages are the provider's plain text. `git_enabled` false
+        means the project has no linked repository.
+      tags: [git]
+      responses:
+        '200': { description: 'The development panel.', content: { application/json: { schema: { $ref: '#/components/schemas/IssueDevelopmentEnvelope' } } } }
+        '404': { $ref: '#/components/responses/IssueNotFound' }
+
+  /v1/issues/{key}/development/links:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+    post:
+      summary: Link a pull request by its URL
+      description: |
+        Contributors and up; a token needs `issues:write`. The URL must be a pull request (GitHub)
+        or merge request (GitLab) of a repository one of the organisation's live connections can see;
+        one never stored before is read from the provider. The link's source is `manual`: no event
+        removes it, only a person. Writes `git_linked` with the person as actor.
+      tags: [git]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [url], properties: { url: { type: string, format: uri } } } } }
+      responses:
+        '200': { description: 'The development panel after the link.', content: { application/json: { schema: { $ref: '#/components/schemas/IssueDevelopmentEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`issue.not_found`, `git.pull_request_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`project.archived`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '422': { description: '`git.url_not_connected`, `git.url_not_pull_request` (`field: url`).', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/issues/{key}/development/links/{link_id}:
+    parameters:
+      - $ref: '#/components/parameters/IssueKey'
+      - { name: link_id, in: path, required: true, schema: { type: integer, minimum: 1 }, description: 'The `link_id` the panel shows.' }
+    delete:
+      summary: Unlink a branch, commit or pull request
+      description: |
+        Contributors and up; a token needs `issues:write`. Any link, found or made by hand. Its
+        sources are remembered: the same reference never brings it back, a new one does (for a pull
+        request's commits, commits pushed after the unlink count as new). Writes `git_unlinked` with
+        the person as actor.
+      tags: [git]
+      responses:
+        '200': { description: 'The development panel after the unlink.', content: { application/json: { schema: { $ref: '#/components/schemas/IssueDevelopmentEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`issue.not_found`, `git.link_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/git/pull-requests/{repository}/{number}:
+    parameters:
+      - $ref: '#/components/parameters/GitRepositoryRef'
+      - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      summary: One pull request with its checks
+      description: |
+        In the current organisation (`X-Organization` for a token). Readable by anyone who can read
+        an issue it is linked to; otherwise `404`. Its checks are those of its current head; `issues`
+        lists the keys of linked issues the caller can read.
+      tags: [git]
+      responses:
+        '200':
+          description: The pull request.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/GitPullRequestDetail' }
+        '404': { description: '`git.pull_request_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -7976,15 +8053,16 @@ components:
       example: { Billable: 'Yes' }
     Issue:
       type: object
-      required: [key, project, title, description_md, status, priority, type, assignees, created_by, updated_by, parent, tags, estimate_minutes, spent_minutes, story_points, story_points_rollup, sprint, subtasks, start_date, due_date, resolved_at, vote_count, comment_count, attachment_count, watcher_count, custom_fields, me, created_at, updated_at, deleted_at, restorable_until]
+      required: [key, project, title, description_md, status, priority, type, assignees, created_by, updated_by, parent, tags, estimate_minutes, spent_minutes, story_points, story_points_rollup, sprint, subtasks, start_date, due_date, resolved_at, vote_count, comment_count, attachment_count, watcher_count, custom_fields, development, me, created_at, updated_at, deleted_at, restorable_until]
       properties:
         key: { type: string, example: PMS-118 }
         project:
           type: object
-          required: [key, name]
+          required: [key, name, git_enabled]
           properties:
             key: { type: string }
             name: { type: string }
+            git_enabled: { type: boolean, description: 'The project has a linked repository. Everything git-related is hidden otherwise.' }
         title: { type: string }
         description_md: { type: [string, 'null'], description: Markdown. }
         status:
@@ -8031,6 +8109,9 @@ components:
         vote_count: { type: integer }
         comment_count: { type: integer }
         attachment_count: { type: integer, description: 'Ready files on the issue, its comments and its work items; drafts and pending uploads excluded.' }
+        development:
+          description: 'The development badge and counts; null when the project is not git-enabled.'
+          oneOf: [{ $ref: '#/components/schemas/GitDevelopmentSummary' }, { type: 'null' }]
         watcher_count: { type: integer }
         custom_fields:
           type: array
@@ -8059,7 +8140,7 @@ components:
         id: { type: integer }
         kind:
           type: string
-          enum: [created, field_changed, commented, comment_edited, comment_deleted, linked, unlinked, attached, detached, time_logged, tagged, untagged, sprint_changed, parent_changed, deleted, restored]
+          enum: [created, field_changed, commented, comment_edited, comment_deleted, linked, unlinked, attached, detached, time_logged, tagged, untagged, sprint_changed, parent_changed, deleted, restored, git_linked, git_unlinked, git_pr_changed]
         actor:
           type: object
           required: [username, name, avatar_url, former_member, deactivated]
@@ -8069,6 +8150,7 @@ components:
             avatar_url: { type: [string, 'null'] }
             former_member: { type: boolean }
             deactivated: { type: boolean, description: The account is deactivated; render the real name greyed. }
+            system: { type: boolean, description: 'Present and true when the system acted (a git event or an automation): `name` is the bot''s, never a member.' }
         change_group_id: { type: string, format: uuid }
         field: { type: [string, 'null'], example: status }
         old_value:
@@ -9124,7 +9206,7 @@ components:
             data: { $ref: '#/components/schemas/Board' }
     BoardCard:
       type: object
-      required: [key, title, status, priority, type, assignees, tags, due_date, story_points, estimate_minutes, parent, subtasks, resolved]
+      required: [key, title, status, priority, type, assignees, tags, due_date, story_points, estimate_minutes, parent, subtasks, resolved, development]
       properties:
         key: { type: string }
         title: { type: string }
@@ -9139,6 +9221,7 @@ components:
         parent: { type: [string, 'null'] }
         subtasks: { $ref: '#/components/schemas/SubtaskProgress' }
         resolved: { type: boolean }
+        development: { type: [string, 'null'], enum: [merged, ci_failing, changes_requested, approved, in_review, draft, branch_active, reverted, none, null], description: The development badge; null when the project is not git-enabled. }
     BoardViewEnvelope:
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
@@ -10072,6 +10155,135 @@ components:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - properties:
             data: { type: object, required: [accepted], properties: { accepted: { type: boolean } } }
+    GitDevelopmentSummary:
+      type: object
+      required: [rollup, pull_requests, commits, branches, repositories]
+      properties:
+        rollup: { type: string, enum: [merged, ci_failing, changes_requested, approved, in_review, draft, branch_active, reverted, none] }
+        pull_requests: { type: integer }
+        commits: { type: integer }
+        branches: { type: integer }
+        repositories: { type: integer }
+    GitAuthor:
+      type: object
+      required: [member, login, name, avatar_url]
+      properties:
+        member: { oneOf: [{ $ref: '#/components/schemas/MemberRef' }, { type: 'null' }], description: 'Set when the provider identity maps to a member; else render the login with the provider''s icon.' }
+        login: { type: [string, 'null'] }
+        name: { type: [string, 'null'] }
+        avatar_url: { type: [string, 'null'] }
+    GitLinkInfo:
+      type: object
+      required: [link_id, sources, intent, linked_at]
+      properties:
+        link_id: { type: integer }
+        sources: { type: array, items: { type: string, enum: [branch_name, commit_message, pr_title, pr_body, pr_commits, merge_commit, manual] } }
+        intent: { type: string, enum: [mention, closes, revert] }
+        linked_at: { type: string, format: date-time }
+    GitRepositoryRef:
+      type: object
+      required: [full_name, provider, html_url]
+      properties:
+        full_name: { type: string }
+        provider: { type: string, enum: [github, gitlab] }
+        html_url: { type: string }
+    GitCommit:
+      type: object
+      required: [sha, short_sha, subject, author, committed_at, html_url, superseded, link]
+      properties:
+        sha: { type: string }
+        short_sha: { type: string }
+        subject: { type: string }
+        author: { $ref: '#/components/schemas/GitAuthor' }
+        committed_at: { type: string, format: date-time }
+        html_url: { type: [string, 'null'] }
+        superseded: { type: boolean }
+        link: { oneOf: [{ $ref: '#/components/schemas/GitLinkInfo' }, { type: 'null' }] }
+    GitBranch:
+      type: object
+      required: [name, head_sha, deleted, link]
+      properties:
+        name: { type: string }
+        head_sha: { type: [string, 'null'] }
+        deleted: { type: boolean }
+        link: { oneOf: [{ $ref: '#/components/schemas/GitLinkInfo' }, { type: 'null' }] }
+    GitCheck:
+      type: object
+      required: [name, status, conclusion, details_url, started_at, completed_at]
+      properties:
+        name: { type: string }
+        status: { type: string, enum: [queued, in_progress, completed] }
+        conclusion: { type: [string, 'null'], enum: [success, failure, neutral, cancelled, skipped, timed_out, action_required, stale, null] }
+        details_url: { type: [string, 'null'] }
+        started_at: { type: [string, 'null'], format: date-time }
+        completed_at: { type: [string, 'null'], format: date-time }
+    GitPullRequest:
+      type: object
+      required: [ref, repository, number, title, state, author, head_ref, head_label, base_ref, html_url, review_state, reviewers, ci_state, ci_summary, additions, deletions, changed_files, is_revert, reverted, merged_by, opened_at, merged_at, closed_at, updated_at, commits_scanned, commits_total, commits, link]
+      properties:
+        ref: { type: string, example: 'acme/web#42' }
+        repository: { $ref: '#/components/schemas/GitRepositoryRef' }
+        number: { type: integer }
+        title: { type: string }
+        state: { type: string, enum: [draft, open, merged, closed] }
+        author: { $ref: '#/components/schemas/GitAuthor' }
+        head_ref: { type: string }
+        head_label: { type: string, description: '`owner:branch` for a pull request from a fork.' }
+        base_ref: { type: string }
+        html_url: { type: [string, 'null'] }
+        review_state: { type: string, enum: [none, review_requested, approved, changes_requested] }
+        reviewers:
+          type: array
+          items:
+            type: object
+            required: [author, state]
+            properties:
+              author: { $ref: '#/components/schemas/GitAuthor' }
+              state: { type: string, enum: [requested, approved, changes_requested, commented, dismissed] }
+        ci_state: { type: string, enum: [none, running, passing, failing] }
+        ci_summary: { type: object, additionalProperties: { type: integer } }
+        additions: { type: [integer, 'null'] }
+        deletions: { type: [integer, 'null'] }
+        changed_files: { type: [integer, 'null'] }
+        is_revert: { type: boolean }
+        reverted: { type: boolean, description: A linked revert merged after this one did. }
+        merged_by: { oneOf: [{ $ref: '#/components/schemas/GitAuthor' }, { type: 'null' }] }
+        opened_at: { type: string, format: date-time }
+        merged_at: { type: [string, 'null'], format: date-time }
+        closed_at: { type: [string, 'null'], format: date-time }
+        updated_at: { type: string, format: date-time }
+        commits_scanned: { type: integer }
+        commits_total: { type: [integer, 'null'], description: 'More than `commits_scanned` when the pull request has over 250 commits.' }
+        commits: { type: array, items: { $ref: '#/components/schemas/GitCommit' } }
+        link: { oneOf: [{ $ref: '#/components/schemas/GitLinkInfo' }, { type: 'null' }] }
+    GitPullRequestDetail:
+      allOf:
+        - $ref: '#/components/schemas/GitPullRequest'
+        - type: object
+          required: [checks, issues]
+          properties:
+            checks: { type: array, items: { $ref: '#/components/schemas/GitCheck' } }
+            issues: { type: array, items: { type: string } }
+    IssueDevelopmentEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data:
+              type: object
+              required: [summary, git_enabled, repositories]
+              properties:
+                summary: { $ref: '#/components/schemas/GitDevelopmentSummary' }
+                git_enabled: { type: boolean }
+                repositories:
+                  type: array
+                  items:
+                    type: object
+                    required: [repository, pull_requests, branches, commits]
+                    properties:
+                      repository: { $ref: '#/components/schemas/GitRepositoryRef' }
+                      pull_requests: { type: array, items: { $ref: '#/components/schemas/GitPullRequest' } }
+                      branches: { type: array, items: { $ref: '#/components/schemas/GitBranch' } }
+                      commits: { type: array, items: { $ref: '#/components/schemas/GitCommit' } }
   parameters:
     GitProvider:
       name: provider

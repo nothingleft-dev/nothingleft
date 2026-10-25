@@ -493,7 +493,7 @@ export function gitlabProvider(deps: ProviderDeps): GitProvider {
   return {
     kind: 'gitlab',
     defaultBaseUrl: 'https://gitlab.com',
-    supports: { checks: true, reviews: true, compare: true, webhook_registration: true },
+    supports: { checks: true, reviews: true, compare: true, webhook_registration: true, reports_forced_push: false },
 
     verifyWebhook(headers, _rawBody, secret) {
       const token = header(headers, 'x-gitlab-token');
@@ -530,6 +530,11 @@ export function gitlabProvider(deps: ProviderDeps): GitProvider {
       } catch {
         return [];
       }
+    },
+
+    pullRequestFromUrl(url) {
+      const match = /^\/(.+?)\/-\/merge_requests\/(\d{1,9})(?:\/|$)/.exec(url.pathname);
+      return match ? { full_name: decodeURIComponent(match[1]!), number: Number(match[2]) } : null;
     },
 
     repositoryFromPayload(_eventName, payload) {

@@ -160,6 +160,9 @@ export const ISSUE_ACTIVITY_KINDS = [
   'parent_changed',
   'deleted',
   'restored',
+  'git_linked',
+  'git_unlinked',
+  'git_pr_changed',
 ] as const;
 export type IssueActivityKind = (typeof ISSUE_ACTIVITY_KINDS)[number];
 
@@ -585,3 +588,58 @@ export const GIT_TOKEN_EXPIRY_WARNING_DAYS = 7;
 export const GIT_MERGE_BASE_BRANCHES_MAX = 20;
 export const GIT_PAGE_DEFAULT = 50;
 export const GIT_PAGE_MAX = 100;
+
+export const GIT_PULL_REQUEST_STATES = ['draft', 'open', 'merged', 'closed'] as const;
+export type GitPullRequestState = (typeof GIT_PULL_REQUEST_STATES)[number];
+export const GIT_REVIEW_STATES = ['none', 'review_requested', 'approved', 'changes_requested'] as const;
+export type GitReviewState = (typeof GIT_REVIEW_STATES)[number];
+export const GIT_REVIEWER_STATES = ['requested', 'approved', 'changes_requested', 'commented', 'dismissed'] as const;
+export type GitReviewerState = (typeof GIT_REVIEWER_STATES)[number];
+export const GIT_CI_STATES = ['none', 'running', 'passing', 'failing'] as const;
+export type GitCiState = (typeof GIT_CI_STATES)[number];
+export const GIT_CHECK_STATUSES = ['queued', 'in_progress', 'completed'] as const;
+export type GitCheckStatus = (typeof GIT_CHECK_STATUSES)[number];
+export const GIT_CHECK_CONCLUSIONS = [
+  'success',
+  'failure',
+  'neutral',
+  'cancelled',
+  'skipped',
+  'timed_out',
+  'action_required',
+  'stale',
+] as const;
+export type GitCheckConclusion = (typeof GIT_CHECK_CONCLUSIONS)[number];
+export const GIT_LINK_TARGETS = ['branch', 'commit', 'pull_request'] as const;
+export type GitLinkTarget = (typeof GIT_LINK_TARGETS)[number];
+export const GIT_LINK_INTENTS = ['mention', 'closes', 'revert'] as const;
+export type GitLinkIntent = (typeof GIT_LINK_INTENTS)[number];
+export const GIT_LINK_SOURCES = [
+  'branch_name',
+  'commit_message',
+  'pr_title',
+  'pr_body',
+  'pr_commits',
+  'merge_commit',
+  'manual',
+] as const;
+export type GitLinkSource = (typeof GIT_LINK_SOURCES)[number];
+export const GIT_IDENTITY_VERIFICATIONS = ['provider', 'email', 'claim'] as const;
+export type GitIdentityVerification = (typeof GIT_IDENTITY_VERIFICATIONS)[number];
+// The issue-level badge; a list sorted by development follows this order.
+export const GIT_DEVELOPMENT_ROLLUPS = [
+  'merged',
+  'ci_failing',
+  'changes_requested',
+  'approved',
+  'in_review',
+  'draft',
+  'branch_active',
+  'reverted',
+  'none',
+] as const;
+export type GitDevelopmentRollup = (typeof GIT_DEVELOPMENT_ROLLUPS)[number];
+export const GIT_BACKFILL_DAYS = 90;
+export const GIT_BACKFILL_PULL_REQUESTS_MAX = 1_000;
+export const GIT_PUSH_COMMITS_MAX = 100;
+export const GIT_COMMIT_MESSAGE_STORED_MAX = 4_096;

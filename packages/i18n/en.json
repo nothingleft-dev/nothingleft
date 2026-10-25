@@ -422,6 +422,10 @@
   "error.git.project_required": "Name the project you are linking repositories to.",
   "error.git.webhook_manual": "{repository}'s webhook is added by hand at the provider: copy the URL and secret from the connection.",
   "error.git.event_not_found": "No delivery {id} in this organisation's event log.",
+  "error.git.url_not_connected": "That address is not a pull request of a repository connected to this organisation.",
+  "error.git.url_not_pull_request": "That address is not a pull request or merge request. Paste the link to one.",
+  "error.git.pull_request_not_found": "No pull request {pull_request} that you can see here.",
+  "error.git.link_not_found": "{key} has no such link to unlink.",
   "error.work_item.invalid_duration": "\"{value}\" is not a duration. Use minutes, or a form such as 1w 2d 4h 30m.",
   "error.work_item.unknown_work_type": "Unknown work type \"{work_type}\" for project {project}.",
   "error.work_item.unknown_author": "{username} cannot be the author: they cannot log time in project {project}.",
@@ -553,6 +557,7 @@
   "mcp.action.schema_change": "change the {list} “{name}” in {project}",
   "mcp.action.git_connection_remove": "disconnect {connection} from {org} (its repositories and links stay, read-only)",
   "mcp.action.repository_unlink": "unlink {repository} from {project}",
+  "mcp.action.pull_request_unlink": "unlink {pull_request} from {key}",
   "mcp.hint.retry_with": "Retry with one of these.",
   "mcp.hint.unknown_arguments": "Unknown argument {names}. Valid arguments: {valid}.",
   "mcp.hint.required": "Missing required argument {name}.",
@@ -711,5 +716,6 @@
   "git.connection_reason.uninstalled": "the app was uninstalled at the provider",
   "email.git_connection_attention.subject": "Fix the git connection {connection} · Nothing Left",
   "email.git_connection_attention.body": "Hi {name},\n\nThe git connection {connection} in {org} needs attention: {reason}.\n\nUntil it is fixed, new branches, commits and pull requests from it do not reach your issues. What is already linked stays.\n\nReview it in organisation settings:\n\n{url}",
-  "email.git_connection_attention.action": "Review connection"
+  "email.git_connection_attention.action": "Review connection",
+  "actor.system": "Nothing Left Bot"
 }

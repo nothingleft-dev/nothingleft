@@ -100,3 +100,22 @@ test('a hook URL id never reaches a log line', () => {
   expect(maskHookId('/v1/git/webhooks/github')).toBe('/v1/git/webhooks/github');
   expect(maskHookId('/v1/issues/PH-1')).toBe('/v1/issues/PH-1');
 });
+
+describe('pull request URLs', () => {
+  test('each provider reads its own form', async () => {
+    const { createProviders } = await import('@git/providers/index');
+    const providers = createProviders({ fetch: fakeFetch().fetch, now: () => new Date(), githubApp: null });
+    const github = providers.get('github')!;
+    const gitlab = providers.get('gitlab')!;
+    expect(github.pullRequestFromUrl(new URL('https://github.com/acme/web/pull/42/files'))).toEqual({
+      full_name: 'acme/web',
+      number: 42,
+    });
+    expect(github.pullRequestFromUrl(new URL('https://github.com/acme/web/issues/42'))).toBeNull();
+    expect(gitlab.pullRequestFromUrl(new URL('https://gitlab.com/acme/sub/api/-/merge_requests/7'))).toEqual({
+      full_name: 'acme/sub/api',
+      number: 7,
+    });
+    expect(gitlab.pullRequestFromUrl(new URL('https://gitlab.com/acme/api/-/issues/7'))).toBeNull();
+  });
+});

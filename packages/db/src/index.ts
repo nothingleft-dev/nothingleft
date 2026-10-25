@@ -43,3 +43,6 @@ export * from './repositories/org-export.repository.ts';
 export * from './repositories/git-connections.repository.ts';
 export * from './repositories/git-repositories.repository.ts';
 export * from './repositories/git-events.repository.ts';
+export * from './repositories/git-entities.repository.ts';
+export * from './repositories/git-links.repository.ts';
+export * from './repositories/git-identities.repository.ts';

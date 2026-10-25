@@ -898,6 +898,12 @@ test('declares its capabilities', () => {
   const { provider } = setup();
   expect(provider.kind).toBe('gitlab');
   expect(provider.defaultBaseUrl).toBe('https://gitlab.com');
-  expect(provider.supports).toEqual({ checks: true, reviews: true, compare: true, webhook_registration: true });
+  expect(provider.supports).toEqual({
+    checks: true,
+    reviews: true,
+    compare: true,
+    webhook_registration: true,
+    reports_forced_push: false,
+  });
   expect(provider.app).toBeUndefined();
 });

@@ -13,9 +13,8 @@ export const issue_activity = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     issue_id: bigint({ mode: 'number' }).notNull(),
-    actor_id: bigint({ mode: 'number' })
-      .notNull()
-      .references(() => users.id, { onDelete: 'restrict' }),
+    // NULL for the system: a git event or an automation, never a person.
+    actor_id: bigint({ mode: 'number' }).references(() => users.id, { onDelete: 'restrict' }),
     change_group_id: uuid().notNull(),
     kind: text().notNull(),
     field: text(),

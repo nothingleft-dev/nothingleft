@@ -82,6 +82,10 @@ export const TOOL_GROUPS: Record<string, readonly ToolName[]> = {
     'update_profile',
   ],
   Development: [
+    'get_issue_development',
+    'get_pull_request',
+    'link_pull_request',
+    'unlink_pull_request',
     'list_git_connections',
     'refresh_git_connection',
     'remove_git_connection',

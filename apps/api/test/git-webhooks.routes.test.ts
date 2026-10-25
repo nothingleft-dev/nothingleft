@@ -11,6 +11,7 @@ const eventsOf = async (ctx: TenantContext) => (await w.repos.events.list(ctx, {
 
 beforeAll(async () => {
   w = await gitWorld(KEY);
+  w.provider.routes['GET https://api.github.com/repositories/101/pulls/42/commits'] = [];
   // The outsider's own organisation also has a project API, an issue API-7 and a GitHub
   // installation whose repository carries the same provider id as Acme's.
   elsewhere = { slug: `${w.slug}-x`, ctx: tenantContext(1) };

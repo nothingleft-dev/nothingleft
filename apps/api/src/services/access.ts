@@ -1,3 +1,4 @@
+import { t } from '@nothingleft/i18n';
 import {
   planLimits,
   STORAGE_CRITICAL_PERCENT,
@@ -5,6 +6,7 @@ import {
   type ByoStatus,
   type StorageLevel,
   type StorageUsage,
+  type ActivityActor,
   type MemberRef,
   type OrgPlan,
   type OrgRole,
@@ -54,6 +56,8 @@ export interface AccessDeps {
   touched?: (orgId: number) => void;
   /** Told of every project a request may read, so an idempotent replay can re-check it. */
   touchedProject?: (orgId: number, projectId: number) => void;
+  /** What the system is called where it acted: git history and automations. */
+  systemActorName?: string | undefined;
 }
 
 /**
@@ -92,6 +96,7 @@ export function accessService({
   freeStorageBytes,
   touched,
   touchedProject,
+  systemActorName,
 }: AccessDeps) {
   async function orgScopeFor(organization: OrganizationRow, userId: number): Promise<OrgAccess | null> {
     const ctx = tenantContext(organization.id, userId);
@@ -167,9 +172,22 @@ export function accessService({
   const avatarUrl = (user: Pick<UserRow, 'name' | 'avatar_url' | 'avatar_object_key'>): string =>
     user.avatar_object_key ? storage.publicUrl(user.avatar_object_key) : (user.avatar_url ?? marks.person(user.name));
 
+  const systemName = systemActorName ?? t('actor.system');
+
   return {
     avatarUrl,
     marks,
+
+    systemActor(): ActivityActor {
+      return {
+        username: null,
+        name: systemName,
+        avatar_url: marks.organization(systemName),
+        former_member: false,
+        deactivated: false,
+        system: true,
+      };
+    },
 
     /** A null membership is someone who left no row in this organisation; they render as former too. */
     memberRef(

@@ -2,6 +2,15 @@ import { z } from 'zod';
 import {
   GIT_AUTH_KINDS,
   GIT_BACKFILL_STATES,
+  GIT_CHECK_CONCLUSIONS,
+  GIT_CHECK_STATUSES,
+  GIT_CI_STATES,
+  GIT_DEVELOPMENT_ROLLUPS,
+  GIT_LINK_INTENTS,
+  GIT_LINK_SOURCES,
+  GIT_PULL_REQUEST_STATES,
+  GIT_REVIEW_STATES,
+  GIT_REVIEWER_STATES,
   GIT_CONNECT_KINDS,
   GIT_CONNECTION_ERRORS,
   GIT_CONNECTION_HEALTH,
@@ -226,3 +235,141 @@ export type ReplayGitEvent = z.infer<typeof ReplayGitEventSchema>;
 
 export const GitWebhookAcceptedSchema = z.object({ accepted: z.boolean() });
 export type GitWebhookAccepted = z.infer<typeof GitWebhookAcceptedSchema>;
+
+// Development: what an issue's branches, commits and pull requests show (plan § 4.10, § 7).
+
+export const GitDevelopmentSummarySchema = z.object({
+  rollup: z.enum(GIT_DEVELOPMENT_ROLLUPS),
+  pull_requests: z.number().int().nonnegative(),
+  commits: z.number().int().nonnegative(),
+  branches: z.number().int().nonnegative(),
+  repositories: z.number().int().nonnegative(),
+});
+export type GitDevelopmentSummary = z.infer<typeof GitDevelopmentSummarySchema>;
+
+// Who wrote it: the member when the provider identity maps to one, else the provider's own login.
+export const GitAuthorSchema = z.object({
+  member: MemberRefSchema.nullable(),
+  login: z.string().nullable(),
+  name: z.string().nullable(),
+  avatar_url: z.string().nullable(),
+});
+export type GitAuthor = z.infer<typeof GitAuthorSchema>;
+
+export const GitRepositoryRefSchema = z.object({
+  full_name: z.string(),
+  provider: GitProviderKindSchema,
+  html_url: z.string(),
+});
+export type GitRepositoryRef = z.infer<typeof GitRepositoryRefSchema>;
+
+export const GitLinkInfoSchema = z.object({
+  // The number the panel's Unlink acts on.
+  link_id: z.number().int(),
+  sources: z.array(z.enum(GIT_LINK_SOURCES)),
+  intent: z.enum(GIT_LINK_INTENTS),
+  linked_at: z.string(),
+});
+export type GitLinkInfo = z.infer<typeof GitLinkInfoSchema>;
+
+export const GitCheckSchema = z.object({
+  name: z.string(),
+  status: z.enum(GIT_CHECK_STATUSES),
+  conclusion: z.enum(GIT_CHECK_CONCLUSIONS).nullable(),
+  details_url: z.string().nullable(),
+  started_at: z.string().nullable(),
+  completed_at: z.string().nullable(),
+});
+export type GitCheck = z.infer<typeof GitCheckSchema>;
+
+export const GitCommitSchema = z.object({
+  sha: z.string(),
+  short_sha: z.string(),
+  subject: z.string(),
+  author: GitAuthorSchema,
+  committed_at: z.string(),
+  html_url: z.string().nullable(),
+  superseded: z.boolean(),
+  // Set when the commit itself is linked to the issue; null when it shows only as part of a pull request.
+  link: GitLinkInfoSchema.nullable(),
+});
+export type GitCommit = z.infer<typeof GitCommitSchema>;
+
+export const GitBranchSchema = z.object({
+  name: z.string(),
+  head_sha: z.string().nullable(),
+  deleted: z.boolean(),
+  link: GitLinkInfoSchema.nullable(),
+});
+export type GitBranch = z.infer<typeof GitBranchSchema>;
+
+export const GitReviewerSchema = z.object({
+  author: GitAuthorSchema,
+  state: z.enum(GIT_REVIEWER_STATES),
+});
+export type GitReviewer = z.infer<typeof GitReviewerSchema>;
+
+export const GitPullRequestSchema = z.object({
+  // `acme/web#42`; GitLab's are `acme/web!42` in its own UI, but one form here.
+  ref: z.string(),
+  repository: GitRepositoryRefSchema,
+  number: z.number().int(),
+  title: z.string(),
+  state: z.enum(GIT_PULL_REQUEST_STATES),
+  author: GitAuthorSchema,
+  head_ref: z.string(),
+  // `owner:branch` for a pull request from a fork.
+  head_label: z.string(),
+  base_ref: z.string(),
+  html_url: z.string().nullable(),
+  review_state: z.enum(GIT_REVIEW_STATES),
+  reviewers: z.array(GitReviewerSchema),
+  ci_state: z.enum(GIT_CI_STATES),
+  ci_summary: z.record(z.string(), z.number().int()),
+  additions: z.number().int().nullable(),
+  deletions: z.number().int().nullable(),
+  changed_files: z.number().int().nullable(),
+  is_revert: z.boolean(),
+  // A linked revert merged after this one did.
+  reverted: z.boolean(),
+  merged_by: GitAuthorSchema.nullable(),
+  opened_at: z.string(),
+  merged_at: z.string().nullable(),
+  closed_at: z.string().nullable(),
+  updated_at: z.string(),
+  // How many of its commits were read, of how many; a pull request over 250 commits is read in part.
+  commits_scanned: z.number().int().nonnegative(),
+  commits_total: z.number().int().nullable(),
+  commits: z.array(GitCommitSchema),
+  link: GitLinkInfoSchema.nullable(),
+});
+export type GitPullRequest = z.infer<typeof GitPullRequestSchema>;
+
+export const GitPullRequestDetailSchema = GitPullRequestSchema.extend({
+  checks: z.array(GitCheckSchema),
+  // Keys of the issues it is linked to that the caller can read.
+  issues: z.array(z.string()),
+});
+export type GitPullRequestDetail = z.infer<typeof GitPullRequestDetailSchema>;
+
+export const IssueDevelopmentSchema = z.object({
+  summary: GitDevelopmentSummarySchema,
+  // False when the issue's project has no linked repository: the panel explains how to link one.
+  git_enabled: z.boolean(),
+  repositories: z.array(
+    z.object({
+      repository: GitRepositoryRefSchema,
+      pull_requests: z.array(GitPullRequestSchema),
+      // Branches with no open pull request of their own.
+      branches: z.array(GitBranchSchema),
+      // Commits linked to the issue that belong to none of the pull requests shown.
+      commits: z.array(GitCommitSchema),
+    }),
+  ),
+});
+export type IssueDevelopment = z.infer<typeof IssueDevelopmentSchema>;
+
+export const LinkPullRequestSchema = z.object({
+  url: z.url().max(2_048),
+});
+export type LinkPullRequest = z.infer<typeof LinkPullRequestSchema>;

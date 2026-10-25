@@ -17,7 +17,10 @@ import {
   createDb,
   exportJobsRepository,
   gitConnectionsRepository,
+  gitEntitiesRepository,
   gitEventsRepository,
+  gitIdentitiesRepository,
+  gitLinksRepository,
   gitRepositoriesRepository,
   importJobsRepository,
   orgExportRepository,
@@ -157,6 +160,9 @@ import { exportsService } from '@services/exports.service';
 import { gitConnectionsService } from '@services/git-connections.service';
 import { gitIngestService } from '@services/git-ingest.service';
 import { gitRepositoriesService } from '@services/git-repositories.service';
+import { developmentReader } from '@services/git-development';
+import { gitDevelopmentService } from '@services/git-development.service';
+import { gitLinksService } from '@services/git-links.service';
 import { twoFactorService } from '@services/two-factor.service';
 import { authService } from '@services/auth.service';
 import { meService } from '@services/me.service';
@@ -260,6 +266,9 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     gitConnections: gitConnectionsRepository(db),
     gitRepositories: gitRepositoriesRepository(db),
     gitEvents: gitEventsRepository(db),
+    gitEntities: gitEntitiesRepository(db),
+    gitLinks: gitLinksRepository(db),
+    gitIdentities: gitIdentitiesRepository(db),
   };
 
   const tenantRepos = (q: Queryable): TenantRepos => ({
@@ -290,6 +299,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     gitConnections: gitConnectionsRepository(q),
     gitRepositories: gitRepositoriesRepository(q),
     gitEvents: gitEventsRepository(q),
+    gitEntities: gitEntitiesRepository(q),
+    gitLinks: gitLinksRepository(q),
   });
   const inTenantTransaction = <T>(body: (r: TenantRepos) => Promise<T>) => db.transaction(tx => body(tenantRepos(tx)));
 
@@ -442,7 +453,9 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     customFields: repos.customFields,
     analytics,
   });
+  const development = developmentReader({ links: repos.gitLinks, entities: repos.gitEntities });
   const issues = issuesService({
+    development,
     access,
     organizations: repos.organizations,
     projects: repos.projects,
@@ -668,7 +681,21 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     allowPrivateHosts: env.GIT_ALLOW_PRIVATE_HOSTS,
     resolveHost: opts.gitResolveHost ?? dnsResolveHost,
   });
+  const gitLinker = gitLinksService({
+    providers: gitProviders,
+    repositories: repos.gitRepositories,
+    entities: repos.gitEntities,
+    links: repos.gitLinks,
+    identities: repos.gitIdentities,
+    users: repos.users,
+    organizations: repos.organizations,
+    inTransaction: inTenantTransaction,
+    masterKey: encryptionMasterKey(env),
+    appBaseUrl: env.APP_BASE_URL,
+  });
   const gitRepositories = gitRepositoriesService({
+    linker: gitLinker,
+    queue: () => queue,
     access,
     providers: gitProviders,
     connections: repos.gitConnections,
@@ -687,11 +714,26 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     repositories: repos.gitRepositories,
     events: repos.gitEvents,
     connectionsService: gitConnections,
+    applyEntities: (ctx, connection, repository, events, row) =>
+      gitLinker.applyEntities(ctx, connection, repository, events, row),
     counter: app.redis,
     queue: () => queue,
     analytics,
     masterKey: encryptionMasterKey(env),
     log: app.log,
+  });
+  const gitDevelopment = gitDevelopmentService({
+    access,
+    issues,
+    providers: gitProviders,
+    connections: repos.gitConnections,
+    repositories: repos.gitRepositories,
+    entities: repos.gitEntities,
+    links: repos.gitLinks,
+    organizations: repos.organizations,
+    reader: development,
+    linker: gitLinker,
+    inTransaction: inTenantTransaction,
   });
   const services = {
     auth: authSvc,
@@ -902,6 +944,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     connections: gitConnections,
     repositories: gitRepositories,
     ingest: gitIngest,
+    development: gitDevelopment,
     cookie: { secure: env.NODE_ENV === 'production', domain: env.SESSION_COOKIE_DOMAIN },
   });
   await app.register(gitWebhookRoutes, { ingest: gitIngest, ...(opts.now ? { now: opts.now } : {}) });
@@ -927,7 +970,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'org.delete': now => organizationLifecycle.deleteDue(now),
     'storage.reconcile': now => storageSvc.reconcile(now),
     'transfers.sweep': async now => (await imports.sweep(now)) + (await exports.sweep(now)),
-    'git.purge': now => gitIngest.purge(now),
+    'git.purge': async now => (await gitIngest.purge(now)) + (await gitLinker.purge(now)),
+    'git.reconcile': now => gitRepositories.reconcileAll(now),
   };
   const queuedHandlers: QueuedHandlers = {
     'notify.fanout': (job, now) => fanout.fanout(job, now),
@@ -936,6 +980,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'import.csv': (job, now) => imports.run(job, now),
     'export.org': (job, now) => exports.run(job, now),
     'git.process_events': (job, now) => gitIngest.drain(job, now),
+    'git.backfill': job => gitRepositories.backfill(job),
   };
   // Route tests run a job the way the schedule would, without pg-boss.
   app.decorate('jobHandlers', jobHandlers);

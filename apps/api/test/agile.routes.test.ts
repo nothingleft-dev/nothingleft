@@ -252,6 +252,7 @@ describe('start and finish', () => {
         parent: issue.parent,
         subtasks: issue.subtasks,
         resolved: issue.resolved_at !== null,
+        development: issue.development?.rollup ?? null,
       });
     }
     expect(view.sprint.slug).toBe('september-2026');

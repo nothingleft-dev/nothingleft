@@ -78,6 +78,10 @@ import {
 import { runReport } from './reports.ts';
 import { listFiles } from './storage.ts';
 import {
+  getIssueDevelopment,
+  getPullRequest,
+  linkPullRequest,
+  unlinkPullRequest,
   linkRepository,
   listGitConnections,
   listGitEvents,
@@ -202,4 +206,8 @@ export const TOOLS = [
   resyncRepository,
   listGitEvents,
   replayGitEvent,
+  getIssueDevelopment,
+  getPullRequest,
+  linkPullRequest,
+  unlinkPullRequest,
 ] as const;

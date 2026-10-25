@@ -7,7 +7,9 @@ import type {
   InvitationsRepository,
   ExportJobsRepository,
   GitConnectionsRepository,
+  GitEntitiesRepository,
   GitEventsRepository,
+  GitLinksRepository,
   GitRepositoriesRepository,
   ImportJobsRepository,
   IssueActivityRepository,
@@ -57,6 +59,8 @@ export interface TenantRepos {
   gitConnections: GitConnectionsRepository;
   gitRepositories: GitRepositoriesRepository;
   gitEvents: GitEventsRepository;
+  gitEntities: GitEntitiesRepository;
+  gitLinks: GitLinksRepository;
 }
 
 export type InTenantTransaction = <T>(body: (repos: TenantRepos) => Promise<T>) => Promise<T>;

@@ -7,3 +7,4 @@ export * from './organization-slug.ts';
 export * from './work-days.ts';
 export * from './bytes.ts';
 export * from './calendar-date.ts';
+export * from './git-references.ts';

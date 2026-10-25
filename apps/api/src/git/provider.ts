@@ -41,6 +41,8 @@ export interface ProviderCapabilities {
   compare: boolean;
   /** We register (and remove) the repository's webhook through the API. */
   webhook_registration: boolean;
+  /** A push says whether it was forced; without it, every push to a stored branch is compared. */
+  reports_forced_push: boolean;
 }
 
 export const PULL_REQUEST_COMMITS_MAX = 250;
@@ -57,6 +59,8 @@ export interface GitProvider {
   route(eventName: string, payload: unknown): DeliveryRoute;
   /** Events nothing uses (tags, wiki, stars, comments) normalize to `[]`. */
   normalize(eventName: string, payload: unknown): NormalizedEvent[];
+  /** A pull request's web URL on this connection's host, as the repository's full name and its number. */
+  pullRequestFromUrl(url: URL): { full_name: string; number: number } | null;
   /** The repository a delivery is about, as complete as the payload describes it: how manual mode learns its repositories. */
   repositoryFromPayload(eventName: string, payload: unknown): ProviderRepo | null;
   /** A payload over the stored-size cap, reduced to what the job needs; the caller marks it truncated. */
