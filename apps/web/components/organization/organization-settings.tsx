@@ -20,6 +20,7 @@ import { StorageTab } from '@components/organization/storage/storage-tab';
 import { DangerTab } from '@components/organization/danger-tab';
 import { TagsTab } from '@components/organization/tags/tags-tab';
 import { ExportsTab } from '@components/organization/exports-tab';
+import { IntegrationsTab } from '@components/organization/integrations/integrations-tab';
 import { useOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { useProjectRoles } from '@hooks/use-project-roles';
@@ -33,6 +34,7 @@ const TABS = [
   { value: 'audit', label: 'Audit log' },
   { value: 'storage', label: 'Storage' },
   { value: 'exports', label: 'Exports' },
+  { value: 'integrations', label: 'Integrations' },
   { value: 'plan', label: 'Plan' },
   { value: 'danger', label: 'Danger zone' },
 ] as const;
@@ -108,7 +110,7 @@ interface OrganizationTabsProps {
 function OrganizationTabs({ organization, user, tab, isAdmin }: OrganizationTabsProps) {
   return (
     // The storage tab's file list is a table of seven columns; the other tabs are forms.
-    <div className={cn('flex flex-col gap-5', tab === 'storage' ? 'max-w-6xl' : 'max-w-4xl')}>
+    <div className={cn('flex flex-col gap-5', tab === 'storage' || tab === 'integrations' ? 'max-w-6xl' : 'max-w-4xl')}>
       {isAdmin ? <SeatBanner seats={organization.seats} /> : null}
       {tab === 'storage' ? null : <StorageBanner storage={organization.storage} withLink={false} />}
 
@@ -119,6 +121,7 @@ function OrganizationTabs({ organization, user, tab, isAdmin }: OrganizationTabs
       {tab === 'tags' ? <TagsTab orgAdmin={isAdmin} /> : null}
       {tab === 'storage' ? <StorageTab organization={organization} user={user} /> : null}
       {tab === 'exports' ? <ExportsTab organization={organization} /> : null}
+      {tab === 'integrations' ? <IntegrationsTab organization={organization} /> : null}
       {tab === 'plan' ? <PlanTab organization={organization} /> : null}
       {tab === 'danger' ? <DangerTab organization={organization} user={user} /> : null}
     </div>
