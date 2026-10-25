@@ -131,9 +131,29 @@ export function gitConnectionsRepository(db: Queryable) {
       return row;
     },
 
-    /** An app delivery names its installation, which at most one live connection holds. */
-    async findByInstallation(
+    /** An app delivery names its installation: every organisation that connected it gets the delivery. */
+    async listByInstallation(
       _ctx: SystemContext,
+      provider: string,
+      baseUrl: string,
+      installationId: string,
+    ): Promise<GitConnectionRow[]> {
+      return db
+        .select()
+        .from(git_connections)
+        .where(
+          and(
+            eq(git_connections.provider, provider),
+            eq(git_connections.base_url, baseUrl),
+            eq(git_connections.installation_id, installationId),
+            live,
+          ),
+        )
+        .orderBy(asc(git_connections.id));
+    },
+
+    async findByInstallation(
+      ctx: TenantContext,
       provider: string,
       baseUrl: string,
       installationId: string,
@@ -143,6 +163,7 @@ export function gitConnectionsRepository(db: Queryable) {
         .from(git_connections)
         .where(
           and(
+            inOrg(ctx),
             eq(git_connections.provider, provider),
             eq(git_connections.base_url, baseUrl),
             eq(git_connections.installation_id, installationId),

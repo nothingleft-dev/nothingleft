@@ -36,6 +36,13 @@
       "when": 1792908737562,
       "tag": "0004_git_polish",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792912720198,
+      "tag": "0005_shared_installations",
+      "breakpoints": true
     }
   ]
 }

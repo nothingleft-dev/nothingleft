@@ -308,6 +308,54 @@ export function gitIngestService(deps: GitIngestDeps) {
     return applied;
   }
 
+  async function accept(
+    connection: GitConnectionRow,
+    provider: GitProvider,
+    delivery: NonNullable<ReturnType<GitProvider['verifyWebhook']>>,
+    payload: unknown,
+    input: { rawBody: Buffer; now: Date },
+  ): Promise<void> {
+    const ctx = tenantContext(connection.org_id);
+    if (connection.status === 'failing' && connection.last_error === 'signature') {
+      await connectionsService.markHealthy(ctx, connection);
+      await deps.counter.del(signatureKey(connection.id));
+    }
+    const route = provider.route(delivery.event_name, payload);
+    const repository = route.provider_repo_id
+      ? await repositories.findByProviderId(ctx, connection.id, route.provider_repo_id)
+      : undefined;
+    const stored = storable(provider, delivery.event_name, input.rawBody, payload);
+    const row = await events.insert(ctx, {
+      connection_id: connection.id,
+      repository_id: repository?.id ?? null,
+      provider_repo_id: route.provider_repo_id,
+      delivery_id: delivery.delivery_id,
+      event_name: delivery.event_name,
+      payload: stored.payload,
+      truncated: stored.truncated,
+      received_at: input.now,
+      run_automations: true,
+    });
+    await connections.touch(ctx, connection.id, input.now);
+    if (repository) {
+      await repositories.touch(ctx, repository.id, input.now);
+      if (connection.auth_kind !== 'app_installation' && repository.webhook_status !== 'active') {
+        await repositories.update(
+          ctx,
+          repository.id,
+          { webhook_status: 'active', webhook_last_status_code: 202 },
+          input.now,
+        );
+      }
+    }
+    if (row) {
+      await enqueue(
+        { org_id: connection.org_id, connection_id: connection.id, provider_repo_id: route.provider_repo_id },
+        input.now,
+      );
+    }
+  }
+
   return {
     async knowsHook(kind: string, hookId: string): Promise<boolean> {
       const connection = await connections.findByHookHash(sys, sha256(hookId));
@@ -326,12 +374,12 @@ export function gitIngestService(deps: GitIngestDeps) {
       now: Date;
     }): Promise<{ accepted: boolean }> {
       const provider = providerOf(providers, input.provider);
-      let connection: GitConnectionRow | undefined;
+      let targets: GitConnectionRow[];
       let delivery: ReturnType<GitProvider['verifyWebhook']>;
       let payload: unknown;
 
       if (input.hookId) {
-        connection = await connections.findByHookHash(sys, sha256(input.hookId));
+        const connection = await connections.findByHookHash(sys, sha256(input.hookId));
         if (!connection || connection.provider !== provider.kind) throw new AppError('not_found', 404);
         const hook = unsealHook(masterKey, connection);
         delivery = hook ? provider.verifyWebhook(input.headers, input.rawBody, hook.secret) : null;
@@ -340,6 +388,7 @@ export function gitIngestService(deps: GitIngestDeps) {
           throw new AppError('git.signature_invalid', 401);
         }
         payload = parse(input.rawBody);
+        targets = [connection];
       } else {
         const app = provider.app;
         if (!app?.configured || !app.webhookSecret) throw new AppError('not_found', 404);
@@ -347,55 +396,18 @@ export function gitIngestService(deps: GitIngestDeps) {
         if (!delivery) throw new AppError('git.signature_invalid', 401);
         payload = parse(input.rawBody);
         const installation = provider.route(delivery.event_name, payload).installation_id;
-        connection = installation
-          ? await connections.findByInstallation(sys, provider.kind, app.baseUrl, installation)
-          : undefined;
-        if (!connection) {
+        targets = installation
+          ? await connections.listByInstallation(sys, provider.kind, app.baseUrl, installation)
+          : [];
+        if (targets.length === 0) {
           // Installed on an account nobody here has connected (yet): counted, never stored.
           deps.log.info({ git_delivery: 'unrouted', provider: provider.kind }, 'git delivery for no connection');
           return { accepted: false };
         }
       }
 
-      const ctx = tenantContext(connection.org_id);
-      if (connection.status === 'failing' && connection.last_error === 'signature') {
-        await connectionsService.markHealthy(ctx, connection);
-        await deps.counter.del(signatureKey(connection.id));
-      }
-      const route = provider.route(delivery.event_name, payload);
-      const repository = route.provider_repo_id
-        ? await repositories.findByProviderId(ctx, connection.id, route.provider_repo_id)
-        : undefined;
-      const stored = storable(provider, delivery.event_name, input.rawBody, payload);
-      const row = await events.insert(ctx, {
-        connection_id: connection.id,
-        repository_id: repository?.id ?? null,
-        provider_repo_id: route.provider_repo_id,
-        delivery_id: delivery.delivery_id,
-        event_name: delivery.event_name,
-        payload: stored.payload,
-        truncated: stored.truncated,
-        received_at: input.now,
-        run_automations: true,
-      });
-      await connections.touch(ctx, connection.id, input.now);
-      if (repository) {
-        await repositories.touch(ctx, repository.id, input.now);
-        if (connection.auth_kind !== 'app_installation' && repository.webhook_status !== 'active') {
-          await repositories.update(
-            ctx,
-            repository.id,
-            { webhook_status: 'active', webhook_last_status_code: 202 },
-            input.now,
-          );
-        }
-      }
-      if (row) {
-        await enqueue(
-          { org_id: connection.org_id, connection_id: connection.id, provider_repo_id: route.provider_repo_id },
-          input.now,
-        );
-      }
+      // One installation can be connected by several organisations: each keeps its own copy.
+      for (const connection of targets) await accept(connection, provider, delivery, payload, input);
       return { accepted: true };
     },
 

@@ -1,4 +1,5 @@
 import type { Analytics } from '@nothingleft/analytics';
+import { t } from '@nothingleft/i18n';
 import type {
   GitAuthor,
   GitBranch,
@@ -39,6 +40,7 @@ import { providerOf } from '@git/connection';
 import { GitProviderError } from '@git/http';
 import type { ProviderRegistry } from '@git/providers/index';
 import type { StoredReviewer } from '@git/rollup';
+import type { AutomationsService } from '@services/automations.service';
 import type { AccessService, ProjectAccess } from '@services/access';
 import { can } from '@services/permissions';
 import type { DevelopmentReader } from '@services/git-development';
@@ -61,6 +63,8 @@ export interface GitDevelopmentDeps {
   linker: Pick<GitLinksService, 'readPullRequest'>;
   inTransaction: InTenantTransaction;
   analytics: Analytics;
+  /** Lazy: the automations service is built after this one. */
+  automations?: () => Pick<AutomationsService, 'fire'>;
   now?: () => Date;
 }
 
@@ -423,6 +427,32 @@ export function gitDevelopmentService(deps: GitDevelopmentDeps) {
           { source: 'manual', target_type: 'pull_request' },
           { userId: principal.userId, orgId: ctx.orgId },
         );
+        // A pull request linked by hand while open counts as opened for the issue, as a found link does.
+        if (deps.automations && (pr.state === 'open' || pr.state === 'draft')) {
+          const name = `${repo.full_name}#${pr.number}`;
+          await deps.automations().fire(ctx, {
+            trigger: 'git.pull_request_opened',
+            issues: [
+              {
+                issueId: issue.id,
+                facts: {
+                  intent: pr.is_revert ? 'revert' : 'mention',
+                  draft: pr.state === 'draft',
+                  base_ref: pr.base_ref,
+                  repository_id: repo.id,
+                  pull_request_id: pr.id,
+                },
+              },
+            ],
+            ref: { pull_request: name },
+            cause: t('automation.cause.pull_request_by', {
+              pull_request: name,
+              verb: t('automation.cause.verb.linked'),
+              who: `@${project.membership.username}`,
+            }),
+            causedBy: principal.userId,
+          });
+        }
       }
       return panel(project, issue.id);
     },

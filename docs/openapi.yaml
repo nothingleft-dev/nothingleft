@@ -7180,7 +7180,7 @@ paths:
         '200': { description: 'The connection.', content: { application/json: { schema: { $ref: '#/components/schemas/GitConnectionEnvelope' } } } }
         '400': { description: '`git.connect_state_invalid`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '403': { description: '`git.installation_forbidden`, `forbidden`, or `auth.session_required`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
-        '409': { description: '`git.installation_already_connected`, `git.connection_limit_reached`, `git.app_not_configured`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.connection_limit_reached`, `git.app_not_configured`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '502': { description: '`git.provider_unreachable`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
 
   /v1/organizations/{slug}/git/connections:

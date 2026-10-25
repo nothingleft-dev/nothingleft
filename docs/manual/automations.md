@@ -14,7 +14,7 @@ project for the git triggers; *Resolve parent* works without one.
 | --- | --- |
 | Branch created | A branch whose name mentions the issue is created, or its first push arrives |
 | Commit pushed | A commit whose message mentions the issue is pushed |
-| Pull request opened | A pull request that mentions the issue is opened or reopened, or starts mentioning it while open |
+| Pull request opened | A pull request that mentions the issue is opened or reopened, starts mentioning it while open, or is linked to it by hand while open |
 | Pull request ready for review | A draft pull request linked to the issue is marked ready |
 | Pull request merged | A pull request linked to the issue is merged |
 | Pull request closed | A pull request linked to the issue is closed without merging |

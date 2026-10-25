@@ -39,9 +39,9 @@ export const git_connections = pgTable(
   },
   t => [
     unique('git_connections_id_org_unique').on(t.id, t.org_id),
-    // One live connection per installation across every organisation: a second claim is refused.
+    // Several organisations may share one installation (one company, an organisation per country).
     uniqueIndex('git_connections_installation_unique')
-      .on(t.provider, t.base_url, t.installation_id)
+      .on(t.org_id, t.provider, t.base_url, t.installation_id)
       .where(sql`${t.revoked_at} is null and ${t.installation_id} is not null`),
     uniqueIndex('git_connections_org_account_unique')
       .on(t.org_id, t.provider, t.base_url, sql`lower(${t.account_login})`)

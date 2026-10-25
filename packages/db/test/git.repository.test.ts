@@ -76,11 +76,17 @@ describe('gitConnectionsRepository tenant isolation', () => {
   test('the system lookups find live connections only', async () => {
     await inRolledBackTx(async tx => {
       const repo = gitConnectionsRepository(tx);
-      const { ctxA, connA, connB } = await seedGit(tx);
+      const { ctxA, ctxB, connA, connB } = await seedGit(tx);
       const hash = Buffer.alloc(32, 9);
       await repo.update(ctxA, connA.id, { hook_id_hash: hash }, at);
       expect((await repo.findByHookHash(sys, hash))?.id).toBe(connA.id);
-      expect((await repo.findByInstallation(sys, 'github', 'https://github.com', connB.installation_id!))?.id).toBe(
+      expect(
+        (await repo.listByInstallation(sys, 'github', 'https://github.com', connB.installation_id!)).map(c => c.id),
+      ).toEqual([connB.id]);
+      expect(
+        await repo.findByInstallation(ctxA, 'github', 'https://github.com', connB.installation_id!),
+      ).toBeUndefined();
+      expect((await repo.findByInstallation(ctxB, 'github', 'https://github.com', connB.installation_id!))?.id).toBe(
         connB.id,
       );
       await repo.revoke(ctxA, connA.id, at);
@@ -89,25 +95,28 @@ describe('gitConnectionsRepository tenant isolation', () => {
     });
   });
 
-  test('an installation is held by one live connection; an account once per organisation', async () => {
+  test('organisations may share an installation, each once; an account once per organisation', async () => {
     await inRolledBackTx(async tx => {
       const repo = gitConnectionsRepository(tx);
       const { ctxA, ctxB, alice, bob, connA } = await seedGit(tx);
-      const taken = await violationInSavepoint(tx, sp =>
+      const shared = await repo.insert(
+        ctxB,
+        connection(bob, { installation_id: connA.installation_id, account_login: 'other' }),
+      );
+      expect(
+        (await repo.listByInstallation(sys, 'github', 'https://github.com', connA.installation_id!)).map(c => c.id),
+      ).toEqual([connA.id, shared.id]);
+      const twice = await violationInSavepoint(tx, sp =>
         gitConnectionsRepository(sp).insert(
-          ctxB,
-          connection(bob, { installation_id: connA.installation_id, account_login: 'other' }),
+          ctxA,
+          connection(alice, { installation_id: connA.installation_id, account_login: 'acme-two' }),
         ),
       );
-      expect(taken?.constraint).toBe('git_connections_installation_unique');
-      const twice = await violationInSavepoint(tx, sp =>
+      expect(twice?.constraint).toBe('git_connections_installation_unique');
+      const account = await violationInSavepoint(tx, sp =>
         gitConnectionsRepository(sp).insert(ctxA, connection(alice, { account_login: 'ACME-INC' })),
       );
-      expect(twice?.constraint).toBe('git_connections_org_account_unique');
-      await repo.revoke(ctxA, connA.id, at);
-      expect(
-        await repo.insert(ctxB, connection(bob, { installation_id: connA.installation_id, account_login: 'other' })),
-      ).toBeDefined();
+      expect(account?.constraint).toBe('git_connections_org_account_unique');
     });
   });
 });

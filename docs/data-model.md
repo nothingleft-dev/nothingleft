@@ -2285,7 +2285,7 @@ git_connections(
   created_by → users, created_at, updated_at,
   revoked_at timestamptz NULL,
   UNIQUE (id, org_id),
-  UNIQUE (provider, base_url, installation_id) WHERE revoked_at IS NULL AND installation_id IS NOT NULL,
+  UNIQUE (org_id, provider, base_url, installation_id) WHERE revoked_at IS NULL AND installation_id IS NOT NULL,
   UNIQUE (org_id, provider, base_url, lower(account_login)) WHERE revoked_at IS NULL
 )
 
@@ -2505,7 +2505,8 @@ automation_runs(
   with `status_missing`.
 - **Webhook deliveries run rules** only when received live or replayed with `run_automations` (and a
   replay fires only on what it changes: stored state already moved fires nothing again);
-  backfill, the nightly reconcile and a manual link never do.
+  backfill and the nightly reconcile never do. A pull request linked by hand while it is open fires
+  `git.pull_request_opened` for that issue, caused by the person who linked it.
 
 ## Tables defined in other documents
 
@@ -2602,7 +2603,7 @@ loudly, which is the point.
 | Colours are palette token names | every `color` column: the 40 label-grid names for statuses, priorities, types and tags; the 14 hues for project avatars | — |
 | Invite limits | `use_count ≤ max_uses`, `expires_at` in the future | — a moving clock is no CHECK |
 | Quotas | 5GB per organisation on `free` (the plan's quota), 100MB per file, 50 attachments per issue and per article — pending uploads count toward both the quota and the 50; with a verified bucket of its own an organisation has no storage quota, while the other limits still apply (6c) | — |
-| One live connection per app installation across every organisation; one per account per organisation | `git_connections` (7) | `git_connections_installation_unique`, `git_connections_org_account_unique` (partial, live rows); a second claim of an installation answers `git.installation_already_connected` without naming the holder |
+| One live connection per app installation per organisation (several organisations may share one, each getting every delivery); one per account per organisation | `git_connections` (7) | `git_connections_installation_unique`, `git_connections_org_account_unique` (partial, live rows) |
 | Git plan caps: on `free`, 2 live connections per organisation and 10 linked repositories per project | `git_connections`, `project_repositories` (7) | — counted by the service |
 | A `byo` attachment is served, and its object deleted, only through a verified connection whose location is the row's | `attachments`, `org_storage_configs` (6c) | which location a file is at: `attachments_storage_location_org_fk`, `attachments_storage_location_check` |
 

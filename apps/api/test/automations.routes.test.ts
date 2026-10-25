@@ -270,6 +270,29 @@ describe('running rules', () => {
     expect(issue.last_automation_at).not.toBeNull();
   });
 
+  test('a pull request linked by hand while open fires the opened rules, caused by the person', async () => {
+    await create(w.admin, {
+      name: 'Start on PR',
+      trigger: 'git.pull_request_opened',
+      conditions: { issue_status_category: ['backlog', 'unstarted'] },
+      action: 'issue.set_status',
+      action_params: { status: 'In Progress' },
+    });
+    await deliver('pull_request.opened', 'pr-open');
+    const linked = await w.call(w.contributor, 'POST', `/v1/issues/${KEY}-6/development/links`, {
+      url: 'https://github.com/acme-inc/web/pull/42',
+    });
+    expect(linked.statusCode).toBe(200);
+    expect(await status(`${KEY}-6`)).toBe('In Progress');
+    const runs = (await w.call(w.admin, 'GET', `/v1/projects/${KEY}/automation-runs?issue=${KEY}-6`)).json().data;
+    expect(runs[0]).toMatchObject({
+      automation: 'Start on PR',
+      result: 'applied',
+      cause: `acme-inc/web#42 was linked by hand by @${w.contributor.username}`,
+    });
+    await w.call(w.admin, 'DELETE', `/v1/projects/${KEY}/automations/Start%20on%20PR`);
+  });
+
   test('close on merge: the merger is not told, everyone else is; failing checks reach assignees; the run is logged', async () => {
     await create(w.admin, {
       name: 'Close on merge',
@@ -294,7 +317,9 @@ describe('running rules', () => {
     await deliver('pull_request.closed.merged', 'pr-merged', mergedByCasey());
     expect(await status(`${KEY}-7`)).toBe('Fixed');
 
-    const runs = (await w.call(w.observer, 'GET', `/v1/projects/${KEY}/automations/Close%20on%20merge/runs`)).json();
+    const runs = (
+      await w.call(w.observer, 'GET', `/v1/projects/${KEY}/automations/Close%20on%20merge/runs?issue=${KEY}-7`)
+    ).json();
     expect(runs.data[0]).toMatchObject({
       automation: 'Close on merge',
       issue: `${KEY}-7`,

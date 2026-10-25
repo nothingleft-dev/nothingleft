@@ -776,6 +776,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     linker: gitLinker,
     inTransaction: inTenantTransaction,
     analytics,
+    automations: () => automations,
   });
   const services = {
     auth: authSvc,

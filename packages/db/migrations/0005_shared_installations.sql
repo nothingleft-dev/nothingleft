@@ -1,0 +1,2 @@
+DROP INDEX "git_connections_installation_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "git_connections_installation_unique" ON "git_connections" USING btree ("org_id","provider","base_url","installation_id") WHERE "git_connections"."revoked_at" is null and "git_connections"."installation_id" is not null;

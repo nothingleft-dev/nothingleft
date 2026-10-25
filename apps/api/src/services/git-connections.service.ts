@@ -454,13 +454,11 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
       }
 
       const holder = await connections.findByInstallation(
-        { kind: 'system', reason: 'an installation is held by at most one organisation' },
+        orgAccess.ctx,
         kind,
         provider.app.baseUrl,
         input.installation_id,
       );
-      if (holder && holder.org_id !== orgAccess.ctx.orgId)
-        throw new AppError('git.installation_already_connected', 409);
       if (holder) {
         // Back from changing which repositories the installation covers.
         await call(kind, () => discover(orgAccess.ctx, holder, provider, connectionAuth(masterKey, holder)));

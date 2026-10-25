@@ -102,11 +102,17 @@ describe('connecting GitHub through the app', () => {
     expect((await w.connectGitHub(w.admin, w.slug, w.inst('5001'))).json().data.name).toBe('github:acme-inc');
   });
 
-  test('an installation another organisation holds names nothing about it', async () => {
+  test('another organisation of the same company connects the same installation, and both get its deliveries', async () => {
     const res = await w.connectGitHub(w.outsider, `${w.slug}-x`, w.inst('5001'));
-    expect(res.statusCode).toBe(409);
-    expect(res.json().error.code).toBe('git.installation_already_connected');
-    expect(res.json().error.message).not.toContain(w.slug);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toMatchObject({ name: 'github:acme-inc', auth_kind: 'app_installation' });
+    const delivered = await w.deliver('github', 'repository.renamed', { delivery: 'shared-1' });
+    expect(delivered.statusCode).toBe(202);
+    const logOf = async (who: typeof w.admin, slug: string) =>
+      (await w.call(who, 'GET', `/v1/organizations/${slug}/git/events`, undefined, { 'x-organization': slug })).json()
+        .data as { delivery_id: string }[];
+    expect((await logOf(w.admin, w.slug)).some(e => e.delivery_id === 'shared-1')).toBe(true);
+    expect((await logOf(w.outsider, `${w.slug}-x`)).some(e => e.delivery_id === 'shared-1')).toBe(true);
   });
 });
 
