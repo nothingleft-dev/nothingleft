@@ -246,6 +246,29 @@ async function activeSprintSlug(ctx: ToolContext, key: string, org: string | und
   return data[0]?.slug;
 }
 
+export const whyDidItChange = definePrompt({
+  name: 'why-did-it-change',
+  title: 'Why did it change',
+  description:
+    "Explains an issue's recent changes, most of all the ones an automation made: which rule, and what fired it.",
+  input: z.strictObject({ issue: text('Issue key, e.g. "PP-12".'), org }),
+  async build(_ctx, args) {
+    const key = issueKey(args.issue);
+    return {
+      text: join(
+        `Explain why ${key} looks the way it does now.${orgNote(args.org)}`,
+        [
+          `1. Read get_issue_activity for ${key}. A change made by an automation names the rule and what fired it ("because acme/web#42 was merged by @alex").`,
+          `2. For each automated change, run list_automation_runs for ${key}'s project with \`issue: "${key}"\`, and list_automations to quote the rule's sentence.`,
+          `3. Run get_issue_development for ${key} when a pull request, branch or commit is the cause, to say where it stands now.`,
+          '4. Answer as a short timeline, newest first: when, who or which rule, what changed, and why. Say plainly when a rule looked at the issue and left it alone, and why.',
+          '5. Change nothing. If a rule did something unwanted, say which one and that a Project Admin can turn it off with update_automation.',
+        ].join('\n'),
+      ),
+    };
+  },
+});
+
 export const PROMPTS = [
   triageIssue,
   findDuplicates,
@@ -254,4 +277,5 @@ export const PROMPTS = [
   estimateBacklog,
   sprintReport,
   documentThis,
+  whyDidItChange,
 ] as const;

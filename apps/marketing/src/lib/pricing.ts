@@ -38,6 +38,7 @@ export const INCLUDED = [
   'Nine reports, each exportable as CSV',
   'Search, saved views and bulk updates',
   'A private knowledge base per project',
+  'GitHub and GitLab links on issues, with status automations',
   'MCP access for AI agents with scoped tokens',
   'Five built-in roles',
 ];
@@ -67,6 +68,13 @@ export const PRICING_FAQ: FaqEntry[] = [
       'Each organisation has 5 GB of platform storage for attachments; avatars do not count. Warnings appear at 80% and 95%. At the limit, new uploads are refused until you delete files or connect your own Cloudflare R2 or AWS S3 bucket, and the platform limit stops applying once that bucket is verified. There is no storage to buy.',
     ],
     link: { href: '/docs/limits-and-billing', label: 'Limits and storage' },
+  },
+  {
+    question: 'Are there limits on GitHub and GitLab?',
+    answer: [
+      'Yes, three. Each organisation connects up to 2 GitHub or GitLab accounts, and each project links up to 10 repositories and keeps up to 10 automations.',
+    ],
+    link: { href: '/docs/limits-and-billing', label: 'Limits and billing' },
   },
   {
     question: 'Can we self-host instead?',

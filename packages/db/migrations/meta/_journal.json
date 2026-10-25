@@ -8,6 +8,41 @@
       "when": 1791626568502,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792896743095,
+      "tag": "0001_git_connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792899913255,
+      "tag": "0002_git_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792905053001,
+      "tag": "0003_automations",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792908737562,
+      "tag": "0004_git_polish",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792912720198,
+      "tag": "0005_shared_installations",
+      "breakpoints": true
     }
   ]
 }

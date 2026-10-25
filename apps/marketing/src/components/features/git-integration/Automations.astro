@@ -1,0 +1,108 @@
+---
+import { issue } from '@data/sample';
+import { AUTOMATIONS_MANUAL_PATH, BOT_LINES, RULE_FACTS, TEMPLATES, TRIGGERS } from '@lib/features/git-integration';
+---
+
+<section class="border-t border-line" aria-labelledby="gi-auto-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="min-w-0 lg:col-span-5">
+      <h2 id="gi-auto-title" class="h2">
+        Let the merge move the issue.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        An automation sets an issue’s status when something happens in git, or when the last open subtask is resolved.
+        Each one belongs to a project, and a Project Admin turns it on.
+      </p>
+      <h3 class="h3 mt-10">What can fire a rule</h3>
+      <ul class="gi-triggers mt-3">
+        {TRIGGERS.map(trigger => (
+          <li>{trigger}</li>
+        ))}
+      </ul>
+      <p class="mt-4 text-sm text-fg-2 max-w-[46ch]">
+        Conditions narrow it: a status category, an issue type, a pull request that closes the issue, a merge into{' '}
+        <code class="mono text-xs">main</code>, or every linked pull request merged.
+      </p>
+      <p class="mt-6 text-sm">
+        <a class="link" href={AUTOMATIONS_MANUAL_PATH}>
+          The automations manual
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+
+    <div class="min-w-0 lg:col-span-6 lg:col-start-7">
+      <h3 class="text-sm font-medium">Five templates, never on until you choose them</h3>
+      <ul class="rule-list mt-3">
+        {TEMPLATES.map(template => (
+          <li class="py-4">
+            <p class="font-medium text-fg">{template.name}</p>
+            <p class="prose mt-1 text-base">{template.does}</p>
+          </li>
+        ))}
+      </ul>
+
+      <h3 class="text-sm font-medium mt-10">In the issue’s history</h3>
+      <ul class="mt-3 space-y-4">
+        {BOT_LINES.map(line => (
+          <li>
+            <p class="text-xs text-fg-3">
+              <span class="mono">{line.key}</span> {issue(line.key).title} · {line.at}
+            </p>
+            <p class="quote mt-2">{line.text}</p>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-4 text-sm text-fg-2">
+        Updated by still names the last person who changed the issue. Merge the pull request yourself and you are not
+        notified about the change it caused.
+      </p>
+    </div>
+
+    <div class="min-w-0 lg:col-span-12">
+      <ul class="gi-facts-grid">
+        {RULE_FACTS.map(fact => (
+          <li>
+            <h3 class="text-sm font-medium">{fact.title}</h3>
+            <p class="mt-1 text-sm text-fg-2">{fact.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gi-triggers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .gi-triggers li {
+    font-size: 13px;
+    line-height: 20px;
+    padding: 1px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text-secondary);
+  }
+  .gi-facts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  @media (max-width: 1023px) {
+    .gi-facts-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .gi-facts-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

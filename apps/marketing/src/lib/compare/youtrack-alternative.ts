@@ -67,6 +67,8 @@ export const DOCS = {
   agile: '/docs/agile',
   reports: '/docs/reports',
   knowledgeBase: '/docs/knowledge-base',
+  git: '/docs/git',
+  automations: '/docs/automations',
   mcp: '/docs/mcp',
   tools: TOOL_REFERENCE_PATH,
   permissions: '/docs/permissions',
@@ -158,8 +160,8 @@ export const YOUTRACK_COMPARISON: Comparison = {
       capability: 'Workflow scripting',
       ours: {
         support: 'no',
-        note: 'Deliberately left out: there are no transition rules and any status can follow any status.',
-        source: nl('Issues manual', DOCS.issues),
+        note: 'Deliberately left out: there are no transition rules and any status can follow any status. Automations are status rules fired by git events and resolved subtasks, not scripts.',
+        source: nl('Automations manual', DOCS.automations),
       },
       theirs: {
         support: 'yes',
@@ -184,8 +186,9 @@ export const YOUTRACK_COMPARISON: Comparison = {
       group: 'delivery',
       capability: 'VCS integration',
       ours: {
-        support: 'no',
-        note: 'No commit, branch or pull-request links on issues today. Google and GitHub sign-in is not source-control integration.',
+        support: 'yes',
+        note: 'GitHub and GitLab, including GitHub Enterprise and self-managed GitLab: commits, branches and pull requests link to issues by key, with review and CI state on the issue. No commands in commit messages, and no Bitbucket.',
+        source: nl('Development manual', DOCS.git),
       },
       theirs: {
         support: 'yes',
@@ -474,7 +477,7 @@ export const SWITCH_TOOLS = ['create_project', 'invite_member', 'create_issue', 
 export const STAY_WITH_YOUTRACK = [
   'Your process runs on scripted workflows: on-change rules, schedules and JavaScript automation.',
   'You run a helpdesk with external reporters, email intake and SLAs in the same tool.',
-  'Commits, branches and pull requests should update issues, and your developers work from JetBrains IDEs.',
+  'Commit messages should carry commands, your code lives in Bitbucket, or your developers work from JetBrains IDEs.',
   'Customers read a public knowledge base that lives beside your issues.',
   'You rely on richer reporting: 20 configurable reports, state-transition analysis and Gantt charts.',
 ];
@@ -512,8 +515,9 @@ export const YOUTRACK_FAQ: FaqEntry[] = [
   {
     question: 'We use workflows and commit commands. What would we lose?',
     answer: [
-      'Both. Nothing Left has no workflow engine, no commands in commit messages and no source-control links on issues today. Any status can follow any status, and changes are made by people or by agents acting as them. If those automations carry your process, YouTrack is the better fit.',
+      'Both. Nothing Left has no workflow engine and no commands in commit messages. It does link commits, branches and pull requests from GitHub and GitLab to issues, and its automations set an issue’s status when a branch is created, a pull request opens or merges, or the last subtask is resolved. Those are status rules from a fixed list, not scripts: any status can still follow any status. If on-change scripts, schedules or commit commands carry your process, YouTrack is the better fit.',
     ],
+    link: { href: DOCS.automations, label: 'Automations manual' },
   },
   {
     question: 'YouTrack is free for small teams. Is price the reason to switch?',

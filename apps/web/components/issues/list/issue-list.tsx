@@ -89,7 +89,8 @@ export function IssueList({ project, base = '', title, views: withViews = true }
 
   const selectedRows = useMemo(() => rows.filter(r => selection.has(r.key)), [rows, selection]);
   const customColumns = useCustomColumns(project, rows);
-  const defs = useMemo(() => columnDefs(customColumns), [customColumns]);
+  const gitEnabled = useMemo(() => rows.some(r => r.project.git_enabled), [rows]);
+  const defs = useMemo(() => columnDefs(customColumns, gitEnabled), [customColumns, gitEnabled]);
   const shown = useMemo(() => shownColumns(columns, defs), [columns, defs]);
   const groupFields = useMemo(() => customColumns.filter(c => isGroupable(c.type)), [customColumns]);
 

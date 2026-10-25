@@ -1,4 +1,6 @@
 import type { ReportName, SprintState, TagContext } from '@nothingleft/types';
+import type { GitEventsFilter, GitRepositoriesFilter } from '@lib/api/git';
+import type { AutomationRunsFilter } from '@lib/api/automations';
 import type { ReportQuery } from '@lib/api/reports';
 import type { ArticleSearchQuery } from '@lib/api/articles';
 import type { StorageFilesFilter } from '@lib/api/organization-storage';
@@ -112,6 +114,28 @@ export const queryKeys = {
   notificationFacets: () => ['notifications', 'facets'] as const,
   notificationPreferences: () => ['notification-preferences'] as const,
   unsubscribe: (token: string) => ['unsubscribe', token] as const,
+
+  // Every git read of the organisation hangs off 'organizations', slug, 'git', so a connection change refreshes them all.
+  git: (slug: string) => ['organizations', slug, 'git'] as const,
+  gitConnections: (slug: string) => ['organizations', slug, 'git', 'connections'] as const,
+  gitRepositories: (slug: string, query: GitRepositoriesFilter) =>
+    ['organizations', slug, 'git', 'repositories', query] as const,
+  gitEvents: (slug: string, query: GitEventsFilter) => ['organizations', slug, 'git', 'events', query] as const,
+  gitEvent: (slug: string, id: number) => ['organizations', slug, 'git', 'event', id] as const,
+  memberGitIdentities: (slug: string) => ['organizations', slug, 'git', 'identities'] as const,
+  gitProviders: () => ['git', 'providers'] as const,
+  myGitIdentities: () => ['me', 'git-identities'] as const,
+  pullRequest: (repository: string, number: number) => ['git', 'pull-request', repository, number] as const,
+  projectRepositories: (key: string) => ['projects', key, 'repositories'] as const,
+  issueDevelopment: (key: string) => ['issues', key, 'development'] as const,
+
+  automationCatalogue: () => ['automations', 'catalogue'] as const,
+  // The rules, their templates and their runs all sit under 'projects', key, 'automations'.
+  automationsAll: (key: string) => ['projects', key, 'automations'] as const,
+  automations: (key: string) => ['projects', key, 'automations', 'list'] as const,
+  automationTemplates: (key: string) => ['projects', key, 'automations', 'templates'] as const,
+  automationRuns: (key: string, query: AutomationRunsFilter) =>
+    ['projects', key, 'automations', 'runs', query] as const,
 
   invitations: (scope: InviteScope) => [...scopeKey(scope), 'invitations'] as const,
   invitationUses: (slug: string, id: number) => ['organizations', slug, 'invitations', id, 'uses'] as const,

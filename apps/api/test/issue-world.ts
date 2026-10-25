@@ -8,6 +8,7 @@ import {
   type TenantContext,
 } from '@nothingleft/db';
 import type { BuildOptions } from '../src/app.ts';
+import type { Env } from '@config/env';
 import { testApp, testEnv } from './helpers.ts';
 import { mailbox, signUp, uniqueStamp, type Person } from './people.ts';
 
@@ -46,9 +47,9 @@ export interface IssueWorld {
 }
 
 /** An organisation with project `key`, an owner, a contributor, an observer, and a stranger elsewhere. */
-export async function issueWorld(key: string, opts: BuildOptions = {}): Promise<IssueWorld> {
+export async function issueWorld(key: string, opts: BuildOptions = {}, env: Env = testEnv): Promise<IssueWorld> {
   const box = mailbox();
-  const app = await testApp({ mailer: box.mailer, ...opts });
+  const app = await testApp({ mailer: box.mailer, ...opts }, env);
   const slug = `iss-${uniqueStamp()}`;
   const call: IssueWorld['call'] = (who, method, url, body, headers = {}) =>
     app.inject({ method, url, headers: { ...who.headers, ...headers }, ...(body ? { body } : {}) });

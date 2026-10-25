@@ -42,6 +42,7 @@ export const TIME_MANUAL_PATH = '/docs/issues#time-tracking';
 export const KB_MANUAL_PATH = '/docs/knowledge-base';
 export const REPORTS_MANUAL_PATH = '/docs/reports';
 export const MCP_MANUAL_PATH = '/docs/mcp';
+export const AUTOMATIONS_MANUAL_PATH = '/docs/automations';
 export const LIMITS_PATH = '/docs/limits-and-billing';
 export { GITHUB_URL, LICENSE_URL, TOOL_REFERENCE_PATH };
 
@@ -162,9 +163,9 @@ export const CLICKUP_COMPARISON: Comparison = {
       group: 'delivery',
       capability: 'Automation',
       ours: {
-        support: 'no',
-        note: 'No workflow automation or transition rules: any status may follow any status. Bulk updates handle repeated edits.',
-        source: ours('Statuses and resolution', `${ISSUES_MANUAL_PATH}#statuses-and-resolution`),
+        support: 'limited',
+        note: 'Status rules fired by git events and resolved subtasks, such as Close on merge; not a general rules engine, and no transition rules. Bulk updates handle other repeated edits.',
+        source: ours('Automations manual', AUTOMATIONS_MANUAL_PATH),
       },
       theirs: {
         support: 'yes',
@@ -276,7 +277,7 @@ export const CLICKUP_STRENGTHS: Strength[] = [
   {
     name: 'Automation',
     theirs: 'Prebuilt trigger-and-action automations, and a builder that drafts new ones from plain language.',
-    ours: 'None. Any status may follow any status, and bulk updates cover the repetitive edits.',
+    ours: 'Status rules only, fired by git events and resolved subtasks. Any status may follow any status, and bulk updates cover other repetitive edits.',
     source: { label: 'Automations', href: CLICKUP.automations },
   },
   {
@@ -291,13 +292,13 @@ export const CHOOSE_CLICKUP = [
   'Several departments, not only product and engineering, plan their work in one workspace.',
   'People need many ways to see the same work: calendar, workload, timeline, mind map, table.',
   'You want chat, whiteboards and company-wide docs next to the tasks rather than in separate tools.',
-  'You rely on rule-based automations or AI agents that run inside the tracker.',
+  'You rely on general trigger-and-action automations or AI agents that run inside the tracker.',
   'Timesheet approval and billable time are part of how you work.',
 ];
 
 export const CHOOSE_NOTHING_LEFT = [
   'Your team ships software and mostly needs issues, sprints, time on the issue and project notes.',
-  'You want a short setup: lists of statuses, priorities and types, five fixed roles, no rules engine.',
+  'You want a short setup: lists of statuses, priorities and types, five fixed roles, no general rules engine.',
   'Your agent should work through a documented API with a scoped token, as the person who connected it.',
   'Open source matters, or you may want to run the same build on your own infrastructure.',
 ];
@@ -477,7 +478,7 @@ export const CLICKUP_FAQ: FaqEntry[] = [
   {
     question: 'What would we give up by moving from ClickUp?',
     answer: [
-      'Chat, whiteboards, forms, rule-based automations, in-product AI, and calendar, workload, timeline and mind-map views. Nothing Left does not try to replace those. It also has no native importer from ClickUp.',
+      'Chat, whiteboards, forms, general rule-based automations, in-product AI, and calendar, workload, timeline and mind-map views. Nothing Left does not try to replace those. It also has no native importer from ClickUp.',
       'What it keeps in one place is the engineering loop: issues, sprints, boards, time on the issue, reports and project notes, with the same capabilities available to an agent.',
     ],
   },

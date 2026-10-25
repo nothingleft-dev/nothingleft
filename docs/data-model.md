@@ -172,6 +172,14 @@ The full list of these integrity keys:
 | `personal_access_token_projects` | — | `(project_id, org_id)` → `projects` |
 | `org_storage_locations` | `(id, org_id)` | — |
 | `attachments`, `org_storage_configs` | — | `(storage_location_id, org_id)` and `(location_id, org_id)` → `org_storage_locations` |
+| `git_connections` | `(id, org_id)` | — |
+| `git_repositories` | `(id, org_id)` | `(connection_id, org_id)` → `git_connections` |
+| `project_repositories` | — | `(project_id, org_id)` → `projects`; `(repository_id, org_id)` → `git_repositories` |
+| `git_webhook_events` | — | `(connection_id, org_id)` → `git_connections`; `(repository_id, org_id)` → `git_repositories` |
+| `git_branches`, `git_commits`, `git_pull_requests` | `(id, org_id)` | `(repository_id, org_id)` → `git_repositories` |
+| `git_checks` | — | `(repository_id, org_id)` → `git_repositories` |
+| `git_pull_request_commits` | — | `(pull_request_id, org_id)` → `git_pull_requests`; `(commit_id, org_id)` → `git_commits` |
+| `issue_git_links` | — | `(issue_id, org_id)` → `issues`; `(repository_id, org_id)` → `git_repositories` |
 
 Every one cascades on delete, except the value-table, parent and sprint keys on
 `issues`, the parent key on `articles`, the work-type key on `work_items`, the option key on `issue_field_values`, the
@@ -342,16 +350,16 @@ purged. They share one table rather than occupying four.
 one_time_tokens(
   id, user_id → users,                -- who the token is for
   purpose: 'password_reset' | 'email_verify' | 'email_change'
-         | 'ownership_transfer',
+         | 'ownership_transfer' | 'git_identity_email',
   token_hash   bytea,                 -- SHA-256; the raw token is never stored
   org_id       → organizations NULL,  -- ownership_transfer only
-  new_email    text NULL,             -- email_change only
+  new_email    text NULL,             -- email_change, git_identity_email (the address claimed)
   created_by   → users NULL,          -- ownership_transfer: the current owner
   expires_at, used_at NULL, created_at,
   UNIQUE (token_hash),
   UNIQUE (org_id) WHERE purpose = 'ownership_transfer' AND used_at IS NULL,
   CHECK (purpose <> 'ownership_transfer' OR (org_id IS NOT NULL AND created_by IS NOT NULL)),
-  CHECK (purpose <> 'email_change' OR new_email IS NOT NULL)
+  CHECK (purpose NOT IN ('email_change', 'git_identity_email') OR new_email IS NOT NULL)
 )
 ```
 
@@ -795,6 +803,7 @@ issues(
   start_date   date NULL,
   due_date     date NULL,
   resolved_at  timestamptz NULL,
+  last_automation_at timestamptz NULL, -- the last change an automation made (7); updated_by stays a person
 
   vote_count   int default 0,         -- denormalised
   comment_count int default 0,        -- denormalised
@@ -1184,12 +1193,15 @@ As built in 1d (owner decisions, 24 Sep 2026):
 
 ```
 issue_activity(
-  id, org_id, issue_id, actor_id,
+  id, org_id, issue_id,
+  actor_id NULL,                     -- NULL: the system (a git event, an automation); 7
+  automation_run_id bigint NULL,     -- the run that made the change (7); no FK: purging runs must not scan this table, a purged id finds nothing
   change_group_id  uuid,           -- v7, one per save; groups its rows
   kind: 'created' | 'field_changed' | 'commented' | 'comment_edited' |
         'comment_deleted' | 'linked' | 'unlinked' | 'attached' |
         'detached' | 'time_logged' | 'tagged' | 'untagged' |
-        'sprint_changed' | 'parent_changed' | 'deleted' | 'restored',
+        'sprint_changed' | 'parent_changed' | 'deleted' | 'restored' |
+        'git_linked' | 'git_unlinked' | 'git_pr_changed',
   field        text NULL,          -- e.g. 'status', 'assignee', 'custom:severity'
   old_value    jsonb NULL,
   new_value    jsonb NULL,
@@ -1258,6 +1270,17 @@ the row records why, and it coalesces like any other change. The API answers eac
 row with `people`, the members its snapshots name by username resolved at read time
 (former members included), so a removed assignee still renders by name — custom user and
 multi-user fields' rows included (Phase 4).
+
+**Git** (7, 25 Oct 2026). `git_linked` / `git_unlinked` record a branch, commit or pull request
+joining or leaving the issue, with `new_value` / `old_value` a snapshot of it — `{"kind":
+"pull_request", "repo": "acme/web", "number": 42, "title": "…", "url": "…", "state": "open",
+"review": "approved", "ci": "passing", "sources": ["pr_title"], "intent": "closes"}`; a commit has
+`sha` and `title`, a branch `name`. `git_pr_changed` records a linked pull request's state, review
+or CI moving, `old_value` and `new_value` the snapshot before and after, and **coalesces per pull
+request** over the same five-minute window: twelve matrix jobs make one row, and a change that
+returns to where it started erases the row. Rows written by the system have `actor_id` NULL and
+render as the bot (`actor.system` in the catalogue, a generated mark); a link made or removed by
+hand carries the person. A system row never coalesces with a person's.
 
 **Immutable** once outside the coalescing window. Never updated, never deleted
 otherwise. It renders the issue history
@@ -1915,10 +1938,11 @@ notifications(
   kind: 'assigned' | 'unassigned' | 'mentioned' | 'commented' |
         'status_changed' | 'resolved' | 'linked' | 'due_soon' | 'overdue' |
         'time_logged' | 'sprint_started' | 'sprint_finished' |
-        'article_published' | 'article_updated' | 'reaction',
+        'article_published' | 'article_updated' | 'reaction' |
+        'pull_request_merged' | 'ci_failed',
   project_id NULL,            -- the centre filters by project; set on every row written
   issue_id NULL, comment_id NULL, article_id NULL, sprint_id NULL,
-  actor_id → users NULL,      -- null only for due_soon and overdue, which nobody's write produced
+  actor_id → users NULL,      -- null for due_soon and overdue, and for what the system wrote (git, automations)
   payload jsonb default '{}', -- the settled facts by name: {field, from, to}, comment, link, minutes, due_date
   dedupe_key text,            -- 'a:<issue_activity id>', 'm:comment:42', 'due_soon:<issue id>', …
   read_at NULL, created_at,
@@ -2004,7 +2028,10 @@ org_activity(
         'export_requested' | 'token_created' | 'token_revoked' |
         'project_updated' | 'project_unarchived' | 'invite_rotated' |
         'username_changed' | 'deletion_scheduled' | 'deletion_cancelled' |
-        'storage_updated' | 'tag_renamed' | 'tag_merged' | 'tag_deleted',
+        'storage_updated' | 'tag_renamed' | 'tag_merged' | 'tag_deleted' |
+        'git_connection_created' | 'git_connection_removed' |
+        'git_connection_error' | 'repository_linked' | 'repository_unlinked' |
+        'automation_changed',
   target_type, target_id,
   old_value jsonb NULL, new_value jsonb NULL,
   ip inet NULL, created_at
@@ -2047,6 +2074,8 @@ what the log says.
 | `project` | project id | `project_created`, `project_updated`, `project_archived`, `project_unarchived` |
 | `invitation` | invitation id | `member_invited` (email), `invite_created` (link), `invite_rotated`, `invite_revoked` |
 | `tag` | tag id | `tag_renamed` (`name` on each side), `tag_merged` (the target; `names` of the merged tags before, `name` of the target after), `tag_deleted` (`name`, `issue_count`, `article_count` before; nothing after). A recolour is not logged (6d) |
+| `git_connection` | connection id | `git_connection_created`, `git_connection_removed` (7: `connection` name and `provider` after), `git_connection_error` (7: written with no actor when the connection moves into a problem state — `status` before, `status` and `reason` after — once per change, never per failed delivery) |
+| `project` (7) | project id | `repository_linked`, `repository_unlinked` — `repository` full name and `project` key after; `automation_changed` — `{project, automation, change: created \| updated \| deleted}` after |
 | `custom_field` | field id | `custom_field_changed` — a field or one of its options created, changed, archived or deleted; each side carries `project_key`, `slug`, `name`, `action` and the changed keys (Phase 4) |
 
 Work item attributes and their values record `schema_changed` with `table:
@@ -2230,6 +2259,266 @@ pointing an agent at the MCP server.
 
 ---
 
+## Git integration
+
+Built in 7 (first milestone, 25 Oct 2026): connections, repositories and the webhook delivery
+log. Branches, commits, pull requests, links and automations follow in later milestones of the
+same sub-phase, each in its own migration.
+
+```
+git_connections(
+  id bigint PK,
+  org_id → organizations ON DELETE CASCADE,
+  provider text,                        -- 'github' | 'gitlab'; no CHECK, see below
+  base_url text,                        -- https://github.com, https://gitlab.com or a self-hosted origin
+  auth_kind text CHECK in ('app_installation','token','manual'),
+  installation_id text NULL,            -- an app installation
+  account_login text, account_avatar_url text NULL, account_url text,
+  token_ciphertext text NULL,           -- sealed, purpose git_connection
+  hook_id_hash bytea NULL UNIQUE,       -- SHA-256 of the hook URL's id
+  hook_secret_ciphertext text NULL,     -- sealed {hook_id, secret}, purpose git_hook; a hook the server
+                                        -- registers on a repository gets HMAC(secret, 'repository:'||provider id),
+                                        -- so one repository's hook cannot speak for another
+  status text DEFAULT 'active' CHECK in ('active','suspended','token_expired','failing','revoked'),
+  last_error text NULL CHECK in ('signature','processing','token_invalid','token_expired','suspended','uninstalled'),
+  last_event_at timestamptz NULL,
+  token_expires_at timestamptz NULL,
+  token_warned_at timestamptz NULL,     -- the Org Admins were told it expires soon; cleared when the expiry moves
+  created_by → users, created_at, updated_at,
+  revoked_at timestamptz NULL,
+  UNIQUE (id, org_id),
+  UNIQUE (org_id, provider, base_url, installation_id) WHERE revoked_at IS NULL AND installation_id IS NOT NULL,
+  UNIQUE (org_id, provider, base_url, lower(account_login)) WHERE revoked_at IS NULL
+)
+
+git_repositories(
+  id bigint PK,
+  org_id → organizations ON DELETE CASCADE,
+  connection_id,                        -- (connection_id, org_id) → git_connections ON DELETE CASCADE
+  provider_repo_id text,                -- the provider's own id, which survives a rename
+  full_name text, html_url text, default_branch text,
+  is_private boolean, is_archived boolean DEFAULT false,
+  provider_webhook_id text NULL,        -- the hook we registered (token connections)
+  webhook_status text DEFAULT 'not_applicable' CHECK in ('active','failing','missing','not_applicable'),
+  webhook_last_status_code integer NULL,
+  match_all_projects boolean DEFAULT false,
+  merge_base_branches text[] NULL,      -- NULL follows default_branch; globs allowed
+  last_event_at timestamptz NULL,
+  backfill_state jsonb NULL,
+  created_at, updated_at,
+  removed_at timestamptz NULL,          -- gone from the installation, or deleted at the provider
+  UNIQUE (id, org_id), UNIQUE (connection_id, provider_repo_id)
+)
+
+project_repositories(
+  project_id, repository_id, org_id → organizations ON DELETE CASCADE,
+  linked_by → users, linked_at,
+  PRIMARY KEY (project_id, repository_id)
+  -- (project_id, org_id) → projects and (repository_id, org_id) → git_repositories, both ON DELETE CASCADE
+)
+
+git_webhook_events(
+  id bigint PK,
+  org_id → organizations ON DELETE CASCADE,
+  connection_id,                        -- (connection_id, org_id) → git_connections ON DELETE CASCADE
+  repository_id NULL,                   -- (repository_id, org_id) → git_repositories ON DELETE CASCADE
+  provider_repo_id text NULL,           -- from the payload, kept when no repository row matches yet
+  delivery_id text, event_name text,
+  received_at, processed_at timestamptz NULL,
+  status text DEFAULT 'pending' CHECK in ('pending','done','ignored','failed'),
+  error text NULL,                      -- the ignored reason or the failure, as a code
+  attempts smallint DEFAULT 0, next_attempt_at timestamptz NULL,
+  run_automations boolean DEFAULT false,
+  payload jsonb, truncated boolean DEFAULT false,
+  UNIQUE (connection_id, delivery_id)
+)
+```
+
+**`provider` has no CHECK.** The API's provider registry is the list of providers; the service
+refuses a kind the registry lacks. Adding a provider is one module and one entry in
+`GIT_PROVIDER_KINDS`, with no migration (owner, 25 Oct 2026).
+
+**A connection is never deleted.** Disconnecting stamps `revoked_at`, sets `status: revoked`
+and nulls the token, the hook hash and the hook secret; the row, its repositories and their
+links stay so history keeps its attribution. An app uninstalled at the provider is revoked the
+same way with `last_error: uninstalled`. The two partial keys therefore cover live rows only: a
+reinstalled app or a reconnected account gets a new row.
+
+**Names.** A connection is addressed as `provider:account` (`github:acme-inc`), with `@host`
+when its `base_url` is not the provider's own (`gitlab:acme@gitlab.example.com`). A repository is
+its `full_name`; when two connections have one of that name, the provider prefixes it
+(`gitlab:acme/web`).
+
+**Secrets.** The token and the hook's shared secret are sealed as `org_storage_configs` seals its
+key (`seal` in `@lib/crypto`): AES-256-GCM under an HKDF subkey of `ENCRYPTION_MASTER_KEY`, purposes
+`git_connection` and `git_hook`, the row `git_connections:<id>` as additional data. Neither is
+returned by any route; the hook secret is shown once, at creation and at rotation. The hook URL's
+id is looked up by its hash, like a token, but is sealed beside the secret too, because
+registering the hook on a repository linked later needs the URL again.
+
+Second milestone (links, 25 Oct 2026, migration `0002_git_links`):
+
+```
+git_branches(id, org_id, repository_id, name, head_sha NULL, created_at, updated_at, deleted_at NULL,
+  UNIQUE (id, org_id), UNIQUE (repository_id, name))
+git_commits(id, org_id, repository_id, sha, message_subject, message_full NULL (first 4 KB),
+  author_name, author_email, author_login NULL, author_provider_id NULL, author_user_id → users NULL,
+  committed_at, html_url, superseded_at NULL, created_at,
+  UNIQUE (id, org_id), UNIQUE (repository_id, sha))
+git_pull_requests(id, org_id, repository_id, number, title,
+  state CHECK in ('draft','open','merged','closed'),
+  author_login NULL, author_provider_id NULL, author_avatar_url NULL, author_user_id → users NULL,
+  head_repo_full_name NULL, head_ref, head_sha, base_ref, merge_commit_sha NULL,
+  merged_by_login NULL, merged_by_user_id → users NULL, is_revert, html_url,
+  review_state CHECK in ('none','review_requested','approved','changes_requested'), reviewers jsonb,
+  ci_state CHECK in ('none','running','passing','failing'), ci_summary jsonb,
+  commits_fetched_for_sha NULL, commits_total NULL, additions/deletions/changed_files NULL,
+  provider_updated_at, opened_at, merged_at NULL, closed_at NULL, created_at, updated_at,
+  UNIQUE (id, org_id), UNIQUE (repository_id, number))
+git_pull_request_commits(pull_request_id, commit_id, org_id, PRIMARY KEY (pull_request_id, commit_id))
+git_checks(id, org_id, repository_id, sha, external_id, name,
+  status CHECK in ('queued','in_progress','completed'), conclusion NULL CHECK in (…GitHub's eight…),
+  details_url NULL, started_at NULL, completed_at NULL, updated_at,
+  UNIQUE (repository_id, sha, external_id))
+issue_git_links(id, org_id, issue_id, repository_id,
+  target_type CHECK in ('branch','commit','pull_request'), target_id,
+  sources text[], intent CHECK in ('mention','closes','revert'), removed_sources text[] DEFAULT '{}',
+  created_by → users NULL, created_at, updated_at, removed_at NULL, removed_by → users NULL,
+  UNIQUE (issue_id, target_type, target_id))
+git_identities(id, user_id → users, provider, base_url, provider_user_id NULL, login NULL, email NULL,
+  verified_by CHECK in ('provider','email','claim'), verified_at NULL, created_at,
+  UNIQUE (provider, base_url, provider_user_id) WHERE provider_user_id IS NOT NULL,
+  UNIQUE (provider, base_url, lower(login)) WHERE login IS NOT NULL,
+  UNIQUE (lower(email)) WHERE email IS NOT NULL AND verified_at IS NOT NULL,
+  CHECK (num_nonnulls(provider_user_id, login, email) >= 1))
+```
+
+Every repository-owned table keys `(repository_id, org_id)` → `git_repositories` and cascades;
+`git_pull_request_commits` keys both sides the same way; `issue_git_links` keys `(issue_id,
+org_id)` → `issues` and `(repository_id, org_id)` → `git_repositories`. `target_id` names a row of
+the table `target_type` says, so it has no foreign key: `git.purge` deletes a commit or pull
+request and its link rows in one statement. `git_identities` has no `org_id`, as `users` has
+none: an identity is a person's, and matches inside an organisation only while its owner is a
+member there.
+
+**Claims** (fourth milestone). A person claims a login (`verified_by = 'claim'`, verified at once;
+an Org Admin can remove a wrong one) or an email (`verified_by = 'email'`, `verified_at` NULL until
+the link sent to that address, a `git_identity_email` one-time token, is followed; the account's
+own verified address needs no link). A pending email matches nothing and blocks nobody: only a
+verified one is unique. A claim queues `git.rematch_authors`, which sets `author_user_id` and
+`merged_by_user_id` on the unattributed commits and pull requests it matches, in every
+organisation the account is in; removing a claim sets back to NULL what it matches, then
+re-matches from the account's remaining identities and verified address. An Org Admin removes only
+a claimed login, never a verified email. Confirmation links are limited to one per address per ten
+minutes and five an hour per account. A login is unique per provider host across every
+organisation and needs no proof; accepted for v1 (owner, 25 Oct 2026), with provider-verified
+logins the planned successor. Reviewers inside `git_pull_requests.reviewers` are matched
+when written and are not re-matched.
+
+**What is stored.** A branch, commit or pull request is stored only when it references an issue
+of a project the repository is linked to (every project of the organisation with
+`match_all_projects`), or belongs to a pull request that does; a push naming no issue writes
+nothing but its delivery row. Nothing is ever created from git: a key whose number does not exist
+is dropped; a soft-deleted issue's links are kept and hidden until it is restored.
+
+**References.** A key matches case-insensitively when not glued to other text:
+`(?<![A-Za-z0-9_-])(KEYS)-(\d{1,7})(?![A-Za-z0-9_/])`, so `feat/ph-675-login`, `[PH-675]` and
+`(ph-675)` match and `alpha-ph-675`, `ph-675x`, `ph-675/notes` do not; the web app's own issue
+URLs count too. A closing keyword (`close`, `fix`, `resolve`, `implement` and their `-s`/`-d`
+forms, optional colon) closes its own run of keys, `Fixes PH-1, PH-2 and PH-3`. A pull request
+body's code is not read; at most 50 references per text (`packages/format`, `findIssueReferences`).
+
+**Links follow their sources.** Each link records which texts named the issue (`branch_name`,
+`commit_message`, `pr_title`, `pr_body`, `pr_commits`, `merge_commit`, `manual`); every event
+recomputes the sources it knows and keeps the rest. A link left with none is removed
+(`removed_at`, `git_unlinked`); `manual` goes only by a person. A link a person removes keeps
+`removed_sources`, and comes back only for a source it did not have then — for a pull request's
+commits, commits pushed after the unlink (recorded as `pr_commits@<head sha>`). A link the system
+removed (its last source went) comes back as soon as any source names the issue again. A merged pull
+request's merge commit is linked to every issue the pull request is (`merge_commit`), so a squash
+whose message lost the key still shows what landed. A force push supersedes the commits the
+provider's compare says are gone (`superseded_at`), which unlinks their `commit_message` links;
+GitLab does not say a push was forced, so every push to a stored branch is compared there.
+
+**Order and staleness.** A pull request event older than the stored row's `provider_updated_at`
+changes nothing (the nightly reconcile catches up); checks are keyed by commit and kept for any commit of a linked repository (a check may arrive
+before the pull request moves to its commit), and a report older than the stored one is dropped,
+so a late event for an old head never moves the current rollup.
+
+**Rollups** are computed when read, from the live links: CI per pull request over its head's
+checks (`failing` > `running` > `passing` > `none`), review as the latest review per reviewer
+(`changes_requested` > `approved` with none pending > `review_requested` > `none`), and the issue's
+badge (`reverted`, `merged`, `ci_failing`, `changes_requested`, `approved`, `in_review`, `draft`,
+`branch_active`, `none`), carried on the issue and the board card.
+
+**Authors.** A commit or pull request author maps to a member, at write time, by provider user id
+(a claimed identity, or sign-in's GitHub id on github.com, read only), a GitHub `noreply` address,
+the account's verified email, then a claimed email or login; else the provider's login shows.
+
+**Deliveries.** Every accepted delivery is a row, applied by a per-repository job in the order
+received; a duplicate delivery id inserts nothing. A delivery over 1 MB is stored trimmed
+(per-commit file lists dropped, the first 100 commits kept) or, if still too large, as `{}`,
+with `truncated`. A failed apply is retried after 1, 4, 16 and 64 minutes and is `failed` after
+the fifth attempt; a replay resets `attempts` and `processed_at`. Every accepted delivery, a
+duplicate included, schedules its repository's drain, and `git.recover` (hourly) schedules any
+still pending after 15 minutes, so one stored whose queueing failed is not stranded. Branches,
+commits and pull requests are applied only while the connection is live and not suspended and the
+repository is still available to it (`connection_suspended`, `repository_removed` otherwise);
+lifecycle events (suspend, unsuspend, rename, removal) always apply. Discovery marks repositories
+removed only after a complete listing; every provider listing stops at 100 pages, a page seen
+twice, or two minutes.
+
+### Automations
+
+Built in 7 (third milestone, 25 Oct 2026). A rule of one project: one trigger, conditions, one
+action. A change it makes is written as the system (`issue_activity.actor_id` NULL) with
+`automation_run_id` set, and its snapshot names the rule and the cause:
+`{"name": "Fixed", "automation": "Close on merge", "cause": "acme/web#42 was merged by @alex"}`.
+
+```
+automations(
+  id bigint PK, org_id → organizations ON DELETE CASCADE,
+  (project_id, org_id) → projects (id, org_id) ON DELETE CASCADE,
+  name text,                         -- unique per project, case-insensitive
+  trigger text,                      -- 'git.pull_request_merged', … : the API's catalogue, no CHECK
+  conditions jsonb default '{}',     -- only what was set; the catalogue holds the defaults
+  action text,                       -- 'issue.set_status'; no CHECK, same reason
+  action_params jsonb default '{}',  -- {"status": "Fixed"}: the status by name, as the project spells it
+  is_enabled boolean default true,
+  position smallint default 0,       -- evaluation order, lowest first
+  created_by → users, created_at, updated_by → users, updated_at,
+  UNIQUE (id, org_id),
+  UNIQUE (project_id, lower(name))
+)
+
+automation_runs(
+  id bigint PK, org_id → organizations ON DELETE CASCADE,
+  (automation_id, org_id) → automations (id, org_id) ON DELETE CASCADE,
+  (issue_id, org_id) → issues (id, org_id) ON DELETE CASCADE,
+  trigger_ref jsonb,                 -- what fired it, readable: {"pull_request": "acme/web#42", "cause": "…"}
+  caused_by → users NULL,            -- the member whose git action fired it: not notified of the change
+  result text CHECK in ('applied','skipped','failed'),
+  reason text NULL,                  -- 'already_in_status' | 'condition_not_met' | 'archived_project' | 'status_missing'
+  changes jsonb NULL,                -- {"status": {"from": "In Review", "to": "Fixed"}} when applied
+  created_at
+)
+```
+
+- **Rules run after the event's writes commit**, in `position` order for the trigger; the first that
+  changes the issue ends the evaluation. Every rule looked at leaves a run, skipped ones too.
+- **Depth one.** A change an automation makes fires no rule. `issue.children_resolved` fires only
+  when a person resolves the last open subtask.
+- **Conditions read live state**, not the event's snapshot: the issue's status category and type,
+  its other linked pull requests (`all_linked_merged`, `no_other_open_prs`), the repository's merge
+  base branches.
+- **A renamed status is followed**: renaming it rewrites `action_params.status` in every rule of the
+  project that sets it. An archived or deleted status leaves the rule pointing nowhere; its runs skip
+  with `status_missing`.
+- **Webhook deliveries run rules** only when received live or replayed with `run_automations` (and a
+  replay fires only on what it changes: stored state already moved fires nothing again);
+  backfill and the nightly reconcile never do. A pull request linked by hand while it is open fires
+  `git.pull_request_opened` for that issue, caused by the person who linked it.
+
 ## Tables defined in other documents
 
 This document is the map of the schema, so the tables specified elsewhere are
@@ -2265,6 +2554,9 @@ Nothing in the product deletes these on a user's behalf, so a job does.
 | `organizations` (deletion scheduled) | rows (`org_storage_configs` and `org_storage_locations` included) and platform-bucket objects deleted 14 days after `deletion_scheduled_at` unless cancelled; objects in the organisation's own bucket are never touched; the org row and `org_activity` stay | `org.delete`, hourly at :45 (reminder: `org.deletion_reminder`, hourly at :40) |
 | `notifications` | read 30 days after reading, unread 90 days after writing | `notifications.purge`, nightly at 03:15 UTC |
 | `webhook_deliveries` (v2) | 30 days | `webhooks.purge`, nightly |
+| `git_webhook_events` | 7 days after `received_at`, whatever their status (7) | `git.purge`, nightly at 03:20 UTC |
+| `automation_runs` | 90 days after `created_at`; history rows keep their own snapshot and lose only the link (7) | `git.purge`, nightly at 03:20 UTC |
+| `git_checks`, `git_commits`, `git_pull_requests` | checks of a commit that heads no pull request after 7 days; superseded commits after 30; commits and pull requests no live link has needed for 90 days, with their link rows (7) | `git.purge`, nightly at 03:20 UTC |
 | `one_time_tokens` | on expiry | `tokens.gc`, hourly |
 | `sessions` | on expiry | `session.gc`, hourly |
 
@@ -2322,6 +2614,8 @@ loudly, which is the point.
 | Colours are palette token names | every `color` column: the 40 label-grid names for statuses, priorities, types and tags; the 14 hues for project avatars | — |
 | Invite limits | `use_count ≤ max_uses`, `expires_at` in the future | — a moving clock is no CHECK |
 | Quotas | 5GB per organisation on `free` (the plan's quota), 100MB per file, 50 attachments per issue and per article — pending uploads count toward both the quota and the 50; with a verified bucket of its own an organisation has no storage quota, while the other limits still apply (6c) | — |
+| One live connection per app installation per organisation (several organisations may share one, each getting every delivery); one per account per organisation | `git_connections` (7) | `git_connections_installation_unique`, `git_connections_org_account_unique` (partial, live rows) |
+| Git plan caps: on `free`, 2 live connections per organisation and 10 linked repositories per project | `git_connections`, `project_repositories` (7) | — counted by the service |
 | A `byo` attachment is served, and its object deleted, only through a verified connection whose location is the row's | `attachments`, `org_storage_configs` (6c) | which location a file is at: `attachments_storage_location_org_fk`, `attachments_storage_location_check` |
 
 One of these could be a constraint and deliberately is not: the one-parent rule

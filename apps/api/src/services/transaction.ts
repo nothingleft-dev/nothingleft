@@ -1,4 +1,5 @@
 import type {
+  AutomationsRepository,
   ArticlesRepository,
   AttachmentsRepository,
   BoardsRepository,
@@ -6,6 +7,11 @@ import type {
   CustomFieldsRepository,
   InvitationsRepository,
   ExportJobsRepository,
+  GitConnectionsRepository,
+  GitEntitiesRepository,
+  GitEventsRepository,
+  GitLinksRepository,
+  GitRepositoriesRepository,
   ImportJobsRepository,
   IssueActivityRepository,
   IssueLinksRepository,
@@ -51,6 +57,12 @@ export interface TenantRepos {
   organizationPurge: OrganizationPurgeRepository;
   importJobs: ImportJobsRepository;
   exportJobs: ExportJobsRepository;
+  gitConnections: GitConnectionsRepository;
+  gitRepositories: GitRepositoriesRepository;
+  gitEvents: GitEventsRepository;
+  gitEntities: GitEntitiesRepository;
+  gitLinks: GitLinksRepository;
+  automations: AutomationsRepository;
 }
 
 export type InTenantTransaction = <T>(body: (repos: TenantRepos) => Promise<T>) => Promise<T>;

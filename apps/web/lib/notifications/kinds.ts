@@ -5,6 +5,7 @@ export const AREA_LABELS: Record<NotificationArea, string> = {
   comments: 'Comments',
   agile: 'Agile',
   knowledge_base: 'Knowledge base',
+  development: 'Development',
 };
 
 /** Per kind: its row on the preferences screen, when you hear it, and what an unsubscribe link names. */
@@ -28,6 +29,16 @@ export const KIND_COPY: Record<NotificationKind, { label: string; when: string; 
   },
   commented: { label: 'Comments', when: 'Someone comments on an issue you watch', about: 'comments' },
   reaction: { label: 'Reactions', when: 'Someone reacts to your comment', about: 'reactions' },
+  pull_request_merged: {
+    label: 'Pull request merged',
+    when: 'A pull request linked to an issue you are assigned to or watch is merged',
+    about: 'merged pull requests',
+  },
+  ci_failed: {
+    label: 'CI failing',
+    when: 'CI starts failing on a pull request linked to an issue assigned to you',
+    about: 'failing CI',
+  },
   sprint_started: {
     label: 'Sprint started',
     when: 'A sprint with an issue assigned to you starts',
@@ -67,6 +78,8 @@ export const KIND_FILTERS: readonly KindFilter[] = [
   { value: 'mentioned', label: 'Mentions', area: 'comments', kinds: ['mentioned'] },
   { value: 'commented', label: 'Comments', area: 'comments', kinds: ['commented'] },
   { value: 'sprint', label: 'Sprints', area: 'agile', kinds: ['sprint_started', 'sprint_finished'] },
+  { value: 'pull_request_merged', label: 'Pull request merged', area: 'development', kinds: ['pull_request_merged'] },
+  { value: 'ci_failed', label: 'CI failing', area: 'development', kinds: ['ci_failed'] },
   { value: 'article', label: 'Articles', area: 'knowledge_base', kinds: ['article_published', 'article_updated'] },
 ];
 

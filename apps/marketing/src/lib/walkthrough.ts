@@ -10,5 +10,5 @@ export const WALKTHROUGH = {
   height: 1080,
   duration: 'PT2M',
   durationLabel: '2 minutes',
-  uploadDate: '2026-10-16',
+  uploadDate: '2026-10-16T12:00:00+05:30',
 };

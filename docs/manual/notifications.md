@@ -18,13 +18,17 @@ Everything here is also available to an AI agent through the [MCP tools](./mcp.m
 | Time logged | Someone logs time on an issue you watch or are assigned to |
 | Sprint started / finished | A sprint with an issue assigned to you starts or finishes |
 | Article published / updated | An article is published in a project you are a member of, or an article you watch changes |
+| Pull request merged | A pull request linked to an issue you watch or are assigned to is merged |
+| CI failing | Checks start failing on a pull request linked to an issue assigned to you |
 
 You watch an issue automatically when you create it, are assigned to it or comment on it, and
 you can watch any issue yourself. See [Issues](./issues.md).
 
 A few rules hold for every kind:
 
-- **Never about your own actions.** Assigning yourself tells nobody.
+- **Never about your own actions.** Assigning yourself tells nobody. The same goes for what
+  your git work sets off: merge a pull request and you are not told it was merged, nor that an
+  [automation](./automations.md) then resolved the issue. Everyone else is.
 - **Only what you can open.** You are never told about an issue in a project you are not in.
   If you leave a project, what you were told about it leaves your inbox too, and comes back if
   you rejoin. A deleted issue leaves with it, and returns if it is restored. An article taken
@@ -85,7 +89,7 @@ kind you pick one of:
 | Daily digest | One email at 9am your time with everything unread from the last day |
 | Weekly digest | The same, on Mondays at 9am |
 
-The kinds are grouped into Issues, Comments, Agile and Knowledge base, and every change saves
+The kinds are grouped into Issues, Comments, Agile, Knowledge base and Development, and every change saves
 as you make it. **Mentioned** is marked *most commonly enabled*: it is the one most people turn
 on. **Reactions** are in-app only. *Turn everything off* at the top switches every email off in
 one go, and *Undo* in the message that follows puts your choices back. Your choices apply in

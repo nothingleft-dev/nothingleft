@@ -4,6 +4,7 @@ import { SEARCH_VIEWS_FAQ } from '@lib/features/search-saved-views';
 import { TIME_TRACKING_FAQ } from '@lib/features/time-tracking';
 import { PROJECT_REPORTS_FAQ } from '@lib/features/project-reports';
 import { KNOWLEDGE_BASE_FAQ } from '@lib/features/project-knowledge-base';
+import { GIT_INTEGRATION_FAQ } from '@lib/features/git-integration';
 import { ENGINEERING_TEAMS_FAQ } from '@lib/solutions/engineering-teams';
 import { PRODUCT_TEAMS_FAQ } from '@lib/solutions/product-teams';
 import { STARTUPS_FAQ } from '@lib/solutions/startups';
@@ -114,6 +115,14 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     breadcrumb: [HOME_CRUMB, { name: 'Knowledge base', path: '/features/project-knowledge-base' }],
     faq: KNOWLEDGE_BASE_FAQ,
   },
+  '/features/git-integration': {
+    title: 'GitHub and GitLab Integration for Issues | Nothing Left',
+    description:
+      'Link branches, commits and pull requests to issues by key, see review and CI state on the issue, and let merges move its status.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'SoftwareApplication', 'FAQPage', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'GitHub and GitLab', path: '/features/git-integration' }],
+    faq: GIT_INTEGRATION_FAQ,
+  },
   '/solutions/engineering-teams': {
     title: 'Project Tracking for Engineering Teams | Nothing Left',
     description:
@@ -205,7 +214,7 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
   '/docs': {
     title: 'Docs | Nothing Left',
     description:
-      'Guides for Nothing Left: issues, search, sprints, reports, the knowledge base, account security and connecting an AI agent over MCP.',
+      'Guides for Nothing Left: issues, search, sprints, reports, the knowledge base, GitHub and GitLab, automations, account security and connecting an AI agent over MCP.',
     nodes: ['Organization', 'WebSite', 'WebPage', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }],
   },
@@ -300,6 +309,22 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
       'Write runbooks, decisions and onboarding notes beside your issues: drafts and publishing, the article tree, tags, links and search.',
     nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Knowledge base', path: '/docs/knowledge-base' }],
+  },
+  '/docs/git': {
+    title: 'GitHub and GitLab | Nothing Left Docs',
+    headline: 'Development: GitHub and GitLab',
+    description:
+      'Connect GitHub or GitLab, link repositories to a project, reference issues from branches, commits and pull requests, and read the Development panel.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'GitHub and GitLab', path: '/docs/git' }],
+  },
+  '/docs/automations': {
+    title: 'Automations | Nothing Left Docs',
+    headline: 'Automations',
+    description:
+      'Status rules fired by git events and resolved subtasks: triggers, conditions, the five templates, run order, the run log and dry runs.',
+    nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
+    breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Automations', path: '/docs/automations' }],
   },
   '/docs/mcp-tools': {
     title: 'MCP tool reference | Nothing Left Docs',

@@ -13,7 +13,8 @@ export interface FieldChange {
 export interface ChangeContext {
   ctx: TenantContext;
   issueId: number;
-  actorId: number;
+  /** Null for the system: a git event or an automation. */
+  actorId: number | null;
   changeGroupId: string;
   at: Date;
 }

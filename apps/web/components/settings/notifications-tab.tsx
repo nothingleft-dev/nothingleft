@@ -17,6 +17,7 @@ import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@hooks/use-notifications';
 import { isApiError } from '@lib/api/errors';
+import { useOrganizations } from '@hooks/use-organizations';
 import { AREA_LABELS, EMAIL_OPTIONS, KIND_COPY } from '@lib/notifications/kinds';
 
 const messageOf = (error: unknown) =>
@@ -24,6 +25,9 @@ const messageOf = (error: unknown) =>
 
 export function NotificationsTab({ user }: { user: Me }) {
   const preferences = useNotificationPreferences();
+  // The development rows wait until a project the reader can see has a linked repository (plan § 14).
+  const organizations = useOrganizations();
+  const gitEnabled = organizations.data?.some(o => o.git_enabled) ?? false;
   const update = useUpdateNotificationPreferences();
   const rows = preferences.data?.preferences ?? [];
   const anyOn = rows.some(p => p.email !== 'off');
@@ -78,7 +82,7 @@ export function NotificationsTab({ user }: { user: Me }) {
 
       {NOTIFICATION_AREAS.map(area => {
         const inArea = rows.filter(p => p.area === area);
-        if (inArea.length === 0) return null;
+        if (inArea.length === 0 || (area === 'development' && !gitEnabled)) return null;
         return (
           <SettingsSection key={area} title={AREA_LABELS[area]}>
             <ul className="flex flex-col divide-y divide-border-subtle">

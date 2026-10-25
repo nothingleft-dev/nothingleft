@@ -13,6 +13,7 @@ import { ReportMultiPicker, ReportPicker, type ReportOption } from '@components/
 import { InboxEntry, InboxEntrySkeletons } from '@components/notifications/inbox-entry';
 import { entryId, useInbox, useMarkRead, useNotificationFacets, useUnreadCount } from '@hooks/use-notifications';
 import type { InboxFilter } from '@lib/api/notifications';
+import { useOrganizations } from '@hooks/use-organizations';
 import { isApiError } from '@lib/api/errors';
 import { AREA_LABELS, KIND_FILTERS, kindsOf, parseKindFilters } from '@lib/notifications/kinds';
 
@@ -176,7 +177,12 @@ function InboxFilters({
   loading: boolean;
   severalOrgs: boolean;
 }) {
-  const kindOptions: ReportOption[] = KIND_FILTERS.map(f => ({
+  // The development kinds wait for a project with a linked repository (plan § 14).
+  const organizations = useOrganizations();
+  const gitEnabled = organizations.data?.some(o => o.git_enabled) ?? false;
+  const kindOptions: ReportOption[] = KIND_FILTERS.filter(
+    f => f.area !== 'development' || gitEnabled || state.kinds.includes(f.value),
+  ).map(f => ({
     value: f.value,
     label: f.label,
     group: AREA_LABELS[f.area],

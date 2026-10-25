@@ -13,9 +13,11 @@ export const issue_activity = pgTable(
       .notNull()
       .references(() => organizations.id, { onDelete: 'cascade' }),
     issue_id: bigint({ mode: 'number' }).notNull(),
-    actor_id: bigint({ mode: 'number' })
-      .notNull()
-      .references(() => users.id, { onDelete: 'restrict' }),
+    // NULL for the system: a git event or an automation, never a person.
+    actor_id: bigint({ mode: 'number' }).references(() => users.id, { onDelete: 'restrict' }),
+    // The automation run that made this change. No foreign key: purging runs would scan this table
+    // once per run; a purged run's id finds nothing, and the snapshot still names the rule and cause.
+    automation_run_id: bigint({ mode: 'number' }),
     change_group_id: uuid().notNull(),
     kind: text().notNull(),
     field: text(),

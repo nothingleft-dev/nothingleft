@@ -5,6 +5,10 @@ import {
   systemContext,
   tenantContext,
   type ArticlesRepository,
+  type AutomationsRepository,
+  type GitEntitiesRepository,
+  type GitLinksRepository,
+  type GitRepositoriesRepository,
   type InboxOrg,
   type CommentsRepository,
   type IssueActivityRepository,
@@ -52,6 +56,10 @@ export interface FanoutDeps {
   projects: ProjectsRepository;
   schema: ProjectSchemaRepository;
   organizations: OrganizationsRepository;
+  automations: AutomationsRepository;
+  gitLinks: GitLinksRepository;
+  gitEntities: GitEntitiesRepository;
+  gitRepositories: GitRepositoriesRepository;
   queue: () => JobQueue;
   mailer: Mailer;
   analytics: Analytics;
@@ -67,6 +75,8 @@ interface Candidate {
   /** What happened; someone in several recipient sets for one event gets one row. Defaults to the dedupe key. */
   event?: string;
   actor_id: number | null;
+  /** The person whose git action made an automation change it: they did it, so they are not told. */
+  exclude?: number | null;
   payload: NotificationDetail;
   issue_id?: number;
   comment_id?: number;
@@ -83,6 +93,8 @@ const PRIORITY: NotificationKind[] = ['assigned', 'unassigned', 'mentioned', 're
 const nameOf = (value: unknown): string | null =>
   value && typeof value === 'object' && 'name' in value ? String((value as { name: unknown }).name) : null;
 const listOf = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
+const fieldOf = (value: unknown, key: string): unknown =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined;
 const idIn = (value: unknown, key: string): number | null => {
   const v = value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined;
   return typeof v === 'number' ? v : null;
@@ -113,6 +125,20 @@ export function notificationFanout(deps: FanoutDeps) {
     return new Set((await notifications.eligibleRecipients(ctx, project.id, userIds)).map(r => r.user_id));
   }
 
+  /** Who merged the issue's linked pull request `repo#number`, when they are a member. */
+  async function mergerOf(ctx: TenantContext, issueId: number, repo: string, number: number): Promise<number | null> {
+    const live = (await deps.gitLinks.liveForIssues(ctx, [issueId])).filter(l => l.target_type === 'pull_request');
+    const pulls = (
+      await deps.gitEntities.pullRequestsByIds(
+        ctx,
+        live.map(l => l.target_id),
+      )
+    ).filter(p => p.number === number);
+    const repos = await deps.gitRepositories.findByIds(ctx, [...new Set(pulls.map(p => p.repository_id))]);
+    const named = (id: number) => repos.find(r => r.id === id)?.full_name.toLowerCase() === repo.toLowerCase();
+    return pulls.find(p => named(p.repository_id))?.merged_by_user_id ?? null;
+  }
+
   /** What a recipient may open and read in one organisation, derived as the inbox derives it. */
   async function inboxOrgOf(orgId: number, userId: number): Promise<InboxOrg> {
     const principal: Principal = { via: 'session', userId, sessionId: 0, currentOrgId: orgId };
@@ -137,7 +163,7 @@ export function notificationFanout(deps: FanoutDeps) {
     const rank = (k: NotificationKind) => (PRIORITY.includes(k) ? PRIORITY.indexOf(k) : PRIORITY.length);
     const ranked = [...candidates].sort((a, b) => rank(a.kind) - rank(b.kind));
     for (const c of ranked) {
-      if (c.user_id === c.actor_id) continue;
+      if (c.user_id === c.actor_id || c.user_id === c.exclude) continue;
       const keys = [`${c.user_id}:${c.dedupe_key}`, `${c.user_id}:e:${c.event ?? c.dedupe_key}`];
       if (keys.some(k => seen.has(k))) continue;
       for (const k of keys) seen.add(k);
@@ -251,6 +277,10 @@ export function notificationFanout(deps: FanoutDeps) {
         actor_id: row.actor_id,
         payload: { source: type === 'issue' ? 'description' : type, ...(extra.payload ?? {}) },
       }));
+    const runIds = settled.flatMap(r => (r.automation_run_id === null ? [] : [r.automation_run_id]));
+    const causers = new Map(
+      (await deps.automations.runsByIds(ctx, runIds)).map(run => [run.id, run.caused_by] as const),
+    );
     const toEach = (
       users: number[],
       row: IssueActivityRow,
@@ -263,8 +293,10 @@ export function notificationFanout(deps: FanoutDeps) {
         ...extra,
         user_id,
         kind,
-        dedupe_key: `a:${row.id}`,
+        dedupe_key: extra.dedupe_key ?? `a:${row.id}`,
         actor_id: row.actor_id,
+        exclude:
+          extra.exclude ?? (row.automation_run_id === null ? null : (causers.get(row.automation_run_id) ?? null)),
         payload,
       }));
 
@@ -309,6 +341,39 @@ export function notificationFanout(deps: FanoutDeps) {
               link: link?.link ?? '',
               other_issue: openers.has(user_id) ? other : null,
             }),
+          );
+        }
+      } else if (row.kind === 'git_pr_changed') {
+        const repo = String(fieldOf(row.new_value, 'repo'));
+        const number = Number(fieldOf(row.new_value, 'number'));
+        const pullRequest = `${repo}#${number}`;
+        const pullRequestTitle = String(fieldOf(row.new_value, 'title') ?? '');
+        const changed = (key: string, to: string) =>
+          fieldOf(row.new_value, key) === to && fieldOf(row.old_value, key) !== to;
+        if (changed('state', 'merged')) {
+          const merger = await mergerOf(ctx, issue.id, repo, number);
+          candidates.push(
+            ...toEach(
+              [...new Set([...assignees, ...watchers])],
+              row,
+              'pull_request_merged',
+              {
+                pull_request: pullRequest,
+                pull_request_title: pullRequestTitle,
+              },
+              { exclude: merger, dedupe_key: `a:${row.id}:merged` },
+            ),
+          );
+        }
+        if (changed('ci', 'failing')) {
+          candidates.push(
+            ...toEach(
+              assignees,
+              row,
+              'ci_failed',
+              { pull_request: pullRequest, pull_request_title: pullRequestTitle },
+              { dedupe_key: `a:${row.id}:ci` },
+            ),
           );
         }
       } else if (row.kind === 'time_logged' && row.new_value && !row.old_value) {

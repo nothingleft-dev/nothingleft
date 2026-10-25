@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GitDevelopmentSummarySchema } from './git.ts';
 import { AttachmentIdsSchema } from './attachments.ts';
 import {
   ISSUE_ACTIVITY_KINDS,
@@ -45,7 +46,8 @@ export type SubtaskProgress = z.infer<typeof SubtaskProgressSchema>;
 
 export const IssueSchema = z.object({
   key: z.string(),
-  project: z.object({ key: z.string(), name: z.string() }),
+  // git_enabled: the project has a linked repository; everything git-related is hidden otherwise.
+  project: z.object({ key: z.string(), name: z.string(), git_enabled: z.boolean() }),
   title: z.string(),
   description_md: z.string().nullable(),
   status: IssueStatusRefSchema,
@@ -72,6 +74,10 @@ export const IssueSchema = z.object({
   attachment_count: z.number().int(),
   watcher_count: z.number().int(),
   custom_fields: z.array(IssueCustomFieldValueSchema),
+  // Null when the project is not git-enabled.
+  development: GitDevelopmentSummarySchema.nullable(),
+  // The last time an automation changed the issue; an automation never becomes updated_by.
+  last_automation_at: z.string().nullable(),
   // The caller's own personal signals.
   me: z.object({ starred: z.boolean(), voted: z.boolean(), watching: z.boolean() }),
   created_at: z.string(),
@@ -168,6 +174,8 @@ export const IssueActivitySchema = z.object({
   updated_at: z.string(),
   // The comment a commented or comment_edited entry is about; those entries vanish with it.
   comment: CommentSchema.nullable(),
+  // Set when an automation made the change: the rule's name and what fired it, in words.
+  automation: z.object({ name: z.string(), cause: z.string() }).nullable(),
 });
 export type IssueActivity = z.infer<typeof IssueActivitySchema>;
 

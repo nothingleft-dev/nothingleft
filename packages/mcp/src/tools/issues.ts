@@ -20,6 +20,7 @@ import {
 import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { ToolError } from '../errors.ts';
+import { developmentLine } from './git.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
 import { customFieldsArg, customFieldsBody } from './custom-fields.ts';
 import { referencedByLines } from './articles.ts';
@@ -212,6 +213,7 @@ export async function renderIssue(
   return join(
     issueHeading(issue, ctx.appBaseUrl),
     issueFacts(issue, zone, calendar),
+    developmentLine(issue),
     linkLines(links) ? `**Links**\n${linkLines(links)}` : null,
     referencedByLines(articles),
     watchers ? `**Watchers:** ${watchers.data.map(person).join(', ') || 'none'}` : null,

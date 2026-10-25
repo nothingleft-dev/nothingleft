@@ -268,5 +268,6 @@ export function activityLine(a: IssueActivity, zone: string, calendar?: WorkCale
         return a.kind.replace(/_/g, ' ');
     }
   })();
+  if (a.automation) return `- ${at} · ${who} · ${a.automation.name} · ${what}, because ${a.automation.cause}`;
   return `- ${at} · ${who} · ${what}`;
 }

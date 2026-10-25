@@ -99,6 +99,12 @@ export const REQUESTS: AgentRequest[] = [
     note: 'The agent reads the same numbers the chart shows.',
   },
   {
+    area: 'Development',
+    prompt: 'Did ACME-12 merge? Is anything still open for it?',
+    calls: [{ tool: 'get_issue_development', args: 'issue: "ACME-12"' }],
+    note: 'The pull request, its review and CI state, and whether it closes the issue.',
+  },
+  {
     area: 'Inbox',
     prompt: "What's waiting on me in ACME? Mark ACME-12 read.",
     calls: [{ tool: 'list_notifications' }, { tool: 'mark_notifications_read' }],
@@ -121,6 +127,11 @@ export const TOOL_AREAS = [
   { area: 'Sprints, backlog and boards', detail: 'Plan, start and finish sprints; order the backlog; shape boards.' },
   { area: 'Knowledge base', detail: 'Write, search, publish and restore project articles.' },
   { area: 'Reports', detail: 'Any of the nine reports, with the table and series behind the chart.' },
+  {
+    area: 'GitHub and GitLab',
+    detail: 'Repositories, linked pull requests with review and CI, and the delivery log.',
+  },
+  { area: 'Automations', detail: 'Status rules on git events and subtasks, with dry runs and the run log.' },
   { area: 'Notifications', detail: 'Your inbox and how you want to be told.' },
   { area: 'Projects, organisation and people', detail: 'Settings, invitations, roles and the audit trail.' },
   { area: 'Prompts', detail: 'Triage, duplicates, standup, release notes, estimates, sprint report, document this.' },

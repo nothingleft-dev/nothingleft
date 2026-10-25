@@ -76,6 +76,17 @@ const EnvSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
+  // The GitHub App for the git integration, separate from GitHub sign-in. Unset, GitHub connects in manual mode only.
+  GITHUB_APP_ID: z.string().optional(),
+  // PEM; a single line with \n escapes is accepted.
+  GITHUB_APP_PRIVATE_KEY: z.string().optional(),
+  GITHUB_APP_WEBHOOK_SECRET: z.string().min(16).optional(),
+  GITHUB_APP_SLUG: z.string().optional(),
+  GITHUB_APP_CLIENT_ID: z.string().optional(),
+  GITHUB_APP_CLIENT_SECRET: z.string().optional(),
+  GITHUB_APP_BASE_URL: z.string().url().default('https://github.com'),
+  // Self-managed GitLab or GitHub Enterprise on a private network; refused otherwise, so a base URL cannot reach internal hosts.
+  GIT_ALLOW_PRIVATE_HOSTS: bool.default(false),
 
   EMAIL_PROVIDER: z.enum(['resend', 'zoho', 'smtp']).default('resend'),
   RESEND_API_KEY: z.string().optional(),
@@ -142,6 +153,24 @@ const CheckedEnvSchema = EnvSchema.refine(e => e.NODE_ENV !== 'production' || e.
     path: ['POSTHOG_KEY'],
     message: 'required when LOG_TARGETS includes posthog',
   })
+  .refine(
+    e => {
+      const app = [
+        e.GITHUB_APP_ID,
+        e.GITHUB_APP_PRIVATE_KEY,
+        e.GITHUB_APP_WEBHOOK_SECRET,
+        e.GITHUB_APP_SLUG,
+        e.GITHUB_APP_CLIENT_ID,
+        e.GITHUB_APP_CLIENT_SECRET,
+      ];
+      return app.every(v => v === undefined) || app.every(v => v !== undefined);
+    },
+    {
+      path: ['GITHUB_APP_ID'],
+      message:
+        'GITHUB_APP_ID, _PRIVATE_KEY, _WEBHOOK_SECRET, _SLUG, _CLIENT_ID and _CLIENT_SECRET are set together or not at all',
+    },
+  )
   .refine(e => e.NODE_ENV !== 'production' || !e.BYO_ALLOW_ANY_ENDPOINT, {
     path: ['BYO_ALLOW_ANY_ENDPOINT'],
     message: 'never in production: storage endpoints are built from an account id or a region there',
@@ -156,6 +185,29 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
     throw new Error(`Invalid environment:\n${issues}`);
   }
   return parsed.data;
+}
+
+export interface GitHubAppEnv {
+  appId: string;
+  privateKey: string;
+  webhookSecret: string;
+  slug: string;
+  clientId: string;
+  clientSecret: string;
+  baseUrl: string;
+}
+
+export function githubApp(env: Env): GitHubAppEnv | null {
+  if (!env.GITHUB_APP_ID) return null;
+  return {
+    appId: env.GITHUB_APP_ID,
+    privateKey: env.GITHUB_APP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+    webhookSecret: env.GITHUB_APP_WEBHOOK_SECRET!,
+    slug: env.GITHUB_APP_SLUG!,
+    clientId: env.GITHUB_APP_CLIENT_ID!,
+    clientSecret: env.GITHUB_APP_CLIENT_SECRET!,
+    baseUrl: env.GITHUB_APP_BASE_URL.replace(/\/+$/, ''),
+  };
 }
 
 export const filesBaseUrl = (env: Env): string => env.FILES_BASE_URL ?? `${env.API_BASE_URL.replace(/\/$/, '')}/files`;

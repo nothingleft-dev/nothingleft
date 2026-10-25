@@ -27,6 +27,7 @@ import { useOrganization } from '@hooks/use-organizations';
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSession } from '@hooks/use-session';
 import { formatCalendarDate } from '@lib/datetime';
+import { DevelopmentIcon } from '@components/git/git-marks';
 import { cn } from '@lib/utils';
 import { personTitle } from '@components/former-member-chip';
 
@@ -130,6 +131,7 @@ export function BoardCard({
         <ValueName value={card.type} label="Type" dim={card.resolved} />
         <CardDueDate card={card} today={today} canEdit={canEdit && !overlay} />
         <span className="ml-auto flex items-center gap-2">
+          {card.development ? <DevelopmentIcon rollup={card.development} /> : null}
           <SubtaskProgress resolved={card.subtasks.resolved} total={card.subtasks.total} />
           <StoryPoints points={card.story_points} />
         </span>

@@ -99,6 +99,8 @@ column (decided 27 Sep 2026). **Email off by default**, opt-in per kind with
 | `article_published` | ✅ | off | In a project you are a member of |
 | `article_updated` | ✅ | off | On an article you watch |
 | `reaction` | ✅ | never | In-app only. Nobody needs an email about a 👍. Nothing produces it until comment reactions ship (3.38a, 6f) |
+| `pull_request_merged` | ✅ | off | A pull request linked to the issue was merged (7) |
+| `ci_failed` | ✅ | off | Checks started failing on a pull request linked to an issue assigned to you (7) |
 
 There is no `invited` kind (decided 27 Sep 2026): an invitation is transactional email, and a
 kind nothing produces is how two documents drift.
@@ -119,6 +121,18 @@ Watchers are the default audience, not the only one. Per kind:
 | `article_published` | Every member of the project | `notify.fanout` |
 | `article_updated` | Watchers of the article | `notify.fanout` |
 | `reaction` | The comment's author | `notify.fanout` |
+| `pull_request_merged` | Assignees and watchers of each linked issue, never the member who merged it | `notify.fanout`, from the issue's `git_pr_changed` row (state became merged) |
+| `ci_failed` | Assignees of each linked issue | `notify.fanout`, from the issue's `git_pr_changed` row (CI became failing) |
+
+An opened pull request or a review request is not a kind: the provider already tells the people
+involved (decided 25 Oct 2026).
+
+**Automated changes (7).** A status an automation set produces the ordinary `status_changed` or
+`resolved`, with no actor; the summary names the bot (*Nothing Left Bot changed PMS-12 from In
+Review to Fixed*). The member whose git action fired the rule (the merger for a merge, the pusher
+for a push, the author for an opened or ready pull request), when they map to a member, is treated
+as the actor for recipients only and is not notified of the change; everyone else is (decided 25
+Oct 2026).
 
 The actor never receives a notification for their own action. A user in more
 than one recipient set for one event gets one row. `due_soon` and `overdue`
@@ -313,10 +327,11 @@ notification_preferences(
 
 Rows are created lazily; an absent row means the defaults above. Preferences belong to the
 account and apply in every organisation. The preferences screen groups kinds into Issues,
-Comments, Agile and Knowledge base, with a "turn everything off" escape hatch at the top:
+Comments, Agile, Knowledge base and Development, with a "turn everything off" escape hatch at the top:
 *Issues* — assigned, unassigned, status changed, resolved, linked, due soon, overdue, time
 logged; *Comments* — mentioned, commented, reaction; *Agile* — sprint started, sprint
-finished; *Knowledge base* — article published, article updated. The API sends each kind's
+finished; *Knowledge base* — article published, article updated; *Development* (7) — pull request
+merged, CI failing. The API sends each kind's
 area, the options it offers (`reaction`: only off) and the *most commonly enabled* marker, so
 the screen declares none of it.
 

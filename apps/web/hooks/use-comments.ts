@@ -196,6 +196,7 @@ export function useCreateComment(scope: CommentScope) {
           old_value: null,
           people: [],
           new_value: null,
+          automation: null,
           created_at: draft.created_at,
           updated_at: draft.created_at,
           comment: draft as Comment,

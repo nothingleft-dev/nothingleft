@@ -22,6 +22,8 @@ export async function testApp(opts: BuildOptions = {}, env: Env = testEnv) {
     ...isolatedRateLimit(),
     isPasswordBreached: async () => false,
     resolveAvatarUrl: async ({ providerUrl }) => providerUrl ?? null,
+    // No test resolves a provider's host for real.
+    gitResolveHost: async () => ['93.184.216.34'],
     ...opts,
   });
   await app.ready();

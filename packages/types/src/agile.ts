@@ -10,6 +10,7 @@ import {
   LABEL_COLORS,
   SPRINT_NAME_MAX_LENGTH,
   STATUS_CATEGORIES,
+  GIT_DEVELOPMENT_ROLLUPS,
 } from './constants.ts';
 import {
   IssuePriorityRefSchema,
@@ -235,6 +236,8 @@ export const BoardCardSchema = z.object({
   parent: z.string().nullable(),
   subtasks: SubtaskProgressSchema,
   resolved: z.boolean(),
+  // The development badge; null when the project is not git-enabled.
+  development: z.enum(GIT_DEVELOPMENT_ROLLUPS).nullable(),
 });
 export type BoardCard = z.infer<typeof BoardCardSchema>;
 

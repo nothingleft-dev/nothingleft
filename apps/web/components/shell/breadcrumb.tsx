@@ -30,6 +30,7 @@ const ROOTS: Record<string, string> = {
   articles: 'Knowledge base',
   reports: 'Reports',
   timesheets: 'Timesheets',
+  git: 'Organisation',
 };
 
 const SECTIONS: Record<string, string> = {

@@ -1,4 +1,12 @@
 import { whoami } from './whoami.ts';
+import {
+  createAutomation,
+  deleteAutomation,
+  listAutomationRuns,
+  listAutomations,
+  testAutomation,
+  updateAutomation,
+} from './automations.ts';
 import { listOrgs } from './list-orgs.ts';
 import { listProjects } from './projects.ts';
 import {
@@ -77,6 +85,25 @@ import {
 } from './articles.ts';
 import { runReport } from './reports.ts';
 import { listFiles } from './storage.ts';
+import {
+  getIssueDevelopment,
+  getPullRequest,
+  linkPullRequest,
+  unlinkPullRequest,
+  listGitIdentities,
+  claimGitIdentity,
+  removeGitIdentity,
+  linkRepository,
+  listGitConnections,
+  listGitEvents,
+  listRepositories,
+  refreshGitConnection,
+  removeGitConnection,
+  replayGitEvent,
+  resyncRepository,
+  unlinkRepository,
+  updateRepositoryLink,
+} from './git.ts';
 import {
   getNotificationPreferences,
   listNotifications,
@@ -180,4 +207,27 @@ export const TOOLS = [
   getImportStatus,
   requestOrgExport,
   getExportStatus,
+  listGitConnections,
+  refreshGitConnection,
+  removeGitConnection,
+  listRepositories,
+  linkRepository,
+  updateRepositoryLink,
+  unlinkRepository,
+  resyncRepository,
+  listGitEvents,
+  replayGitEvent,
+  getIssueDevelopment,
+  getPullRequest,
+  linkPullRequest,
+  unlinkPullRequest,
+  listGitIdentities,
+  claimGitIdentity,
+  removeGitIdentity,
+  listAutomations,
+  createAutomation,
+  updateAutomation,
+  deleteAutomation,
+  testAutomation,
+  listAutomationRuns,
 ] as const;

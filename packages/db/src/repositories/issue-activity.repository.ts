@@ -22,7 +22,8 @@ export interface IssueActivityFilter {
 
 export interface IssueActivityWithActor {
   activity: IssueActivityRow;
-  actor: UserRow;
+  /** Null for a system row: a git event or an automation. */
+  actor: UserRow | null;
   actor_membership: OrgMemberRow | null;
 }
 
@@ -49,6 +50,39 @@ export function issueActivityRepository(db: Queryable) {
         .returning();
       if (!row) throw new Error('insert returned no row');
       return row;
+    },
+
+    /** The newest system `git_pr_changed` row about that pull request since `since`: the one a new change coalesces into. */
+    async latestPullRequestChange(
+      ctx: TenantContext,
+      issueId: number,
+      pullRequest: { repo: string; number: number },
+      since: Date,
+    ): Promise<IssueActivityRow | undefined> {
+      const [row] = await db
+        .select()
+        .from(issue_activity)
+        .where(
+          and(
+            onIssue(ctx, issueId),
+            eq(issue_activity.kind, 'git_pr_changed'),
+            sql`${issue_activity.actor_id} is null`,
+            sql`${issue_activity.new_value} ->> 'repo' = ${pullRequest.repo}`,
+            sql`(${issue_activity.new_value} ->> 'number')::int = ${pullRequest.number}`,
+            gt(issue_activity.created_at, since),
+          ),
+        )
+        .orderBy(desc(issue_activity.id))
+        .limit(1);
+      return row;
+    },
+
+    /** Rewrites both sides of a coalesced system row. */
+    async rewriteBoth(ctx: TenantContext, id: number, oldValue: unknown, newValue: unknown, at: Date): Promise<void> {
+      await db
+        .update(issue_activity)
+        .set({ old_value: oldValue, new_value: newValue, updated_at: at })
+        .where(and(eq(issue_activity.org_id, ctx.orgId), eq(issue_activity.id, id)));
     },
 
     /** The newest change to one field, by anyone: another actor's row is itself a hard stop. */
@@ -105,7 +139,7 @@ export function issueActivityRepository(db: Queryable) {
       return db
         .select({ activity: issue_activity, actor: users, actor_membership: org_members })
         .from(issue_activity)
-        .innerJoin(users, eq(users.id, issue_activity.actor_id))
+        .leftJoin(users, eq(users.id, issue_activity.actor_id))
         .leftJoin(
           org_members,
           and(eq(org_members.org_id, issue_activity.org_id), eq(org_members.user_id, issue_activity.actor_id)),

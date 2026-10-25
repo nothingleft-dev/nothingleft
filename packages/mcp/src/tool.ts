@@ -50,4 +50,5 @@ export const EXEMPT_CATEGORIES = [
   'email_link',
   'lifecycle',
   'byo_storage',
+  'integration_inbound',
 ] as const;

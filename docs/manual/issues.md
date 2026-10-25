@@ -34,8 +34,13 @@ it is fixed, because every key already handed out would stop working.
 | Start date, Due date | Calendar dates                                | `No start date`, `No due date` |
 | Parent               | The issue this one is a subtask of            | - (none)                       |
 | Tags                 | Any number of organisation-wide tags          | nothing is shown               |
+| Development          | The badge for its branches and pull requests  | `Nothing linked`               |
 
 In the issue list, an empty cell shows `--`.
+
+**Development** shows only in a project with a linked GitHub or GitLab repository. It is set
+by the code work that names the issue, never by hand; its menu copies a branch name for the
+issue and its checkout command. See [Development: GitHub and GitLab](./git.md).
 
 **Story points and sprints** are covered in [Sprints, backlog and boards](./agile.md). A
 parent issue - an epic - also shows the story points of everything beneath it added up,
@@ -158,9 +163,10 @@ issue's activity.
 - A deleted comment disappears from the issue entirely - you are asked first, because
   it cannot be brought back. The history keeps one line saying a comment was deleted,
   and by whom.
-- The activity has four tabs: **All** shows comments and changes together, **Comments**
-  only the comments, **Spent time** the time logged (see [Time tracking](#time-tracking)),
-  and **History** only the changes.
+- The activity has up to five tabs: **All** shows comments and changes together, **Comments**
+  only the comments, **Development** the branches, commits and pull requests that name the
+  issue (in a project with a linked repository; see [Development](./git.md)), **Spent time**
+  the time logged (see [Time tracking](#time-tracking)), and **History** only the changes.
 - A comment ends the five-minute window described under
   [History](#history): changes made before it stay exactly as they were.
 

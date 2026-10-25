@@ -1,0 +1,152 @@
+---
+import DevelopmentBadge from '@components/DevelopmentBadge.astro';
+import Card from '@components/features/sprints-kanban-boards/Card.astro';
+import {
+  CI_FAILING_KEYS,
+  DEVELOPMENT_BADGES,
+  SEARCH_EXAMPLES,
+  SEARCH_MANUAL_PATH,
+  SPRINT_LIST,
+  SPRINT_LIST_QUERY,
+} from '@lib/features/git-integration';
+import { SPRINT_ISSUES } from '@lib/features/sprints-kanban-boards';
+
+const boardCards = SPRINT_ISSUES.filter(card => CI_FAILING_KEYS.includes(card.key) || card.development === 'in_review');
+const badges = Object.values(DEVELOPMENT_BADGES);
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="gi-badge-title">
+  <div class="wrap py-16 md:py-24">
+    <div class="max-w-[680px]">
+      <h2 id="gi-badge-title" class="h2">
+        One badge says where the code is.
+      </h2>
+      <p class="prose mt-5">
+        Every linked issue carries a badge that sums up its branches and pull requests, in the issue list and on board
+        cards. Colour is kept for what needs a look: a failing check, requested changes, a revert.
+      </p>
+      <ul class="gi-legend mt-6" aria-label="Development badges">
+        {badges.map(badge => (
+          <li>
+            <DevelopmentBadge badge={badge} />
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="mt-10 md:mt-14 grid lg:grid-cols-12 gap-10 lg:gap-12">
+      <div class="min-w-0 lg:col-span-7">
+        <div class="panel gi-list" role="group" aria-label="Sprint 08 issues with linked development">
+          <div class="querybar">
+            <span class="q">{SPRINT_LIST_QUERY}</span>
+            <span class="count">{SPRINT_LIST.length} issues</span>
+          </div>
+          {SPRINT_LIST.map(row => (
+            <div class="row gi-row">
+              <span class="key">{row.key}</span>
+              <span class="title">{row.title}</span>
+              <span class="gi-dev">{row.development && <DevelopmentBadge badge={row.development} />}</span>
+              <span class="meta">
+                {row.assignee ? (
+                  <span class="who">
+                    <span class="av" aria-hidden="true">
+                      {row.assignee.initials}
+                    </span>
+                    {row.assignee.name}
+                  </span>
+                ) : (
+                  <span class="who none">Unassigned</span>
+                )}
+                <span class="status">
+                  <i
+                    class:list={['dot', { started: row.status === 'In Progress', done: row.status === 'Fixed' }]}
+                    aria-hidden="true"
+                  ></i>
+                  {row.status}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <div class="gi-cards mt-6" role="group" aria-label="The same issues on the sprint board">
+          {boardCards.map(card => (
+            <Card issue={card} />
+          ))}
+        </div>
+      </div>
+
+      <div class="min-w-0 lg:col-span-4 lg:col-start-9">
+        <h3 class="h3">Search by it.</h3>
+        <p class="prose mt-2 text-base">
+          The same search language reads pull requests, the badge, the repository and the branch, in the search bar, in
+          saved views, in reports and for agents.
+        </p>
+        <ul class="rule-list mt-5">
+          {SEARCH_EXAMPLES.map(example => (
+            <li class="py-3">
+              <code class="gi-query">{example.query}</code>
+              <p class="mt-1 text-sm text-fg-2">{example.means}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-5 text-sm">
+          <a class="link" href={SEARCH_MANUAL_PATH}>
+            The search manual
+            <span class="arr" aria-hidden="true">
+              →
+            </span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gi-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gi-list {
+    overflow: hidden;
+  }
+  .gi-query {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  .gi-row {
+    grid-template-columns: 64px minmax(0, 1fr) 112px 110px 100px;
+  }
+  .gi-dev {
+    display: flex;
+    min-width: 0;
+  }
+  .gi-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-width: 480px;
+  }
+  .gi-cards > :global(.card) {
+    margin-top: 0;
+  }
+  @media (max-width: 640px) {
+    .gi-row {
+      grid-template-columns: 60px minmax(0, 1fr);
+    }
+    .gi-dev {
+      grid-row: 2;
+      grid-column: 1 / span 2;
+      padding-left: 70px;
+    }
+    .gi-row :global(.meta) {
+      grid-row: 3;
+    }
+    .gi-cards {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

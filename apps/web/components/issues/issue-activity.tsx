@@ -7,6 +7,7 @@ import type { WorkCalendar } from '@nothingleft/format';
 import {
   ISSUE_ACTIVITY_KINDS,
   type CustomField,
+  type GitLinkSource,
   type Issue,
   type IssueActivity,
   type IssueActivityKind,
@@ -29,15 +30,18 @@ import { emptyLabelOf } from '@components/custom-fields/field-types';
 import { useIssueActivity } from '@hooks/use-issues';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { formatCalendarDate, formatDateTime } from '@lib/datetime';
+import { LINK_SOURCE } from '@lib/git/words';
 import { cn } from '@lib/utils';
 
 const TABS = [
   { value: 'all', label: 'All' },
   { value: 'comments', label: 'Comments' },
+  { value: 'development', label: 'Development' },
   { value: 'time', label: 'Spent time' },
   { value: 'history', label: 'History' },
 ] as const;
-type Tab = (typeof TABS)[number]['value'];
+export type ActivityTab = (typeof TABS)[number]['value'];
+type Tab = ActivityTab;
 
 const COMMENT_KINDS: readonly IssueActivityKind[] = ['commented', 'comment_edited', 'comment_deleted'];
 const HISTORY_KINDS = ISSUE_ACTIVITY_KINDS.filter(kind => !COMMENT_KINDS.includes(kind));
@@ -151,19 +155,35 @@ export interface TimeTracking {
   onLogTime: () => void;
 }
 
+/** The Development tab, present only while the project has a linked repository (plan § 14). */
+export interface DevelopmentTab {
+  count: number;
+  panel: ReactNode;
+}
+
 interface IssueActivitySectionProps {
   issue: Issue;
   canComment: boolean;
   time: TimeTracking;
+  development: DevelopmentTab | null;
+  tab: Tab;
+  onTabChange: (tab: Tab) => void;
   timeZone?: string;
 }
 
-export function IssueActivitySection({ issue, canComment, time, timeZone }: IssueActivitySectionProps) {
-  const [chosen, setTab] = useState<Tab>('all');
-  const tab: Tab = chosen === 'time' && !time.enabled ? 'all' : chosen;
+export function IssueActivitySection({
+  issue,
+  canComment,
+  time,
+  development,
+  tab: chosen,
+  onTabChange: setTab,
+  timeZone,
+}: IssueActivitySectionProps) {
+  const tab: Tab = (chosen === 'time' && !time.enabled) || (chosen === 'development' && !development) ? 'all' : chosen;
   const context = { issueKey: issue.key, projectKey: issue.project.key, timeZone };
   const calendar = useWorkCalendar();
-  const tabs = TABS.filter(t => t.value !== 'time' || time.enabled);
+  const tabs = TABS.filter(t => (t.value !== 'time' || time.enabled) && (t.value !== 'development' || development));
 
   return (
     <section className="mt-8" aria-label="Activity">
@@ -186,6 +206,9 @@ export function IssueActivitySection({ issue, canComment, time, timeZone }: Issu
               {t.value === 'comments' && issue.comment_count > 0 ? (
                 <span className="tabular text-text-muted">{issue.comment_count}</span>
               ) : null}
+              {t.value === 'development' && development && development.count > 0 ? (
+                <span className="tabular text-text-muted">{development.count}</span>
+              ) : null}
               {t.value === 'time' && issue.spent_minutes > 0 ? (
                 <Duration minutes={issue.spent_minutes} calendar={calendar} className="text-2xs text-text-muted" />
               ) : null}
@@ -197,6 +220,8 @@ export function IssueActivitySection({ issue, canComment, time, timeZone }: Issu
 
       {tab === 'comments' ? (
         <CommentsTab {...context} canComment={canComment} />
+      ) : tab === 'development' ? (
+        development?.panel
       ) : tab === 'time' ? (
         <IssueSpentTime
           issue={issue}
@@ -210,7 +235,7 @@ export function IssueActivitySection({ issue, canComment, time, timeZone }: Issu
         <ActivityTab key={tab} {...context} history={tab === 'history'} />
       )}
 
-      {canComment && tab !== 'history' && tab !== 'time' ? (
+      {canComment && (tab === 'all' || tab === 'comments') ? (
         <CommentComposer
           scope={{ issue: issue.key }}
           projectKey={issue.project.key}
@@ -399,10 +424,12 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
   const changes = entry.rows.filter(r => r.kind === 'field_changed' && r.field && r.field !== 'description');
   const relations = entry.rows.filter(r => RELATION_KINDS.includes(r.kind));
   const time = entry.rows.filter(r => r.kind === 'time_logged');
+  const git = entry.rows.filter(r => GIT_KINDS.includes(r.kind));
+  const automated = entry.rows.find(r => r.automation)?.automation ?? null;
   const touchedDescription = entry.rows.some(r => r.field === 'description');
 
   const details =
-    changes.length > 0 || relations.length > 0 || time.length > 0 || touchedDescription ? (
+    changes.length > 0 || relations.length > 0 || time.length > 0 || git.length > 0 || touchedDescription ? (
       <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
         {changes.map(change => {
           const custom = change.field!.startsWith(CUSTOM) ? change.field!.slice(CUSTOM.length) : null;
@@ -434,6 +461,15 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
         {time.map(row => (
           <TimeLine key={row.id} row={row} calendar={calendar} nameOf={nameOf} />
         ))}
+        {git.map(row => (
+          <GitLine key={row.id} row={row} />
+        ))}
+        {automated ? (
+          <div className="contents">
+            <dt className="text-text-muted">Because</dt>
+            <dd className="min-w-0 text-text-secondary [overflow-wrap:anywhere]">{automated.cause}</dd>
+          </div>
+        ) : null}
         {touchedDescription ? (
           <div className="contents">
             <dt className="text-text-muted">Description</dt>
@@ -452,27 +488,44 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
   }
 
   const onlyTime = time.length > 0 && time.length === entry.rows.length;
+  const onlyGit = git.length > 0 && git.length === entry.rows.length;
   const fileVerb = filesVerb(entry.rows);
   const verb = lifecycle
     ? VERBS[lifecycle.kind]
     : onlyTime
       ? timeVerb(time)
-      : fileVerb
-        ? fileVerb
-        : entry.rows.length === 1 && first.kind === 'sprint_changed'
-          ? sprintVerb(first)
-          : touchedDescription && changes.length === 0 && relations.length === 0
-            ? 'updated the description'
-            : 'updated';
+      : onlyGit
+        ? gitVerb(git)
+        : fileVerb
+          ? fileVerb
+          : entry.rows.length === 1 && first.kind === 'sprint_changed'
+            ? sprintVerb(first)
+            : touchedDescription && changes.length === 0 && relations.length === 0
+              ? 'updated the description'
+              : 'updated';
 
   return (
     <li className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 py-3">
       <Connector last={last} />
-      <MemberAvatar member={first.actor} className="size-avatar-lg" />
+      <MemberAvatar member={first.actor} className={cn('size-avatar-lg', first.actor.system && 'rounded-md')} />
       <div className="min-w-0">
         <div className="flex h-8 flex-wrap items-center gap-x-2 text-xs text-text-secondary">
           <PersonName person={first.actor} className="font-medium text-text" />
-          <span>{verb}</span>
+          {automated ? (
+            <>
+              <span aria-hidden>·</span>
+              <Link
+                href={
+                  `/projects/${context.projectKey}/settings?tab=automations&runs=${encodeURIComponent(automated.name)}` as Route
+                }
+                className="font-medium text-text hover:underline"
+              >
+                {automated.name}
+              </Link>
+            </>
+          ) : (
+            <span>{verb}</span>
+          )}
           <RelativeTime value={entry.at} timeZone={context.timeZone} />
         </div>
         {details}
@@ -491,6 +544,110 @@ const RELATION_KINDS: readonly IssueActivityKind[] = [
   'detached',
   'sprint_changed',
 ];
+
+const GIT_KINDS: readonly IssueActivityKind[] = ['git_linked', 'git_unlinked', 'git_pr_changed'];
+
+const GIT_NOUN: Record<string, string> = { pull_request: 'a pull request', commit: 'a commit', branch: 'a branch' };
+
+function gitVerb(rows: IssueActivity[]): string {
+  if (rows.length > 1) return 'updated development';
+  const row = rows[0]!;
+  const noun = GIT_NOUN[String(snap(row.new_value ?? row.old_value)?.kind)] ?? 'development';
+  return row.kind === 'git_linked'
+    ? `linked ${noun}`
+    : row.kind === 'git_unlinked'
+      ? `unlinked ${noun}`
+      : `updated ${noun}`;
+}
+
+const PR_FIELDS: { key: string; label: string; words: Record<string, string> }[] = [
+  { key: 'state', label: 'state', words: { open: 'open', draft: 'draft', merged: 'merged', closed: 'closed' } },
+  {
+    key: 'review',
+    label: 'review',
+    words: {
+      none: 'none',
+      review_requested: 'requested',
+      approved: 'approved',
+      changes_requested: 'changes requested',
+    },
+  },
+  { key: 'ci', label: 'CI', words: { none: 'none', running: 'running', passing: 'passing', failing: 'failing' } },
+];
+
+// History snapshots keep the URL as the provider sent it; the panel links, the history does not.
+function gitSubject(value: Record<string, unknown>): ReactNode {
+  const repo = String(value.repo ?? '');
+  if (value.kind === 'pull_request') {
+    return (
+      <>
+        <span className="font-mono text-2xs text-text">
+          {repo}#{String(value.number ?? '')}
+        </span>{' '}
+        <b className="font-medium text-text">{String(value.title ?? '')}</b>
+      </>
+    );
+  }
+  if (value.kind === 'commit') {
+    return (
+      <>
+        <span className="font-mono text-2xs text-text">{String(value.sha ?? '').slice(0, 7)}</span>{' '}
+        <b className="font-medium text-text">{String(value.title ?? '')}</b>
+        <span className="text-text-muted"> in {repo}</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="font-mono text-2xs text-text">{String(value.name ?? '')}</span>
+      <span className="text-text-muted"> in {repo}</span>
+    </>
+  );
+}
+
+function GitLine({ row }: { row: IssueActivity }) {
+  const before = snap(row.old_value);
+  const after = snap(row.new_value);
+  let value: ReactNode;
+
+  if (row.kind === 'git_pr_changed' && before && after) {
+    const moved = PR_FIELDS.filter(f => before[f.key] !== after[f.key]).map(f => (
+      <span key={f.key}>
+        {f.label} {f.words[String(before[f.key])] ?? String(before[f.key])} →{' '}
+        <b className="font-medium text-text">{f.words[String(after[f.key])] ?? String(after[f.key])}</b>
+      </span>
+    ));
+    value = (
+      <>
+        <span className="font-mono text-2xs text-text">
+          {String(after.repo ?? '')}#{String(after.number ?? '')}
+        </span>
+        {': '}
+        {moved.reduce<ReactNode[]>((acc, node, i) => (i === 0 ? [node] : [...acc, '; ', node]), [])}
+      </>
+    );
+  } else {
+    const subject = (row.kind === 'git_linked' ? after : before) ?? {};
+    const sources = Array.isArray(subject.sources) ? (subject.sources as GitLinkSource[]) : [];
+    value = (
+      <>
+        {row.kind === 'git_linked' ? 'linked ' : 'unlinked '}
+        {gitSubject(subject)}
+        {subject.intent === 'closes' ? <span className="text-text-muted"> · closes this issue</span> : null}
+        {row.kind === 'git_linked' && sources.length > 0 ? (
+          <span className="text-text-muted"> · from {sources.map(s => LINK_SOURCE[s] ?? s).join(', ')}</span>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <div className="contents">
+      <dt className="text-text-muted">Development</dt>
+      <dd className="min-w-0 text-text-secondary [overflow-wrap:anywhere]">{value}</dd>
+    </div>
+  );
+}
 
 const sprintName = (value: unknown) => {
   const name = snap(value)?.name;

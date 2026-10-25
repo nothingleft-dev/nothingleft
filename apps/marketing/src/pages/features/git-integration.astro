@@ -1,0 +1,70 @@
+---
+import CallToAction from '@components/CallToAction.astro';
+import Faq from '@components/Faq.astro';
+import Agent from '@components/features/git-integration/Agent.astro';
+import Automations from '@components/features/git-integration/Automations.astro';
+import Fit from '@components/features/git-integration/Fit.astro';
+import Linking from '@components/features/git-integration/Linking.astro';
+import Visibility from '@components/features/git-integration/Visibility.astro';
+import PageHero from '@components/PageHero.astro';
+import Base from '@layouts/Base.astro';
+import { GIT_INTEGRATION_FAQ, GIT_MANUAL_PATH } from '@lib/features/git-integration';
+import { SIGN_UP_URL } from '@lib/site';
+---
+
+<Base>
+  <PageHero
+    eyebrow="GitHub and GitLab"
+    title="The pull request shows up on the issue it fixes."
+    lede="Connect GitHub or GitLab and name the issue in a branch, a commit or a pull request. The issue shows that work with its review and CI state, and automations move its status when the work moves."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={GIT_MANUAL_PATH}>
+      Read the development manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <p slot="note" class="mt-5 text-xs text-fg-3">
+      <a class="link font-normal" href="#git-linking">
+        See how a key links the work
+        <span class="arr" aria-hidden="true">
+          ↓
+        </span>
+      </a>
+    </p>
+  </PageHero>
+  <Linking />
+  <Visibility />
+  <Automations />
+  <Agent />
+  <Fit />
+  <Faq
+    entries={GIT_INTEGRATION_FAQ}
+    title="Questions about GitHub and GitLab."
+    intro="What it reads, what it changes and what it leaves alone. Short answers here, the rest in the manual."
+    signup={false}
+  />
+  <CallToAction
+    title="Link one repository and watch an issue fill in."
+    body="Join the beta, connect GitHub or GitLab, link a repository to a project and push a branch named after an issue. Add Close on merge when you want the status to follow."
+  >
+    <a class="btn" href={SIGN_UP_URL}>
+      Join the beta
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+    <a class="link text-sm" href={GIT_MANUAL_PATH}>
+      Read the development manual
+      <span class="arr" aria-hidden="true">
+        →
+      </span>
+    </a>
+  </CallToAction>
+</Base>

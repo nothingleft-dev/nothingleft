@@ -19,6 +19,7 @@ import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import type { ColumnDef } from '@lib/issue-list/columns';
+import { DevelopmentBadge, summaryCounts } from '@components/git/git-marks';
 import { FieldValue } from '@components/custom-fields/field-value';
 import { formatCalendarDateShort } from '@lib/datetime';
 import { issuePath } from '@lib/issue-path';
@@ -121,6 +122,15 @@ export function IssueRow({
           >
             {issue.story_points ?? '--'}
           </span>
+        );
+      case 'development':
+        return issue.development && issue.development.rollup !== 'none' ? (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <DevelopmentBadge rollup={issue.development.rollup} />
+            <span className="truncate text-2xs text-text-muted tabular">{summaryCounts(issue.development, true)}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-text-muted">--</span>
         );
       case 'votes':
         return (

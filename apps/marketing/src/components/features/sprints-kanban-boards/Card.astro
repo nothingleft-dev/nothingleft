@@ -1,4 +1,6 @@
 ---
+import DevelopmentBadge from '@components/DevelopmentBadge.astro';
+import { DEVELOPMENT_BADGES } from '@lib/features/git-integration';
 import type { SprintIssue } from '@lib/features/sprints-kanban-boards';
 
 interface Props {
@@ -13,6 +15,7 @@ const typeClass = { Bug: 'l-bug', Feature: 'l-feature', Task: 'l-task' }[issue.t
 const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-normal', Minor: 'p-minor' }[
   issue.priority
 ];
+const development = issue.development ? DEVELOPMENT_BADGES[issue.development] : null;
 ---
 
 <div class:list={['card', 'sk-card', priorityClass, { compact }]} hidden={hidden} {...data}>
@@ -34,6 +37,7 @@ const priorityClass = { Critical: 'p-critical', Major: 'p-major', Normal: 'p-nor
         <span aria-hidden="true">{issue.priority.charAt(0)}</span>
         <span class="sr-only">{issue.priority}</span>
       </span>
+      {development && <DevelopmentBadge badge={development} />}
       {issue.assignees.map((who, index) => (
         <span class:list={['av', { first: index === 0 }]} title={who.name}>
           <span aria-hidden="true">{who.initials}</span>

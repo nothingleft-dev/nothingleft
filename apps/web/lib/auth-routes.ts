@@ -4,6 +4,7 @@ export const AUTH_ROUTES = [
   '/sign-in',
   '/sign-up',
   '/verify-email',
+  '/verify-git-email',
   '/reset-password',
   '/invite',
   '/auth/',

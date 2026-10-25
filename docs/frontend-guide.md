@@ -147,6 +147,9 @@ apps/web/
 │   ├── settings/             one file per ?tab= panel, plus SettingsSection and the timezone picker; security-tab
 │   │                         composes two-factor-section (setup, QR), recovery-codes and deactivate-section
 │   ├── transfer/             transfer-flow (the /transfer/<token> states)
+│   ├── git/                  development-panel (the issue's Development tab) · development-field (the sidebar row) ·
+│   │                         git-marks (badge, state chips, the board icon) · git-author · provider-glyph ·
+│   │                         link-pull-request-dialog · this-is-me · verify-git-email (the /verify-git-email page)
 │   ├── choice-select.tsx     a Command in a Popover: the one replacement for <select>
 │   ├── date-picker.tsx       month grid in a Popover; emits YYYY-MM-DD, never an instant. MonthGrid is the bare grid
 │   ├── palette-swatches.tsx  the 14 palette tokens as buttons; the only colour input
@@ -251,12 +254,14 @@ organisations, articles, boards and sprints by slug, users by username.
 | `/reports`, `/reports/<report>?…`                                                       | Report index; one report with its parameters in the query string, e.g. `/reports/burndown?sprint=PROJ/september-2026`                                                                                                             |
 | `/timesheets`                                                                           | The timesheet report, defaulting to the current user and week                                                                                                                                                                     |
 | `/projects/PROJ/import`                                                                 | CSV import into the project: the flow and *Recent imports*, whose rows open in place (an import has no address of its own). Project Admin and up; others get a sentence saying who can (6d, 10 Oct 2026) |
-| `/projects/PROJ/settings?tab=`                                                          | `general` · `statuses` · `priorities` · `types` · `fields` · `time-tracking` · `boards` · `people` · `invites` · `deleted` (Project Admin only: deleted issues within the 14-day restore window; decided 24 Sep 2026)             |
-| `/organization?tab=`                                                                    | `general` · `members` · `invites` · `tags` · `audit` · `storage` · `exports` · `plan` · `danger` (Owner only; `&confirm=transfer&to=<username>` or `&confirm=delete` reopens its dialog after a provider sign-in, 6b). `storage` (Org Admins and the Owner, 6c) keeps the list in `&sort=created`, `&where=platform\|byo`, `&project=PROJ`, `&offset=`; `&setup=provider\|permissions\|cors\|credentials\|check\|connected` is the bring-your-own wizard's step, `&setup=update` the key form, `&confirm=disconnect` reopens that dialog. `tags` (6d) is open to a Project Admin of any project as well; `exports` (6d) to Org Admins and the Owner, and is where the export-ready email links |
-| `/settings?tab=`                                                                        | Account: `profile` · `security` · `sessions` · `tokens` · `notifications`. On `security`, `&confirm=disable-two-factor`, `recovery-codes` or `deactivate` reopens that dialog after a provider sign-in (6b)                        |
+| `/projects/PROJ/settings?tab=`                                                          | `general` · `statuses` · `priorities` · `types` · `fields` · `time-tracking` · `boards` · `repositories` · `automations` · `people` · `invites` · `deleted` (Project Admin only: deleted issues within the 14-day restore window; decided 24 Sep 2026). `repositories` (7) shows to others only once the project has a linked repository; `automations` (7) always, read-only below Project Admin, with `&runs=<rule>` (or `*`) and `&issue=PROJ-1` opening the runs drawer, which an automated change's history entry links to             |
+| `/organization?tab=`                                                                    | `general` · `members` · `invites` · `tags` · `audit` · `storage` · `exports` · `plan` · `danger` (Owner only; `&confirm=transfer&to=<username>` or `&confirm=delete` reopens its dialog after a provider sign-in, 6b). `storage` (Org Admins and the Owner, 6c) keeps the list in `&sort=created`, `&where=platform\|byo`, `&project=PROJ`, `&offset=`; `&setup=provider\|permissions\|cors\|credentials\|check\|connected` is the bring-your-own wizard's step, `&setup=update` the key form, `&confirm=disconnect` reopens that dialog. `tags` (6d) is open to a Project Admin of any project as well; `exports` (6d) to Org Admins and the Owner, and is where the export-ready email links. `integrations` (7, Org Admins and the Owner) opens one connection in place with `&connection=github:acme-inc` |
+| `/settings?tab=`                                                                        | Account: `profile` · `security` · `sessions` · `tokens` · `notifications` · `git` (7: shown once an organisation the person belongs to has a connection, or they already have an identity). On `security`, `&confirm=disable-two-factor`, `recovery-codes` or `deactivate` reopens that dialog after a provider sign-in (6b)                        |
 | `/sign-in`, `/sign-up`, `/verify-email`, `/reset-password`, `/auth/<provider>/callback` | `(auth)` group, 400px column                                                                                                                                                                                                      |
 | `/invite/<token>`                                                                       | Invite landing (Path A) and accept card (Path B)                                                                                                                                                                                  |
 | `/transfer/<token>`                                                                     | Ownership transfer offer: preview, accept or decline (6b); the token rides in request bodies, never the API path. Outside the shell, in the § 8d frame; signed out it offers `/sign-in?next=` back here rather than bouncing, and wrong account, expired and invalid are its own states |
+| `/git/connect/github/callback?installation_id=&setup_action=&state=&code=`               | Where GitHub returns after the app is installed (7): posts the callback to the API once, then goes to `/organization?tab=integrations`; an install an organisation owner still has to approve, and each refusal, are states of the page |
+| `/verify-git-email?token=`                                                              | The link sent to a claimed commit email (7), in the `(auth)` group with no sign-in: confirms on load (the token is single-use, guarded against strict mode's second run) and links to `/settings?tab=git` |
 | `/unsubscribe?token=`                                                                   | One-click unsubscribe from an activity email, in the `(auth)` group: reads `GET /v1/notifications/unsubscribe`, says what it turns off, and turns it off only on the button (a link scanner must not unsubscribe anyone); no sign-in (6a) |
 | `/welcome`, `/welcome/organization`, `/welcome/project`, `/welcome/invite`              | Onboarding Path C steps                                                                                                                                                                                                           |
 
@@ -958,6 +963,39 @@ notifications.md, the visual ones ui-conventions.md § Notification centre. How 
 - **The unsubscribe page** reads the preview once (`staleTime: Infinity`, no refocus refetch)
   and POSTs only on the button. `/unsubscribe` is an anonymous route in `lib/auth-routes.ts`, so a 401
   elsewhere on the page can never bounce it to sign-in.
+
+## Git integration and automations
+
+Built in 7; the product rules are [manual/git.md](./manual/git.md) and
+[manual/automations.md](./manual/automations.md). How the pieces fit:
+
+- **Invisible until enabled** (plan § 14, as built). Every git surface on an issue reads
+  `issue.project.git_enabled`; project settings read `Project.git_enabled`; the account's *Git
+  identities* tab reads `Organization.git_connected` across the person's organisations (or an identity
+  they already have); the notification preferences' *Development* group reads `Organization.git_enabled`;
+  the list's *Development* column is offered once a row on screen is git-enabled. Nothing asks the git
+  routes just to decide whether to show something.
+- **Resources**: `lib/api/git.ts` and `lib/api/automations.ts`; hooks `use-git.ts` and `use-automations.ts`.
+  Repositories and connections travel as one percent-encoded path segment. Every git read of the
+  organisation hangs off `queryKeys.git(slug)`, so a connection change refreshes them all; a repository link
+  also refreshes the project and every issue query, since `git_enabled` and the badges move with it.
+- **Words**: `lib/git/words.ts` holds the badge, state, health and reason labels and their palette hue,
+  with the provider's own word for a pull request. The API's `sentence`, `cause` and notification
+  `summary` are shown as they arrive, never rebuilt.
+- **Issue page**: the *Development* tab (`components/git/development-panel.tsx`) is a tab of the activity
+  section, whose tab state the page now owns so the sidebar badge can open it. Provider URLs arrive
+  filtered to the connection's host; a null one renders as text. History renders `git_*` rows and an
+  automated status change as *Nothing Left Bot · rule* with its cause; snapshot URLs are not linked. The
+  modal shows the sidebar row only.
+- **Integrations tab** (`components/organization/integrations/`): connections, the connect sheet (its
+  *Check* is the same POST with `dry_run`), the secret dialog that is the only place a webhook secret is
+  ever shown, the in-place connection detail with its repositories, the delivery log sheet (the payload
+  is `JSON.stringify` in a `<pre>`, never markup) and members' identities.
+- **Automations tab** (`components/projects/automations/`): the git matrix is a view over the rules (a
+  row is the first rule by position with that trigger; *—* disables it, a status PATCHes it or POSTs the
+  template); everything else lists under *Other automations*. The editor draws its *Only if* rows from
+  the catalogue's JSON Schema, so a new condition needs no web change. Templates are offered as cards on an
+  empty tab and once, inline, after a project's first repository is linked.
 
 ## Account security and lifecycle
 

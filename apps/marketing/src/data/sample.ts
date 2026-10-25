@@ -51,6 +51,10 @@ export type SprintName = 'Sprint 07' | 'Sprint 08' | 'Sprint 09';
 
 export const RESOLVED_STATUSES: readonly Status[] = ['Fixed'];
 
+// An issue's badge as of NOW; unlike the timelines, it keeps no history.
+export type Development =
+  'merged' | 'ci_failing' | 'changes_requested' | 'approved' | 'in_review' | 'draft' | 'branch_active' | 'reverted';
+
 export interface Attachment {
   name: string;
   size: string;
@@ -75,6 +79,7 @@ export interface Issue {
   dependsOn?: Timeline<string[]>;
   tags?: string[];
   attachments?: Attachment[];
+  development?: Development;
 }
 
 const UNASSIGNED: Handle[] = [];
@@ -108,6 +113,7 @@ export const ISSUES: Issue[] = [
     sprint: [{ at: '2026-10-03 10:00', value: 'Sprint 08' }],
     points: [{ at: '2026-10-03 10:00', value: 1 }],
     severity: [{ at: '2026-09-01 10:03', value: 'Low' }],
+    development: 'merged',
   },
   {
     key: 'ACME-3',
@@ -134,6 +140,7 @@ export const ISSUES: Issue[] = [
     assignees: [{ at: '2026-09-28 11:00', value: ['sam'] }],
     sprint: [{ at: '2026-10-03 10:00', value: 'Sprint 08' }],
     points: [{ at: '2026-10-03 10:00', value: 3 }],
+    development: 'merged',
   },
   {
     key: 'ACME-5',
@@ -151,6 +158,7 @@ export const ISSUES: Issue[] = [
     sprint: [{ at: '2026-10-03 10:00', value: 'Sprint 08' }],
     points: [{ at: '2026-10-03 10:00', value: 5 }],
     severity: [{ at: '2026-09-28 11:10', value: 'High' }],
+    development: 'merged',
   },
   {
     key: 'ACME-6',
@@ -167,6 +175,7 @@ export const ISSUES: Issue[] = [
     assignees: [{ at: '2026-09-28 11:20', value: ['jordan'] }],
     sprint: [{ at: '2026-10-03 10:00', value: 'Sprint 08' }],
     points: [{ at: '2026-10-03 10:00', value: 8 }],
+    development: 'merged',
   },
   {
     key: 'ACME-7',
@@ -195,6 +204,7 @@ export const ISSUES: Issue[] = [
     points: [{ at: '2026-09-29 10:00', value: 2 }],
     estimate: 60,
     severity: [{ at: '2026-09-29 10:00', value: 'High' }],
+    development: 'reverted',
   },
   {
     key: 'ACME-9',
@@ -231,6 +241,7 @@ export const ISSUES: Issue[] = [
     points: [{ at: '2026-09-29 15:00', value: 3 }],
     estimate: 300,
     parent: [{ at: '2026-10-09 11:00', value: 'ACME-3' }],
+    development: 'in_review',
   },
   {
     key: 'ACME-11',
@@ -248,6 +259,7 @@ export const ISSUES: Issue[] = [
     points: [{ at: '2026-10-03 10:00', value: 5 }],
     estimate: 120,
     severity: [{ at: '2026-09-30 11:00', value: 'High' }],
+    development: 'ci_failing',
   },
   {
     key: 'ACME-12',
@@ -280,6 +292,7 @@ export const ISSUES: Issue[] = [
     dependsOn: [{ at: '2026-10-05 11:28', value: ['ACME-4'] }],
     tags: ['invitations'],
     attachments: [{ name: 'invite-expired.log', size: '18 KB', at: '2026-10-06 14:12' }],
+    development: 'merged',
   },
   {
     key: 'ACME-13',
@@ -303,6 +316,7 @@ export const ISSUES: Issue[] = [
     points: [{ at: '2026-10-05 11:34', value: 1 }],
     severity: [{ at: '2026-10-02 09:20', value: 'Low' }],
     parent: [{ at: '2026-10-05 11:34', value: 'ACME-12' }],
+    development: 'merged',
   },
   {
     key: 'ACME-14',
@@ -321,6 +335,7 @@ export const ISSUES: Issue[] = [
     estimate: 60,
     parent: [{ at: '2026-10-09 11:00', value: 'ACME-3' }],
     tags: ['invitations'],
+    development: 'branch_active',
   },
   {
     key: 'ACME-15',
@@ -343,6 +358,7 @@ export const ISSUES: Issue[] = [
     estimate: 360,
     parent: [{ at: '2026-10-09 11:00', value: 'ACME-3' }],
     tags: ['invitations'],
+    development: 'draft',
   },
   {
     key: 'ACME-16',
@@ -615,6 +631,133 @@ export function updatedAt(key: string, at: Moment = NOW): Moment {
   ].filter(moment => moment <= at);
   return moments.sort().at(-1) ?? found.created;
 }
+
+export const developmentOf = (key: string): Development | null => issue(key).development ?? null;
+
+export const REPOSITORY = 'acme/web';
+
+export interface PullRequest {
+  number: number;
+  title: string;
+  issue: string;
+  author: Handle;
+  branch: string;
+  state: 'open' | 'draft' | 'merged' | 'closed';
+  review?: 'approved' | 'changes_requested' | 'review_requested';
+  ci?: 'passing' | 'failing' | 'running';
+  closes: boolean;
+  commits: number;
+  opened: Moment;
+  merged?: Moment;
+  reverts?: number;
+}
+
+export const PULL_REQUESTS: PullRequest[] = [
+  {
+    number: 33,
+    title: 'Refresh saved view counts on change',
+    issue: 'ACME-8',
+    author: 'sam',
+    branch: 'fix/ACME-8-stale-view-count',
+    state: 'merged',
+    review: 'approved',
+    ci: 'passing',
+    closes: true,
+    commits: 2,
+    opened: '2026-09-30 11:20',
+    merged: '2026-10-01 16:00',
+  },
+  {
+    number: 38,
+    title: 'Scope invite links to a project',
+    issue: 'ACME-6',
+    author: 'jordan',
+    branch: 'feat/ACME-6-project-invite-links',
+    state: 'merged',
+    review: 'approved',
+    ci: 'passing',
+    closes: true,
+    commits: 5,
+    opened: '2026-10-08 11:00',
+    merged: '2026-10-09 15:00',
+  },
+  {
+    number: 40,
+    title: 'Revert “Refresh saved view counts on change”',
+    issue: 'ACME-8',
+    author: 'sam',
+    branch: 'revert-33-fix/ACME-8-stale-view-count',
+    state: 'merged',
+    review: 'approved',
+    ci: 'passing',
+    closes: false,
+    commits: 1,
+    opened: '2026-10-05 08:50',
+    merged: '2026-10-05 09:10',
+    reverts: 33,
+  },
+  {
+    number: 42,
+    title: 'Explain expired invite links',
+    issue: 'ACME-12',
+    author: 'alex',
+    branch: 'fix/ACME-12-expired-invite-page',
+    state: 'merged',
+    review: 'approved',
+    ci: 'passing',
+    closes: true,
+    commits: 3,
+    opened: '2026-10-07 10:00',
+    merged: '2026-10-08 16:36',
+  },
+  {
+    number: 45,
+    title: 'Show who sent the invite on the landing page',
+    issue: 'ACME-10',
+    author: 'alex',
+    branch: 'feat/ACME-10-inviter-on-landing',
+    state: 'open',
+    review: 'review_requested',
+    ci: 'passing',
+    closes: true,
+    commits: 4,
+    opened: '2026-10-12 17:20',
+  },
+  {
+    number: 46,
+    title: 'Keep swimlane counts clear of the header',
+    issue: 'ACME-11',
+    author: 'casey',
+    branch: 'fix/ACME-11-swimlane-header',
+    state: 'open',
+    review: 'review_requested',
+    ci: 'failing',
+    closes: true,
+    commits: 2,
+    opened: '2026-10-12 11:05',
+  },
+  {
+    number: 47,
+    title: 'Resend an invitation from the members list',
+    issue: 'ACME-15',
+    author: 'sam',
+    branch: 'feat/ACME-15-resend-invite',
+    state: 'draft',
+    ci: 'running',
+    closes: true,
+    commits: 1,
+    opened: '2026-10-12 15:30',
+  },
+];
+
+export function pullRequest(number: number): PullRequest {
+  const found = PULL_REQUESTS.find(candidate => candidate.number === number);
+  if (!found) throw new Error(`acme/web#${number} is not in the sample data`);
+  return found;
+}
+
+export const pullRequestsFor = (key: string): PullRequest[] =>
+  PULL_REQUESTS.filter(candidate => candidate.issue === key);
 
 export interface Sprint {
   name: SprintName;

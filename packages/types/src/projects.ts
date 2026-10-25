@@ -24,6 +24,8 @@ export const ProjectSchema = z.object({
   my_role: z.enum(PROJECT_ROLES),
   // What the caller may do in the knowledge base as a whole; each article carries its own `me`.
   knowledge_base: z.object({ can_create: z.boolean(), can_move: z.boolean() }),
+  // It has a linked repository: the git surfaces show.
+  git_enabled: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
 });

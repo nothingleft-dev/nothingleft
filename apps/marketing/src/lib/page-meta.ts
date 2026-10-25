@@ -44,7 +44,8 @@ export function pageMeta(pathname: string): PageMeta {
     WebSite: website,
     WebPage: () => webPage(path, schema.title, schema.description, lastmod),
     SoftwareApplication: softwareApplication,
-    TechArticle: () => techArticle(path, schema.headline ?? schema.title, schema.description, lastmod),
+    TechArticle: () =>
+      techArticle(path, schema.headline ?? schema.title, schema.description, lastmod, ogImagePath(path)),
     FAQPage: () => (schema.faq ? faqPage(path, schema.faq) : undefined),
     VideoObject: walkthroughVideo,
     BreadcrumbList: () => (schema.breadcrumb ? breadcrumb(schema.breadcrumb) : undefined),

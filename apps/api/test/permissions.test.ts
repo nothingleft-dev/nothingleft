@@ -345,6 +345,45 @@ describe('missingScope, every scoped cell', () => {
   });
 });
 
+describe('git integration', () => {
+  type GitCells = Record<'read' | 'link' | 'repositories' | 'automations' | 'list' | 'connections', boolean>;
+  const expected: Record<Level, GitCells> = {
+    observer: { read: true, link: false, repositories: false, automations: false, list: false, connections: false },
+    contributor: { read: true, link: true, repositories: false, automations: false, list: false, connections: false },
+    project_admin: { read: true, link: true, repositories: true, automations: true, list: true, connections: false },
+    org_admin: { read: true, link: true, repositories: true, automations: true, list: true, connections: true },
+    org_owner: { read: true, link: true, repositories: true, automations: true, list: true, connections: true },
+  };
+  for (const level of LEVELS) {
+    test(`${level}: ${JSON.stringify(expected[level])}`, () => {
+      const scope = membershipFor(level, 7);
+      expect({
+        read: can(session, 'git.read', scope),
+        link: can(session, 'git.link_manual', scope),
+        repositories: can(session, 'project.repositories.manage', scope),
+        automations: can(session, 'project.automations.manage', scope),
+        list: can(session, 'git.repositories.list', scope),
+        connections: can(session, 'org.git.manage', scope),
+      }).toEqual(expected[level]);
+      expect(can(session, 'org.git.identities.manage', scope)).toBe(expected[level].connections);
+    });
+  }
+
+  test('a token reads with issues:read, links with issues:write, manages with admin:project and connects with admin:org', () => {
+    const owner = membershipFor('org_owner', 7);
+    expect(can(pat(['issues:read']), 'git.read', owner)).toBe(true);
+    expect(missingScope(pat(['issues:read']), 'git.link_manual', owner)).toBe('issues:write');
+    expect(missingScope(pat(['issues:write']), 'project.repositories.manage', owner)).toBe('admin:project');
+    expect(missingScope(pat(['issues:write']), 'project.automations.manage', owner)).toBe('admin:project');
+    expect(missingScope(pat(['admin:project']), 'org.git.manage', owner)).toBe('admin:org');
+    expect(missingScope(pat(['admin:project']), 'org.git.identities.manage', owner)).toBe('admin:org');
+  });
+
+  test("every token may manage its owner's own git identities", () => {
+    for (const scope of PAT_SCOPES) expect(missingSelfServiceScope(pat([scope]), 'git_identity.manage')).toBeNull();
+  });
+});
+
 describe('spot checks against docs/permissions.md', () => {
   test('observers may star, watch and vote but not alter an issue', () => {
     const observer = membershipFor('observer');
@@ -413,6 +452,7 @@ describe('self-service: notifications', () => {
     expect(SELF_SERVICE_SCOPES).toEqual({
       'notification.read': ['issues:read'],
       'notification.manage': ['issues:write'],
+      'git_identity.manage': PAT_SCOPES,
     });
     expect(missingSelfServiceScope(pat(['issues:read']), 'notification.read')).toBeNull();
     expect(missingSelfServiceScope(pat(['issues:read']), 'notification.manage')).toBe('issues:write');

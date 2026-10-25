@@ -253,6 +253,10 @@ after deactivation, by the nightly job above. What an erasure must do, once it i
   trail (owner, 27 Sep 2026).
 - The last sign-in IP address and country, invitation IP addresses and recent searches are cleared.
 - `deleted_at` is stamped so the state is explicit rather than inferred.
+- Git (7): their `git_identities` rows are deleted, and `author_user_id` / `merged_by_user_id`
+  on commits and pull requests are nulled (`gitIdentitiesRepository.removeAllForUser`,
+  `gitEntitiesRepository.forgetAuthor`). The provider's login and name on those rows stay: they are
+  what the provider recorded, not a link to the erased account (owner, 25 Oct 2026).
 
 ## What happens to their work
 

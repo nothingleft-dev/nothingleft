@@ -14,12 +14,12 @@ verified own bucket lifts that limit.
 A plan is a **limit preset** on `organizations.plan`, nothing more — no billing,
 no feature gating.
 
-| Plan | Seats | Storage | Availability |
-|---|---|---|---|
-| `free` | 20, then the seat notice | 5GB, or BYO | **Public** — every new organisation starts here |
-| `pro` | 20, then the seat notice | 50GB, or BYO | Public, **not offered yet** |
-| `pro_lite` | Unlimited | 5GB, or BYO | **Private** — set by the platform operator only |
-| `unlimited` | Unlimited | 250GB, or BYO | **Private** — set by the platform operator only |
+| Plan | Seats | Storage | Git | Availability |
+|---|---|---|---|---|
+| `free` | 20, then the seat notice | 5GB, or BYO | 2 connections, 10 linked repositories and 10 automations per project | **Public** — every new organisation starts here |
+| `pro` | 20, then the seat notice | 50GB, or BYO | Unlimited | Public, **not offered yet** |
+| `pro_lite` | Unlimited | 5GB, or BYO | Unlimited | **Private** — set by the platform operator only |
+| `unlimited` | Unlimited | 250GB, or BYO | Unlimited | **Private** — set by the platform operator only |
 
 - **Public** means selectable at sign-up; **private** means only the platform
   operator assigns it, directly in the database — there is no admin console
@@ -32,7 +32,13 @@ no feature gating.
   (file-storage.md § Two buckets).
 
 Everything below describes the `free` plan. The other plans differ only in
-the two numbers above.
+the numbers above.
+
+The git caps (owner, 25 Oct 2026) are checked where the write happens: a third live connection
+answers `409 git.connection_limit_reached`, an eleventh repository linked to one project
+`git.repository_limit_reached`, an eleventh automation in one project `automation.limit_reached`,
+each with the `limit`. A disconnected connection does not count. Lowering a plan removes nothing;
+it only refuses the next one.
 
 ## Seats
 

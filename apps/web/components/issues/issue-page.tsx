@@ -37,7 +37,9 @@ import { MarkdownAttachments } from '@components/markdown/markdown-attachments';
 import { AddLinksDialog } from '@components/issues/add-links-dialog';
 import { CopyIssueButton } from '@components/issues/copy-issue';
 import { useCreateIssueDialog } from '@components/issues/create-issue-provider';
-import { IssueActivitySection, type TimeTracking } from '@components/issues/issue-activity';
+import { IssueActivitySection, type ActivityTab, type TimeTracking } from '@components/issues/issue-activity';
+import { DevelopmentPanel } from '@components/git/development-panel';
+import { LinkPullRequestDialog } from '@components/git/link-pull-request-dialog';
 import { IssueDescription } from '@components/issues/issue-description';
 import { IssueLinks } from '@components/issues/issue-links';
 import { IssueParent } from '@components/issues/issue-parent';
@@ -73,6 +75,8 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
   const [linking, setLinking] = useState(false);
   const [pickingParent, setPickingParent] = useState(false);
   const [logging, setLogging] = useState(false);
+  const [activityTab, setActivityTab] = useState<ActivityTab>('all');
+  const [linkingPullRequest, setLinkingPullRequest] = useState(false);
   const { openCreateIssue } = useCreateIssueDialog();
   const user = session.status === 'signed-in' ? session.user : null;
   const organization = useOrganization(user?.current_organization_slug ?? null);
@@ -126,6 +130,26 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
   const data = issue.data;
   const createSubtask = () => openCreateIssue({ project: data.project.key, parent: data.key });
+  const summary = data.development;
+  // The modal shows the sidebar field only (plan § 13 D); the tab is the full page's.
+  const development =
+    data.project.git_enabled && !modal
+      ? {
+          count: summary
+            ? summary.pull_requests + summary.branches + (summary.pull_requests === 0 ? summary.commits : 0)
+            : 0,
+          panel: (
+            <DevelopmentPanel
+              issueKey={data.key}
+              projectKey={data.project.key}
+              canLink={canEdit}
+              canAdminProject={role === 'project_admin'}
+              onLink={() => setLinkingPullRequest(true)}
+              timeZone={timeZone}
+            />
+          ),
+        }
+      : null;
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
@@ -215,7 +239,15 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
             />
           ) : null}
 
-          <IssueActivitySection issue={data} canComment={canEdit} time={time} timeZone={timeZone} />
+          <IssueActivitySection
+            issue={data}
+            canComment={canEdit}
+            time={time}
+            development={development}
+            tab={activityTab}
+            onTabChange={setActivityTab}
+            timeZone={timeZone}
+          />
         </div>
 
         {canEdit ? (
@@ -240,7 +272,18 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
           />
         ) : null}
 
-        <IssueSidebar issue={data} canEdit={canEdit} time={time} timeZone={timeZone} />
+        {canEdit && data.project.git_enabled ? (
+          <LinkPullRequestDialog open={linkingPullRequest} onOpenChange={setLinkingPullRequest} issueKey={data.key} />
+        ) : null}
+
+        <IssueSidebar
+          issue={data}
+          canEdit={canEdit}
+          time={time}
+          timeZone={timeZone}
+          onOpenDevelopment={modal ? undefined : () => setActivityTab('development')}
+          onLinkPullRequest={canEdit ? () => setLinkingPullRequest(true) : undefined}
+        />
       </div>
     </MarkdownAttachments>
   );

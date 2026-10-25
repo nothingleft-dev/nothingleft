@@ -32,3 +32,5 @@ export * from './notifications.ts';
 export * from './storage.ts';
 export * from './imports.ts';
 export * from './exports.ts';
+export * from './git.ts';
+export * from './automations.ts';

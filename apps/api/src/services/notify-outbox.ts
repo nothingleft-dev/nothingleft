@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { ACTIVITY_COALESCE_WINDOW_MS, NOTIFICATION_FANOUT_DELAY_MS } from '@nothingleft/types';
 import { FANOUT_SINCE_MARGIN_MS } from '@config/constants';
-import type { FanoutJob } from '@lib/jobs';
+import type { FanoutJob, JobQueue } from '@lib/jobs';
 
 export interface Pending {
   job: FanoutJob;
@@ -42,4 +42,23 @@ export function recordArticleTouched(orgId: number, articleId: number, actorId: 
 // A sprint starting or finishing is a deliberate act that coalescing never rewrites, so it goes at once.
 export function recordSprintEvent(job: Extract<FanoutJob, { type: 'sprint' }>, at: Date): void {
   remember({ key: `sprint:${job.sprint_id}:${job.kind}`, startAfter: at, job });
+}
+
+/** A job's writes get the same fan-out a request's do; sent even after a failure, for what had committed. */
+export async function withNotifications<T>(
+  queue: () => JobQueue,
+  report: (error: unknown) => void,
+  body: () => Promise<T>,
+): Promise<T> {
+  const store = new Map<string, Pending>();
+  try {
+    return await pending.run(store, body);
+  } finally {
+    const sent = await Promise.allSettled(
+      [...store.values()].map(entry =>
+        queue().send('notify.fanout', entry.job, { startAfter: entry.startAfter, singletonKey: entry.key }),
+      ),
+    );
+    for (const result of sent) if (result.status === 'rejected') report(result.reason);
+  }
 }

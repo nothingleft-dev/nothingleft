@@ -20,6 +20,7 @@ import type {
   ProjectRow,
   ProjectsRepository,
   UserRow,
+  GitLinksRepository,
 } from '@nothingleft/db';
 import type { Analytics } from '@nothingleft/analytics';
 import { t } from '@nothingleft/i18n';
@@ -42,6 +43,7 @@ export interface ProjectsDeps {
   mailer: Mailer;
   analytics: Analytics;
   appBaseUrl: string;
+  gitLinks: Pick<GitLinksRepository, 'gitEnabledProjects'>;
 }
 
 export interface ProjectListQuery {
@@ -73,12 +75,13 @@ export function projectsService(deps: ProjectsDeps) {
   interface Enrichment {
     leads: Map<number, MemberWithUser>;
     fields: Map<number, CustomFieldRow>;
+    gitEnabled: Set<number>;
   }
 
   async function enrichmentOf(org: OrgAccess, rows: ProjectRow[]): Promise<Enrichment> {
     const leadIds = [...new Set(rows.map(p => p.lead_user_id).filter((id): id is number => id !== null))];
     const timed = rows.filter(p => p.estimation_field_id !== null || p.spent_time_field_id !== null);
-    const [leads, fields] = await Promise.all([
+    const [leads, fields, gitEnabled] = await Promise.all([
       leadIds.length > 0 ? organizations.findMembersByUserIds(org.ctx, leadIds, { includeRemoved: true }) : [],
       timed.length > 0
         ? customFields.listForProjects(
@@ -86,10 +89,15 @@ export function projectsService(deps: ProjectsDeps) {
             timed.map(p => p.id),
           )
         : [],
+      deps.gitLinks.gitEnabledProjects(
+        org.ctx,
+        rows.map(p => p.id),
+      ),
     ]);
     return {
       leads: new Map(leads.map(l => [l.user.id, l])),
       fields: new Map(fields.map(f => [f.id, f])),
+      gitEnabled,
     };
   }
 
@@ -160,6 +168,7 @@ export function projectsService(deps: ProjectsDeps) {
       key_editable: project.issue_counter === 0,
       my_role: role,
       knowledge_base: knowledgeBaseAbilities(principal, org, project, role),
+      git_enabled: enrichment.gitEnabled.has(project.id),
       created_at: project.created_at.toISOString(),
       updated_at: project.updated_at.toISOString(),
     };

@@ -162,8 +162,10 @@ has: -estimation
 has: -{due date}
 ```
 
-`has:` takes the name of any value-bearing attribute, plus `description`,
-which is only ever tested for presence.
+`has:` takes the name of any value-bearing attribute, plus `description` and
+`commits`, which are only ever tested for presence. `has: {pull request}`,
+`has: branch` and `has: commits` test the issue's live git links (7);
+`has: development` and `has: repository` are true for an issue with any.
 
 ### Numeric and duration comparison
 
@@ -260,6 +262,10 @@ attributes, never silent free text. Quote it to search for it literally.
 | `work type` | Development, Testing, … |
 | `spent time`, `estimation` | Durations |
 | `story points`, `votes` | Numbers |
+| `pull request` | State of any linked pull request: `Open`, `Draft`, `Merged`, `Closed`; `{No pull request}` for none (7) |
+| `development` | The issue's development badge: `Merged`, `{CI failing}`, `{Changes requested}`, `Approved`, `{In review}`, `Draft`, `{Branch active}`, `Reverted`, `None` (7) |
+| `repository` | A linked repository, by full name (`acme/web`) or by its last part (`web`) (7) |
+| `branch` | Substring of a linked branch's name (7) |
 | `key` | Issue key (`PMS-118`) |
 | `has` | Existence checks |
 | `sort by` | Ordering |
@@ -385,6 +391,17 @@ the list of valid values. The API wraps them in `AppError` (1c).
 | 27 Sep 2026 | Phase 5: reports run the same pipeline and aggregate over the compiled predicate; their grouping is the list's own (`packages/db/src/search/issue-groups.ts`, moved out of the search repository), plus a `status_category` grouping for reports' *group by category*. Every report group carries the query for its issues, built from the AST and rendered with `render.ts`; a report's `period` is read with the date vocabulary above. |
 | 24 Sep 2026 | Recent searches: recorded for session callers only, newest 20 per user and organisation. |
 | 13 Oct 2026 | Recent searches: a repeat within five minutes writes nothing, only a new query prunes, and page 2 onward is not recorded. |
+
+### Git attributes (7)
+
+Built in 7 (fourth milestone, 25 Oct 2026). They read the issue's **live** links only: a link a
+person removed, a branch deleted at the provider and a commit a force push dropped do not match.
+`development:` computes the badge in SQL by the same rules the API uses when it reads an issue
+(data-model.md § Git integration, *Rollups*), so the list and the badge never disagree.
+`pull request:` and `development:` have fixed values, checked like statuses (`query.invalid_value`
+lists them); `repository:` is not checked, so a repository not linked matches nothing. None of
+them is sortable or a `#` shortcut in v1. In a project with no linked repository every issue is
+`development: None`.
 
 ## HTTP surface
 

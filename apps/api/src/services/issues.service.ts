@@ -1,3 +1,5 @@
+import type { DevelopmentReader } from '@services/git-development';
+import type { AutomationsService } from '@services/automations.service';
 import {
   ISSUE_CSV_COLUMNS,
   ISSUE_REF_PICKER_LIMIT,
@@ -115,6 +117,9 @@ export interface IssuesDeps {
   attachments: AttachmentsRepository;
   sprints: SprintsRepository;
   customFields: CustomFieldsRepository;
+  development: DevelopmentReader;
+  /** Lazy: the automations service is built after this one. */
+  automations?: () => Pick<AutomationsService, 'childResolved'>;
   /** Injected so coalescing can be tested across its window without waiting. */
   now?: () => Date;
 }
@@ -304,6 +309,15 @@ export function decodeCursor(cursor: string): number {
   throw new AppError('activity.invalid_cursor', 400, {}, 'cursor');
 }
 
+/** An automated change's snapshot names the rule and what fired it. */
+function automationOf(value: unknown): { name: string; cause: string } | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as { automation?: unknown; cause?: unknown };
+  return typeof v.automation === 'string'
+    ? { name: v.automation, cause: typeof v.cause === 'string' ? v.cause : '' }
+    : null;
+}
+
 export function issuesService(deps: IssuesDeps) {
   const {
     access,
@@ -416,6 +430,7 @@ export function issuesService(deps: IssuesDeps) {
       rollups,
       catalogue,
       fieldValues,
+      development,
     ] = await Promise.all([
       schemaOf(ctx, projectIds, preloaded.values),
       issues.listAssignees(ctx, ids),
@@ -436,6 +451,7 @@ export function issuesService(deps: IssuesDeps) {
       issues.storyPointsRollup(ctx, ids),
       preloaded.catalogue ?? loadCatalogue(deps.customFields, ctx, projectIds),
       deps.customFields.listValues(ctx, ids),
+      deps.development.summaries(ctx, unique),
     ]);
     const valuePeople = await issues.findPeople(ctx, userIdsIn(fieldValues));
     const person = new Map([...people, ...valuePeople].map(p => [p.user.id, p]));
@@ -454,7 +470,7 @@ export function issuesService(deps: IssuesDeps) {
       const ownValues = valuesOf.get(row.id) ?? [];
       return {
         key: formatIssueKey(key, row.key_number),
-        project: { key, name },
+        project: { key, name, git_enabled: development.enabled.has(row.project_id) },
         title: row.title,
         description_md: row.description_md,
         status: statusRef(statusById.get(row.status_id)!),
@@ -479,6 +495,8 @@ export function issuesService(deps: IssuesDeps) {
         watcher_count: watchers.get(row.id) ?? 0,
         attachment_count: files.get(row.id) ?? 0,
         custom_fields: issueCustomFields(catalogue, row, ownValues, refs),
+        development: development.byIssue.get(row.id) ?? null,
+        last_automation_at: row.last_automation_at?.toISOString() ?? null,
         me: signals.get(row.id) ?? { starred: false, voted: false, watching: false },
         created_at: row.created_at.toISOString(),
         updated_at: row.updated_at.toISOString(),
@@ -551,7 +569,7 @@ export function issuesService(deps: IssuesDeps) {
     const { catalogue } = preloaded;
     const ids = [...new Set(rows.map(r => r.id))];
     const estimated = catalogue.roles.get(project.project.id)?.estimation != null;
-    const [values, assignees, parents, tagRows, subtasks, fieldValues] = await Promise.all([
+    const [values, assignees, parents, tagRows, subtasks, fieldValues, development] = await Promise.all([
       schemaOf(ctx, [project.project.id], preloaded.values),
       issues.listAssignees(ctx, ids),
       issues.keyNumbers(
@@ -561,6 +579,7 @@ export function issuesService(deps: IssuesDeps) {
       tags.listForIssues(ctx, ids),
       issues.subtaskProgress(ctx, ids),
       estimated ? deps.customFields.listValues(ctx, ids) : [],
+      deps.development.summaries(ctx, rows),
     ]);
     const statusById = byId(values.statuses);
     const priorityById = byId(values.priorities);
@@ -585,6 +604,7 @@ export function issuesService(deps: IssuesDeps) {
         parent: parentNumber === undefined ? null : formatIssueKey(key, parentNumber),
         subtasks: subtasks.get(row.id) ?? { resolved: 0, total: 0 },
         resolved: row.resolved_at !== null,
+        development: development.byIssue.get(row.id)?.rollup ?? null,
       };
     });
   }
@@ -1264,6 +1284,7 @@ export function issuesService(deps: IssuesDeps) {
       });
 
       let customChanged = 0;
+      let resolvedNow = false;
       const updated = await inTransaction(async repos => {
         const current = await repos.issues.lockById(project.ctx, issue.id);
         if (!current || current.deleted_at) throw notFound(key);
@@ -1293,6 +1314,7 @@ export function issuesService(deps: IssuesDeps) {
           const will = isResolvedCategory(resolved.status.category);
           if (!was && will) patch.resolved_at = at;
           if (was && !will) patch.resolved_at = null;
+          resolvedNow = !was && will;
           changes.push({
             field: 'status',
             old_value: { name: before.name },
@@ -1432,6 +1454,13 @@ export function issuesService(deps: IssuesDeps) {
           { via: viaOf(principal), field_count: customChanged },
           { userId: principal.userId, orgId: project.organization.id },
         );
+      }
+      if (resolvedNow && deps.automations) {
+        // The change is saved; a rule that fails must not turn it into an error.
+        await deps
+          .automations()
+          .childResolved(project.ctx, updated, n => keyIn(project)({ key_number: n }))
+          .catch(error => analytics.captureException(error, { org_id: project.ctx.orgId }));
       }
       return one(principal, project, updated);
     },
@@ -1603,10 +1632,9 @@ export function issuesService(deps: IssuesDeps) {
           return {
             id: r.activity.id,
             kind: r.activity.kind as IssueActivityKind,
-            actor: {
-              ...access.memberRef(r.actor, r.actor_membership),
-              username: r.actor_membership?.username ?? null,
-            },
+            actor: r.actor
+              ? { ...access.memberRef(r.actor, r.actor_membership), username: r.actor_membership?.username ?? null }
+              : access.systemActor(),
             change_group_id: r.activity.change_group_id,
             field: r.activity.field,
             old_value: shown(r.activity.kind, r.activity.old_value ?? null),
@@ -1615,6 +1643,7 @@ export function issuesService(deps: IssuesDeps) {
             created_at: r.activity.created_at.toISOString(),
             updated_at: r.activity.updated_at.toISOString(),
             comment: commentId === undefined ? null : (commentsById.get(commentId) ?? null),
+            automation: automationOf(r.activity.new_value),
           };
         }),
         pagination: {

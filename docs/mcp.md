@@ -401,6 +401,54 @@ bucket's secret or act on it, all are session only, and three confirm with step-
 - **`merge_tags` and `delete_tag` ask first**, naming how many issues and articles change, from
   `GET /v1/tags/manage`'s organisation-wide counts. `admin:org`.
 
+## Built in 7 (git integration)
+
+25 Oct 2026, first milestone (connections): ten tools. Second milestone (links): four more; 109 in
+all. Third milestone (automations): six more and the `why-did-it-change` prompt; 115 in all. Fourth
+milestone (polish): three identity tools; 118 in all.
+
+- **Connections are read and repaired, never created, by an agent.** Connecting carries a
+  token or a provider's install flow, so `POST …/git/connections`, the install start and
+  callback, and `rotate-secret` are `x-mcp-exempt: credentials`. `list_git_connections` (with
+  the provider catalogue), `refresh_git_connection` and `remove_git_connection` (confirmation)
+  are `admin:org`.
+- **A repository is named as people name it**: `acme/web`, or `gitlab:acme/web` when two
+  connections have one of that name. The REST path carries it as one percent-encoded segment;
+  the tools encode it.
+- **`list_repositories` is two lists in one tool**: with `project`, what is linked to it (any
+  member, `issues:read`); with `available: true` or no project, what can be linked (an Org
+  Admin, or a Project Admin naming their project). `link_repository`,
+  `update_repository_link` and `unlink_repository` (confirmation) are `admin:project`.
+- **The delivery log answers "why did nothing show up?"**: `list_git_events` with a status or
+  repository filter, one delivery's payload by `id` (fenced as untrusted data), and
+  `replay_git_event`, which runs automations only when asked, and only for what the replay changes. `resync_repository` also puts
+  back a webhook the server registered, with `rehook: true`. All `admin:org`.
+- **The webhook routes are a new exempt category, `integration_inbound`**: called by the
+  provider, never by a person.
+- **`get_issue_development` answers "is PH-675 merged?"**: the issue's pull requests by
+  repository with state, CI, review and whether each closes it, its branches and commits; provider
+  text fenced as untrusted data. `get_issue` adds one *Development* line when the project has a
+  linked repository, and nothing otherwise. `get_pull_request` (`acme/web#42`) adds every check and
+  the linked issues the caller can read; it needs `org` when the caller has several organisations,
+  since a pull request carries no project key.
+- **`link_pull_request` takes the pull request's URL**; `unlink_pull_request` takes `acme/web#42`,
+  finds the link on the issue's panel and asks first. Both `issues:write`, Contributor and up.
+- **Git identities are self-service.** `list_git_identities`, `claim_git_identity` (a login counts at
+  once; an email when its emailed link is followed) and `remove_git_identity` (by the login or
+  email, never an id; confirmation) work
+  with any token scope, like notifications; `all_members: true` and `member: true` are the Org
+  Admin's view and removal (`admin:org`). The emailed link's route is `x-mcp-exempt: email_link`.
+- **Automations are named rules, one sentence each.** `list_automations` shows them in the order
+  they run, one in detail with `automation`, the templates with `include: "templates"` and the
+  trigger catalogue with `include: "catalogue"`. `create_automation` starts from a `template` or a
+  `trigger` and a `status`; `update_automation` renames, turns off, reorders or changes conditions;
+  `delete_automation` asks first. `test_automation` is a dry run on one issue (`admin:project`, like
+  the writes). `list_automation_runs` is the run log, by rule or by issue (`issues:read`).
+- **`get_issue_activity` names the rule and its cause** on a change an automation made:
+  *Nothing Left Bot · Close on merge · status: In Review → Fixed, because acme/web#42 was merged
+  by @alex*. The `why-did-it-change` prompt reads the history, the run log and the development
+  panel and explains an issue's recent changes as a timeline, changing nothing.
+
 ## Authentication
 
 Personal Access Tokens, `Authorization: Bearer nl_pat_…`. See
@@ -656,6 +704,20 @@ then a column mapping; a dry run unless `dry_run: false`), `get_import_status` (
 errors) — `admin:project`; `request_org_export`, `get_export_status` (a five-minute download
 link when ready) — `admin:org`.
 
+### Development
+
+Built in 7 — [§ Built in 7](#built-in-7-git-integration). `get_issue_development`,
+`get_pull_request` (`issues:read`); `link_pull_request`, `unlink_pull_request` (confirmation) —
+`issues:write`; `list_git_connections`,
+`refresh_git_connection`, `remove_git_connection` (confirmation), `resync_repository`,
+`list_git_events`, `replay_git_event` — `admin:org`; `list_repositories`, `link_repository`,
+`update_repository_link`, `unlink_repository` (confirmation) — `admin:project` (reading what is
+linked: `issues:read`). Identities: `list_git_identities`, `claim_git_identity`, `remove_git_identity` (confirmation) —
+any scope, the members' view and removal `admin:org`. Automations: `list_automations`,
+`list_automation_runs` (`issues:read`);
+`create_automation`, `update_automation`, `delete_automation` (confirmation), `test_automation` —
+`admin:project`.
+
 ### Planned with later phases
 
 **Webhooks (v2, moved out of 6a by the owner on 27 Sep 2026):** `list_webhooks`,
@@ -677,7 +739,7 @@ Each operation in openapi.yaml without a tool names one of these categories as
 
 | Category | Operations | Why no tool |
 |---|---|---|
-| `credentials` | `auth/*`, password and email change, resend verification, sessions, access tokens | An agent must not carry or mint credentials |
+| `credentials` | `auth/*`, password and email change, resend verification, sessions, access tokens; connecting a git provider (the install start and callback, a token connection) and rotating its webhook secret (7) | An agent must not carry or mint credentials |
 | `session` | current organisation, landing, preferences, recent searches, the editor's `issues/refs` picker, the inbox's filter `notifications/facets` (6a) | Browser-session plumbing; a token has no session, and an agent filters `list_notifications` by name directly |
 | `invitee` | invitation preview, accept, decline | The invitee's own decision, made with the secret link token |
 | `download` | both `export.csv` routes | A spreadsheet download; `search_issues` and `get_org_activity` page the same rows |
@@ -687,6 +749,7 @@ Each operation in openapi.yaml without a tool names one of these categories as
 | `avatar` | profile avatar upload and removal; `GET /avatars/{kind}` | An image picked in the settings screen; a generated image the browser loads |
 | `infrastructure` | `/health`, `/health/deep`, `/mcp` | Not product data |
 | `email_link` | the two `notifications/unsubscribe` routes (6a) | The credential is the signed link in an email; an agent has no email to click |
+| `integration_inbound` | `/v1/git/webhooks/{provider}` and `/v1/git/webhooks/{provider}/{hook_id}` (7) | Called by GitHub or GitLab, never by a person; authenticated by the delivery's signature |
 
 ## Resources
 
@@ -721,6 +784,7 @@ starts with the data. None changes anything before the person confirms.
 | `estimate-backlog` | `project`, `query?` | Suggests an Estimation (a duration) and story points from the spent time and points of similar resolved issues | 2b, points in 3 |
 | `sprint-report` | `project`, `sprint?` (default the active one) | Embeds the sprint; a narrative of goal, days left, committed against done, scope added after the start, the burndown trend and the issues at risk | 3 |
 | `document-this` | `issues`, `project?`, `parent?` | Embeds the issues with their comments; checks `search_articles` for what exists, drafts a runbook, root-cause write-up or how-to citing the keys, proposes a place and tags, and creates it as a draft after you confirm | 3.5 |
+| `why-did-it-change` | `issue` | Reads the history, the automation run log and the development panel; a timeline of what changed, who or which rule changed it, and why, including rules that looked and left it alone. Changes nothing | 7 |
 
 ## Example exchange
 

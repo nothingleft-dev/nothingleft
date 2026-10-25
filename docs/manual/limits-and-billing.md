@@ -68,6 +68,9 @@ Both are covered step by step in [Storage](./storage.md).
 | Attachments                | 50 per issue, 50 per article |
 | Issues in one bulk edit    | 500                          |
 | Custom fields              | 50 per project               |
+| GitHub or GitLab accounts  | 2 per organisation           |
+| Linked repositories        | 10 per project               |
+| Automations                | 10 per project               |
 | Projects                   | No limit                     |
 | Tags                       | No limit                     |
 | API requests, signed in    | 300 a minute                 |

@@ -1,0 +1,81 @@
+{
+  "headers": {
+    "x-gitlab-event": "Push Hook",
+    "x-gitlab-event-uuid": "3b1f9e2a-6c4d-4e8f-9a1b-2c3d4e5f6071"
+  },
+  "body": {
+    "object_kind": "push",
+    "event_name": "push",
+    "before": "5f2c1e9a7d3b4c6e8f0a1b2c3d4e5f6a7b8c9d0e",
+    "after": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+    "ref": "refs/heads/feat/api-7-login",
+    "ref_protected": false,
+    "checkout_sha": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+    "message": null,
+    "user_id": 9001,
+    "user_name": "Alex Lee",
+    "user_username": "alex-lee",
+    "user_email": "",
+    "user_avatar": "https://gitlab.com/uploads/-/system/user/avatar/9001/avatar.png",
+    "project_id": 202,
+    "project": {
+      "id": 202,
+      "name": "api",
+      "description": "Acme API",
+      "web_url": "https://gitlab.com/acme/api",
+      "avatar_url": null,
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "namespace": "acme",
+      "visibility_level": 0,
+      "path_with_namespace": "acme/api",
+      "default_branch": "main",
+      "ci_config_path": null,
+      "homepage": "https://gitlab.com/acme/api",
+      "url": "git@gitlab.com:acme/api.git",
+      "ssh_url": "git@gitlab.com:acme/api.git",
+      "http_url": "https://gitlab.com/acme/api.git"
+    },
+    "commits": [
+      {
+        "id": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+        "message": "API-7: Validate the login form\n\nTrims whitespace before checking.\n",
+        "title": "API-7: Validate the login form",
+        "timestamp": "2026-10-25T10:10:00+00:00",
+        "url": "https://gitlab.com/acme/api/-/commit/a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+        "author": {
+          "name": "Alex Lee",
+          "email": "alex@acme.example"
+        },
+        "added": [],
+        "modified": ["src/auth/login.ts"],
+        "removed": []
+      },
+      {
+        "id": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+        "message": "API-7: Reject empty passwords\n",
+        "title": "API-7: Reject empty passwords",
+        "timestamp": "2026-10-25T10:20:00+00:00",
+        "url": "https://gitlab.com/acme/api/-/commit/b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+        "author": {
+          "name": "Alex Lee",
+          "email": "alex@acme.example"
+        },
+        "added": [],
+        "modified": ["src/auth/login.ts"],
+        "removed": []
+      }
+    ],
+    "total_commits_count": 2,
+    "push_options": {},
+    "repository": {
+      "name": "api",
+      "url": "git@gitlab.com:acme/api.git",
+      "description": "Acme API",
+      "homepage": "https://gitlab.com/acme/api",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "visibility_level": 0
+    }
+  }
+}

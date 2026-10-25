@@ -199,7 +199,7 @@ describe('suggest: value position', () => {
 
   test('has: offers attribute names, braced when multi-word', async () => {
     const items = await run('has: -d');
-    expect(labels(items)).toEqual(['-description', '-{resolved date}', '-{due date}', '-{start date}']);
+    expect(labels(items)).toEqual(['-description', '-{resolved date}', '-{due date}', '-{start date}', '-development']);
     expect(items[2]).toMatchObject({ insert: '-{due date} ', description: { key: 'query.attribute.due_date' } });
     expect(items[0]?.description).toBeUndefined();
   });

@@ -40,6 +40,7 @@ export const PATHS = {
   reportsManual: '/docs/reports',
   knowledgeManual: '/docs/knowledge-base',
   mcpManual: '/docs/mcp',
+  automationsManual: '/docs/automations',
   permissions: '/docs/permissions',
   limits: '/docs/limits-and-billing',
 } as const;
@@ -185,9 +186,9 @@ export const ASANA_COMPARISON: Comparison = {
       group: 'delivery',
       capability: 'Workflow automation',
       ours: {
-        support: 'no',
-        note: 'No rules engine, and no transition rules: any status can follow any status. An agent can make bulk changes you ask for.',
-        source: { label: 'Issues manual', href: PATHS.issuesManual },
+        support: 'limited',
+        note: 'Status rules fired by git events and resolved subtasks, not a general rules engine, and no transition rules: any status can follow any status. An agent can make bulk changes you ask for.',
+        source: { label: 'Automations manual', href: PATHS.automationsManual },
       },
       theirs: {
         support: 'yes',
@@ -269,7 +270,7 @@ export const NOT_IN_NOTHING_LEFT = [
   'Portfolios that group projects',
   'Organisation, team or personal goals',
   'A workload or capacity view',
-  'Rules that change work automatically',
+  'General rules that change work automatically; automations here only set a status',
   'An AI assistant inside the app',
 ];
 

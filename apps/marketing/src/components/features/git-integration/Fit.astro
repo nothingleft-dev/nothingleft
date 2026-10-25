@@ -1,0 +1,87 @@
+---
+import {
+  AUTOMATIONS_MANUAL_PATH,
+  GIT_MANUAL_PATH,
+  LIMITS,
+  LIMITS_PATH,
+  NOT_BUILT,
+  SELF_HOSTING_GUIDE_PATH,
+} from '@lib/features/git-integration';
+
+const LINKS = [
+  { href: GIT_MANUAL_PATH, label: 'Connecting GitHub and GitLab' },
+  { href: AUTOMATIONS_MANUAL_PATH, label: 'Automations' },
+  { href: SELF_HOSTING_GUIDE_PATH, label: 'Your own GitHub App when self-hosting' },
+  { href: LIMITS_PATH, label: 'Limits and billing' },
+];
+---
+
+<section class="border-t border-line" aria-labelledby="gi-fit-title">
+  <div class="wrap py-16 md:py-24 grid md:grid-cols-12 gap-10 md:gap-12">
+    <div class="min-w-0 md:col-span-6 lg:col-span-5">
+      <h2 id="gi-fit-title" class="h2">
+        It reads your repositories. It never writes to them.
+      </h2>
+      <p class="prose mt-5">
+        An Org Admin connects GitHub or GitLab once for the organisation, and a Project Admin links the repositories
+        whose work belongs to the project. A project with no linked repository shows nothing about git at all.
+      </p>
+      <ul class="mt-6 space-y-2 text-sm">
+        {LINKS.map(link => (
+          <li>
+            <a class="link" href={link.href}>
+              {link.label}
+              <span class="arr" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <div class="min-w-0 md:col-span-6 lg:col-span-6 lg:col-start-7 space-y-10">
+      <div>
+        <h3 class="text-sm font-medium">Limits on the hosted beta</h3>
+        <dl class="gi-limits mt-3">
+          {LIMITS.map(item => (
+            <>
+              <dt>{item.limit}</dt>
+              <dd>{item.value}</dd>
+            </>
+          ))}
+        </dl>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium">Not built today</h3>
+        <ul class="rule-list mt-3">
+          {NOT_BUILT.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gi-limits {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    border-top: 1px solid var(--border);
+  }
+  .gi-limits dt,
+  .gi-limits dd {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+    line-height: 22px;
+  }
+  .gi-limits dt {
+    color: var(--text-secondary);
+  }
+  .gi-limits dd {
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+</style>

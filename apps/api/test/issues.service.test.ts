@@ -95,6 +95,7 @@ function hydrationWorld(rowCount: number) {
     },
     attachments: { readyCounts: async () => new Map() },
     sprints: { findByIds: async () => [] },
+    development: { summaries: async () => ({ enabled: new Set(), byIssue: new Map() }) },
     customFields: {
       async listForProjects() {
         calls.catalogue += 1;

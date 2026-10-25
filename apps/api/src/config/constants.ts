@@ -114,3 +114,18 @@ export const EXPORT_PAGE_SIZE = 500;
 export const EXPORT_JOB_EXPIRE_SECONDS = 6 * 60 * 60;
 export const JOB_TRANSFER_SWEEP_CRON = '50 * * * *'; // hourly: transfers.sweep, expired exports and spent import files
 export const TRANSFER_SWEEP_BATCH = 200;
+
+// Git integration (docs/data-model.md § Git integration).
+export const GIT_WEBHOOK_BODY_LIMIT_BYTES = 25 * 1024 * 1024; // GitHub's own maximum, so every body is signature-checked whole
+export const GIT_EVENT_STORED_MAX_BYTES = 1 * 1024 * 1024;
+export const GIT_WEBHOOK_RATE_LIMIT_PER_HOOK = 600; // per minute, per hook URL
+export const GIT_WEBHOOK_RATE_LIMIT_PER_APP = 6_000; // per minute, for the app URL every installation shares
+export const GIT_SIGNATURE_FAILURES_MAX = 50; // in one hour, before the connection shows as failing
+export const GIT_EVENT_RETRY_MINUTES = [1, 4, 16, 64] as const;
+export const GIT_EVENT_RETENTION_DAYS = 7;
+export const GIT_CONNECT_STATE_TTL_SECONDS = 10 * 60;
+export const GIT_PURGE_BATCH = 5_000;
+export const JOB_GIT_PURGE_CRON = '20 3 * * *'; // nightly, 03:20 UTC: git.purge
+export const JOB_GIT_RECONCILE_CRON = '40 2 * * *'; // nightly, 02:40 UTC: git.reconcile
+export const JOB_GIT_TOKEN_EXPIRY_CRON = '10 * * * *'; // hourly at :10: git.token_expiry
+export const JOB_GIT_RECOVER_CRON = '25 * * * *'; // hourly at :25: git.recover

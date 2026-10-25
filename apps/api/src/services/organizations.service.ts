@@ -15,6 +15,9 @@ import {
   type OrgMemberRow,
   type OrgStorageConfigsRepository,
   type UsersRepository,
+  type GitConnectionsRepository,
+  type GitLinksRepository,
+  type ProjectsRepository,
 } from '@nothingleft/db';
 import type { Analytics } from '@nothingleft/analytics';
 import { generateOrganizationSlug, parseOrganizationSlug, usernameFromEmail } from '@nothingleft/format';
@@ -32,6 +35,9 @@ export interface OrganizationsDeps {
   sessions: SessionsService;
   inTransaction: InTenantTransaction;
   analytics: Analytics;
+  projects: Pick<ProjectsRepository, 'listReadable'>;
+  gitConnections: Pick<GitConnectionsRepository, 'countLive'>;
+  gitLinks: Pick<GitLinksRepository, 'gitEnabledProjects'>;
 }
 
 type OrganizationSettings = Pick<
@@ -45,11 +51,18 @@ export function organizationsService(deps: OrganizationsDeps) {
 
   async function toDto(organization: OrganizationRow, membership: OrgMemberRow): Promise<Organization> {
     const ctx = tenantContext(organization.id, membership.user_id);
-    const [owner, used, storageConfig] = await Promise.all([
+    const everyProject = organization.owner_user_id === membership.user_id || membership.role === 'org_admin';
+    const [owner, used, storageConfig, connections, readable] = await Promise.all([
       organizations.findMemberByUserId(ctx, organization.owner_user_id, { includeRemoved: true }),
       organizations.countActiveMembers(ctx),
       deps.storageConfigs.find(ctx),
+      deps.gitConnections.countLive(ctx),
+      deps.projects.listReadable(ctx, membership.user_id, { everyProject }),
     ]);
+    const gitEnabled = await deps.gitLinks.gitEnabledProjects(
+      ctx,
+      readable.filter(r => everyProject || r.role !== null).map(r => r.project.id),
+    );
     if (!owner) throw new Error(`organisation ${organization.id} has no owner membership`);
     return {
       slug: organization.slug,
@@ -75,6 +88,8 @@ export function organizationsService(deps: OrganizationsDeps) {
             ).toISOString(),
           }
         : null,
+      git_connected: connections > 0,
+      git_enabled: gitEnabled.size > 0,
       created_at: organization.created_at.toISOString(),
       updated_at: organization.updated_at.toISOString(),
     };

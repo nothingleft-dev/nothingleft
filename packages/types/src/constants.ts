@@ -34,6 +34,7 @@ export const ONE_TIME_TOKEN_PURPOSES = [
   'email_verify',
   'email_change',
   'ownership_transfer',
+  'git_identity_email',
 ] as const;
 export type OneTimeTokenPurpose = (typeof ONE_TIME_TOKEN_PURPOSES)[number];
 
@@ -69,6 +70,12 @@ export const ORG_ACTIVITY_KINDS = [
   'tag_renamed',
   'tag_merged',
   'tag_deleted',
+  'git_connection_created',
+  'git_connection_removed',
+  'git_connection_error',
+  'repository_linked',
+  'repository_unlinked',
+  'automation_changed',
 ] as const;
 export type OrgActivityKind = (typeof ORG_ACTIVITY_KINDS)[number];
 
@@ -127,6 +134,7 @@ export const ONE_TIME_TOKEN_TTL_SECONDS: Record<OneTimeTokenPurpose, number> = {
   email_verify: 24 * 60 * 60,
   email_change: 24 * 60 * 60,
   ownership_transfer: 7 * 24 * 60 * 60,
+  git_identity_email: 24 * 60 * 60,
 };
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
@@ -155,6 +163,9 @@ export const ISSUE_ACTIVITY_KINDS = [
   'parent_changed',
   'deleted',
   'restored',
+  'git_linked',
+  'git_unlinked',
+  'git_pr_changed',
 ] as const;
 export type IssueActivityKind = (typeof ISSUE_ACTIVITY_KINDS)[number];
 
@@ -432,10 +443,12 @@ export const NOTIFICATION_KINDS = [
   'article_published',
   'article_updated',
   'reaction',
+  'pull_request_merged',
+  'ci_failed',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
-export const NOTIFICATION_AREAS = ['issues', 'comments', 'agile', 'knowledge_base'] as const;
+export const NOTIFICATION_AREAS = ['issues', 'comments', 'agile', 'knowledge_base', 'development'] as const;
 export type NotificationArea = (typeof NOTIFICATION_AREAS)[number];
 
 export const NOTIFICATION_KIND_AREAS = {
@@ -454,6 +467,8 @@ export const NOTIFICATION_KIND_AREAS = {
   sprint_finished: 'agile',
   article_published: 'knowledge_base',
   article_updated: 'knowledge_base',
+  pull_request_merged: 'development',
+  ci_failed: 'development',
 } as const satisfies Record<NotificationKind, NotificationArea>;
 
 export const NOTIFICATION_EMAIL_OPTIONS = ['off', 'instant', 'daily_digest', 'weekly_digest'] as const;
@@ -525,3 +540,115 @@ export const ORG_EXPORT_TTL_DAYS = 7;
 export const ORG_EXPORT_FORMAT_VERSION = 1;
 
 export const TAG_MERGE_MAX_SOURCES = 50;
+
+export const GIT_AUTH_KINDS = ['app_installation', 'token', 'manual'] as const;
+export type GitAuthKind = (typeof GIT_AUTH_KINDS)[number];
+export const GIT_CONNECT_KINDS = ['app', 'token', 'manual'] as const;
+export type GitConnectKind = (typeof GIT_CONNECT_KINDS)[number];
+export const GIT_CONNECTION_STATUSES = ['active', 'suspended', 'token_expired', 'failing', 'revoked'] as const;
+export type GitConnectionStatus = (typeof GIT_CONNECTION_STATUSES)[number];
+// What went wrong, as the connection card says it; `last_error` holds one of these.
+export const GIT_CONNECTION_ERRORS = [
+  'signature',
+  'processing',
+  'token_invalid',
+  'token_expired',
+  'suspended',
+  'uninstalled',
+] as const;
+export type GitConnectionError = (typeof GIT_CONNECTION_ERRORS)[number];
+export const GIT_CONNECTION_HEALTH = [
+  'active',
+  'failing',
+  'token_expired',
+  'expiring',
+  'suspended',
+  'removed_at_provider',
+  'disconnected',
+] as const;
+export type GitConnectionHealth = (typeof GIT_CONNECTION_HEALTH)[number];
+export const GIT_WEBHOOK_STATUSES = ['active', 'failing', 'missing', 'not_applicable'] as const;
+export type GitWebhookStatus = (typeof GIT_WEBHOOK_STATUSES)[number];
+export const GIT_EVENT_STATUSES = ['pending', 'done', 'ignored', 'failed'] as const;
+export type GitEventStatus = (typeof GIT_EVENT_STATUSES)[number];
+// Why an event ended `failed`, as stored in its `error` and counted in analytics.
+export const GIT_EVENT_FAILURES = [
+  'provider_unreachable',
+  'provider_rate_limited',
+  'token_invalid',
+  'payload_truncated',
+  'internal',
+] as const;
+export type GitEventFailure = (typeof GIT_EVENT_FAILURES)[number];
+// Why an event ended `ignored`.
+export const GIT_EVENT_IGNORED = [
+  'repository_unknown',
+  'repository_not_linked',
+  'connection_revoked',
+  'connection_suspended',
+  'repository_removed',
+  'event_unused',
+] as const;
+export type GitEventIgnored = (typeof GIT_EVENT_IGNORED)[number];
+export const GIT_BACKFILL_STATES = ['queued', 'running', 'done', 'failed'] as const;
+export type GitBackfillState = (typeof GIT_BACKFILL_STATES)[number];
+export const GIT_EVENT_ATTEMPTS_MAX = 5;
+export const GIT_TOKEN_EXPIRY_WARNING_DAYS = 7;
+export const GIT_MERGE_BASE_BRANCHES_MAX = 20;
+export const GIT_PAGE_DEFAULT = 50;
+export const GIT_PAGE_MAX = 100;
+
+export const GIT_PULL_REQUEST_STATES = ['draft', 'open', 'merged', 'closed'] as const;
+export type GitPullRequestState = (typeof GIT_PULL_REQUEST_STATES)[number];
+export const GIT_REVIEW_STATES = ['none', 'review_requested', 'approved', 'changes_requested'] as const;
+export type GitReviewState = (typeof GIT_REVIEW_STATES)[number];
+export const GIT_REVIEWER_STATES = ['requested', 'approved', 'changes_requested', 'commented', 'dismissed'] as const;
+export type GitReviewerState = (typeof GIT_REVIEWER_STATES)[number];
+export const GIT_CI_STATES = ['none', 'running', 'passing', 'failing'] as const;
+export type GitCiState = (typeof GIT_CI_STATES)[number];
+export const GIT_CHECK_STATUSES = ['queued', 'in_progress', 'completed'] as const;
+export type GitCheckStatus = (typeof GIT_CHECK_STATUSES)[number];
+export const GIT_CHECK_CONCLUSIONS = [
+  'success',
+  'failure',
+  'neutral',
+  'cancelled',
+  'skipped',
+  'timed_out',
+  'action_required',
+  'stale',
+] as const;
+export type GitCheckConclusion = (typeof GIT_CHECK_CONCLUSIONS)[number];
+export const GIT_LINK_TARGETS = ['branch', 'commit', 'pull_request'] as const;
+export type GitLinkTarget = (typeof GIT_LINK_TARGETS)[number];
+export const GIT_LINK_INTENTS = ['mention', 'closes', 'revert'] as const;
+export type GitLinkIntent = (typeof GIT_LINK_INTENTS)[number];
+export const GIT_LINK_SOURCES = [
+  'branch_name',
+  'commit_message',
+  'pr_title',
+  'pr_body',
+  'pr_commits',
+  'merge_commit',
+  'manual',
+] as const;
+export type GitLinkSource = (typeof GIT_LINK_SOURCES)[number];
+export const GIT_IDENTITY_VERIFICATIONS = ['provider', 'email', 'claim'] as const;
+export type GitIdentityVerification = (typeof GIT_IDENTITY_VERIFICATIONS)[number];
+// The issue-level badge; a list sorted by development follows this order.
+export const GIT_DEVELOPMENT_ROLLUPS = [
+  'merged',
+  'ci_failing',
+  'changes_requested',
+  'approved',
+  'in_review',
+  'draft',
+  'branch_active',
+  'reverted',
+  'none',
+] as const;
+export type GitDevelopmentRollup = (typeof GIT_DEVELOPMENT_ROLLUPS)[number];
+export const GIT_BACKFILL_DAYS = 90;
+export const GIT_BACKFILL_PULL_REQUESTS_MAX = 1_000;
+export const GIT_PUSH_COMMITS_MAX = 100;
+export const GIT_COMMIT_MESSAGE_STORED_MAX = 4_096;

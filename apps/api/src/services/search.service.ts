@@ -3,6 +3,7 @@ import {
   checkValues,
   dateInZone,
   expandSavedViews,
+  GIT_QUERY_VALUES,
   issueRegistry,
   parse,
   QueryError,
@@ -10,6 +11,7 @@ import {
   sortKeysOf,
   suggest,
   vocabularyNeeds,
+  withoutGitAttributes,
   type CustomAttributeType,
   type Query,
   type Registry,
@@ -35,6 +37,7 @@ import {
   type IssueGroupRow,
   type IssueSearchRepository,
   type IssueSearchResult,
+  type GitLinksRepository,
   type IssuesRepository,
   type ProjectRow,
   type ProjectsRepository,
@@ -87,6 +90,7 @@ export interface SearchDeps {
   savedViews: SavedViewsRepository;
   recentSearches: RecentSearchesRepository;
   customFields: CustomFieldsRepository;
+  gitLinks: Pick<GitLinksRepository, 'gitEnabledProjects'>;
   analytics: Analytics;
   now?: () => Date;
 }
@@ -129,6 +133,7 @@ function vocabularyOf(v: SearchVocabulary): Vocabulary {
     'work type': names(v.work_types),
     tag: entry(v.tags.map(tag => [[tag.name, tag.slug], tag.name])),
     sprint: entry(v.sprints.map(s => [[s.name, s.slug], s.name])),
+    ...Object.fromEntries(Object.entries(GIT_QUERY_VALUES).map(([name, values]) => [name, names([...values])])),
     user: {
       accepted: new Set(v.usernames.map(u => u.username.toLowerCase())),
       display: v.usernames.filter(u => !u.removed).map(u => u.username),
@@ -385,6 +390,11 @@ export function searchService(deps: SearchDeps) {
         issueSearch.suggestValues(sc.ctx, ids, attribute, prefix, SUGGEST_VALUES_MAX);
       const provider: ValueProvider = {
         async values(attribute, prefix) {
+          const fixed = GIT_QUERY_VALUES[attribute.name as keyof typeof GIT_QUERY_VALUES];
+          if (fixed) {
+            const needle = prefix.toLowerCase();
+            return fixed.filter(v => v.toLowerCase().includes(needle)).map(value => ({ value }));
+          }
           const name = attribute.type === 'user' ? 'user' : attribute.name;
           return (await lookup(name, prefix)).map(value => ({ value }));
         },
@@ -400,7 +410,10 @@ export function searchService(deps: SearchDeps) {
           return (await recentSearches.list(sc.ctx, principal.userId, SUGGEST_VALUES_MAX)).map(r => r.query);
         },
       };
-      const suggestions = await suggest(text, caret, sc.registry, provider, {
+      // Git attributes are offered only once a project in scope has a repository (still parsed everywhere).
+      const gitEnabled = (await deps.gitLinks.gitEnabledProjects(sc.ctx, ids)).size > 0;
+      const registry = gitEnabled ? sc.registry : withoutGitAttributes(sc.registry);
+      const suggestions = await suggest(text, caret, registry, provider, {
         today: sc.scope.today,
         weekStartsOn: sc.scope.weekStartsOn,
       });
