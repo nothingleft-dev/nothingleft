@@ -27,7 +27,7 @@ const GITHUB_EVENTS = [
 
 function Value({ label, value, what }: { label: string; value: string; what: string }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       <span className="text-xs font-medium text-text-secondary">{label}</span>
       <div className="flex items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded-sm border bg-inset px-2 py-1.5 font-mono text-xs">
@@ -66,7 +66,7 @@ export function SecretDialog({
                   : `The server registers a webhook on each repository you link. Keep the secret in case you add one by hand.`}
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-4">
               {connection.webhook_secret ? (
                 <FormAlert tone="warning" title="This secret is shown once.">
                   Copy it now. Nothing shows it again; a lost secret is replaced with Rotate secret.

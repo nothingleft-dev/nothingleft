@@ -21,7 +21,7 @@ function NeedsStatus({ projectKey }: { projectKey: string }) {
       <Link href={`/projects/${projectKey}/settings?tab=statuses` as Route} className="text-text underline">
         add one in Statuses
       </Link>
-      , such as In Review in the started category.
+      .
     </p>
   );
 }
