@@ -10355,7 +10355,7 @@ components:
         error: { type: [string, 'null'] }
     GitRepository:
       type: object
-      required: [full_name, provider, connection, html_url, default_branch, is_private, is_archived, removed, webhook_status, webhook_last_status_code, match_all_projects, merge_base_branches, effective_merge_base_branches, last_event_at, projects, backfill]
+      required: [full_name, provider, connection, html_url, default_branch, is_private, is_archived, removed, webhook_status, webhook_last_status_code, match_all_projects, merge_base_branches, effective_merge_base_branches, last_event_at, projects, shared, backfill]
       properties:
         full_name: { type: string, example: acme/web }
         provider: { type: string, enum: [github, gitlab] }
@@ -10372,6 +10372,7 @@ components:
         effective_merge_base_branches: { type: array, items: { type: string } }
         last_event_at: { type: [string, 'null'], format: date-time }
         projects: { type: array, items: { type: string }, description: Keys of the linked projects the caller can read. }
+        shared: { type: boolean, description: 'Another project uses it (readable by the caller or not), or it matches every project: its merge branches are then an Org Admin''s to change. Without a project in the request, it is linked to more than one.' }
         backfill: { oneOf: [{ $ref: '#/components/schemas/GitBackfill' }, { type: 'null' }] }
     GitRepositoryEnvelope:
       allOf:

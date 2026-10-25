@@ -148,6 +148,10 @@ export const GitRepositorySchema = z.object({
   last_event_at: z.string().nullable(),
   // Keys of the linked projects the caller can read.
   projects: z.array(z.string()),
+  // Another project uses it (readable by the caller or not), or it matches every project: its
+  // merge branches are then an Org Admin's to change. Without a project in the request, it is
+  // linked to more than one.
+  shared: z.boolean(),
   backfill: GitBackfillSchema.nullable(),
 });
 export type GitRepository = z.infer<typeof GitRepositorySchema>;

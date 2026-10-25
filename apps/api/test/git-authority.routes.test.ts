@@ -59,7 +59,15 @@ describe("a repository's shared settings", () => {
     expect(
       (await w.call(w.projectAdmin, 'PATCH', repoPath(KEY), { merge_base_branches: ['main', 'release/*'] })).statusCode,
     ).toBe(200);
+    const mine = async () =>
+      (await w.call(w.projectAdmin, 'GET', `/v1/projects/${KEY}/repositories`)).json().data[0] as {
+        projects: string[];
+        shared: boolean;
+      };
+    expect(await mine()).toMatchObject({ projects: [KEY], shared: false });
     expect((await w.call(w.admin, 'PUT', repoPath('SEC'), { backfill: false })).statusCode).toBe(201);
+    // SEC is not theirs to read, yet they learn the repository is shared.
+    expect(await mine()).toMatchObject({ projects: [KEY], shared: true });
     const shared = await w.call(w.projectAdmin, 'PATCH', repoPath(KEY), { merge_base_branches: ['*'] });
     expect(shared.json().error).toMatchObject({ code: 'git.repository_shared', field: 'merge_base_branches' });
     expect((await w.call(w.admin, 'PATCH', repoPath(KEY), { merge_base_branches: ['main'] })).statusCode).toBe(200);

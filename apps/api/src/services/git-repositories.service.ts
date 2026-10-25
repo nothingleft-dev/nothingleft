@@ -151,7 +151,22 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
 
   const effectiveBranches = (row: GitRepositoryRow) => row.merge_base_branches ?? [row.default_branch];
 
-  async function toDtos(org: OrgAccess, principal: Principal, rows: GitRepositoryRow[]): Promise<GitRepository[]> {
+  const sharedBeyond = (
+    links: { repository_id: number; project_id: number }[],
+    repoId: number,
+    forProject: number | null,
+  ) => {
+    const linked = links.filter(l => l.repository_id === repoId).map(l => l.project_id);
+    return forProject === null ? linked.length > 1 : linked.some(id => id !== forProject);
+  };
+
+  /** `forProject`: the project the caller is looking from; `shared` means any other project uses the repository. */
+  async function toDtos(
+    org: OrgAccess,
+    principal: Principal,
+    rows: GitRepositoryRow[],
+    forProject: number | null = null,
+  ): Promise<GitRepository[]> {
     const [all, links, keys] = await Promise.all([
       connections.list(org.ctx, { includeRevoked: true }),
       repositories.projectLinks(
@@ -182,6 +197,8 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
           .filter(l => l.repository_id === row.id && keys.has(l.project_id))
           .map(l => keys.get(l.project_id)!)
           .sort(),
+        // Counted over every project, readable or not: the caller learns only that one exists.
+        shared: row.match_all_projects || sharedBeyond(links, row.id, forProject),
         backfill: (row.backfill_state as GitBackfill | null) ?? null,
       };
     });
@@ -189,7 +206,7 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
 
   async function projectDto(project: ProjectAccess, principal: Principal, repoId: number): Promise<ProjectRepository> {
     const linked = (await repositories.listForProject(project.ctx, project.project.id)).find(r => r.id === repoId)!;
-    const [dto] = await toDtos(project, principal, [linked]);
+    const [dto] = await toDtos(project, principal, [linked], project.project.id);
     const by = await organizations.findMemberByUserId(project.ctx, linked.linked_by, { includeRemoved: true });
     return {
       ...dto!,
@@ -382,6 +399,7 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
       query: GitRepositoriesQuery,
     ): Promise<{ data: GitRepository[]; total: number }> {
       const org = await access.org(principal, slug);
+      let forProject: number | null = null;
       if (!can(principal, 'org.git.manage', org.scope)) {
         if (!query.project) {
           const mine = await projects.listReadable(org.ctx, principal.userId, { everyProject: false });
@@ -390,6 +408,9 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
         }
         const project = await access.project(principal, query.project.toUpperCase(), { slug });
         access.require(principal, 'git.repositories.list', project.scope);
+        forProject = project.project.id;
+      } else if (query.project) {
+        forProject = (await access.project(principal, query.project.toUpperCase(), { slug })).project.id;
       }
       const all = await connections.list(org.ctx, { includeRevoked: Boolean(query.connection) });
       let ids = all.filter(c => !c.revoked_at).map(c => c.id);
@@ -411,14 +432,14 @@ export function gitRepositoriesService(deps: GitRepositoriesDeps) {
         },
         { limit: query.limit, offset: query.offset },
       );
-      return { data: await toDtos(org, principal, rows), total };
+      return { data: await toDtos(org, principal, rows, forProject), total };
     },
 
     async listForProject(principal: Principal, key: string, hints: OrgHints = {}): Promise<ProjectRepository[]> {
       const project = await access.project(principal, key, hints);
       access.require(principal, 'git.read', project.scope);
       const linked = await repositories.listForProject(project.ctx, project.project.id);
-      const dtos = await toDtos(project, principal, linked);
+      const dtos = await toDtos(project, principal, linked, project.project.id);
       const people = await organizations.findMembersByUserIds(project.ctx, [...new Set(linked.map(l => l.linked_by))], {
         includeRemoved: true,
       });
