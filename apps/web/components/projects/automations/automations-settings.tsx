@@ -375,7 +375,7 @@ function MergedInto({
             </span>
             <BranchChips
               repository={repository}
-              disabled={!canEdit || repositoryLocks(repository, projectKey, orgAdmin).branches !== null}
+              disabled={!canEdit || repositoryLocks(repository, orgAdmin).branches !== null}
               onChange={branches =>
                 update.mutate(
                   {
@@ -389,7 +389,7 @@ function MergedInto({
           </li>
         ))}
       </ul>
-      {canEdit && repositories.some(r => repositoryLocks(r, projectKey, orgAdmin).branches) ? (
+      {canEdit && repositories.some(r => repositoryLocks(r, orgAdmin).branches) ? (
         <p className="text-2xs text-text-secondary">
           Only an Org Admin can change the branches of a repository other projects use too.
         </p>

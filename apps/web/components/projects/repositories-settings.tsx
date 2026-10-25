@@ -166,7 +166,7 @@ function RepositoryRow({
   canEdit: boolean;
   orgAdmin: boolean;
 }) {
-  const locks = repositoryLocks(repository, projectKey, orgAdmin);
+  const locks = repositoryLocks(repository, orgAdmin);
   const update = useUpdateRepositoryLink(projectKey);
   const unlink = useUnlinkRepository(projectKey);
   const [confirming, setConfirming] = useState(false);
