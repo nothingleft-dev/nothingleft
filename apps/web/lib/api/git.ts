@@ -67,11 +67,18 @@ export interface GitRepositoriesFilter {
 export const listGitRepositories = (slug: string, query: GitRepositoriesFilter) =>
   api.get<GitRepository[]>(`${git(slug)}/repositories`, { query: { ...query } });
 
-export const resyncGitRepository = (slug: string, repository: string) =>
-  api.post<GitRepository>(`${git(slug)}/repositories/${segment(repository)}/resync`, { timeoutMs: 30_000 });
+// `connection` names which one when two connections hold a repository of that name.
+export const resyncGitRepository = (slug: string, repository: string, connection: string) =>
+  api.post<GitRepository>(`${git(slug)}/repositories/${segment(repository)}/resync`, {
+    query: { connection },
+    timeoutMs: 30_000,
+  });
 
-export const rehookGitRepository = (slug: string, repository: string) =>
-  api.post<GitRepository>(`${git(slug)}/repositories/${segment(repository)}/rehook`, { timeoutMs: 30_000 });
+export const rehookGitRepository = (slug: string, repository: string, connection: string) =>
+  api.post<GitRepository>(`${git(slug)}/repositories/${segment(repository)}/rehook`, {
+    query: { connection },
+    timeoutMs: 30_000,
+  });
 
 export interface GitEventsFilter {
   connection?: string;
@@ -87,7 +94,7 @@ export const listGitEvents = (slug: string, query: GitEventsFilter) =>
 export const getGitEvent = (slug: string, id: number) => api.get<GitWebhookEventDetail>(`${git(slug)}/events/${id}`);
 
 export const replayGitEvent = (slug: string, id: number, runAutomations: boolean) =>
-  api.post<{ accepted: boolean }>(`${git(slug)}/events/${id}/replay`, { body: { run_automations: runAutomations } });
+  api.post<GitWebhookEventDetail>(`${git(slug)}/events/${id}/replay`, { body: { run_automations: runAutomations } });
 
 export const listMemberGitIdentities = (slug: string) => api.get<MemberGitIdentity[]>(`${git(slug)}/identities`);
 
@@ -104,8 +111,8 @@ export const linkRepository = (key: string, repository: string, body: LinkReposi
 export const updateRepositoryLink = (key: string, repository: string, body: UpdateRepositoryLink) =>
   api.patch<ProjectRepository>(`${projectRepos(key)}/${segment(repository)}`, { body });
 
-export const unlinkRepository = (key: string, repository: string) =>
-  api.delete<ProjectRepository[]>(`${projectRepos(key)}/${segment(repository)}`);
+export const unlinkRepository = (key: string, repository: string, connection: string) =>
+  api.delete<ProjectRepository[]>(`${projectRepos(key)}/${segment(repository)}`, { query: { connection } });
 
 const development = (key: string) => `/v1/issues/${encodeURIComponent(key)}/development`;
 

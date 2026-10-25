@@ -30,16 +30,37 @@ function dismiss(id: string) {
 
 const loose = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+const PUBLIC_HOSTS = new Set(['github.com', 'gitlab.com']);
+
+// The claim must name the host the login lives on: a self-managed GitLab is its own identity.
+function baseUrlOf(repositoryUrl: string): string | undefined {
+  try {
+    const url = new URL(repositoryUrl);
+    return PUBLIC_HOSTS.has(url.hostname) ? undefined : url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * An unmatched author whose login reads like the viewer's own name or username: offered to the
  * viewer once, as a claim of that login. Dismissing it is remembered in this browser.
  */
-export function ThisIsMe({ author, provider }: { author: GitAuthor; provider: GitProviderKind }) {
+export function ThisIsMe({
+  author,
+  provider,
+  repositoryUrl,
+}: {
+  author: GitAuthor;
+  provider: GitProviderKind;
+  repositoryUrl: string;
+}) {
   const session = useSession();
   const user = session.status === 'signed-in' ? session.user : null;
   const organization = useOrganization(user?.current_organization_slug ?? null);
   const claim = useClaimGitIdentity();
-  const id = `${provider}:${author.login?.toLowerCase() ?? ''}`;
+  const baseUrl = baseUrlOf(repositoryUrl);
+  const id = `${provider}:${baseUrl ?? ''}:${author.login?.toLowerCase() ?? ''}`;
   const [hidden, setHidden] = useState(() => typeof window === 'undefined' || readDismissed().includes(id));
 
   const username = organization.data?.membership.username ?? null;
@@ -58,7 +79,7 @@ export function ThisIsMe({ author, provider }: { author: GitAuthor; provider: Gi
         disabled={claim.isPending}
         onClick={() =>
           claim.mutate(
-            { provider, login: login! },
+            { provider, login: login!, ...(baseUrl ? { base_url: baseUrl } : {}) },
             {
               onSuccess: () => {
                 toast.success(`@${login} on ${providerLabel(provider)} is now yours. Its work shows under your name.`);

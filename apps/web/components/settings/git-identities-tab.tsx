@@ -127,11 +127,10 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
           size="xs"
           disabled={remove.isPending}
           onClick={() =>
-            remove.mutate(identity.id, {
-              onSuccess: () =>
-                toast.success(`${identity.login ? `@${identity.login}` : identity.email} is no longer yours here.`),
-              onError: error => toast.error(error.message),
-            })
+            remove.mutateAsync(identity.id).then(
+              () => toast.success(`${identity.login ? `@${identity.login}` : identity.email} is no longer yours.`),
+              (error: Error) => toast.error(error.message),
+            )
           }
         >
           Remove

@@ -236,10 +236,13 @@ function RepositoryRow({
             <DropdownMenuItem
               disabled={repository.removed || resync.isPending}
               onSelect={() =>
-                resync.mutate(repository.full_name, {
-                  onSuccess: () => toast.success(`${repository.full_name} is being re-read from the provider.`),
-                  onError: error => toast.error(error.message),
-                })
+                resync.mutate(
+                  { repository: repository.full_name, connection: repository.connection },
+                  {
+                    onSuccess: () => toast.success(`${repository.full_name} is being re-read from the provider.`),
+                    onError: error => toast.error(error.message),
+                  },
+                )
               }
             >
               <RefreshCw /> Re-sync now
@@ -248,10 +251,13 @@ function RepositoryRow({
               <DropdownMenuItem
                 disabled={rehook.isPending}
                 onSelect={() =>
-                  rehook.mutate(repository.full_name, {
-                    onSuccess: () => toast.success(`The webhook on ${repository.full_name} was registered again.`),
-                    onError: error => toast.error(error.message),
-                  })
+                  rehook.mutate(
+                    { repository: repository.full_name, connection: repository.connection },
+                    {
+                      onSuccess: () => toast.success(`The webhook on ${repository.full_name} was registered again.`),
+                      onError: error => toast.error(error.message),
+                    },
+                  )
                 }
               >
                 <Webhook /> Re-register webhook

@@ -246,16 +246,13 @@ function RepositoryRow({
         confirmLabel="Unlink repository"
         pending={unlink.isPending}
         onConfirm={() =>
-          unlink.mutate(repository.full_name, {
-            onSuccess: () => {
-              setConfirming(false);
-              toast.success(`${repository.full_name} is no longer linked to ${projectKey}.`);
-            },
-            onError: error => {
-              setConfirming(false);
-              toast.error(error.message);
-            },
-          })
+          unlink
+            .mutateAsync({ repository: repository.full_name, connection: repository.connection })
+            .then(
+              () => toast.success(`${repository.full_name} is no longer linked to ${projectKey}.`),
+              (error: Error) => toast.error(error.message),
+            )
+            .finally(() => setConfirming(false))
         }
       >
         <p>
@@ -291,10 +288,10 @@ function LinkRepositoryPicker({
   const link = useLinkRepository(projectKey);
 
   const groups = useMemo(() => {
-    const taken = new Set(linked.map(r => r.full_name));
+    const taken = new Set(linked.map(r => `${r.connection} ${r.full_name}`));
     const byConnection = new Map<string, GitRepository[]>();
     for (const repository of available.data?.data ?? []) {
-      if (taken.has(repository.full_name) || repository.removed) continue;
+      if (taken.has(`${repository.connection} ${repository.full_name}`) || repository.removed) continue;
       byConnection.set(repository.connection, [...(byConnection.get(repository.connection) ?? []), repository]);
     }
     return [...byConnection.entries()];
@@ -319,7 +316,9 @@ function LinkRepositoryPicker({
               <CommandEmpty>
                 {query
                   ? `No repository matches “${query}”.`
-                  : 'Every repository the organisation can see is linked here already.'}
+                  : (available.data?.meta.pagination?.total ?? 0) > (available.data?.data.length ?? 0)
+                    ? 'Search to find the rest of the organisation’s repositories.'
+                    : 'Every repository the organisation can see is linked here already.'}
               </CommandEmpty>
             )}
             {groups.map(([connection, repositories]) => (

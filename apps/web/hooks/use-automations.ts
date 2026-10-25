@@ -84,8 +84,11 @@ export function useUpdateAutomation(key: string) {
           : rule,
       ),
     ),
-    onSuccess: (rule, { name }) =>
-      client.setQueryData<Automation[]>(rulesKey(key), list => list?.map(r => (r.name === name ? rule : r))),
+    // The early draw already carries a new name, so the answer replaces the row under it.
+    onSuccess: (rule, { name, body }) =>
+      client.setQueryData<Automation[]>(rulesKey(key), list =>
+        list?.map(r => (r.name === (body.name ?? name) ? rule : r)),
+      ),
     onSettled: () => settle(client, key),
   });
 }

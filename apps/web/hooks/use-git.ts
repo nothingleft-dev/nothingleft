@@ -115,11 +115,18 @@ export function useCheckGitConnection(slug: string) {
   return useMutation({ mutationFn: (body: CreateGitConnection) => checkGitConnection(slug, body).then(r => r.data) });
 }
 
+// git_connected and git_enabled live on the organisation, so a connection change refreshes it too.
+const invalidateOrganizations = (client: ReturnType<typeof useQueryClient>) =>
+  client.invalidateQueries({ queryKey: queryKeys.organizations() });
+
 export function useCreateGitConnection(slug: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateGitConnection) => createGitConnection(slug, body).then(r => r.data),
-    onSettled: () => invalidateGit(client, slug),
+    onSettled: () => {
+      void invalidateGit(client, slug);
+      void invalidateOrganizations(client);
+    },
   });
 }
 
@@ -132,8 +139,9 @@ export function useRemoveGitConnection(slug: string) {
       list.filter(c => c.name !== name),
     ),
     onSettled: () => {
-      void invalidateGit(client, slug);
+      void invalidateOrganizations(client);
       void client.invalidateQueries({ queryKey: ['projects'] });
+      void client.invalidateQueries({ queryKey: ['issues'] });
     },
   });
 }
@@ -161,7 +169,8 @@ export function useRotateGitSecret(slug: string) {
 export function useResyncGitRepository(slug: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (repository: string) => resyncGitRepository(slug, repository).then(r => r.data),
+    mutationFn: ({ repository, connection }: { repository: string; connection: string }) =>
+      resyncGitRepository(slug, repository, connection).then(r => r.data),
     onSettled: () => invalidateGit(client, slug),
   });
 }
@@ -169,7 +178,8 @@ export function useResyncGitRepository(slug: string) {
 export function useRehookGitRepository(slug: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (repository: string) => rehookGitRepository(slug, repository).then(r => r.data),
+    mutationFn: ({ repository, connection }: { repository: string; connection: string }) =>
+      rehookGitRepository(slug, repository, connection).then(r => r.data),
     onSettled: () => invalidateGit(client, slug),
   });
 }
@@ -179,7 +189,10 @@ export function useReplayGitEvent(slug: string) {
   return useMutation({
     mutationFn: ({ id, runAutomations }: { id: number; runAutomations: boolean }) =>
       replayGitEvent(slug, id, runAutomations).then(r => r.data),
-    onSettled: () => client.invalidateQueries({ queryKey: [...queryKeys.git(slug), 'event'] }),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: [...queryKeys.git(slug), 'event'] });
+      void client.invalidateQueries({ queryKey: [...queryKeys.git(slug), 'events'] });
+    },
   });
 }
 
@@ -214,13 +227,23 @@ export function useProjectRepositories(key: string, enabled = true) {
   });
 }
 
-// A link changes what every issue of the project shows (git_enabled, badges), so issues refresh too.
+// A link changes what every issue of the project shows (git_enabled, badges), so issues,
+// boards and the organisation's git_enabled refresh too.
 function invalidateProjectGit(client: ReturnType<typeof useQueryClient>, key: string) {
   void client.invalidateQueries({ queryKey: queryKeys.projectRepositories(key) });
-  void client.invalidateQueries({ queryKey: ['organizations'], predicate: q => q.queryKey.includes('git') });
-  void client.invalidateQueries({ queryKey: queryKeys.project(key) });
-  void client.invalidateQueries({ queryKey: ['issues'] });
+  void client.invalidateQueries({ queryKey: ['organizations'] });
+  void client.invalidateQueries({ queryKey: ['projects'] });
+  void invalidateIssueViews(client);
 }
+
+function invalidateIssueViews(client: ReturnType<typeof useQueryClient>) {
+  void client.invalidateQueries({ queryKey: ['issues'] });
+  void client.invalidateQueries({ queryKey: queryKeys.boardViews() });
+  void client.invalidateQueries({ queryKey: ['backlog'] });
+}
+
+const sameRepository = (a: { full_name: string; connection: string }, repository: string, connection: string) =>
+  a.full_name === repository && a.connection === connection;
 
 export function useLinkRepository(key: string) {
   const client = useQueryClient();
@@ -229,7 +252,7 @@ export function useLinkRepository(key: string) {
       linkRepository(key, repository, body).then(r => r.data),
     onSuccess: repo =>
       client.setQueryData<ProjectRepository[]>(queryKeys.projectRepositories(key), list =>
-        list ? [...list.filter(r => r.full_name !== repo.full_name), repo] : [repo],
+        list ? [...list.filter(r => !sameRepository(r, repo.full_name, repo.connection)), repo] : [repo],
       ),
     onSettled: () => invalidateProjectGit(client, key),
   });
@@ -245,7 +268,7 @@ export function useUpdateRepositoryLink(key: string) {
       queryKeys.projectRepositories(key),
       (list, { repository, body }) =>
         list.map(r =>
-          r.full_name === repository
+          sameRepository(r, repository, body.connection ?? r.connection)
             ? {
                 ...r,
                 ...(body.match_all_projects !== undefined ? { match_all_projects: body.match_all_projects } : {}),
@@ -263,12 +286,17 @@ export function useUpdateRepositoryLink(key: string) {
   });
 }
 
+type RepositoryRef = { repository: string; connection: string };
+
 export function useUnlinkRepository(key: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (repository: string) => unlinkRepository(key, repository).then(r => r.data),
-    ...optimisticList<ProjectRepository[], string>(client, queryKeys.projectRepositories(key), (list, repository) =>
-      list.filter(r => r.full_name !== repository),
+    mutationFn: ({ repository, connection }: RepositoryRef) =>
+      unlinkRepository(key, repository, connection).then(r => r.data),
+    ...optimisticList<ProjectRepository[], RepositoryRef>(
+      client,
+      queryKeys.projectRepositories(key),
+      (list, { repository, connection }) => list.filter(r => !sameRepository(r, repository, connection)),
     ),
     onSettled: () => invalidateProjectGit(client, key),
   });
@@ -292,7 +320,7 @@ export function useLinkPullRequest(key: string) {
   return useMutation({
     mutationFn: (url: string) => linkPullRequest(key, url).then(r => r.data),
     onSuccess: development => settleDevelopment(client, key, development),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.issue(key) }),
+    onSettled: () => invalidateIssueViews(client),
   });
 }
 
@@ -301,7 +329,7 @@ export function useUnlinkDevelopment(key: string) {
   return useMutation({
     mutationFn: (linkId: number) => unlinkDevelopment(key, linkId).then(r => r.data),
     onSuccess: development => settleDevelopment(client, key, development),
-    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.issue(key) }),
+    onSettled: () => invalidateIssueViews(client),
   });
 }
 
@@ -326,6 +354,8 @@ export function useClaimGitIdentity() {
   return useMutation({
     mutationFn: (body: ClaimGitIdentity) => claimGitIdentity(body).then(r => r.data),
     onSuccess: list => client.setQueryData(queryKeys.myGitIdentities(), list),
+    // A login counts at once: authors it matches now show as the member.
+    onSettled: () => client.invalidateQueries({ queryKey: ['issues'] }),
   });
 }
 

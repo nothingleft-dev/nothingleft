@@ -99,6 +99,7 @@ export function DevelopmentIcon({ rollup, className }: { rollup: GitDevelopmentR
     <Tooltip>
       <TooltipTrigger asChild>
         <span
+          role="img"
           aria-label={`Development: ${label}`}
           className={cn(
             'inline-flex size-5 flex-none items-center justify-center rounded-xs',

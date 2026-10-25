@@ -372,23 +372,14 @@ function ConditionRow({ name, label, schema, value, fallback, projectKey, onChan
   }
 
   if (schema.type === 'integer' || schema.type === 'number') {
-    const current = (value ?? fallback ?? '') as number | '';
     return (
-      <div className="flex items-center justify-between gap-4">
-        <Label htmlFor={id} className="font-normal">
-          {label}
-        </Label>
-        <Input
-          id={id}
-          inputMode="numeric"
-          value={String(current)}
-          className="w-20 text-right tabular"
-          onChange={event => {
-            const n = Number.parseInt(event.target.value, 10);
-            onChange(Number.isNaN(n) ? undefined : n);
-          }}
-        />
-      </div>
+      <NumberCondition
+        id={id}
+        label={label}
+        value={value as number | undefined}
+        fallback={fallback}
+        onChange={onChange}
+      />
     );
   }
 
@@ -430,6 +421,41 @@ function ConditionRow({ name, label, schema, value, fallback, projectKey, onChan
   }
 
   return null;
+}
+
+// A local draft, so the field can be emptied and retyped without the default springing back.
+function NumberCondition({
+  id,
+  label,
+  value,
+  fallback,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: number | undefined;
+  fallback: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const [draft, setDraft] = useState(String(value ?? fallback ?? ''));
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <Label htmlFor={id} className="font-normal">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        inputMode="numeric"
+        value={draft}
+        className="w-20 text-right tabular"
+        onChange={event => {
+          setDraft(event.target.value);
+          const n = Number.parseInt(event.target.value, 10);
+          onChange(Number.isNaN(n) ? undefined : n);
+        }}
+      />
+    </div>
+  );
 }
 
 function TypeChoice({

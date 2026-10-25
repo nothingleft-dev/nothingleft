@@ -372,16 +372,13 @@ function ConnectionMenu({
         confirmLabel="Disconnect"
         pending={remove.isPending}
         onConfirm={() =>
-          remove.mutate(connection.name, {
-            onSuccess: () => {
-              setConfirm(null);
-              toast.success(`${connection.account.login} on ${provider} is disconnected.`);
-            },
-            onError: error => {
-              setConfirm(null);
-              toast.error(error.message);
-            },
-          })
+          remove
+            .mutateAsync(connection.name)
+            .then(
+              () => toast.success(`${connection.account.login} on ${provider} is disconnected.`),
+              (error: Error) => toast.error(error.message),
+            )
+            .finally(() => setConfirm(null))
         }
       >
         <p>

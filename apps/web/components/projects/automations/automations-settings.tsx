@@ -460,16 +460,13 @@ function RuleRow({
         confirmLabel="Delete automation"
         pending={remove.isPending}
         onConfirm={() =>
-          remove.mutate(rule.name, {
-            onSuccess: () => {
-              setConfirming(false);
-              toast.success(`${rule.name} is deleted.`);
-            },
-            onError: error => {
-              setConfirming(false);
-              toast.error(error.message);
-            },
-          })
+          remove
+            .mutateAsync(rule.name)
+            .then(
+              () => toast.success(`${rule.name} is deleted.`),
+              (error: Error) => toast.error(error.message),
+            )
+            .finally(() => setConfirming(false))
         }
       >
         <p>It stops changing issues for everyone in the project, and its run log goes with it.</p>

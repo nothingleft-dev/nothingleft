@@ -119,7 +119,7 @@ export function DevelopmentPanel({
     <div className="flex flex-col gap-5 pt-3">
       {data.repositories.map(group => (
         <RepositoryGroup
-          key={group.repository.full_name}
+          key={`${group.repository.provider}:${group.repository.html_url}`}
           group={group}
           issueKey={issueKey}
           canLink={canLink}
@@ -288,7 +288,7 @@ function PullRequestCard({
           <span>{pr.base_ref}</span>
         </span>
         <GitAuthorLine author={pr.author} provider={provider} />
-        <ThisIsMe author={pr.author} provider={provider} />
+        <ThisIsMe author={pr.author} provider={provider} repositoryUrl={pr.repository.html_url} />
         {pr.reviewers.length > 0 ? <Reviewers pr={pr} /> : null}
         {pr.additions !== null && pr.deletions !== null ? (
           <span className="font-mono text-2xs tabular">
@@ -347,7 +347,7 @@ function Reviewers({ pr }: { pr: GitPullRequest }) {
         return (
           <Tooltip key={i}>
             <TooltipTrigger asChild>
-              <span className="relative inline-flex cursor-help" aria-label={`${name} ${label}`}>
+              <span role="img" className="relative inline-flex cursor-help" aria-label={`${name} ${label}`}>
                 <GitAuthorAvatar author={reviewer.author} provider={provider} className="size-5" />
                 <HueDot hue={hue} className="absolute -right-0.5 -bottom-0.5 size-2 ring-[1.5px] ring-surface" />
               </span>
@@ -440,9 +440,9 @@ function BranchRow({
   issueKey: string;
   canLink: boolean;
 }) {
-  const url = repositoryUrl
-    ? `${repositoryUrl}/tree/${branch.name.split('/').map(encodeURIComponent).join('/')}`
-    : null;
+  const path = branch.name.split('/').map(encodeURIComponent).join('/');
+  // GitLab serves trees under /-/; the bare form is GitHub's.
+  const url = repositoryUrl ? `${repositoryUrl}${provider === 'gitlab' ? '/-/tree/' : '/tree/'}${path}` : null;
   return (
     <li className="flex h-9 items-center gap-2.5 px-3 text-xs">
       <GitBranch aria-hidden className="size-icon-sm flex-none text-text-muted" />
@@ -567,16 +567,13 @@ function CardMenu({
           destructive={false}
           pending={unlink.isPending}
           onConfirm={() =>
-            unlink.mutate(link.link_id, {
-              onSuccess: () => {
-                setConfirming(false);
-                toast.success(`Unlinked from ${issueKey}.`);
-              },
-              onError: error => {
-                setConfirming(false);
-                toast.error(error.message);
-              },
-            })
+            unlink
+              .mutateAsync(link.link_id)
+              .then(
+                () => toast.success(`Unlinked from ${issueKey}.`),
+                (error: Error) => toast.error(error.message),
+              )
+              .finally(() => setConfirming(false))
           }
         >
           <p>It leaves the Development tab and the badge for everyone, and the history records who unlinked it.</p>
