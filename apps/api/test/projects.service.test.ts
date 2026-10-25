@@ -110,6 +110,7 @@ function harness(rows: ProjectRow[]) {
     organizations,
     projects,
     customFields,
+    gitLinks: { gitEnabledProjects: async () => new Set<number>() },
     access,
     inTransaction: (() => {
       throw new Error('a read opens no transaction');

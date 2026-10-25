@@ -7896,7 +7896,7 @@ components:
         over: { type: integer, description: Members beyond the allowance. Nothing is blocked; the UI shows the seat notice. }
     Organization:
       type: object
-      required: [slug, name, avatar_url, plan, owner, workday_minutes, workweek_days, week_starts_on, seats, storage, membership, deletion, created_at, updated_at]
+      required: [slug, name, avatar_url, plan, owner, workday_minutes, workweek_days, week_starts_on, seats, storage, membership, deletion, git_connected, git_enabled, created_at, updated_at]
       properties:
         slug: { type: string, example: acme-corporation }
         name: { type: string }
@@ -7924,6 +7924,8 @@ components:
               properties:
                 scheduled_at: { type: string, format: date-time }
                 deletes_at: { type: string, format: date-time }
+        git_connected: { type: boolean, description: 'A live GitHub or GitLab connection exists. Every member sees it.' }
+        git_enabled: { type: boolean, description: A project the caller can read has a linked repository (the issue's project.git_enabled rule). }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     StepUp:
@@ -8045,7 +8047,7 @@ components:
             data: { $ref: '#/components/schemas/Member' }
     Project:
       type: object
-      required: [key, name, slug, description_md, avatar_color, avatar_initials, avatar_url, lead, is_archived, time_tracking_enabled, estimation_field, spent_time_field, key_editable, my_role, knowledge_base, created_at, updated_at]
+      required: [key, name, slug, description_md, avatar_color, avatar_initials, avatar_url, lead, is_archived, time_tracking_enabled, estimation_field, spent_time_field, key_editable, my_role, knowledge_base, git_enabled, created_at, updated_at]
       properties:
         key: { type: string, example: PP }
         name: { type: string }
@@ -8071,6 +8073,7 @@ components:
           properties:
             can_create: { type: boolean }
             can_move: { type: boolean }
+        git_enabled: { type: boolean, description: 'It has a linked repository: git surfaces show (data-model.md § Git integration).' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     StatusCategory: { type: string, enum: [backlog, unstarted, started, done, cancelled] }

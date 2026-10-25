@@ -68,6 +68,10 @@ export const OrganizationSchema = z.object({
   membership: OrganizationMembershipSchema,
   // Set while the Owner's deletion request runs its grace period; every member sees it.
   deletion: OrganizationDeletionSchema.nullable(),
+  // A live GitHub or GitLab connection exists: git is on here.
+  git_connected: z.boolean(),
+  // A project the caller can read has a linked repository.
+  git_enabled: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
 });

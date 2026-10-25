@@ -440,6 +440,9 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     organizations: repos.organizations,
     users: repos.users,
     storageConfigs: repos.storageConfigs,
+    projects: repos.projects,
+    gitConnections: repos.gitConnections,
+    gitLinks: repos.gitLinks,
   });
   const invitations = invitationsService({
     ...orgDeps,
@@ -807,6 +810,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
       organizations: repos.organizations,
       projects: repos.projects,
       customFields: repos.customFields,
+      gitLinks: repos.gitLinks,
     }),
     activity: activityService({ activity: repos.activity, organizations: repos.organizations, access }),
     schema: projectSchemaService({ schema: repos.schema, access, inTransaction: inTenantTransaction }),
