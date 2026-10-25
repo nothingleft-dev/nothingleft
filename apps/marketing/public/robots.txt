@@ -4,4 +4,3 @@ Allow: /
 # Disallow controls crawling; it can prevent crawlers from seeing noindex.
 
 Sitemap: https://nothingleft.dev/sitemap-index.xml
-Sitemap: https://nothingleft.dev/sitemap-0.xml
