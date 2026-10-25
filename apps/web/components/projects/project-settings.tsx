@@ -23,6 +23,9 @@ import { TimeFields } from '@components/projects/time-fields';
 import { WorkItemAttributes } from '@components/projects/work-item-attributes';
 import { CustomFieldsSettings } from '@components/projects/custom-fields-settings';
 import { BoardSettings } from '@components/agile/board-settings';
+import { RepositoriesSettings } from '@components/projects/repositories-settings';
+import { AutomationsSettings } from '@components/projects/automations/automations-settings';
+import { useProjectRepositories } from '@hooks/use-git';
 import type { SchemaTable } from '@lib/api/project-schema';
 import { useArchiveProject, useProject } from '@hooks/use-projects';
 import { useOrganization } from '@hooks/use-organizations';
@@ -36,6 +39,8 @@ const TABS = [
   { value: 'fields', label: 'Fields' },
   { value: 'time-tracking', label: 'Time tracking' },
   { value: 'boards', label: 'Boards' },
+  { value: 'repositories', label: 'Repositories' },
+  { value: 'automations', label: 'Automations' },
   { value: 'people', label: 'People' },
   { value: 'invites', label: 'Invites' },
   { value: 'deleted', label: 'Deleted issues' },
@@ -63,13 +68,20 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
   const slug = session.status === 'signed-in' ? session.user.current_organization_slug : null;
   const project = useProject(projectKey);
   const organization = useOrganization(slug);
+  const repositories = useProjectRepositories(projectKey, requested === 'automations');
 
   if (project.isPending) return <PageSkeleton rows={5} />;
   if (project.isError || !project.data) return <FormAlert title="This project could not be loaded." />;
 
   const isAdmin = project.data.my_role === 'project_admin';
   const canEdit = isAdmin && !project.data.is_archived;
-  const tabs = TABS.filter(t => isAdmin || !ADMIN_ONLY.includes(t.value));
+  const gitEnabled = project.data.git_enabled;
+  const orgAdmin =
+    organization.data?.membership.org_role === 'org_admin' || organization.data?.membership.is_owner === true;
+  // Repositories is how a Project Admin turns git on; to anyone else it is noise until it is on (plan § 14).
+  const tabs = TABS.filter(
+    t => (isAdmin || !ADMIN_ONLY.includes(t.value)) && (t.value !== 'repositories' || isAdmin || gitEnabled),
+  );
   const tab: Tab = tabs.some(t => t.value === requested) ? requested : 'general';
   const schemaTable = SCHEMA_TABS[tab];
   const readOnlyReason = project.data.is_archived
@@ -120,6 +132,33 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
 
         {tab === 'boards' ? (
           <BoardSettings projectKey={projectKey} selectedSlug={params.get('board')} canEdit={canEdit} />
+        ) : null}
+
+        {tab === 'repositories' ? (
+          <RepositoriesSettings
+            projectKey={projectKey}
+            orgSlug={slug}
+            canEdit={canEdit}
+            orgAdmin={orgAdmin}
+            readOnlyReason={readOnlyReason}
+          />
+        ) : null}
+
+        {tab === 'automations' ? (
+          repositories.isPending && gitEnabled ? (
+            <PageSkeleton rows={4} />
+          ) : (
+            <AutomationsSettings
+              projectKey={projectKey}
+              canEdit={canEdit}
+              readOnlyReason={
+                project.data.is_archived
+                  ? readOnlyReason
+                  : 'Only a Project Admin can change automations; you can read them and their runs.'
+              }
+              repositories={repositories.data ?? []}
+            />
+          )
         ) : null}
 
         {tab === 'deleted' ? <DeletedIssues projectKey={projectKey} canRestore={canEdit} /> : null}
