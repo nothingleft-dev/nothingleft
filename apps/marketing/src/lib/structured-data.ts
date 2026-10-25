@@ -79,7 +79,13 @@ export function faqPage(path: string, entries: FaqEntry[]): JsonLd {
   };
 }
 
-export function techArticle(path: string, headline: string, description: string, dateModified?: string): JsonLd {
+export function techArticle(
+  path: string,
+  headline: string,
+  description: string,
+  dateModified?: string,
+  image?: string,
+): JsonLd {
   return {
     '@type': 'TechArticle',
     '@id': `${SITE_URL}${path}#article`,
@@ -87,12 +93,13 @@ export function techArticle(path: string, headline: string, description: string,
     description,
     url: `${SITE_URL}${path}`,
     inLanguage: 'en',
+    ...(image && { image }),
     author: { '@id': ORGANIZATION_ID },
     publisher: { '@id': ORGANIZATION_ID },
     isPartOf: { '@id': WEBSITE_ID },
     mainEntityOfPage: { '@id': `${SITE_URL}${path}#webpage` },
     about: { '@id': SOFTWARE_ID },
-    ...(dateModified && { dateModified }),
+    ...(dateModified && { dateModified, datePublished: dateModified }),
   };
 }
 
@@ -102,7 +109,7 @@ export function walkthroughVideo(): JsonLd {
     '@id': `${SITE_URL}/#walkthrough`,
     name: WALKTHROUGH.name,
     description: WALKTHROUGH.description,
-    thumbnailUrl: WALKTHROUGH.posterUrl,
+    thumbnailUrl: [WALKTHROUGH.posterUrl],
     contentUrl: WALKTHROUGH.videoUrl,
     uploadDate: WALKTHROUGH.uploadDate,
     duration: WALKTHROUGH.duration,
