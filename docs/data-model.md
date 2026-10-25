@@ -803,6 +803,7 @@ issues(
   start_date   date NULL,
   due_date     date NULL,
   resolved_at  timestamptz NULL,
+  last_automation_at timestamptz NULL, -- the last change an automation made (7); updated_by stays a person
 
   vote_count   int default 0,         -- denormalised
   comment_count int default 0,        -- denormalised
@@ -1194,6 +1195,7 @@ As built in 1d (owner decisions, 24 Sep 2026):
 issue_activity(
   id, org_id, issue_id,
   actor_id NULL,                     -- NULL: the system (a git event, an automation); 7
+  automation_run_id bigint NULL,     -- the run that made the change (7); no FK: purging runs must not scan this table, a purged id finds nothing
   change_group_id  uuid,           -- v7, one per save; groups its rows
   kind: 'created' | 'field_changed' | 'commented' | 'comment_edited' |
         'comment_deleted' | 'linked' | 'unlinked' | 'attached' |
@@ -1936,10 +1938,11 @@ notifications(
   kind: 'assigned' | 'unassigned' | 'mentioned' | 'commented' |
         'status_changed' | 'resolved' | 'linked' | 'due_soon' | 'overdue' |
         'time_logged' | 'sprint_started' | 'sprint_finished' |
-        'article_published' | 'article_updated' | 'reaction',
+        'article_published' | 'article_updated' | 'reaction' |
+        'pull_request_merged' | 'ci_failed',
   project_id NULL,            -- the centre filters by project; set on every row written
   issue_id NULL, comment_id NULL, article_id NULL, sprint_id NULL,
-  actor_id → users NULL,      -- null only for due_soon and overdue, which nobody's write produced
+  actor_id → users NULL,      -- null for due_soon and overdue, and for what the system wrote (git, automations)
   payload jsonb default '{}', -- the settled facts by name: {field, from, to}, comment, link, minutes, due_date
   dedupe_key text,            -- 'a:<issue_activity id>', 'm:comment:42', 'due_soon:<issue id>', …
   read_at NULL, created_at,
@@ -2027,7 +2030,8 @@ org_activity(
         'username_changed' | 'deletion_scheduled' | 'deletion_cancelled' |
         'storage_updated' | 'tag_renamed' | 'tag_merged' | 'tag_deleted' |
         'git_connection_created' | 'git_connection_removed' |
-        'git_connection_error' | 'repository_linked' | 'repository_unlinked',
+        'git_connection_error' | 'repository_linked' | 'repository_unlinked' |
+        'automation_changed',
   target_type, target_id,
   old_value jsonb NULL, new_value jsonb NULL,
   ip inet NULL, created_at
@@ -2071,7 +2075,7 @@ what the log says.
 | `invitation` | invitation id | `member_invited` (email), `invite_created` (link), `invite_rotated`, `invite_revoked` |
 | `tag` | tag id | `tag_renamed` (`name` on each side), `tag_merged` (the target; `names` of the merged tags before, `name` of the target after), `tag_deleted` (`name`, `issue_count`, `article_count` before; nothing after). A recolour is not logged (6d) |
 | `git_connection` | connection id | `git_connection_created`, `git_connection_removed` (7: `connection` name and `provider` after), `git_connection_error` (7: written with no actor when the connection moves into a problem state — `status` before, `status` and `reason` after — once per change, never per failed delivery) |
-| `project` (7) | project id | `repository_linked`, `repository_unlinked` — `repository` full name and `project` key after |
+| `project` (7) | project id | `repository_linked`, `repository_unlinked` — `repository` full name and `project` key after; `automation_changed` — `{project, automation, change: created \| updated \| deleted}` after |
 | `custom_field` | field id | `custom_field_changed` — a field or one of its options created, changed, archived or deleted; each side carries `project_key`, `slug`, `name`, `action` and the changed keys (Phase 4) |
 
 Work item attributes and their values record `schema_changed` with `table:
@@ -2440,6 +2444,56 @@ received; a duplicate delivery id inserts nothing. A delivery over 1 MB is store
 with `truncated`. A failed apply is retried after 1, 4, 16 and 64 minutes and is `failed` after
 the fifth attempt; a replay resets `attempts` and `processed_at`.
 
+### Automations
+
+Built in 7 (third milestone, 25 Oct 2026). A rule of one project: one trigger, conditions, one
+action. A change it makes is written as the system (`issue_activity.actor_id` NULL) with
+`automation_run_id` set, and its snapshot names the rule and the cause:
+`{"name": "Fixed", "automation": "Close on merge", "cause": "acme/web#42 was merged by @alex"}`.
+
+```
+automations(
+  id bigint PK, org_id → organizations ON DELETE CASCADE,
+  (project_id, org_id) → projects (id, org_id) ON DELETE CASCADE,
+  name text,                         -- unique per project, case-insensitive
+  trigger text,                      -- 'git.pull_request_merged', … : the API's catalogue, no CHECK
+  conditions jsonb default '{}',     -- only what was set; the catalogue holds the defaults
+  action text,                       -- 'issue.set_status'; no CHECK, same reason
+  action_params jsonb default '{}',  -- {"status": "Fixed"}: the status by name, as the project spells it
+  is_enabled boolean default true,
+  position smallint default 0,       -- evaluation order, lowest first
+  created_by → users, created_at, updated_by → users, updated_at,
+  UNIQUE (id, org_id),
+  UNIQUE (project_id, lower(name))
+)
+
+automation_runs(
+  id bigint PK, org_id → organizations ON DELETE CASCADE,
+  (automation_id, org_id) → automations (id, org_id) ON DELETE CASCADE,
+  (issue_id, org_id) → issues (id, org_id) ON DELETE CASCADE,
+  trigger_ref jsonb,                 -- what fired it, readable: {"pull_request": "acme/web#42", "cause": "…"}
+  caused_by → users NULL,            -- the member whose git action fired it: not notified of the change
+  result text CHECK in ('applied','skipped','failed'),
+  reason text NULL,                  -- 'already_in_status' | 'condition_not_met' | 'archived_project' | 'status_missing'
+  changes jsonb NULL,                -- {"status": {"from": "In Review", "to": "Fixed"}} when applied
+  created_at
+)
+```
+
+- **Rules run after the event's writes commit**, in `position` order for the trigger; the first that
+  changes the issue ends the evaluation. Every rule looked at leaves a run, skipped ones too.
+- **Depth one.** A change an automation makes fires no rule. `issue.children_resolved` fires only
+  when a person resolves the last open subtask.
+- **Conditions read live state**, not the event's snapshot: the issue's status category and type,
+  its other linked pull requests (`all_linked_merged`, `no_other_open_prs`), the repository's merge
+  base branches.
+- **A renamed status is followed**: renaming it rewrites `action_params.status` in every rule of the
+  project that sets it. An archived or deleted status leaves the rule pointing nowhere; its runs skip
+  with `status_missing`.
+- **Webhook deliveries run rules** only when received live or replayed with `run_automations` (and a
+  replay fires only on what it changes: stored state already moved fires nothing again);
+  backfill, the nightly reconcile and a manual link never do.
+
 ## Tables defined in other documents
 
 This document is the map of the schema, so the tables specified elsewhere are
@@ -2476,6 +2530,7 @@ Nothing in the product deletes these on a user's behalf, so a job does.
 | `notifications` | read 30 days after reading, unread 90 days after writing | `notifications.purge`, nightly at 03:15 UTC |
 | `webhook_deliveries` (v2) | 30 days | `webhooks.purge`, nightly |
 | `git_webhook_events` | 7 days after `received_at`, whatever their status (7) | `git.purge`, nightly at 03:20 UTC |
+| `automation_runs` | 90 days after `created_at`; history rows keep their own snapshot and lose only the link (7) | `git.purge`, nightly at 03:20 UTC |
 | `git_checks`, `git_commits`, `git_pull_requests` | checks of a commit that heads no pull request after 7 days; superseded commits after 30; commits and pull requests no live link has needed for 90 days, with their link rows (7) | `git.purge`, nightly at 03:20 UTC |
 | `one_time_tokens` | on expiry | `tokens.gc`, hourly |
 | `sessions` | on expiry | `session.gc`, hourly |

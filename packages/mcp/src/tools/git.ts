@@ -480,10 +480,10 @@ export const replayGitEvent = defineTool({
   name: 'replay_git_event',
   title: 'Replay a webhook delivery',
   description:
-    "Applies a stored delivery again, in order with the repository's other deliveries. Automations do not run unless `run_automations` is true. For a delivery that never arrived, use the provider's own redelivery page (list_git_connections does not show it; organisation settings links it). Needs an Org Admin and a token with admin:org.",
+    "Applies a stored delivery again, in order with the repository's other deliveries. Automations do not run unless `run_automations` is true, and then only for what the replay itself changes (a pull request already stored as merged does not fire again; its commits do). For a delivery that never arrived, use the provider's own redelivery page (list_git_connections does not show it; organisation settings links it). Needs an Org Admin and a token with admin:org.",
   input: z.strictObject({
     delivery: z.number().int().positive().describe('The delivery by the number list_git_events shows.'),
-    run_automations: z.boolean().optional().describe('Let the replay change issue statuses through automations.'),
+    run_automations: z.boolean().optional().describe('Let what the replay changes fire automations.'),
     org: arg.org,
   }),
   kind: 'write',

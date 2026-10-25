@@ -6,7 +6,14 @@ import type { SystemContext, TenantContext } from '../tenant-context.ts';
 
 export type GitEventInsert = Pick<
   NewGitWebhookEventRow,
-  'connection_id' | 'repository_id' | 'provider_repo_id' | 'delivery_id' | 'event_name' | 'payload' | 'truncated'
+  | 'connection_id'
+  | 'repository_id'
+  | 'provider_repo_id'
+  | 'delivery_id'
+  | 'event_name'
+  | 'payload'
+  | 'truncated'
+  | 'run_automations'
 > & { received_at: Date };
 
 export interface GitEventFilter {

@@ -65,3 +65,5 @@ export * from './git-pull-request-commits.ts';
 export * from './git-checks.ts';
 export * from './issue-git-links.ts';
 export * from './git-identities.ts';
+export * from './automations.ts';
+export * from './automation-runs.ts';

@@ -1,4 +1,5 @@
 import { findIssueReferences, isRevert as isRevertName } from '@nothingleft/format';
+import { t } from '@nothingleft/i18n';
 import {
   ACTIVITY_COALESCE_WINDOW_MS,
   GIT_BACKFILL_DAYS,
@@ -32,10 +33,12 @@ import {
   type NormalizedCommit,
   type NormalizedEvent,
   type NormalizedPullRequest,
+  type PullRequestAction,
 } from '@git/events';
 import type { ConnectionAuth, GitProvider } from '@git/provider';
 import type { ProviderRegistry } from '@git/providers/index';
 import { applyReview, ciState, ciSummary, reviewState, withRequested, type StoredReviewer } from '@git/rollup';
+import type { AutomationFiring, AutomationsService, FiringFacts } from '@services/automations.service';
 import { recordIssueEvent } from '@services/issue-history';
 import type { EntityOutcome } from '@services/git-ingest.service';
 import type { InTenantTransaction, TenantRepos } from '@services/transaction';
@@ -51,6 +54,8 @@ export interface GitLinksDeps {
   inTransaction: InTenantTransaction;
   masterKey: Buffer;
   appBaseUrl: string;
+  /** Lazy: the automations service is built after this one. */
+  automations?: () => Pick<AutomationsService, 'fire'>;
   now?: () => Date;
 }
 
@@ -105,6 +110,8 @@ function intentOf(wanted: Wanted, isRevert: boolean): GitLinkIntent {
 }
 
 const subjectOf = (message: string) => cap(message.split('\n', 1)[0], 1_000);
+
+const isOpenState = (state: string) => state === 'open' || state === 'draft';
 
 export function gitLinksService(deps: GitLinksDeps) {
   const { providers, repositories, entities, links, identities, users, organizations, inTransaction, masterKey } = deps;
@@ -428,6 +435,8 @@ export function gitLinksService(deps: GitLinksDeps) {
     repo: GitRepositoryRow,
     scope: Scope,
     event: Extract<NormalizedEvent, { type: 'branch.created' | 'branch.deleted' }>,
+    fired: AutomationFiring[],
+    causedBy: number | null,
     changeGroupId: string,
     at: Date,
   ) {
@@ -439,7 +448,7 @@ export function gitLinksService(deps: GitLinksDeps) {
     const known = await repos.gitEntities.findBranch(ctx, repo.id, event.ref);
     if (wanted.size === 0 && !known) return;
     const branch = await repos.gitEntities.upsertBranch(ctx, repo.id, event.ref, event.head_sha, at);
-    await syncLinks(
+    const { linked } = await syncLinks(
       repos,
       ctx,
       { type: 'branch', id: branch.id, repository_id: repo.id },
@@ -448,6 +457,15 @@ export function gitLinksService(deps: GitLinksDeps) {
       branchSnapshot(repo, branch.name),
       { changeGroupId, at },
     );
+    if (linked.length > 0) {
+      fired.push({
+        trigger: 'git.branch_created',
+        issues: linked.map(issueId => ({ issueId, facts: { repository_id: repo.id } })),
+        ref: { repository: repo.full_name, branch: branch.name },
+        cause: t('automation.cause.branch', { branch: branch.name, repository: repo.full_name }),
+        causedBy,
+      });
+    }
   }
 
   async function applyPush(
@@ -458,9 +476,11 @@ export function gitLinksService(deps: GitLinksDeps) {
     event: Extract<NormalizedEvent, { type: 'push' }>,
     superseded: readonly string[],
     author: ReturnType<typeof authorResolver>,
+    fired: AutomationFiring[],
     changeGroupId: string,
     at: Date,
   ) {
+    const pusher = await author(event.pusher);
     if (event.created) {
       await applyBranch(
         repos,
@@ -468,6 +488,8 @@ export function gitLinksService(deps: GitLinksDeps) {
         repo,
         scope,
         { type: 'branch.created', repo: event.repo, ref: event.ref, head_sha: event.after, actor: event.pusher },
+        fired,
+        pusher,
         changeGroupId,
         at,
       );
@@ -489,7 +511,38 @@ export function gitLinksService(deps: GitLinksDeps) {
       );
     }
     const distinct = event.commits.filter(c => c.distinct).slice(0, GIT_PUSH_COMMITS_MAX);
-    await linkCommits(repos, ctx, repo, scope, distinct, false, author, changeGroupId, at);
+    const bySha = await linkCommits(repos, ctx, repo, scope, distinct, false, author, changeGroupId, at);
+    // From the links as they stand now, so a link a person removed fires nothing.
+    const byIssue = new Map<number, { closing: boolean }>();
+    let last: string | null = null;
+    for (const c of distinct) {
+      const row = bySha.get(c.sha);
+      if (!row) continue;
+      const live = (await repos.gitLinks.forTarget(ctx, { target_type: 'commit', target_id: row.id })).filter(
+        l => !l.removed_at,
+      );
+      for (const link of live) {
+        byIssue.set(link.issue_id, {
+          closing: (byIssue.get(link.issue_id)?.closing ?? false) || link.intent === 'closes',
+        });
+      }
+      if (live.length > 0) last = c.sha;
+    }
+    if (byIssue.size === 0 || last === null) return;
+    fired.push({
+      trigger: 'git.commit_pushed',
+      issues: [...byIssue].map(([issueId, c]) => ({
+        issueId,
+        facts: {
+          intent: c.closing ? 'closes' : 'mention',
+          to_default_branch: event.ref === repo.default_branch,
+          repository_id: repo.id,
+        },
+      })),
+      ref: { repository: repo.full_name, branch: event.ref, commit: last },
+      cause: t('automation.cause.commit', { commit: last.slice(0, 7), repository: repo.full_name }),
+      causedBy: pusher,
+    });
   }
 
   interface FetchedCommits {
@@ -505,6 +558,8 @@ export function gitLinksService(deps: GitLinksDeps) {
     pr: NormalizedPullRequest,
     fetched: FetchedCommits | null,
     author: ReturnType<typeof authorResolver>,
+    fired: AutomationFiring[],
+    trigger: { action: PullRequestAction; actor: EventActor } | null,
     changeGroupId: string,
     at: Date,
   ): Promise<GitPullRequestRow | null> {
@@ -599,7 +654,82 @@ export function gitLinksService(deps: GitLinksDeps) {
       const issues = (await liveIssuesOf(repos, ctx, 'pull_request', row.id)).filter(id => !linked.includes(id));
       await recordPrChange(repos, ctx, issues, prSnapshot(repo, existing), prSnapshot(repo, row), changeGroupId, at);
     }
+    if (trigger) {
+      await pullRequestFirings(repos, ctx, repo, existing, row, linked, fired, {
+        author: authorId,
+        mergedBy,
+        actor: await author(trigger.actor),
+        action: trigger.action,
+      });
+    }
     return row;
+  }
+
+  /** What a pull request's change fires: opened (or newly linked while open), ready, merged, closed. */
+  async function pullRequestFirings(
+    repos: TenantRepos,
+    ctx: TenantContext,
+    repo: GitRepositoryRow,
+    before: GitPullRequestRow | undefined,
+    row: GitPullRequestRow,
+    linked: readonly number[],
+    fired: AutomationFiring[],
+    by: { author: number | null; mergedBy: number | null; actor: number | null; action: PullRequestAction },
+  ) {
+    const live = (await repos.gitLinks.forTarget(ctx, { target_type: 'pull_request', target_id: row.id })).filter(
+      l => !l.removed_at,
+    );
+    if (live.length === 0) return;
+    const name = `${repo.full_name}#${row.number}`;
+    const facts = (intent: string): FiringFacts => ({
+      intent: intent as GitLinkIntent,
+      draft: row.state === 'draft',
+      base_ref: row.base_ref,
+      repository_id: repo.id,
+      pull_request_id: row.id,
+    });
+    const fire = (
+      trigger: AutomationFiring['trigger'],
+      verb: 'opened' | 'ready' | 'merged' | 'closed',
+      issueIds: readonly number[],
+      causedBy: number | null,
+      login: string | null,
+    ) => {
+      const issues = live
+        .filter(l => issueIds.includes(l.issue_id))
+        .map(l => ({ issueId: l.issue_id, facts: facts(l.intent) }));
+      if (issues.length === 0) return;
+      const words = { pull_request: name, verb: t(`automation.cause.verb.${verb}`) };
+      fired.push({
+        trigger,
+        issues,
+        ref: { pull_request: name },
+        cause: login
+          ? t('automation.cause.pull_request_by', { ...words, who: `@${login}` })
+          : t('automation.cause.pull_request', words),
+        causedBy,
+      });
+    };
+    const all = live.map(l => l.issue_id);
+    const wasOpen = before !== undefined && isOpenState(before.state);
+    if (isOpenState(row.state)) {
+      const reopened = by.action === 'opened' || by.action === 'reopened';
+      fire('git.pull_request_opened', 'opened', reopened ? all : linked, by.author, row.author_login);
+      // A pull request first stored when it is marked ready (no key while it was a draft) counts too.
+      if (row.state === 'open' && (before?.state === 'draft' || (!before && by.action === 'ready_for_review'))) {
+        fire('git.pull_request_ready', 'ready', all, by.author, row.author_login);
+      }
+    } else if (row.state === 'merged' && before?.state !== 'merged') {
+      fire(
+        row.is_revert ? 'git.revert_merged' : 'git.pull_request_merged',
+        'merged',
+        all,
+        by.mergedBy,
+        row.merged_by_login,
+      );
+    } else if (row.state === 'closed' && wasOpen) {
+      fire('git.pull_request_closed', 'closed', all, by.actor, null);
+    }
   }
 
   /** What landed on the base branch is linked to every issue the pull request is, whatever its message says. */
@@ -718,11 +848,18 @@ export function gitLinksService(deps: GitLinksDeps) {
 
   function actorsOf(event: NormalizedEvent, fetched: FetchedCommits | null): Actor[] {
     const fromCommits = (fetched?.commits ?? []).map(commitAuthor);
-    if (event.type === 'push') return [...event.commits.map(commitAuthor), ...fromCommits];
+    if (event.type === 'push') return [event.pusher, ...event.commits.map(commitAuthor), ...fromCommits];
+    if (event.type === 'branch.created') return [event.actor];
     if (event.type === 'pull_request.review') return [event.reviewer];
     if ('pull_request' in event) {
       const pr = event.pull_request;
-      return [pr.author, ...(pr.merged_by ? [pr.merged_by] : []), ...pr.requested_reviewers, ...fromCommits];
+      return [
+        pr.author,
+        event.actor,
+        ...(pr.merged_by ? [pr.merged_by] : []),
+        ...pr.requested_reviewers,
+        ...fromCommits,
+      ];
     }
     return [];
   }
@@ -755,7 +892,7 @@ export function gitLinksService(deps: GitLinksDeps) {
     return { commits: null, superseded: [] };
   }
 
-  /** Applies one normalized event to a linked repository: entities, links, history. */
+  /** Applies one normalized event to a linked repository: entities, links, history. Returns what it fired. */
   async function applyOne(
     ctx: TenantContext,
     connection: GitConnectionRow,
@@ -763,7 +900,7 @@ export function gitLinksService(deps: GitLinksDeps) {
     scope: Scope,
     event: NormalizedEvent,
     at: Date,
-  ) {
+  ): Promise<AutomationFiring[]> {
     const provider = providerOf(providers, connection.provider);
     const author = authorResolver(ctx, connection);
     const prNumber = 'pull_request' in event ? event.pull_request.number : null;
@@ -772,19 +909,36 @@ export function gitLinksService(deps: GitLinksDeps) {
     // Authors are matched before the transaction opens, so it never waits on a second connection.
     await Promise.all(actorsOf(event, commits).map(author));
     const changeGroupId = Bun.randomUUIDv7();
+    const fired: AutomationFiring[] = [];
     await inTransaction(async repos => {
+      fired.length = 0;
       if (event.type === 'branch.created' || event.type === 'branch.deleted') {
-        await applyBranch(repos, ctx, repo, scope, event, changeGroupId, at);
+        const causedBy = event.type === 'branch.created' ? await author(event.actor) : null;
+        await applyBranch(repos, ctx, repo, scope, event, fired, causedBy, changeGroupId, at);
       } else if (event.type === 'push') {
-        await applyPush(repos, ctx, repo, scope, event, superseded, author, changeGroupId, at);
+        await applyPush(repos, ctx, repo, scope, event, superseded, author, fired, changeGroupId, at);
       } else if (event.type === 'pull_request.review') {
         await applyReviewEvent(repos, ctx, repo, event, author, changeGroupId, at);
       } else if (event.type === 'check.updated') {
         await applyCheck(repos, ctx, repo, event, changeGroupId, at);
       } else if ('pull_request' in event) {
-        await applyPullRequest(repos, ctx, repo, scope, event.pull_request, commits, author, changeGroupId, at);
+        const action = event.type.slice('pull_request.'.length) as PullRequestAction;
+        await applyPullRequest(
+          repos,
+          ctx,
+          repo,
+          scope,
+          event.pull_request,
+          commits,
+          author,
+          fired,
+          { action, actor: event.actor },
+          changeGroupId,
+          at,
+        );
       }
     });
+    return fired;
   }
 
   return {
@@ -815,10 +969,16 @@ export function gitLinksService(deps: GitLinksDeps) {
       connection: GitConnectionRow,
       repo: GitRepositoryRow,
       events: NormalizedEvent[],
-      _row: GitWebhookEventRow,
+      row: GitWebhookEventRow,
     ): Promise<EntityOutcome> {
       const scope = await scopeOf(ctx, repo);
-      for (const event of events) await applyOne(ctx, connection, repo, scope, event, now());
+      for (const event of events) {
+        const fired = await applyOne(ctx, connection, repo, scope, event, now());
+        // Rules run after the event's writes commit, and only for a delivery received live or replayed with them.
+        if (row.run_automations && deps.automations) {
+          for (const firing of fired) await deps.automations().fire(ctx, firing);
+        }
+      }
       return { status: 'done' };
     },
 
@@ -910,8 +1070,23 @@ export function gitLinksService(deps: GitLinksDeps) {
       const scope = await scopeOf(ctx, repo);
       const author = authorResolver(ctx, connection);
       const fetched = await provider.listPullRequestCommits(auth, repo, number);
+      await Promise.all(
+        actorsOf({ type: 'pull_request.edited', repo, pull_request: pr, actor: pr.author }, fetched).map(author),
+      );
       return inTransaction(async repos => {
-        const applied = await applyPullRequest(repos, ctx, repo, scope, pr, fetched, author, Bun.randomUUIDv7(), now());
+        const applied = await applyPullRequest(
+          repos,
+          ctx,
+          repo,
+          scope,
+          pr,
+          fetched,
+          author,
+          [],
+          null,
+          Bun.randomUUIDv7(),
+          now(),
+        );
         if (applied) return applied;
         // Nothing references an issue yet: store it anyway, for the manual link about to be made.
         const stored = await repos.gitEntities.insertPullRequest(ctx, repo.id, {

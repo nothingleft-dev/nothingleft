@@ -7,6 +7,7 @@ import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fas
 import { createAnalytics, noopAnalytics, type Analytics } from '@nothingleft/analytics';
 import {
   attachmentsRepository,
+  automationsRepository,
   boardsRepository,
   customFieldsRepository,
   workItemAttributesRepository,
@@ -121,6 +122,7 @@ import importsRoutes from '@routes/imports';
 import exportsRoutes from '@routes/exports';
 import gitRoutes from '@routes/git';
 import gitWebhookRoutes from '@routes/git-webhooks';
+import automationsRoutes from '@routes/automations';
 import { accessService } from '@services/access';
 import { activityService } from '@services/activity.service';
 import { invitationsService } from '@services/invitations.service';
@@ -163,6 +165,7 @@ import { gitRepositoriesService } from '@services/git-repositories.service';
 import { developmentReader } from '@services/git-development';
 import { gitDevelopmentService } from '@services/git-development.service';
 import { gitLinksService } from '@services/git-links.service';
+import { automationsService } from '@services/automations.service';
 import { twoFactorService } from '@services/two-factor.service';
 import { authService } from '@services/auth.service';
 import { meService } from '@services/me.service';
@@ -269,6 +272,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     gitEntities: gitEntitiesRepository(db),
     gitLinks: gitLinksRepository(db),
     gitIdentities: gitIdentitiesRepository(db),
+    automations: automationsRepository(db),
   };
 
   const tenantRepos = (q: Queryable): TenantRepos => ({
@@ -301,6 +305,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     gitEvents: gitEventsRepository(q),
     gitEntities: gitEntitiesRepository(q),
     gitLinks: gitLinksRepository(q),
+    automations: automationsRepository(q),
   });
   const inTenantTransaction = <T>(body: (r: TenantRepos) => Promise<T>) => db.transaction(tx => body(tenantRepos(tx)));
 
@@ -456,6 +461,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   const development = developmentReader({ links: repos.gitLinks, entities: repos.gitEntities });
   const issues = issuesService({
     development,
+    automations: () => automations,
     access,
     organizations: repos.organizations,
     projects: repos.projects,
@@ -568,6 +574,10 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     projects: repos.projects,
     schema: repos.schema,
     organizations: repos.organizations,
+    automations: repos.automations,
+    gitLinks: repos.gitLinks,
+    gitEntities: repos.gitEntities,
+    gitRepositories: repos.gitRepositories,
     queue: () => queue,
     mailer: bestEffort(mailer, error => analytics.captureException(error)),
     analytics,
@@ -692,6 +702,20 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     inTransaction: inTenantTransaction,
     masterKey: encryptionMasterKey(env),
     appBaseUrl: env.APP_BASE_URL,
+    automations: () => automations,
+  });
+  const automations = automationsService({
+    access,
+    automations: repos.automations,
+    projects: repos.projects,
+    schema: repos.schema,
+    issues: repos.issues,
+    organizations: repos.organizations,
+    links: repos.gitLinks,
+    entities: repos.gitEntities,
+    repositories: repos.gitRepositories,
+    inTransaction: inTenantTransaction,
+    analytics,
   });
   const gitRepositories = gitRepositoriesService({
     linker: gitLinker,
@@ -948,6 +972,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     cookie: { secure: env.NODE_ENV === 'production', domain: env.SESSION_COOKIE_DOMAIN },
   });
   await app.register(gitWebhookRoutes, { ingest: gitIngest, ...(opts.now ? { now: opts.now } : {}) });
+  await app.register(automationsRoutes, { automations });
   await app.register(mcpRoutes, {
     apiBaseUrl: env.MCP_API_BASE_URL ?? `http://127.0.0.1:${env.PORT}`,
     appBaseUrl: env.APP_BASE_URL,
@@ -970,7 +995,8 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'org.delete': now => organizationLifecycle.deleteDue(now),
     'storage.reconcile': now => storageSvc.reconcile(now),
     'transfers.sweep': async now => (await imports.sweep(now)) + (await exports.sweep(now)),
-    'git.purge': async now => (await gitIngest.purge(now)) + (await gitLinker.purge(now)),
+    'git.purge': async now =>
+      (await gitIngest.purge(now)) + (await gitLinker.purge(now)) + (await automations.purge(now)),
     'git.reconcile': now => gitRepositories.reconcileAll(now),
   };
   const queuedHandlers: QueuedHandlers = {

@@ -38,6 +38,7 @@ export const ACTIVITY_LABELS: Record<OrgActivityKind, string> = {
   git_connection_error: 'a git connection needs attention',
   repository_linked: 'linked a repository',
   repository_unlinked: 'unlinked a repository',
+  automation_changed: 'changed an automation',
 };
 
 // Internal ids carry no meaning to a reader, so the values that do - usernames, keys,

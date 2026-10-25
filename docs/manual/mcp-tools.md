@@ -1066,7 +1066,7 @@ Your inbox across every organisation you belong to: one row per issue or article
 | Argument | Type | Required | Description |
 |---|---|---|---|
 | `unread_only` | boolean |  | Only entries with something unread. |
-| `kind` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Only these kinds, e.g. ["mentioned", "assigned"]. |
+| `kind` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` · `pull_request_merged` · `ci_failed` |  | Only these kinds, e.g. ["mentioned", "assigned"]. |
 | `project` | string |  | Project key, e.g. "PP". |
 | `issue` | string |  | One issue's notifications, e.g. "PP-12". |
 | `article` | string |  | One article's notifications; needs project. |
@@ -1086,7 +1086,7 @@ Marks notifications read: every one on the issues or articles named, or with all
 | `project` | string |  | With article, the article's project; with all, only this project. |
 | `article` | string |  | An article of the project by slug or exact title, e.g. "restoring-a-failed-sync"; list_articles shows them. |
 | `all` | boolean |  | Everything matching kind, project and org. |
-| `kind` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | With all: only these kinds. |
+| `kind` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` · `pull_request_merged` · `ci_failed` |  | With all: only these kinds. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
 ### `get_notification_preferences`
@@ -1105,10 +1105,10 @@ Chooses how each kind reaches you by email, by listing kinds under the option th
 
 | Argument | Type | Required | Description |
 |---|---|---|---|
-| `instant` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Kinds to email at once. |
-| `daily_digest` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Kinds for the daily digest, 9am your time. |
-| `weekly_digest` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Kinds for the weekly digest, Monday 9am your time. |
-| `off` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` |  | Kinds with no email. |
+| `instant` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` · `pull_request_merged` · `ci_failed` |  | Kinds to email at once. |
+| `daily_digest` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` · `pull_request_merged` · `ci_failed` |  | Kinds for the daily digest, 9am your time. |
+| `weekly_digest` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` · `pull_request_merged` · `ci_failed` |  | Kinds for the weekly digest, Monday 9am your time. |
+| `off` | list of `assigned` · `unassigned` · `mentioned` · `commented` · `status_changed` · `resolved` · `linked` · `due_soon` · `overdue` · `time_logged` · `sprint_started` · `sprint_finished` · `article_published` · `article_updated` · `reaction` · `pull_request_merged` · `ci_failed` |  | Kinds with no email. |
 | `everything_else` | `off` · `instant` · `daily_digest` · `weekly_digest` |  | The option for every kind not named above (reaction stays off). |
 | `all_off` | boolean |  | Turn every email off before applying the rest. |
 
@@ -1205,7 +1205,7 @@ The organisation's audit log, newest first: invitations, joins, removals, role c
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `actor` | string |  | Only what this member did. |
-| `kinds` | list of `member_invited` · `member_joined` · `member_removed` · `role_changed` · `invite_created` · `invite_revoked` · `project_created` · `project_archived` · `project_deleted` · `schema_changed` · `custom_field_changed` · `storage_connected` · `storage_disconnected` · `ownership_transferred` · `org_settings_changed` · `export_requested` · `token_created` · `token_revoked` · `project_updated` · `project_unarchived` · `invite_rotated` · `username_changed` · `deletion_scheduled` · `deletion_cancelled` · `storage_updated` · `tag_renamed` · `tag_merged` · `tag_deleted` · `git_connection_created` · `git_connection_removed` · `git_connection_error` · `repository_linked` · `repository_unlinked` |  |  |
+| `kinds` | list of `member_invited` · `member_joined` · `member_removed` · `role_changed` · `invite_created` · `invite_revoked` · `project_created` · `project_archived` · `project_deleted` · `schema_changed` · `custom_field_changed` · `storage_connected` · `storage_disconnected` · `ownership_transferred` · `org_settings_changed` · `export_requested` · `token_created` · `token_revoked` · `project_updated` · `project_unarchived` · `invite_rotated` · `username_changed` · `deletion_scheduled` · `deletion_cancelled` · `storage_updated` · `tag_renamed` · `tag_merged` · `tag_deleted` · `git_connection_created` · `git_connection_removed` · `git_connection_error` · `repository_linked` · `repository_unlinked` · `automation_changed` |  |  |
 | `from` | string |  | A calendar date, YYYY-MM-DD. |
 | `to` | string |  | A calendar date, YYYY-MM-DD. |
 | `limit` | number |  | Rows per page, 1–50. Default 20. |
@@ -1394,15 +1394,104 @@ The delivery log: what each provider sent, newest first, and what came of it (do
 
 ### `replay_git_event`
 
-Applies a stored delivery again, in order with the repository's other deliveries. Automations do not run unless `run_automations` is true. For a delivery that never arrived, use the provider's own redelivery page (list_git_connections does not show it; organisation settings links it). Needs an Org Admin and a token with admin:org.
+Applies a stored delivery again, in order with the repository's other deliveries. Automations do not run unless `run_automations` is true, and then only for what the replay itself changes (a pull request already stored as merged does not fire again; its commits do). For a delivery that never arrived, use the provider's own redelivery page (list_git_connections does not show it; organisation settings links it). Needs an Org Admin and a token with admin:org.
 
 *Changes data.*
 
 | Argument | Type | Required | Description |
 |---|---|---|---|
 | `delivery` | number | yes | The delivery by the number list_git_events shows. |
-| `run_automations` | boolean |  | Let the replay change issue statuses through automations. |
+| `run_automations` | boolean |  | Let what the replay changes fire automations. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+## Automations
+
+### `list_automations`
+
+The rules that change issues by themselves in a project, in the order they run: each as one sentence, whether it is on, and how often it ran. With `automation`, that one rule and its exact conditions. `include: "templates"` adds the ready-made rules with this project's statuses filled in; `include: "catalogue"` adds every trigger and the conditions it takes. Any member can read them; a token needs issues:read.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `automation` | string |  | The automation by name, e.g. "Close on merge". |
+| `include` | `templates` · `catalogue` |  | Also show the templates or the catalogue. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `create_automation`
+
+Adds a rule that sets an issue's status when something happens in git (a branch, a commit, a pull request opened, ready, merged or closed, a revert merged) or when the last open subtask is resolved. Start from a `template` or give `trigger` and `status`. A change an automation makes never fires another. Needs a Project Admin and a token with admin:project; the free plan allows 10 per project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `template` | `start_work` · `review` · `close_on_merge` · `reopen_on_revert` · `resolve_parent` |  | A ready-made rule; anything else you pass overrides it. |
+| `trigger` | `git.branch_created` · `git.commit_pushed` · `git.pull_request_opened` · `git.pull_request_ready` · `git.pull_request_merged` · `git.pull_request_closed` · `git.revert_merged` · `issue.children_resolved` |  | What fires it; needed without a template. |
+| `conditions` | object |  | Conditions for the trigger, e.g. {"issue_status_category": ["backlog", "unstarted"]} or {"base_branch": ["main"]}. list_automations with include: "catalogue" shows which each trigger takes and their defaults. |
+| `status` | string |  | The status it sets, by name, e.g. "Fixed". |
+| `name` | string |  | Its name; left out, the rule as a sentence names it. |
+| `enabled` | boolean |  | Off creates it without running it. Default on. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `update_automation`
+
+Renames a rule, turns it on or off, changes its conditions, the status it sets, or where it runs in the order (the first rule that changes an issue ends the evaluation). Needs a Project Admin and a token with admin:project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `automation` | string | yes | The automation by name, e.g. "Close on merge". |
+| `name` | string |  | A new name. |
+| `enabled` | boolean |  |  |
+| `conditions` | object |  | Replaces its conditions; {} goes back to the defaults. |
+| `status` | string |  | The status it sets, by name, e.g. "Fixed". |
+| `position` | number |  | Its place in the order, 0 first. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `delete_automation`
+
+Deletes a rule and its run log. What it already changed stays in the issues' history. Needs a Project Admin and a token with admin:project. Asks you to confirm before acting.
+
+*Changes data; asks you to confirm in your MCP client first.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `automation` | string | yes | The automation by name, e.g. "Close on merge". |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `test_automation`
+
+A dry run: what the rule would do to an issue now, were its trigger to fire. Changes nothing. Needs a Project Admin and a token with admin:project.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `automation` | string | yes | The automation by name, e.g. "Close on merge". |
+| `issue` | string | yes | Issue key, e.g. "PP-12". |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `list_automation_runs`
+
+The run log, newest first: each time a rule looked at an issue, what fired it, and whether it changed the issue or why not. Narrow it to one `automation`, one `issue`, or both. Kept 90 days. Any member can read it; a token needs issues:read.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `automation` | string |  | The automation by name, e.g. "Close on merge". |
+| `issue` | string |  | Issue key, e.g. "PP-12". |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `limit` | number |  | Rows per page, 1–50. Default 20. |
+| `offset` | number |  | Rows to skip, from the previous page. Default 0. |
 
 ## Import and export
 
@@ -1675,4 +1764,13 @@ Turns a resolved issue, or a cluster of them, into a draft knowledge base articl
 | `issues` | string | yes | One or more issue keys, comma-separated, e.g. "PP-12, PP-15". |
 | `project` | string |  | Project key for the article. Default: the first issue’s project. |
 | `parent` | string |  | An article to put it under, by slug or title. |
+| `org` | string |  | Organisation slug, when you belong to more than one. |
+
+### `why-did-it-change`
+
+Explains an issue's recent changes, most of all the ones an automation made: which rule, and what fired it.
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `issue` | string | yes | Issue key, e.g. "PP-12". |
 | `org` | string |  | Organisation slug, when you belong to more than one. |

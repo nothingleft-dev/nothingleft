@@ -7,10 +7,12 @@ import {
   DIGEST_CADENCES,
   GIT_AUTH_KINDS,
   GIT_EVENT_FAILURES,
+  GIT_LINK_SOURCES,
   NOTIFICATION_KINDS,
   REPORT_NAMES,
 } from './constants.ts';
 import { GIT_PROVIDER_KINDS } from './git.ts';
+import { AUTOMATION_ACTIONS, AUTOMATION_RUN_RESULTS, AUTOMATION_TRIGGERS } from './automations.ts';
 
 // Each schema is the property allow-list: the adapter drops undeclared keys, so no customer text leaks.
 
@@ -253,6 +255,12 @@ export const EventCatalogue = {
   }),
   git_repository_linked: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), backfill: z.boolean() }),
   git_event_failed: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), reason: z.enum(GIT_EVENT_FAILURES) }),
+  automation_created: z.object({ trigger: z.enum(AUTOMATION_TRIGGERS), action: z.enum(AUTOMATION_ACTIONS) }),
+  automation_run: z.object({ trigger: z.enum(AUTOMATION_TRIGGERS), result: z.enum(AUTOMATION_RUN_RESULTS) }),
+  git_link_created: z.object({
+    source: z.enum(GIT_LINK_SOURCES),
+    target_type: z.enum(['branch', 'commit', 'pull_request']),
+  }),
   // One per MCP tool call. Tool names and error codes are ours, never the caller's text; arguments are only counted.
   two_factor_enabled: z.object({}),
   two_factor_disabled: z.object({ with_recovery_code: z.boolean() }),

@@ -52,6 +52,7 @@ export const issues = pgTable(
     start_date: date({ mode: 'string' }),
     due_date: date({ mode: 'string' }),
     resolved_at: timestamp({ withTimezone: true }),
+    last_automation_at: timestamp({ withTimezone: true }),
     vote_count: integer().notNull().default(0),
     comment_count: integer().notNull().default(0),
     search_tsv: tsvector().generatedAlwaysAs(

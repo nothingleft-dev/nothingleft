@@ -50,6 +50,7 @@ names only — never real ones.
 | [manual/reports.md](./manual/reports.md) | The nine reports: scoping by query, saved view and projects, what each counts, drill-down to the issue list, empty results, colours, CSV export and asking an agent |
 | [manual/agile.md](./manual/agile.md) | Sprints (planning, starting, finishing and what happens to unfinished work), the backlog's order, story points, boards with columns, WIP limits and swimlanes |
 | [manual/notifications.md](./manual/notifications.md) | The inbox, what each kind tells you and when, the ten-minute wait, email per kind (instant, daily or weekly digest), unsubscribing, asking an agent |
+| [manual/automations.md](./manual/automations.md) | Automations: the triggers, conditions, templates, the order rules run in, what the history and run log show, dry runs, renamed or missing statuses, limits, asking an agent |
 | [manual/account-security.md](./manual/account-security.md) | Two-factor authentication and recovery codes, confirming important changes, deactivating your account, erasure on request, transferring ownership, deleting an organisation |
 | [manual/storage.md](./manual/storage.md) | Storage: what counts, the file list by size, bringing your own R2 or S3 bucket (the key's permissions, CORS, the two checks, moving files), a key that stops working, disconnecting, what is ever deleted there |
 | [manual/tags.md](./manual/tags.md) | The organisation's tags: the list with counts by issues and articles, renaming (saved views follow), recolouring, merging, deleting, who may, asking an agent |

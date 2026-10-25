@@ -159,6 +159,7 @@ const AREA: Record<NotificationArea, string> = {
   comments: 'Comments',
   agile: 'Agile',
   knowledge_base: 'Knowledge base',
+  development: 'Development',
 };
 
 function preferencesTable(p: NotificationPreferences): string {

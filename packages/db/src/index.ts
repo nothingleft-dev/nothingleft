@@ -46,3 +46,4 @@ export * from './repositories/git-events.repository.ts';
 export * from './repositories/git-entities.repository.ts';
 export * from './repositories/git-links.repository.ts';
 export * from './repositories/git-identities.repository.ts';
+export * from './repositories/automations.repository.ts';

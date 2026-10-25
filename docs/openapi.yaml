@@ -7463,7 +7463,7 @@ paths:
       - $ref: '#/components/parameters/GitEventId'
     post:
       summary: Apply a stored delivery again
-      description: Org Admins and the Owner; a token needs `admin:org`. Back to `pending`, applied in order with its repository's other deliveries. Automations run only with `run_automations`.
+      description: Org Admins and the Owner; a token needs `admin:org`. Back to `pending`, applied in order with its repository's other deliveries. Automations run only with `run_automations`, and only for what the replay itself changes (a pull request or branch already stored in that state fires nothing again; commits it carries do).
       tags: [git]
       requestBody:
         required: false
@@ -7591,6 +7591,184 @@ paths:
                   - properties:
                       data: { $ref: '#/components/schemas/GitPullRequestDetail' }
         '404': { description: '`git.pull_request_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/automations/catalogue:
+    get:
+      summary: The triggers, conditions and actions an automation can use
+      description: |
+        Any signed-in member. Each trigger carries the JSON Schema of the conditions it takes and
+        what a condition left out means (`defaults`); the editor draws its rows from them.
+      tags: [automations]
+      responses:
+        '200':
+          description: The catalogue.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/AutomationCatalogue' }
+
+  /v1/projects/{key}/automations:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+    get:
+      summary: The project's automations, in the order they run
+      description: Anyone who reads the project; a token needs `issues:read`. `runs` and `last_run_at` cover the last 90 days, the window runs are kept for.
+      tags: [automations]
+      responses:
+        '200':
+          description: The automations, by `position`.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Automation' } }
+        '404': { $ref: '#/components/responses/ProjectNotFound' }
+    post:
+      summary: Add an automation
+      description: |
+        Project Admins and up; a token needs `admin:project`. One trigger, conditions for it, one
+        action (`issue.set_status` with `action_params.status`, a status of the project, matched
+        case-insensitively and stored as the project spells it). Left out, `name` is the rule as a
+        sentence. The free plan allows 10 per project. Writes `automation_changed` to the
+        organisation's activity.
+      tags: [automations]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateAutomation' } } }
+      responses:
+        '201': { description: 'The automation.', content: { application/json: { schema: { $ref: '#/components/schemas/AutomationEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/ProjectNotFound' }
+        '409': { description: '`automation.name_taken`, `automation.limit_reached`, `project.archived`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '422': { description: '`automation.condition_invalid` (`field: conditions`), `automation.status_missing` (`field: action_params`), `automation.name_reserved` (`field: name`).', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/projects/{key}/automations/templates:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+    get:
+      summary: Ready-made automations for this project
+      description: |
+        Anyone who reads the project; a token needs `issues:read`. Offered, never created unasked.
+        Each `automation` is ready to POST, with the project's first fitting status filled in;
+        `needs_status` when the project has none that fits.
+      tags: [automations]
+      responses:
+        '200':
+          description: The templates.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/AutomationTemplate' } }
+        '404': { $ref: '#/components/responses/ProjectNotFound' }
+
+  /v1/projects/{key}/automations/{name}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - $ref: '#/components/parameters/AutomationName'
+    get:
+      summary: One automation
+      description: Anyone who reads the project; a token needs `issues:read`.
+      tags: [automations]
+      responses:
+        '200': { description: 'The automation.', content: { application/json: { schema: { $ref: '#/components/schemas/AutomationEnvelope' } } } }
+        '404': { description: '`project.not_found`, `automation.not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    patch:
+      summary: Change an automation
+      description: |
+        Project Admins and up; a token needs `admin:project`. Changing the trigger without
+        `conditions` resets them to the new trigger's defaults. Writes `automation_changed`.
+      tags: [automations]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateAutomation' } } }
+      responses:
+        '200': { description: 'The automation.', content: { application/json: { schema: { $ref: '#/components/schemas/AutomationEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`project.not_found`, `automation.not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`automation.name_taken`, `project.archived`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '422': { description: '`automation.condition_invalid`, `automation.status_missing`, `automation.name_reserved`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    delete:
+      summary: Delete an automation
+      description: Project Admins and up; a token needs `admin:project`. Its run log goes with it; what it changed stays in the issues' history. Writes `automation_changed`. Answers the automations left.
+      tags: [automations]
+      responses:
+        '200':
+          description: The automations left.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Automation' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`project.not_found`, `automation.not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`project.archived`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/projects/{key}/automations/{name}/test:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - $ref: '#/components/parameters/AutomationName'
+    post:
+      summary: Dry-run an automation on one issue
+      description: |
+        Project Admins and up; a token needs `admin:project`. What the rule would do to the issue
+        now, were its trigger to fire with an event that fits it. Writes nothing.
+      tags: [automations]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [issue], properties: { issue: { type: string, example: PMS-118 } } } } }
+      responses:
+        '200':
+          description: The verdict.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/AutomationTestResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`project.not_found`, `automation.not_found`, `issue.not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/projects/{key}/automations/{name}/runs:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - $ref: '#/components/parameters/AutomationName'
+    get:
+      summary: One automation's run log
+      description: Anyone who reads the project; a token needs `issues:read`. Newest first; every time the rule looked at an issue, applied or skipped and why. Kept 90 days.
+      tags: [automations]
+      parameters:
+        - { name: issue, in: query, schema: { type: string }, description: 'Only runs on this issue, e.g. `PMS-118`.' }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200': { $ref: '#/components/responses/AutomationRuns' }
+        '404': { description: '`project.not_found`, `automation.not_found`, `issue.not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/projects/{key}/automation-runs:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+    get:
+      summary: Every automation's run log in the project
+      description: Anyone who reads the project; a token needs `issues:read`. With `issue`, why an issue changed (or did not). Newest first; kept 90 days.
+      tags: [automations]
+      parameters:
+        - { name: issue, in: query, schema: { type: string }, description: 'Only runs on this issue, e.g. `PMS-118`.' }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200': { $ref: '#/components/responses/AutomationRuns' }
+        '404': { description: '`project.not_found`, `issue.not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
 
 components:
   securitySchemes:
@@ -8053,7 +8231,7 @@ components:
       example: { Billable: 'Yes' }
     Issue:
       type: object
-      required: [key, project, title, description_md, status, priority, type, assignees, created_by, updated_by, parent, tags, estimate_minutes, spent_minutes, story_points, story_points_rollup, sprint, subtasks, start_date, due_date, resolved_at, vote_count, comment_count, attachment_count, watcher_count, custom_fields, development, me, created_at, updated_at, deleted_at, restorable_until]
+      required: [key, project, title, description_md, status, priority, type, assignees, created_by, updated_by, parent, tags, estimate_minutes, spent_minutes, story_points, story_points_rollup, sprint, subtasks, start_date, due_date, resolved_at, vote_count, comment_count, attachment_count, watcher_count, custom_fields, development, last_automation_at, me, created_at, updated_at, deleted_at, restorable_until]
       properties:
         key: { type: string, example: PMS-118 }
         project:
@@ -8112,6 +8290,7 @@ components:
         development:
           description: 'The development badge and counts; null when the project is not git-enabled.'
           oneOf: [{ $ref: '#/components/schemas/GitDevelopmentSummary' }, { type: 'null' }]
+        last_automation_at: { type: [string, 'null'], format: date-time, description: 'When an automation last changed it; `updated_by` stays the last person.' }
         watcher_count: { type: integer }
         custom_fields:
           type: array
@@ -8135,7 +8314,7 @@ components:
             data: { $ref: '#/components/schemas/Issue' }
     IssueActivity:
       type: object
-      required: [id, kind, actor, change_group_id, field, old_value, new_value, people, created_at, updated_at, comment]
+      required: [id, kind, actor, change_group_id, field, old_value, new_value, people, created_at, updated_at, comment, automation]
       properties:
         id: { type: integer }
         kind:
@@ -8169,6 +8348,15 @@ components:
           description: On `commented` and `comment_edited`, the comment as it is now; `null` otherwise.
           oneOf:
             - $ref: '#/components/schemas/Comment'
+            - { type: 'null' }
+        automation:
+          description: 'On a change an automation made (`actor.system`), the rule and what fired it; `null` otherwise.'
+          oneOf:
+            - type: object
+              required: [name, cause]
+              properties:
+                name: { type: string, example: Close on merge }
+                cause: { type: string, example: 'acme/web#42 was merged by @alex' }
             - { type: 'null' }
     IssueLinkSnapshot:
       description: What a `linked` / `unlinked` history entry carries on its side, read from this issue.
@@ -9888,7 +10076,7 @@ components:
 
     NotificationKind:
       type: string
-      enum: [assigned, unassigned, mentioned, commented, status_changed, resolved, linked, due_soon, overdue, time_logged, sprint_started, sprint_finished, article_published, article_updated, reaction]
+      enum: [assigned, unassigned, mentioned, commented, status_changed, resolved, linked, due_soon, overdue, time_logged, sprint_started, sprint_finished, article_published, article_updated, reaction, pull_request_merged, ci_failed]
     NotificationEmail:
       type: string
       enum: ['off', instant, daily_digest, weekly_digest]
@@ -9922,7 +10110,7 @@ components:
         summary: { type: string, example: 'Casey Kim assigned PP-12 to you' }
         detail:
           type: object
-          description: 'The facts behind the summary as they settled, by name: `field`, `from`, `to`, `comment`, `work_item`, `link`, `other_issue`, `minutes`, `due_date`, `source`. On `linked`, `other_issue` is `null` when the recipient could not open the other issue''s project when the notification was written; the summary then reads "an issue in another project".'
+          description: 'The facts behind the summary as they settled, by name: `field`, `from`, `to`, `comment`, `work_item`, `link`, `other_issue`, `minutes`, `due_date`, `source`, `pull_request` (`acme/web#42`) and `pull_request_title` (the provider''s plain text), on `pull_request_merged` and `ci_failed`. A change an automation made has no `actor`; the summary names the bot. The person whose git action fired the automation is not notified of it. On `linked`, `other_issue` is `null` when the recipient could not open the other issue''s project when the notification was written; the summary then reads "an issue in another project".'
         read_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
         path: { type: string, example: '/issue/PP-12#comment-42' }
@@ -10097,6 +10285,109 @@ components:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - properties:
             data: { $ref: '#/components/schemas/GitRepository' }
+    Automation:
+      type: object
+      required: [name, trigger, conditions, action, action_params, is_enabled, position, sentence, status_missing, last_run_at, runs, created_by, updated_by, created_at, updated_at]
+      properties:
+        name: { type: string, example: Close on merge }
+        trigger: { $ref: '#/components/schemas/AutomationTrigger' }
+        conditions: { type: object, additionalProperties: true, description: 'Only the conditions set; the catalogue holds the defaults.' }
+        action: { type: string, enum: [issue.set_status] }
+        action_params: { type: object, properties: { status: { type: string } }, example: { status: Fixed } }
+        is_enabled: { type: boolean }
+        position: { type: integer, description: 'Evaluation order, lowest first; the first rule that changes an issue ends it.' }
+        sentence: { type: string, example: 'When a pull request is merged, if it closes the issue and all linked pull requests are merged, set status to Fixed.' }
+        status_missing: { type: boolean, description: Its status no longer exists in the project; every run skips until it is pointed at another. }
+        last_run_at: { type: [string, 'null'], format: date-time }
+        runs: { type: integer, description: Runs in the last 90 days. }
+        created_by: { oneOf: [{ $ref: '#/components/schemas/MemberRef' }, { type: 'null' }] }
+        updated_by: { oneOf: [{ $ref: '#/components/schemas/MemberRef' }, { type: 'null' }] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    AutomationEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/Automation' }
+    AutomationTrigger:
+      type: string
+      enum: [git.branch_created, git.commit_pushed, git.pull_request_opened, git.pull_request_ready, git.pull_request_merged, git.pull_request_closed, git.revert_merged, issue.children_resolved]
+    CreateAutomation:
+      type: object
+      required: [trigger, action, action_params]
+      properties:
+        name: { type: string, maxLength: 100, description: Left out, the rule as a sentence. }
+        trigger: { $ref: '#/components/schemas/AutomationTrigger' }
+        conditions: { type: object, additionalProperties: true, default: {} }
+        action: { type: string, enum: [issue.set_status] }
+        action_params: { type: object, required: [status], properties: { status: { type: string } } }
+        is_enabled: { type: boolean, default: true }
+        position: { type: integer, minimum: 0, maximum: 100 }
+    UpdateAutomation:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        trigger: { $ref: '#/components/schemas/AutomationTrigger' }
+        conditions: { type: object, additionalProperties: true }
+        action: { type: string, enum: [issue.set_status] }
+        action_params: { type: object, properties: { status: { type: string } } }
+        is_enabled: { type: boolean }
+        position: { type: integer, minimum: 0, maximum: 100 }
+    AutomationRun:
+      type: object
+      required: [id, automation, issue, result, reason, changes, cause, trigger_ref, created_at]
+      properties:
+        id: { type: integer }
+        automation: { type: string }
+        issue: { type: string, example: PMS-118 }
+        result: { type: string, enum: [applied, skipped, failed] }
+        reason: { type: [string, 'null'], enum: [already_in_status, condition_not_met, archived_project, status_missing, null] }
+        changes: { type: [object, 'null'], example: { status: { from: In Review, to: Fixed } } }
+        cause: { type: string, example: 'acme/web#42 was merged by @alex', description: 'In words. Branch names and logins are the provider''s text.' }
+        trigger_ref: { type: object, additionalProperties: true, example: { pull_request: acme/web#42 } }
+        created_at: { type: string, format: date-time }
+    AutomationTestResult:
+      type: object
+      required: [result, reason, changes, sentence]
+      properties:
+        result: { type: string, enum: [would_apply, would_skip] }
+        reason: { type: [string, 'null'], enum: [already_in_status, condition_not_met, archived_project, status_missing, null] }
+        changes: { type: [object, 'null'] }
+        sentence: { type: string }
+    AutomationCatalogue:
+      type: object
+      required: [triggers, actions, conditions]
+      properties:
+        triggers:
+          type: array
+          items:
+            type: object
+            required: [key, group, label, conditions, defaults]
+            properties:
+              key: { $ref: '#/components/schemas/AutomationTrigger' }
+              group: { type: string, enum: [git, hierarchy] }
+              label: { type: string }
+              conditions: { type: object, description: JSON Schema of the conditions it takes. }
+              defaults: { type: object, description: What a condition left out means. }
+        actions:
+          type: array
+          items:
+            type: object
+            required: [key, label, params]
+            properties:
+              key: { type: string, enum: [issue.set_status] }
+              label: { type: string }
+              params: { type: object, description: JSON Schema of its parameters. }
+        conditions: { type: object, additionalProperties: { type: string }, description: Each condition's label. }
+    AutomationTemplate:
+      type: object
+      required: [key, name, description, automation, needs_status]
+      properties:
+        key: { type: string, enum: [start_work, review, close_on_merge, reopen_on_revert, resolve_parent] }
+        name: { type: string }
+        description: { type: string }
+        automation: { $ref: '#/components/schemas/CreateAutomation' }
+        needs_status: { type: boolean, description: 'The project has no status that fits; `action_params.status` is null.' }
     ProjectRepository:
       allOf:
         - $ref: '#/components/schemas/GitRepository'
@@ -10438,6 +10729,12 @@ components:
       in: header
       description: PAT callers name the organisation by slug. Sessions use their current organisation and ignore it.
       schema: { type: string }
+    AutomationName:
+      name: name
+      in: path
+      required: true
+      schema: { type: string, maxLength: 100 }
+      description: 'The automation by name, case-insensitive and percent-encoded: `Close%20on%20merge`.'
     Limit:
       name: limit
       in: query
@@ -10530,6 +10827,15 @@ components:
               token: { type: string, minLength: 1, maxLength: 200 }
 
   responses:
+    AutomationRuns:
+      description: One page of runs, with `meta.pagination`.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/AutomationRun' } }
     ReportInvalid:
       description: |
         A parameter could not be used: a query error (see QueryInvalid), `search.not_groupable`,

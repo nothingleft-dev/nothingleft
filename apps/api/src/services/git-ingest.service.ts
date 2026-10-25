@@ -39,6 +39,7 @@ import type { DeliveryHeaders, GitProvider } from '@git/provider';
 import type { ProviderRegistry } from '@git/providers/index';
 import type { AccessService, OrgAccess } from '@services/access';
 import type { GitConnectionsService } from '@services/git-connections.service';
+import { withNotifications } from '@services/notify-outbox';
 
 interface Counter {
   incr(key: string): Promise<number>;
@@ -254,6 +255,59 @@ export function gitIngestService(deps: GitIngestDeps) {
       : { status: 'ignored', error: outcome.reason, repository_id: repository.id };
   }
 
+  async function drainKey(job: GitEventsJob, now: Date): Promise<number> {
+    const ctx = tenantContext(job.org_id);
+    let applied = 0;
+    for (let i = 0; i < DRAIN_BATCH; i++) {
+      // Read each time: an event just applied may have revoked or suspended it.
+      const connection = await connections.findById(ctx, job.connection_id);
+      if (!connection) return applied;
+      const row = await events.nextPending(ctx, job);
+      if (!row) return applied;
+      if (row.next_attempt_at && row.next_attempt_at > now) {
+        await enqueue(job, row.next_attempt_at);
+        return applied;
+      }
+      if (connection.revoked_at) {
+        await events.finish(ctx, row.id, { status: 'ignored', error: 'connection_revoked' }, now);
+        continue;
+      }
+      try {
+        const outcome = await apply(ctx, connection, row, now);
+        await events.finish(ctx, row.id, outcome, now);
+        applied++;
+        if (connection.status === 'failing' && connection.last_error === 'processing') {
+          await connectionsService.markHealthy(ctx, connection);
+        }
+      } catch (error) {
+        const reason: GitEventFailure = error instanceof PayloadTruncated ? 'payload_truncated' : failureOf(error);
+        const attempts = row.attempts + 1;
+        if (reason === 'payload_truncated' || attempts >= GIT_EVENT_ATTEMPTS_MAX) {
+          await events.finish(ctx, row.id, { status: 'failed', error: reason }, now);
+          analytics.capture(
+            'git_event_failed',
+            { provider: connection.provider as GitProviderKind, reason },
+            { orgId: ctx.orgId },
+          );
+          // One delivery too large to keep says nothing about the connection's health.
+          if (reason !== 'payload_truncated') {
+            await connectionsService.markProblem(ctx, connection, 'failing', 'processing');
+          }
+          continue;
+        }
+        const minutes = GIT_EVENT_RETRY_MINUTES[Math.min(row.attempts, GIT_EVENT_RETRY_MINUTES.length - 1)]!;
+        const backoff = now.getTime() + minutes * 60_000;
+        const reset = error instanceof GitProviderError && error.resetAt ? error.resetAt.getTime() : 0;
+        const next = new Date(Math.max(backoff, reset));
+        await events.retryLater(ctx, row.id, reason, next);
+        await enqueue(job, next);
+        return applied;
+      }
+    }
+    await enqueue(job, now);
+    return applied;
+  }
+
   return {
     async knowsHook(kind: string, hookId: string): Promise<boolean> {
       const connection = await connections.findByHookHash(sys, sha256(hookId));
@@ -322,6 +376,7 @@ export function gitIngestService(deps: GitIngestDeps) {
         payload: stored.payload,
         truncated: stored.truncated,
         received_at: input.now,
+        run_automations: true,
       });
       await connections.touch(ctx, connection.id, input.now);
       if (repository) {
@@ -345,57 +400,12 @@ export function gitIngestService(deps: GitIngestDeps) {
     },
 
     /** Applies one key's pending events oldest first; stops at a failure, which waits for its retry. */
-    async drain(job: GitEventsJob, now = new Date()): Promise<number> {
-      const ctx = tenantContext(job.org_id);
-      let applied = 0;
-      for (let i = 0; i < DRAIN_BATCH; i++) {
-        // Read each time: an event just applied may have revoked or suspended it.
-        const connection = await connections.findById(ctx, job.connection_id);
-        if (!connection) return applied;
-        const row = await events.nextPending(ctx, job);
-        if (!row) return applied;
-        if (row.next_attempt_at && row.next_attempt_at > now) {
-          await enqueue(job, row.next_attempt_at);
-          return applied;
-        }
-        if (connection.revoked_at) {
-          await events.finish(ctx, row.id, { status: 'ignored', error: 'connection_revoked' }, now);
-          continue;
-        }
-        try {
-          const outcome = await apply(ctx, connection, row, now);
-          await events.finish(ctx, row.id, outcome, now);
-          applied++;
-          if (connection.status === 'failing' && connection.last_error === 'processing') {
-            await connectionsService.markHealthy(ctx, connection);
-          }
-        } catch (error) {
-          const reason: GitEventFailure = error instanceof PayloadTruncated ? 'payload_truncated' : failureOf(error);
-          const attempts = row.attempts + 1;
-          if (reason === 'payload_truncated' || attempts >= GIT_EVENT_ATTEMPTS_MAX) {
-            await events.finish(ctx, row.id, { status: 'failed', error: reason }, now);
-            analytics.capture(
-              'git_event_failed',
-              { provider: connection.provider as GitProviderKind, reason },
-              { orgId: ctx.orgId },
-            );
-            // One delivery too large to keep says nothing about the connection's health.
-            if (reason !== 'payload_truncated') {
-              await connectionsService.markProblem(ctx, connection, 'failing', 'processing');
-            }
-            continue;
-          }
-          const minutes = GIT_EVENT_RETRY_MINUTES[Math.min(row.attempts, GIT_EVENT_RETRY_MINUTES.length - 1)]!;
-          const backoff = now.getTime() + minutes * 60_000;
-          const reset = error instanceof GitProviderError && error.resetAt ? error.resetAt.getTime() : 0;
-          const next = new Date(Math.max(backoff, reset));
-          await events.retryLater(ctx, row.id, reason, next);
-          await enqueue(job, next);
-          return applied;
-        }
-      }
-      await enqueue(job, now);
-      return applied;
+    drain(job: GitEventsJob, now = new Date()): Promise<number> {
+      return withNotifications(
+        deps.queue,
+        error => analytics.captureException(error),
+        () => drainKey(job, now),
+      );
     },
 
     async list(

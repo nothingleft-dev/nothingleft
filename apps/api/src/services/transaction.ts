@@ -1,4 +1,5 @@
 import type {
+  AutomationsRepository,
   ArticlesRepository,
   AttachmentsRepository,
   BoardsRepository,
@@ -61,6 +62,7 @@ export interface TenantRepos {
   gitEvents: GitEventsRepository;
   gitEntities: GitEntitiesRepository;
   gitLinks: GitLinksRepository;
+  automations: AutomationsRepository;
 }
 
 export type InTenantTransaction = <T>(body: (repos: TenantRepos) => Promise<T>) => Promise<T>;

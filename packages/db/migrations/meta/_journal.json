@@ -22,6 +22,13 @@
       "when": 1792899913255,
       "tag": "0002_git_links",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792905053001,
+      "tag": "0003_automations",
+      "breakpoints": true
     }
   ]
 }

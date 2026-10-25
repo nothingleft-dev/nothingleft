@@ -59,6 +59,7 @@ export type IssuePatch = Partial<
     | 'updated_by'
     | 'updated_at'
     | 'deleted_at'
+    | 'last_automation_at'
   >
 >;
 

@@ -1,4 +1,5 @@
 import type { DevelopmentReader } from '@services/git-development';
+import type { AutomationsService } from '@services/automations.service';
 import {
   ISSUE_CSV_COLUMNS,
   ISSUE_REF_PICKER_LIMIT,
@@ -117,6 +118,8 @@ export interface IssuesDeps {
   sprints: SprintsRepository;
   customFields: CustomFieldsRepository;
   development: DevelopmentReader;
+  /** Lazy: the automations service is built after this one. */
+  automations?: () => Pick<AutomationsService, 'childResolved'>;
   /** Injected so coalescing can be tested across its window without waiting. */
   now?: () => Date;
 }
@@ -306,6 +309,15 @@ export function decodeCursor(cursor: string): number {
   throw new AppError('activity.invalid_cursor', 400, {}, 'cursor');
 }
 
+/** An automated change's snapshot names the rule and what fired it. */
+function automationOf(value: unknown): { name: string; cause: string } | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as { automation?: unknown; cause?: unknown };
+  return typeof v.automation === 'string'
+    ? { name: v.automation, cause: typeof v.cause === 'string' ? v.cause : '' }
+    : null;
+}
+
 export function issuesService(deps: IssuesDeps) {
   const {
     access,
@@ -484,6 +496,7 @@ export function issuesService(deps: IssuesDeps) {
         attachment_count: files.get(row.id) ?? 0,
         custom_fields: issueCustomFields(catalogue, row, ownValues, refs),
         development: development.byIssue.get(row.id) ?? null,
+        last_automation_at: row.last_automation_at?.toISOString() ?? null,
         me: signals.get(row.id) ?? { starred: false, voted: false, watching: false },
         created_at: row.created_at.toISOString(),
         updated_at: row.updated_at.toISOString(),
@@ -1271,6 +1284,7 @@ export function issuesService(deps: IssuesDeps) {
       });
 
       let customChanged = 0;
+      let resolvedNow = false;
       const updated = await inTransaction(async repos => {
         const current = await repos.issues.lockById(project.ctx, issue.id);
         if (!current || current.deleted_at) throw notFound(key);
@@ -1300,6 +1314,7 @@ export function issuesService(deps: IssuesDeps) {
           const will = isResolvedCategory(resolved.status.category);
           if (!was && will) patch.resolved_at = at;
           if (was && !will) patch.resolved_at = null;
+          resolvedNow = !was && will;
           changes.push({
             field: 'status',
             old_value: { name: before.name },
@@ -1439,6 +1454,13 @@ export function issuesService(deps: IssuesDeps) {
           { via: viaOf(principal), field_count: customChanged },
           { userId: principal.userId, orgId: project.organization.id },
         );
+      }
+      if (resolvedNow && deps.automations) {
+        // The change is saved; a rule that fails must not turn it into an error.
+        await deps
+          .automations()
+          .childResolved(project.ctx, updated, n => keyIn(project)({ key_number: n }))
+          .catch(error => analytics.captureException(error, { org_id: project.ctx.orgId }));
       }
       return one(principal, project, updated);
     },
@@ -1621,6 +1643,7 @@ export function issuesService(deps: IssuesDeps) {
             created_at: r.activity.created_at.toISOString(),
             updated_at: r.activity.updated_at.toISOString(),
             comment: commentId === undefined ? null : (commentsById.get(commentId) ?? null),
+            automation: automationOf(r.activity.new_value),
           };
         }),
         pagination: {

@@ -130,6 +130,7 @@ argument, is the [tool reference](./mcp-tools.md).
 | Notifications | `list_notifications` (your inbox, one row per issue), `mark_notifications_read`, `get_notification_preferences`, `set_notification_preferences`; see [Notifications](./notifications.md) |
 | Import and export | `start_csv_import`, `get_import_status` - issues from a CSV file, with a dry run first; `request_org_export`, `get_export_status` - the whole organisation as one download ([Import and export](./import-export.md)) |
 | Development | `get_issue_development` - an issue's branches, commits and pull requests, *is it merged?*; `get_pull_request` - one pull request with its checks; `link_pull_request`, `unlink_pull_request` - by hand, for one that never names the issue; `list_git_connections`, `refresh_git_connection`, `remove_git_connection` - the organisation's GitHub and GitLab connections, for an Org Admin; `list_repositories`, `link_repository`, `update_repository_link`, `unlink_repository` - which repositories feed a project's issues, for a Project Admin; `resync_repository`, `list_git_events`, `replay_git_event` - the webhook delivery log and its repairs, for an Org Admin. Connecting an account carries a token, so it is done in organisation settings |
+| Automations | `list_automations`, `create_automation`, `update_automation`, `delete_automation` - the rules that move an issue's status when a branch, commit or pull request happens, or the last subtask is resolved, for a Project Admin; `test_automation` - a dry run on one issue; `list_automation_runs` - what each rule did, and why it left an issue alone ([Automations](./automations.md)) |
 | Settings | `create_project`, `update_project`, `update_project_schema`, `create_org`, `update_org_settings`, `get_org_activity`, `update_profile` |
 | People | `list_members`, `get_member`, `invite_member`, `create_invite_link`, `manage_roles`, `remove_member`, `list_invitations`, `get_invitation`, `revoke_invitation`, `rotate_invite_link` |
 
@@ -202,6 +203,7 @@ Add `?org=acme` when the same key exists in two of your organisations.
 | `estimate-backlog` | Suggests estimates and story points for unestimated issues from how long similar ones took |
 | `sprint-report` | How a sprint is going: done against committed, what was added after it started, the burndown trend and the issues at risk |
 | `document-this` | Turns one or more resolved issues into a draft knowledge base article - a runbook, a root-cause write-up or a how-to - and creates it once you agree |
+| `why-did-it-change` | Explains an issue's recent changes as a timeline: who or which automation changed what, and what fired it |
 
 In Claude Code they appear as slash commands, e.g. `/mcp__nothingleft__triage-issue ACME-12`.
 

@@ -1369,7 +1369,7 @@ describe('resources', () => {
 });
 
 describe('prompts', () => {
-  test('the seven prompts are listed', async () => {
+  test('the eight prompts are listed', async () => {
     const { result } = await rpc(t.contributor, 'prompts/list');
     expect((result!['prompts'] as { name: string }[]).map(p => p.name).sort()).toEqual(
       [
@@ -1379,6 +1379,7 @@ describe('prompts', () => {
         'sprint-report',
         'standup-summary',
         'triage-issue',
+        'why-did-it-change',
         'write-release-notes',
       ].sort(),
     );
@@ -1427,6 +1428,61 @@ describe('prompts', () => {
   });
 });
 
+describe('automations', () => {
+  test('templates and the catalogue are read; a rule is made, tested, run, logged and explained', async () => {
+    const listed = await ok(t.observer, 'list_automations', { project: KEY, include: 'templates' });
+    expect(listed).toContain('has no automations');
+    expect(listed).toContain('`close_on_merge`');
+    expect(await ok(t.observer, 'list_automations', { project: KEY, include: 'catalogue' })).toContain(
+      '`git.pull_request_merged`',
+    );
+    expect((await tool(t.contributor, 'create_automation', { project: KEY, template: 'resolve_parent' })).code).toBe(
+      'forbidden',
+    );
+    const created = await ok(t.projectAdmin, 'create_automation', {
+      project: KEY,
+      template: 'resolve_parent',
+      status: 'Closed',
+    });
+    expect(created).toContain('Created `Resolve parent when subtasks are done`');
+    expect(
+      await ok(t.projectAdmin, 'update_automation', {
+        project: KEY,
+        automation: 'Resolve parent when subtasks are done',
+        name: 'Resolve parent',
+      }),
+    ).toContain('Updated `Resolve parent`');
+    expect(await ok(t.observer, 'list_automations', { project: KEY, automation: 'resolve parent' })).toContain(
+      '`issue.children_resolved`',
+    );
+
+    const parent = await newIssue({ title: 'Checkout epic' });
+    const child = await newIssue({ title: 'Checkout step', parent });
+    expect(
+      await ok(t.projectAdmin, 'test_automation', { project: KEY, automation: 'Resolve parent', issue: parent }),
+    ).toContain(`would move ${parent} from **Open** to **Closed**`);
+    await ok(t.contributor, 'update_issue', { issue: child, status: 'Fixed' });
+    expect(await ok(t.observer, 'get_issue_activity', { issue: parent })).toContain(
+      `Resolve parent · status: Open → Closed, because the last open subtask of ${parent} was resolved`,
+    );
+    expect(await ok(t.observer, 'list_automation_runs', { project: KEY, issue: parent })).toContain('Open → Closed');
+    expect(await ok(t.observer, 'list_automation_runs', { project: KEY, automation: 'Resolve parent' })).toContain(
+      parent,
+    );
+
+    const { result } = await rpc(t.contributor, 'prompts/get', {
+      name: 'why-did-it-change',
+      arguments: { issue: parent },
+    });
+    expect((result!['messages'] as { content: { text: string } }[]).at(-1)!.content.text).toContain(
+      'list_automation_runs',
+    );
+    expect(await ok(t.projectAdmin, 'delete_automation', { project: KEY, automation: 'Resolve parent' })).toContain(
+      'It has no automations now',
+    );
+  });
+});
+
 describe('destructive tools ask the person, every time', () => {
   type Who = 'admin' | 'contributor' | 'projectAdmin';
   const f = {} as { issue: string; comment: number; item: number; link: string; robin: string; prIssue: string };
@@ -1464,6 +1520,7 @@ describe('destructive tools ask the person, every time', () => {
     },
     { name: 'remove_git_connection', who: 'admin', args: () => ({ connection: 'github:keep-inc', org: w.slug }) },
     { name: 'unlink_repository', who: 'projectAdmin', args: () => ({ project: KEY, repository: 'acme-inc/web' }) },
+    { name: 'delete_automation', who: 'projectAdmin', args: () => ({ project: KEY, automation: 'Keep rule' }) },
   ];
 
   beforeAll(async () => {
@@ -1496,6 +1553,12 @@ describe('destructive tools ask the person, every time', () => {
       .exec(await ok(t.admin, 'create_invite_link', { org: w.slug }))![1]!
       .replace(/[)|`]+$/, '');
     f.robin = (await signUpAndJoin('Robin')).username;
+    await w.call(w.admin, 'POST', `/v1/projects/${KEY}/automations`, {
+      name: 'Keep rule',
+      trigger: 'git.branch_created',
+      action: 'issue.set_status',
+      action_params: { status: 'In Progress' },
+    });
     // A manual connection learns its repository from a delivery; linked, it can be unlinked.
     const manual = await w.call(w.admin, 'POST', `/v1/organizations/${w.slug}/git/connections`, {
       provider: 'github',
@@ -1720,6 +1783,7 @@ describe('contributor content is framed as data', () => {
       'estimate-backlog': { project: KEY },
       'sprint-report': { project: KEY },
       'document-this': { issues: key },
+      'why-did-it-change': { issue: key },
     };
     expect(Object.keys(argumentsOf).sort()).toEqual(promptDefinitions.map(p => p.name).sort());
     for (const [name, args] of Object.entries(argumentsOf)) {

@@ -1,4 +1,12 @@
 import { whoami } from './whoami.ts';
+import {
+  createAutomation,
+  deleteAutomation,
+  listAutomationRuns,
+  listAutomations,
+  testAutomation,
+  updateAutomation,
+} from './automations.ts';
 import { listOrgs } from './list-orgs.ts';
 import { listProjects } from './projects.ts';
 import {
@@ -210,4 +218,10 @@ export const TOOLS = [
   getPullRequest,
   linkPullRequest,
   unlinkPullRequest,
+  listAutomations,
+  createAutomation,
+  updateAutomation,
+  deleteAutomation,
+  testAutomation,
+  listAutomationRuns,
 ] as const;

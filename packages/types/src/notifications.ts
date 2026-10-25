@@ -34,6 +34,9 @@ export const NotificationDetailSchema = z.object({
   minutes: z.number().int().optional(),
   due_date: z.string().optional(),
   source: z.enum(['description', 'comment', 'work_item', 'article']).optional(),
+  // pull_request_merged, ci_failed: `acme/web#42` and its title, the provider's plain text.
+  pull_request: z.string().optional(),
+  pull_request_title: z.string().optional(),
 });
 export type NotificationDetail = z.infer<typeof NotificationDetailSchema>;
 

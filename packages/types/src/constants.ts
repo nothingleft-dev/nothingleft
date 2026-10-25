@@ -74,6 +74,7 @@ export const ORG_ACTIVITY_KINDS = [
   'git_connection_error',
   'repository_linked',
   'repository_unlinked',
+  'automation_changed',
 ] as const;
 export type OrgActivityKind = (typeof ORG_ACTIVITY_KINDS)[number];
 
@@ -440,10 +441,12 @@ export const NOTIFICATION_KINDS = [
   'article_published',
   'article_updated',
   'reaction',
+  'pull_request_merged',
+  'ci_failed',
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
-export const NOTIFICATION_AREAS = ['issues', 'comments', 'agile', 'knowledge_base'] as const;
+export const NOTIFICATION_AREAS = ['issues', 'comments', 'agile', 'knowledge_base', 'development'] as const;
 export type NotificationArea = (typeof NOTIFICATION_AREAS)[number];
 
 export const NOTIFICATION_KIND_AREAS = {
@@ -462,6 +465,8 @@ export const NOTIFICATION_KIND_AREAS = {
   sprint_finished: 'agile',
   article_published: 'knowledge_base',
   article_updated: 'knowledge_base',
+  pull_request_merged: 'development',
+  ci_failed: 'development',
 } as const satisfies Record<NotificationKind, NotificationArea>;
 
 export const NOTIFICATION_EMAIL_OPTIONS = ['off', 'instant', 'daily_digest', 'weekly_digest'] as const;

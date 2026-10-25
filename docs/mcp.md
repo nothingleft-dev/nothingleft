@@ -404,7 +404,7 @@ bucket's secret or act on it, all are session only, and three confirm with step-
 ## Built in 7 (git integration)
 
 25 Oct 2026, first milestone (connections): ten tools. Second milestone (links): four more; 109 in
-all.
+all. Third milestone (automations): six more and the `why-did-it-change` prompt; 115 in all.
 
 - **Connections are read and repaired, never created, by an agent.** Connecting carries a
   token or a provider's install flow, so `POST …/git/connections`, the install start and
@@ -420,7 +420,7 @@ all.
   `update_repository_link` and `unlink_repository` (confirmation) are `admin:project`.
 - **The delivery log answers "why did nothing show up?"**: `list_git_events` with a status or
   repository filter, one delivery's payload by `id` (fenced as untrusted data), and
-  `replay_git_event`, which runs automations only when asked. `resync_repository` also puts
+  `replay_git_event`, which runs automations only when asked, and only for what the replay changes. `resync_repository` also puts
   back a webhook the server registered, with `rehook: true`. All `admin:org`.
 - **The webhook routes are a new exempt category, `integration_inbound`**: called by the
   provider, never by a person.
@@ -432,6 +432,16 @@ all.
   since a pull request carries no project key.
 - **`link_pull_request` takes the pull request's URL**; `unlink_pull_request` takes `acme/web#42`,
   finds the link on the issue's panel and asks first. Both `issues:write`, Contributor and up.
+- **Automations are named rules, one sentence each.** `list_automations` shows them in the order
+  they run, one in detail with `automation`, the templates with `include: "templates"` and the
+  trigger catalogue with `include: "catalogue"`. `create_automation` starts from a `template` or a
+  `trigger` and a `status`; `update_automation` renames, turns off, reorders or changes conditions;
+  `delete_automation` asks first. `test_automation` is a dry run on one issue (`admin:project`, like
+  the writes). `list_automation_runs` is the run log, by rule or by issue (`issues:read`).
+- **`get_issue_activity` names the rule and its cause** on a change an automation made:
+  *Nothing Left Bot · Close on merge · status: In Review → Fixed, because acme/web#42 was merged
+  by @alex*. The `why-did-it-change` prompt reads the history, the run log and the development
+  panel and explains an issue's recent changes as a timeline, changing nothing.
 
 ## Authentication
 
@@ -696,7 +706,9 @@ Built in 7 — [§ Built in 7](#built-in-7-git-integration). `get_issue_developm
 `refresh_git_connection`, `remove_git_connection` (confirmation), `resync_repository`,
 `list_git_events`, `replay_git_event` — `admin:org`; `list_repositories`, `link_repository`,
 `update_repository_link`, `unlink_repository` (confirmation) — `admin:project` (reading what is
-linked: `issues:read`).
+linked: `issues:read`). Automations: `list_automations`, `list_automation_runs` (`issues:read`);
+`create_automation`, `update_automation`, `delete_automation` (confirmation), `test_automation` —
+`admin:project`.
 
 ### Planned with later phases
 
@@ -764,6 +776,7 @@ starts with the data. None changes anything before the person confirms.
 | `estimate-backlog` | `project`, `query?` | Suggests an Estimation (a duration) and story points from the spent time and points of similar resolved issues | 2b, points in 3 |
 | `sprint-report` | `project`, `sprint?` (default the active one) | Embeds the sprint; a narrative of goal, days left, committed against done, scope added after the start, the burndown trend and the issues at risk | 3 |
 | `document-this` | `issues`, `project?`, `parent?` | Embeds the issues with their comments; checks `search_articles` for what exists, drafts a runbook, root-cause write-up or how-to citing the keys, proposes a place and tags, and creates it as a draft after you confirm | 3.5 |
+| `why-did-it-change` | `issue` | Reads the history, the automation run log and the development panel; a timeline of what changed, who or which rule changed it, and why, including rules that looked and left it alone. Changes nothing | 7 |
 
 ## Example exchange
 

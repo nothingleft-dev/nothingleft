@@ -280,6 +280,10 @@ export function projectSchemaService({ schema, access, inTransaction }: ProjectS
           );
         }
         await place(repos, project, table, current.id, input.position);
+        // Automations name their status: a rename takes them along rather than leaving them pointing nowhere.
+        if (table === 'statuses' && input.name !== undefined && input.name !== current.name) {
+          await repos.automations.renameStatus(project.ctx, project.project.id, current.name, input.name, new Date());
+        }
 
         const [updated] = await repos.schema.findByIds(project.ctx, table, [current.id]);
         const before = toSchemaDto(table, current);

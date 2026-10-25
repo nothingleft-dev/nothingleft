@@ -52,7 +52,7 @@ export function summaryOf(view: NotificationView): string {
   const detail = view.notification.payload as NotificationDetail;
   const subject = subjectOf(view);
   return t(summaryKey(kind, detail, subject.type === 'article'), {
-    actor: view.actor?.user.name ?? '',
+    actor: view.actor?.user.name ?? t('actor.system'),
     issue: subject.type === 'issue' ? subject.key : '',
     article: subject.type === 'article' ? subject.title : '',
     sprint: subject.type === 'sprint' ? subject.name : '',
@@ -62,6 +62,7 @@ export function summaryOf(view: NotificationView): string {
     other: detail.other_issue ?? t('notification.linked.other_project'),
     duration: detail.minutes === undefined ? '' : formatDuration(detail.minutes),
     due: detail.due_date ? formatCalendarDate(detail.due_date) : '',
+    pull_request: detail.pull_request ?? '',
   });
 }
 

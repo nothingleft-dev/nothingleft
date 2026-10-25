@@ -76,6 +76,8 @@ export const IssueSchema = z.object({
   custom_fields: z.array(IssueCustomFieldValueSchema),
   // Null when the project is not git-enabled.
   development: GitDevelopmentSummarySchema.nullable(),
+  // The last time an automation changed the issue; an automation never becomes updated_by.
+  last_automation_at: z.string().nullable(),
   // The caller's own personal signals.
   me: z.object({ starred: z.boolean(), voted: z.boolean(), watching: z.boolean() }),
   created_at: z.string(),
@@ -172,6 +174,8 @@ export const IssueActivitySchema = z.object({
   updated_at: z.string(),
   // The comment a commented or comment_edited entry is about; those entries vanish with it.
   comment: CommentSchema.nullable(),
+  // Set when an automation made the change: the rule's name and what fired it, in words.
+  automation: z.object({ name: z.string(), cause: z.string() }).nullable(),
 });
 export type IssueActivity = z.infer<typeof IssueActivitySchema>;
 

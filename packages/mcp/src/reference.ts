@@ -97,6 +97,14 @@ export const TOOL_GROUPS: Record<string, readonly ToolName[]> = {
     'list_git_events',
     'replay_git_event',
   ],
+  Automations: [
+    'list_automations',
+    'create_automation',
+    'update_automation',
+    'delete_automation',
+    'test_automation',
+    'list_automation_runs',
+  ],
   'Import and export': ['start_csv_import', 'get_import_status', 'request_org_export', 'get_export_status'],
   People: [
     'list_members',
