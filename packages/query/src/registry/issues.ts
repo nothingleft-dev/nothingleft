@@ -145,10 +145,56 @@ const ISSUE_ATTRIBUTES: readonly AttributeDefinition[] = [
     empty: 'No story points',
   },
   { name: 'votes', type: 'number', description: { key: 'query.attribute.votes' }, sortable: true },
+  {
+    name: 'pull request',
+    type: 'enum',
+    description: { key: 'query.attribute.pull_request' },
+    group: { key: 'query.group.pull_request' },
+    empty: 'No pull request',
+  },
+  {
+    name: 'development',
+    type: 'enum',
+    description: { key: 'query.attribute.development' },
+    group: { key: 'query.group.development' },
+  },
+  { name: 'repository', type: 'enum', description: { key: 'query.attribute.repository' } },
+  { name: 'branch', type: 'text', description: { key: 'query.attribute.branch' } },
   { name: 'key', type: 'key', description: { key: 'query.attribute.key' }, sortable: true },
   { name: 'has', type: 'has', description: { key: 'query.attribute.has' } },
   { name: 'sort by', type: 'sort', description: { key: 'query.attribute.sort_by' } },
 ];
+
+/** Fixed values of the git attributes: a pull request's state, and the issue's development badge. */
+export const GIT_QUERY_VALUES: Readonly<Record<'pull request' | 'development', readonly string[]>> = {
+  'pull request': ['Open', 'Draft', 'Merged', 'Closed'],
+  development: [
+    'Merged',
+    'CI failing',
+    'Changes requested',
+    'Approved',
+    'In review',
+    'Draft',
+    'Branch active',
+    'Reverted',
+    'None',
+  ],
+};
+
+const GIT_ONLY = new Set(['pull request', 'development', 'repository', 'branch', 'commits']);
+
+/** The registry autocomplete offers where no project has a repository: the parser still accepts the rest. */
+export function withoutGitAttributes(registry: Registry): Registry {
+  return {
+    ...registry,
+    attributes: registry.attributes.filter(a => !GIT_ONLY.has(a.name)),
+    existence: registry.existence.filter(name => !GIT_ONLY.has(name)),
+    attribute: name => {
+      const found = registry.attribute(name);
+      return found && GIT_ONLY.has(found.name) ? undefined : found;
+    },
+  };
+}
 
 const RESERVED = new Set(ISSUE_ATTRIBUTES.map(attribute => attribute.name));
 
@@ -186,6 +232,6 @@ export function issueRegistry(options: IssueRegistryOptions = {}): Registry {
     attributes: [...ISSUE_ATTRIBUTES, ...custom],
     links: ISSUE_LINKS,
     categories: ISSUE_CATEGORIES,
-    presenceOnly: ['description'],
+    presenceOnly: ['description', 'commits'],
   });
 }

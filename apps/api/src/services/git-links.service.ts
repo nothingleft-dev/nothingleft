@@ -1,3 +1,4 @@
+import type { Analytics } from '@nothingleft/analytics';
 import { findIssueReferences, isRevert as isRevertName } from '@nothingleft/format';
 import { t } from '@nothingleft/i18n';
 import {
@@ -56,6 +57,7 @@ export interface GitLinksDeps {
   appBaseUrl: string;
   /** Lazy: the automations service is built after this one. */
   automations?: () => Pick<AutomationsService, 'fire'>;
+  analytics?: Analytics;
   now?: () => Date;
 }
 
@@ -311,6 +313,12 @@ export function gitLinksService(deps: GitLinksDeps) {
       if (!inserted) continue;
       await history(issueId, 'git_linked', { sources, intent });
       linked.push(issueId);
+      // Counted as found, even should the transaction roll back: a count, never what was linked.
+      deps.analytics?.capture(
+        'git_link_created',
+        { source: sources[0]!, target_type: target.type },
+        { orgId: ctx.orgId },
+      );
     }
     return { linked, unlinked };
   }

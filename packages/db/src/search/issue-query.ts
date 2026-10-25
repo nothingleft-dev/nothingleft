@@ -183,6 +183,62 @@ export function issueSearch(scope: IssueSearchScope) {
   const attached = (t: IssueTable, extra: SQL) =>
     sql`exists (select 1 from attachments f where f.issue_id = ${t.id} and f.org_id = ${orgId} and f.deleted_at is null and ${extra})`;
 
+  // A project with no linked repository shows nothing from git, links kept or not.
+  const gitEnabled = (t: IssueTable) =>
+    sql`exists (select 1 from project_repositories pr where pr.project_id = ${t.project_id} and pr.org_id = ${orgId})`;
+  const liveLinks = (t: IssueTable, type: string, extra: SQL) =>
+    sql`(${gitEnabled(t)} and exists (select 1 from issue_git_links l where l.issue_id = ${t.id} and l.org_id = ${orgId} and l.removed_at is null and l.target_type = ${type} and ${extra}))`;
+  const pullRequests = (t: IssueTable, extra: SQL) =>
+    liveLinks(
+      t,
+      'pull_request',
+      sql`exists (select 1 from git_pull_requests p where p.id = l.target_id and p.org_id = ${orgId} and ${extra})`,
+    );
+  const branches = (t: IssueTable, extra: SQL) =>
+    liveLinks(
+      t,
+      'branch',
+      sql`exists (select 1 from git_branches b where b.id = l.target_id and b.org_id = ${orgId} and b.deleted_at is null and ${extra})`,
+    );
+  const commits = (t: IssueTable) =>
+    liveLinks(
+      t,
+      'commit',
+      sql`exists (select 1 from git_commits c where c.id = l.target_id and c.org_id = ${orgId} and c.superseded_at is null)`,
+    );
+  // Live links to what still stands: no deleted branch, no commit a force push dropped.
+  const anyRepository = (t: IssueTable, extra: SQL) =>
+    sql`(${gitEnabled(t)} and exists (select 1 from issue_git_links l join git_repositories r on r.id = l.repository_id and r.org_id = l.org_id where l.issue_id = ${t.id} and l.org_id = ${orgId} and l.removed_at is null and ${extra} and (l.target_type = 'pull_request' or (l.target_type = 'branch' and exists (select 1 from git_branches b where b.id = l.target_id and b.org_id = ${orgId} and b.deleted_at is null)) or (l.target_type = 'commit' and exists (select 1 from git_commits c where c.id = l.target_id and c.org_id = ${orgId} and c.superseded_at is null)))))`;
+
+  /** The development badge, as the API computes it when it reads the issue (git/rollup.ts). */
+  const developmentRollup = (t: IssueTable) => {
+    const livePulls = sql`(select x.* from issue_git_links xl join git_pull_requests x on x.id = xl.target_id and x.org_id = xl.org_id where xl.issue_id = ${t.id} and xl.org_id = ${orgId} and xl.removed_at is null and xl.target_type = 'pull_request')`;
+    return sql`(select case
+      when not ${gitEnabled(t)} then 'none'
+      when a.last_revert is not null and a.merged_after_revert = 0 then 'reverted'
+      when a.n > 0 and a.open_n = 0 and a.merged_n > 0 then 'merged'
+      when a.failing_n > 0 then 'ci_failing'
+      when a.changes_n > 0 then 'changes_requested'
+      when a.ready_n > 0 and a.ready_n = a.approved_n then 'approved'
+      when a.ready_n > 0 then 'in_review'
+      when a.open_n > 0 then 'draft'
+      when a.n = 0 and (${branches(t, TRUE)} or ${commits(t)}) then 'branch_active'
+      else 'none' end
+      from (select
+        count(*) as n,
+        count(*) filter (where p.state in ('open', 'draft')) as open_n,
+        count(*) filter (where p.state = 'open') as ready_n,
+        count(*) filter (where p.state = 'open' and p.review_state = 'approved') as approved_n,
+        count(*) filter (where p.state = 'merged') as merged_n,
+        count(*) filter (where p.state in ('open', 'draft') and p.ci_state = 'failing') as failing_n,
+        count(*) filter (where p.state in ('open', 'draft') and p.review_state = 'changes_requested') as changes_n,
+        max(r.last_revert) as last_revert,
+        count(*) filter (where not p.is_revert and p.state = 'merged' and p.merged_at > r.last_revert) as merged_after_revert
+        from ${livePulls} p
+        cross join (select max(q.merged_at) as last_revert from ${livePulls} q where q.is_revert and q.state = 'merged') r
+      ) a)`;
+  };
+
   const tagMatch = (name: string) => sql`(lower(tg.name) = lower(${name}) or tg.slug = ${slugify(name)})`;
   const projectMatch = (t: IssueTable, name: string) =>
     sql`${t.project_id} in (select p.id from projects p where p.org_id = ${orgId} and (lower(p.key) = lower(${name}) or lower(p.name) = lower(${name})))`;
@@ -247,6 +303,15 @@ export function issueSearch(scope: IssueSearchScope) {
         return workItems(t, sql`w.work_type_id is not null`);
       case 'sprint':
         return sql`${t.sprint_id} is not null`;
+      case 'pull request':
+        return pullRequests(t, TRUE);
+      case 'branch':
+        return branches(t, TRUE);
+      case 'commits':
+        return commits(t);
+      case 'development':
+      case 'repository':
+        return anyRepository(t, TRUE);
       default: {
         const field = customBySlug.get(name);
         return field ? customHas(t, field) : TRUE;
@@ -413,6 +478,26 @@ export function issueSearch(scope: IssueSearchScope) {
         );
       case 'votes':
         return valueList(values, v => numberRange(sql`${t.vote_count}`, v, number));
+      case 'pull request':
+        return valueList(values, v =>
+          v.kind === 'empty'
+            ? sql`not ${pullRequests(t, TRUE)}`
+            : pullRequests(t, sql`p.state = ${literal(v).toLowerCase()}`),
+        );
+      case 'development':
+        return valueList(
+          values,
+          v => sql`${developmentRollup(t)} = ${literal(v).toLowerCase().trim().replace(/\s+/g, '_')}`,
+        );
+      case 'repository':
+        return valueList(values, v =>
+          anyRepository(
+            t,
+            sql`(lower(r.full_name) = lower(${literal(v)}) or lower(split_part(r.full_name, '/', -1)) = lower(${literal(v)}))`,
+          ),
+        );
+      case 'branch':
+        return valueList(values, v => branches(t, sql`b.name ilike ${likePattern(literal(v))}`));
       case 'key':
         return valueList(values, v => (v.kind === 'key' ? keyMatch(t, v.key) : FALSE));
       case 'has':

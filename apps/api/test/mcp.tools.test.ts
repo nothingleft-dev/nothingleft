@@ -1428,6 +1428,23 @@ describe('prompts', () => {
   });
 });
 
+describe('git identities', () => {
+  test('claim, list and remove your own; an Org Admin lists everyone’s', async () => {
+    const handle = `mcp-${Date.now().toString(36)}`;
+    expect(await ok(t.observer, 'claim_git_identity', { provider: 'github', login: handle })).toContain(
+      'now shows as yours',
+    );
+    expect(await ok(t.observer, 'list_git_identities')).toContain(`\`${handle}\``);
+    expect(await ok(t.admin, 'list_git_identities', { all_members: true, org: w.slug })).toContain(handle);
+    expect((await tool(t.observer, 'list_git_identities', { all_members: true, org: w.slug })).code).toBe('forbidden');
+    expect((await tool(t.observer, 'claim_git_identity', { provider: 'github' })).code).toBe('mcp.invalid_arguments');
+    expect(await ok(t.observer, 'remove_git_identity', { identity: handle })).toContain(
+      `Removed the git identity \`${handle}\``,
+    );
+    expect((await tool(t.observer, 'remove_git_identity', { identity: handle })).code).toBe('git.identity_not_found');
+  });
+});
+
 describe('automations', () => {
   test('templates and the catalogue are read; a rule is made, tested, run, logged and explained', async () => {
     const listed = await ok(t.observer, 'list_automations', { project: KEY, include: 'templates' });
@@ -1485,7 +1502,15 @@ describe('automations', () => {
 
 describe('destructive tools ask the person, every time', () => {
   type Who = 'admin' | 'contributor' | 'projectAdmin';
-  const f = {} as { issue: string; comment: number; item: number; link: string; robin: string; prIssue: string };
+  const f = {} as {
+    issue: string;
+    comment: number;
+    item: number;
+    link: string;
+    robin: string;
+    prIssue: string;
+    identity: string;
+  };
   const tokens = {} as Record<Who, string>;
   const rows: { name: string; who: Who; args: () => Record<string, unknown> }[] = [
     { name: 'delete_comment', who: 'contributor', args: () => ({ issue: f.issue, comment: f.comment }) },
@@ -1521,6 +1546,7 @@ describe('destructive tools ask the person, every time', () => {
     { name: 'remove_git_connection', who: 'admin', args: () => ({ connection: 'github:keep-inc', org: w.slug }) },
     { name: 'unlink_repository', who: 'projectAdmin', args: () => ({ project: KEY, repository: 'acme-inc/web' }) },
     { name: 'delete_automation', who: 'projectAdmin', args: () => ({ project: KEY, automation: 'Keep rule' }) },
+    { name: 'remove_git_identity', who: 'contributor', args: () => ({ identity: f.identity }) },
   ];
 
   beforeAll(async () => {
@@ -1553,6 +1579,12 @@ describe('destructive tools ask the person, every time', () => {
       .exec(await ok(t.admin, 'create_invite_link', { org: w.slug }))![1]!
       .replace(/[)|`]+$/, '');
     f.robin = (await signUpAndJoin('Robin')).username;
+    f.identity = `keep-${Date.now().toString(36)}`;
+    await w.call(w.contributor, 'POST', '/v1/me/git-identities', {
+      provider: 'gitlab',
+      base_url: 'https://git.keep.example',
+      login: f.identity,
+    });
     await w.call(w.admin, 'POST', `/v1/projects/${KEY}/automations`, {
       name: 'Keep rule',
       trigger: 'git.branch_created',

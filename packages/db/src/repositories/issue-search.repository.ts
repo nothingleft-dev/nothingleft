@@ -10,6 +10,8 @@ import type { Queryable } from '../client.ts';
 import {
   custom_field_options,
   custom_fields,
+  git_repositories,
+  project_repositories,
   issue_types,
   issues,
   org_members,
@@ -492,6 +494,29 @@ export function issueSearchRepository(db: Queryable) {
               and(eq(sprints.org_id, ctx.orgId), inArray(sprints.project_id, ids), wordMatch(sql`${sprints.name}`)),
             )
             .orderBy(sprints.name)
+            .limit(limit);
+          return rows.map(r => r.name);
+        }
+        case 'repository': {
+          if (ids.length === 0) return [];
+          const rows = await db
+            .selectDistinct({ name: git_repositories.full_name })
+            .from(git_repositories)
+            .innerJoin(
+              project_repositories,
+              and(
+                eq(project_repositories.repository_id, git_repositories.id),
+                eq(project_repositories.org_id, git_repositories.org_id),
+              ),
+            )
+            .where(
+              and(
+                eq(git_repositories.org_id, ctx.orgId),
+                inArray(project_repositories.project_id, ids),
+                sql`lower(${git_repositories.full_name}) like ${`%${like}`}`,
+              ),
+            )
+            .orderBy(git_repositories.full_name)
             .limit(limit);
           return rows.map(r => r.name);
         }

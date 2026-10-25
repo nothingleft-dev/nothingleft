@@ -228,6 +228,23 @@ so this does not breed near-duplicates.
 - A report never shows an issue you could not open yourself: it is limited to what you can
   read before anything is counted ([Reports](./reports.md)).
 
+### Development
+
+| Capability                                                   | Observer | Contributor | Project Admin | Org Admin | Org Owner |
+| ------------------------------------------------------------ | :------: | :---------: | :-----------: | :-------: | :-------: |
+| See an issue's branches, commits and pull requests           |    ✅    |     ✅      |      ✅       |    ✅     |    ✅     |
+| See the project's repositories and automations, and their runs |    ✅    |     ✅      |      ✅       |    ✅     |    ✅     |
+| Link or unlink a pull request by hand                        |    ❌    |     ✅      |      ✅       |    ✅     |    ✅     |
+| Link and unlink repositories to the project                  |    ❌    |     ❌      |      ✅       |    ✅     |    ✅     |
+| Create, change, test and delete automations                  |    ❌    |     ❌      |      ✅       |    ✅     |    ✅     |
+| Connect and disconnect GitHub or GitLab, read the delivery log |    ❌    |     ❌      |      ❌       |    ✅     |    ✅     |
+| Remove a member's claimed git login                          |    ❌    |     ❌      |      ❌       |    ✅     |    ✅     |
+
+- Connecting an account carries a token or the provider's install, so it is done in the browser,
+  never with an access token.
+- A pull request linked by hand must come from a repository the issue's project can reference
+  ([Development](./git.md)).
+
 ### Your own account
 
 Whatever your roles, you can:
@@ -239,7 +256,9 @@ Whatever your roles, you can:
 - see and sign out your signed-in devices;
 - choose your notification settings, and read and mark your notifications;
 - deactivate your account;
-- accept or decline ownership of an organisation offered to you.
+- accept or decline ownership of an organisation offered to you;
+- add and remove your git identities, the logins and commit emails that make your work show as
+  yours ([Development](./git.md#who-wrote-it)).
 
 The Org Owner cannot deactivate their account while their organisation still exists. Erasing
 an account is not self-service: you, or an Org Admin on your behalf, email admin@nothingleft.dev

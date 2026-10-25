@@ -1,6 +1,8 @@
 import type { Analytics } from '@nothingleft/analytics';
+import { formatCalendarDate } from '@nothingleft/format';
 import { t } from '@nothingleft/i18n';
 import {
+  GIT_TOKEN_EXPIRY_WARNING_DAYS,
   planLimits,
   type CreateGitConnection,
   type GitConnection,
@@ -13,13 +15,15 @@ import {
   type OrgPlan,
   type Principal,
 } from '@nothingleft/types';
-import type {
-  GitConnectionRow,
-  GitConnectionsRepository,
-  GitRepositoriesRepository,
-  OrganizationsRepository,
-  RepositoryCounts,
-  TenantContext,
+import {
+  systemContext,
+  tenantContext,
+  type GitConnectionRow,
+  type GitConnectionsRepository,
+  type GitRepositoriesRepository,
+  type OrganizationsRepository,
+  type RepositoryCounts,
+  type TenantContext,
 } from '@nothingleft/db';
 import { GIT_CONNECT_STATE_TTL_SECONDS } from '@config/constants';
 import { issueHookId, issueHookSecret, randomToken } from '@lib/crypto';
@@ -216,6 +220,25 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
     }
   }
 
+  async function warnExpiring(ctx: TenantContext, row: GitConnectionRow) {
+    const org = await organizations.findById(ctx);
+    if (!org || !row.token_expires_at) return;
+    for (const admin of await organizations.listAdmins(ctx)) {
+      await deps.mailer.send({
+        to: admin.user.email,
+        subject: 'email.git_token_expiring.subject',
+        body: 'email.git_token_expiring.body',
+        params: {
+          name: admin.user.name,
+          org: org.name,
+          connection: nameOf(row),
+          date: formatCalendarDate(row.token_expires_at.toISOString().slice(0, 10)),
+          url: `${deps.appBaseUrl}/organization?tab=integrations`,
+        },
+      });
+    }
+  }
+
   /**
    * Moves a live connection into a problem state. Only the call that changes it records the
    * audit row and emails the Org Admins, so a stream of failures sends one email.
@@ -316,6 +339,29 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
     markProblem,
     markHealthy,
     markUninstalled,
+
+    /**
+     * Hourly: a token that expires within the warning window tells the Org Admins once; one that
+     * has expired moves the connection to `token_expired`, which tells them again.
+     */
+    async checkTokenExpiry(at = now()): Promise<number> {
+      const horizon = new Date(at.getTime() + GIT_TOKEN_EXPIRY_WARNING_DAYS * 24 * 60 * 60 * 1000);
+      let changed = 0;
+      for (const row of await connections.expiringAll(
+        systemContext('token expiry spans every organisation'),
+        horizon,
+      )) {
+        const ctx = tenantContext(row.org_id);
+        if (row.token_expires_at! <= at) {
+          if (row.status !== 'token_expired' && (await markProblem(ctx, row, 'token_expired', 'token_expired')))
+            changed++;
+        } else if (!row.token_warned_at && (await connections.markWarned(ctx, row.id, at))) {
+          await warnExpiring(ctx, row);
+          changed++;
+        }
+      }
+      return changed;
+    },
 
     catalogue(): GitProviderInfo[] {
       return [...providers.values()].map(p => {
@@ -565,6 +611,9 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
               account_avatar_url: described.account.avatar_url,
               account_url: described.account.url,
               token_expires_at: described.token_expires_at,
+              ...(described.token_expires_at?.getTime() !== row.token_expires_at?.getTime()
+                ? { token_warned_at: null }
+                : {}),
             },
             now(),
           )) ?? row;

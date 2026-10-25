@@ -9,12 +9,15 @@ import type {
   Issue,
   IssueDevelopment,
   GitConnection,
+  GitIdentity,
+  MemberGitIdentity,
   GitProviderInfo,
   GitRepository,
   GitWebhookEvent,
   GitWebhookEventDetail,
   ProjectRepository,
 } from '@nothingleft/types';
+import { GitProviderKindSchema, type GitProviderKind } from '@nothingleft/types';
 import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { defineTool, type ToolContext } from '../tool.ts';
@@ -734,5 +737,160 @@ export const unlinkPullRequest = defineTool({
       scope(args.org),
     );
     return { markdown: `Unlinked ${code(pr.ref)} from ${key}.` };
+  },
+});
+
+function identityLine(i: GitIdentity): string[] {
+  return [
+    i.provider + (i.base_url === `https://${i.provider}.com` ? '' : ` (${i.base_url})`),
+    i.login ? code(i.login) : (i.email ?? ''),
+    i.pending ? 'waiting for the emailed link' : i.verified_by === 'claim' ? 'claimed' : `verified by ${i.verified_by}`,
+  ];
+}
+
+export const listGitIdentities = defineTool({
+  name: 'list_git_identities',
+  title: 'List git identities',
+  description:
+    "Your provider logins and commit emails, which attribute commits and pull requests to you; never used to sign in. With `all_members: true`, every member's in the organisation, for an Org Admin with a token holding admin:org.",
+  input: z.strictObject({
+    all_members: z.boolean().optional().describe("Every member's identities instead of yours."),
+    org: arg.org,
+  }),
+  kind: 'read',
+  endpoints: ['GET /v1/me/git-identities', 'GET /v1/organizations', 'GET /v1/organizations/{slug}/git/identities'],
+  async run(ctx, args) {
+    const headers = ['Provider', 'Login or email', 'State'];
+    if (args.all_members) {
+      const org = await orgOf(ctx, args.org);
+      const { data } = await ctx.api.get<MemberGitIdentity[]>(path`/v1/organizations/${org.slug}/git/identities`);
+      return {
+        markdown: data.length
+          ? table(
+              ['Member', ...headers],
+              data.map(i => [handle(i.member.username), ...identityLine(i)]),
+            )
+          : `No member of **${org.name}** has a git identity yet.`,
+      };
+    }
+    const { data } = await ctx.api.get<GitIdentity[]>('/v1/me/git-identities');
+    return {
+      markdown: data.length
+        ? table(headers, data.map(identityLine))
+        : 'You have no git identities. Add your provider login or commit email with claim_git_identity.',
+    };
+  },
+});
+
+export const claimGitIdentity = defineTool({
+  name: 'claim_git_identity',
+  title: 'Claim a git identity',
+  description:
+    'Says a provider login or a commit email is yours, so what it wrote shows as yours. A login counts at once (an Org Admin can remove a wrong one); an email gets a link at that address and counts once it is followed - unless it is your own verified address. Works with any token scope.',
+  input: z.strictObject({
+    provider: GitProviderKindSchema,
+    login: z.string().trim().min(1).max(100).optional().describe('Your login there, e.g. "alex-lee".'),
+    email: z.email().max(254).optional().describe('An address your commits are written with.'),
+    base_url: z
+      .url({ protocol: /^https$/ })
+      .optional()
+      .describe('A self-managed host, e.g. "https://git.acme.example". Left out, the public one.'),
+  }),
+  kind: 'write',
+  endpoints: ['POST /v1/me/git-identities'],
+  async run(ctx, args) {
+    if ((args.login === undefined) === (args.email === undefined)) {
+      throw ToolError.local(
+        'mcp.invalid_arguments',
+        { tool: 'claim_git_identity' },
+        { hints: ['Pass either `login` or `email`.'] },
+      );
+    }
+    const { data } = await ctx.api.send<GitIdentity[]>('POST', '/v1/me/git-identities', { body: args });
+    const added = data.find(i =>
+      args.login ? i.login === args.login.replace(/^@/, '') : i.email === args.email!.toLowerCase(),
+    );
+    return {
+      markdown: added?.pending
+        ? `A link went to ${args.email}. The address counts once you follow it.`
+        : `Added. What ${args.login ? code(args.login) : args.email} wrote now shows as yours.`,
+    };
+  },
+});
+
+/** The identity a login or email names, among yours or (with `member`) that member's. */
+async function findIdentity(
+  ctx: ToolContext,
+  args: {
+    identity: string;
+    provider?: GitProviderKind | undefined;
+    member?: string | undefined;
+    org?: string | undefined;
+  },
+): Promise<{ id: number; slug: string | null; shown: string }> {
+  const wanted = args.identity.trim().replace(/^@/, '').toLowerCase();
+  let rows: GitIdentity[];
+  let slug: string | null = null;
+  if (args.member) {
+    const org = await orgOf(ctx, args.org);
+    slug = org.slug;
+    const member = args.member.trim().replace(/^@/, '').toLowerCase();
+    const { data } = await ctx.api.get<MemberGitIdentity[]>(path`/v1/organizations/${org.slug}/git/identities`);
+    rows = data.filter(i => i.member.username.toLowerCase() === member);
+  } else {
+    rows = (await ctx.api.get<GitIdentity[]>('/v1/me/git-identities')).data;
+  }
+  const name = (i: GitIdentity) => (i.login ?? i.email ?? '').toLowerCase();
+  const matches = rows.filter(i => name(i) === wanted && (!args.provider || i.provider === args.provider));
+  if (matches.length !== 1) {
+    throw ToolError.local(
+      'git.identity_not_found',
+      {},
+      {
+        field: 'identity',
+        valid_values: rows.map(i => `${i.provider}:${i.login ?? i.email}`),
+        ...(matches.length > 1 ? { hints: ['Pass `provider` too: the login is held at both.'] } : {}),
+      },
+    );
+  }
+  return { id: matches[0]!.id, slug, shown: args.identity };
+}
+
+const identityInput = z.strictObject({
+  identity: z.string().trim().min(1).max(254).describe('The login or email, e.g. "alex-lee" or "alex@work.example".'),
+  provider: GitProviderKindSchema.optional().describe('Only when the same login is held at both.'),
+  member: arg.person.optional().describe("A member's identity, removed as an Org Admin: their username."),
+  org: arg.org,
+});
+
+export const removeGitIdentity = defineTool({
+  name: 'remove_git_identity',
+  title: 'Remove a git identity',
+  description:
+    "Removes one of your git identities by its login or email, or with `member`, an Org Admin removes a member's claimed login (a token with admin:org; never a verified email). What it matched goes back to the provider's login. Asks you to confirm before acting.",
+  input: identityInput,
+  kind: 'destructive',
+  endpoints: [
+    'GET /v1/me/git-identities',
+    'DELETE /v1/me/git-identities/{id}',
+    'GET /v1/organizations',
+    'GET /v1/organizations/{slug}/git/identities',
+    'DELETE /v1/organizations/{slug}/git/identities/{id}',
+  ],
+  async describeAction(ctx, args) {
+    const found = await findIdentity(ctx, args);
+    return t('mcp.action.git_identity_remove', { identity: found.shown });
+  },
+  async run(ctx, args) {
+    const found = await findIdentity(ctx, args);
+    if (found.slug) {
+      await ctx.api.send<MemberGitIdentity[]>(
+        'DELETE',
+        path`/v1/organizations/${found.slug}/git/identities/${String(found.id)}`,
+      );
+    } else {
+      await ctx.api.send<GitIdentity[]>('DELETE', path`/v1/me/git-identities/${String(found.id)}`);
+    }
+    return { markdown: `Removed the git identity ${code(found.shown)}.` };
   },
 });

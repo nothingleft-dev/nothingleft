@@ -1404,6 +1404,43 @@ Applies a stored delivery again, in order with the repository's other deliveries
 | `run_automations` | boolean |  | Let what the replay changes fire automations. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
+### `list_git_identities`
+
+Your provider logins and commit emails, which attribute commits and pull requests to you; never used to sign in. With `all_members: true`, every member's in the organisation, for an Org Admin with a token holding admin:org.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `all_members` | boolean |  | Every member's identities instead of yours. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `claim_git_identity`
+
+Says a provider login or a commit email is yours, so what it wrote shows as yours. A login counts at once (an Org Admin can remove a wrong one); an email gets a link at that address and counts once it is followed - unless it is your own verified address. Works with any token scope.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `provider` | `github` · `gitlab` | yes |  |
+| `login` | string |  | Your login there, e.g. "alex-lee". |
+| `email` | string |  | An address your commits are written with. |
+| `base_url` | string |  | A self-managed host, e.g. "https://git.acme.example". Left out, the public one. |
+
+### `remove_git_identity`
+
+Removes one of your git identities by its login or email, or with `member`, an Org Admin removes a member's claimed login (a token with admin:org; never a verified email). What it matched goes back to the provider's login. Asks you to confirm before acting.
+
+*Changes data; asks you to confirm in your MCP client first.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `identity` | string | yes | The login or email, e.g. "alex-lee" or "alex@work.example". |
+| `provider` | `github` · `gitlab` |  | Only when the same login is held at both. |
+| `member` | string |  | A member's identity, removed as an Org Admin: their username. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
 ## Automations
 
 ### `list_automations`

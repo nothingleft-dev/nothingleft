@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import type { Queryable } from '../client.ts';
 import {
   git_branches,
@@ -22,7 +22,69 @@ export type PullRequestInput = Omit<NewGitPullRequestRow, 'id' | 'org_id' | 'rep
 export type CheckInput = Omit<NewGitCheckRow, 'id' | 'org_id' | 'repository_id'>;
 
 /** Branches, commits, pull requests and checks: what a repository's deliveries describe. */
+export interface AuthorIdentity {
+  provider: string;
+  base_url: string;
+  login: string | null;
+  email: string | null;
+}
+
 export function gitEntitiesRepository(db: Queryable) {
+  async function setAuthors(
+    ctx: TenantContext,
+    identity: AuthorIdentity,
+    change: { from: number | null; to: number | null },
+  ): Promise<number> {
+    const onProvider = (repositoryId: SQL) =>
+      sql`${repositoryId} in (select r.id from git_repositories r join git_connections k on k.id = r.connection_id and k.org_id = r.org_id where r.org_id = ${ctx.orgId} and k.provider = ${identity.provider} and k.base_url = ${identity.base_url})`;
+    const holds = (column: SQL) => (change.from === null ? sql`${column} is null` : sql`${column} = ${change.from}`);
+    const login = identity.login;
+    let n = 0;
+    const commitMatch = or(
+      login
+        ? and(sql`lower(${git_commits.author_login}) = lower(${login})`, onProvider(sql`${git_commits.repository_id}`))
+        : undefined,
+      identity.email ? sql`lower(${git_commits.author_email}) = lower(${identity.email})` : undefined,
+    );
+    if (commitMatch) {
+      const rows = await db
+        .update(git_commits)
+        .set({ author_user_id: change.to })
+        .where(and(eq(git_commits.org_id, ctx.orgId), holds(sql`${git_commits.author_user_id}`), commitMatch))
+        .returning({ id: git_commits.id });
+      n += rows.length;
+    }
+    if (login) {
+      const onRepo = onProvider(sql`${git_pull_requests.repository_id}`);
+      const authored = await db
+        .update(git_pull_requests)
+        .set({ author_user_id: change.to })
+        .where(
+          and(
+            eq(git_pull_requests.org_id, ctx.orgId),
+            holds(sql`${git_pull_requests.author_user_id}`),
+            sql`lower(${git_pull_requests.author_login}) = lower(${login})`,
+            onRepo,
+          ),
+        )
+        .returning({ id: git_pull_requests.id });
+      const merged = await db
+        .update(git_pull_requests)
+        .set({ merged_by_user_id: change.to })
+        .where(
+          and(
+            eq(git_pull_requests.org_id, ctx.orgId),
+            holds(sql`${git_pull_requests.merged_by_user_id}`),
+            sql`lower(${git_pull_requests.merged_by_login}) = lower(${login})`,
+            onRepo,
+          ),
+        )
+        .returning({ id: git_pull_requests.id });
+      n += authored.length + merged.length;
+    }
+    return n;
+  }
+
   return {
     async upsertBranch(
       ctx: TenantContext,
@@ -311,6 +373,19 @@ export function gitEntitiesRepository(db: Queryable) {
           and(eq(git_checks.org_id, ctx.orgId), eq(git_checks.repository_id, repositoryId), eq(git_checks.sha, sha)),
         )
         .orderBy(git_checks.name);
+    },
+
+    /**
+     * Attributes this organisation's unattributed commits and pull requests to `userId` where the
+     * identity matches: its login on that provider, or its email on any commit.
+     */
+    async rematchAuthors(ctx: TenantContext, userId: number, identity: AuthorIdentity): Promise<number> {
+      return setAuthors(ctx, identity, { from: null, to: userId });
+    },
+
+    /** The reverse, when the identity is removed: what it attributed goes back to the provider's login. */
+    async unmatchAuthors(ctx: TenantContext, userId: number, identity: AuthorIdentity): Promise<number> {
+      return setAuthors(ctx, identity, { from: userId, to: null });
     },
 
     /** Erasure: what the provider recorded stays, the link to the erased account goes. */

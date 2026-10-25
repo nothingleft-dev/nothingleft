@@ -29,6 +29,13 @@
       "when": 1792905053001,
       "tag": "0003_automations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792908737562,
+      "tag": "0004_git_polish",
+      "breakpoints": true
     }
   ]
 }

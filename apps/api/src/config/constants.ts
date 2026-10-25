@@ -127,3 +127,4 @@ export const GIT_CONNECT_STATE_TTL_SECONDS = 10 * 60;
 export const GIT_PURGE_BATCH = 5_000;
 export const JOB_GIT_PURGE_CRON = '20 3 * * *'; // nightly, 03:20 UTC: git.purge
 export const JOB_GIT_RECONCILE_CRON = '40 2 * * *'; // nightly, 02:40 UTC: git.reconcile
+export const JOB_GIT_TOKEN_EXPIRY_CRON = '10 * * * *'; // hourly at :10: git.token_expiry

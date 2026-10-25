@@ -35,6 +35,28 @@ export function oneTimeTokensRepository(db: Queryable) {
       return row;
     },
 
+    /** Tokens of one purpose issued to the account since `since`, optionally for one address. */
+    async countRecent(
+      _ctx: SystemContext,
+      userId: number,
+      purpose: OneTimeTokenPurpose,
+      since: Date,
+      newEmail?: string,
+    ): Promise<number> {
+      const [row] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(one_time_tokens)
+        .where(
+          and(
+            eq(one_time_tokens.user_id, userId),
+            eq(one_time_tokens.purpose, purpose),
+            gt(one_time_tokens.created_at, since),
+            newEmail === undefined ? undefined : sql`lower(${one_time_tokens.new_email}) = lower(${newEmail})`,
+          ),
+        );
+      return row?.n ?? 0;
+    },
+
     async deleteForUser(_ctx: SystemContext, userId: number, purpose: OneTimeTokenPurpose): Promise<void> {
       await db
         .delete(one_time_tokens)

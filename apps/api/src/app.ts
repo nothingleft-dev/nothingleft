@@ -123,6 +123,7 @@ import exportsRoutes from '@routes/exports';
 import gitRoutes from '@routes/git';
 import gitWebhookRoutes from '@routes/git-webhooks';
 import automationsRoutes from '@routes/automations';
+import gitIdentitiesRoutes from '@routes/git-identities';
 import { accessService } from '@services/access';
 import { activityService } from '@services/activity.service';
 import { invitationsService } from '@services/invitations.service';
@@ -166,6 +167,7 @@ import { developmentReader } from '@services/git-development';
 import { gitDevelopmentService } from '@services/git-development.service';
 import { gitLinksService } from '@services/git-links.service';
 import { automationsService } from '@services/automations.service';
+import { gitIdentitiesService } from '@services/git-identities.service';
 import { twoFactorService } from '@services/two-factor.service';
 import { authService } from '@services/auth.service';
 import { meService } from '@services/me.service';
@@ -456,6 +458,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     savedViews: repos.savedViews,
     recentSearches: repos.recentSearches,
     customFields: repos.customFields,
+    gitLinks: repos.gitLinks,
     analytics,
   });
   const development = developmentReader({ links: repos.gitLinks, entities: repos.gitEntities });
@@ -703,6 +706,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     masterKey: encryptionMasterKey(env),
     appBaseUrl: env.APP_BASE_URL,
     automations: () => automations,
+    analytics,
   });
   const automations = automationsService({
     access,
@@ -716,6 +720,19 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     repositories: repos.gitRepositories,
     inTransaction: inTenantTransaction,
     analytics,
+  });
+  const gitIdentities = gitIdentitiesService({
+    access,
+    identities: repos.gitIdentities,
+    entities: repos.gitEntities,
+    users: repos.users,
+    organizations: repos.organizations,
+    oneTimeTokens: repos.oneTimeTokens,
+    providers: gitProviders,
+    mailer: bestEffort(mailer, error => analytics.captureException(error)),
+    queue: () => queue,
+    analytics,
+    appBaseUrl: env.APP_BASE_URL,
   });
   const gitRepositories = gitRepositoriesService({
     linker: gitLinker,
@@ -758,6 +775,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     reader: development,
     linker: gitLinker,
     inTransaction: inTenantTransaction,
+    analytics,
   });
   const services = {
     auth: authSvc,
@@ -973,6 +991,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   });
   await app.register(gitWebhookRoutes, { ingest: gitIngest, ...(opts.now ? { now: opts.now } : {}) });
   await app.register(automationsRoutes, { automations });
+  await app.register(gitIdentitiesRoutes, { identities: gitIdentities });
   await app.register(mcpRoutes, {
     apiBaseUrl: env.MCP_API_BASE_URL ?? `http://127.0.0.1:${env.PORT}`,
     appBaseUrl: env.APP_BASE_URL,
@@ -998,6 +1017,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'git.purge': async now =>
       (await gitIngest.purge(now)) + (await gitLinker.purge(now)) + (await automations.purge(now)),
     'git.reconcile': now => gitRepositories.reconcileAll(now),
+    'git.token_expiry': now => gitConnections.checkTokenExpiry(now),
   };
   const queuedHandlers: QueuedHandlers = {
     'notify.fanout': (job, now) => fanout.fanout(job, now),
@@ -1007,6 +1027,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'export.org': (job, now) => exports.run(job, now),
     'git.process_events': (job, now) => gitIngest.drain(job, now),
     'git.backfill': job => gitRepositories.backfill(job),
+    'git.rematch_authors': job => gitIdentities.rematchAuthors(job.user_id),
   };
   // Route tests run a job the way the schedule would, without pg-boss.
   app.decorate('jobHandlers', jobHandlers);

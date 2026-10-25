@@ -7592,6 +7592,96 @@ paths:
                       data: { $ref: '#/components/schemas/GitPullRequestDetail' }
         '404': { description: '`git.pull_request_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
 
+  /v1/me/git-identities:
+    get:
+      summary: Your git identities
+      description: |
+        Any signed-in person; any token scope. The provider logins and commit emails that attribute
+        commits and pull requests to you. Never used to sign in.
+      tags: [git]
+      responses:
+        '200': { $ref: '#/components/responses/GitIdentities' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      summary: Claim a login or a commit email
+      description: |
+        `login` or `email`, not both. A login counts at once (`verified_by: claim`); an Org Admin
+        can remove a wrong one. An email is `pending` until the link sent to that address is
+        followed (`POST /v1/git/identities/confirm`), unless it is the account's own verified
+        address. Either queues `git.rematch_authors`, which attributes what the identity already
+        wrote, in every organisation the account belongs to.
+      tags: [git]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ClaimGitIdentity' } } }
+      responses:
+        '201': { $ref: '#/components/responses/GitIdentities' }
+        '400': { description: '`validation_failed`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.identity_taken`: another account holds that login, or verified that address.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '429': { description: '`git.identity_links_limited`: five confirmation links an hour. A second claim of the same address within ten minutes sends nothing new.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/me/git-identities/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    delete:
+      summary: Remove one of your git identities
+      description: What it matches goes back to the provider's login, then the account's other identities and verified address are matched again. Answers what is left.
+      tags: [git]
+      responses:
+        '200': { $ref: '#/components/responses/GitIdentities' }
+        '404': { description: '`git.identity_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/git/identities/confirm:
+    post:
+      x-mcp-exempt: email_link
+      summary: Follow the link that verifies a commit email
+      description: The token from the email is the proof, so no session is needed. Valid for 24 hours, once.
+      tags: [git]
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string } } } } }
+      responses:
+        '200':
+          description: The verified identity.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/GitIdentity' }
+        '400': { description: '`auth.invalid_token`, `auth.token_expired`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.identity_taken`: someone else verified the address first.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/identities:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+    get:
+      summary: The members' git identities
+      description: Org Admins and the Owner; a token needs `admin:org`. Live members only, verified identities only (a pending email is the person's business).
+      tags: [git]
+      responses:
+        '200': { $ref: '#/components/responses/MemberGitIdentities' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/organizations/{slug}/git/identities/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    delete:
+      summary: Remove a member's git identity
+      description: |
+        Org Admins and the Owner; a token needs `admin:org`. Only a claimed login (`verified_by:
+        claim`), for one that is not theirs; a verified email is the person's to remove. The
+        identity belongs to the account, so it goes in every organisation; what it matches goes
+        back to the provider's login.
+      tags: [git]
+      responses:
+        '200': { $ref: '#/components/responses/MemberGitIdentities' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`git.identity_not_found`: no such claimed login of a live member.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
   /v1/automations/catalogue:
     get:
       summary: The triggers, conditions and actions an automation can use
@@ -10285,6 +10375,34 @@ components:
         - $ref: '#/components/schemas/SuccessEnvelope'
         - properties:
             data: { $ref: '#/components/schemas/GitRepository' }
+    GitIdentity:
+      type: object
+      required: [id, provider, base_url, login, email, verified_by, verified_at, pending, created_at]
+      properties:
+        id: { type: integer }
+        provider: { type: string, enum: [github, gitlab] }
+        base_url: { type: string, example: 'https://github.com' }
+        login: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+        verified_by: { type: string, enum: [provider, email, claim] }
+        verified_at: { type: [string, 'null'], format: date-time }
+        pending: { type: boolean, description: An email claim waiting for its link; it matches nothing yet. }
+        created_at: { type: string, format: date-time }
+    MemberGitIdentity:
+      allOf:
+        - $ref: '#/components/schemas/GitIdentity'
+        - type: object
+          required: [member]
+          properties:
+            member: { $ref: '#/components/schemas/MemberRef' }
+    ClaimGitIdentity:
+      type: object
+      required: [provider]
+      properties:
+        provider: { type: string, enum: [github, gitlab] }
+        base_url: { type: string, format: uri, description: 'A self-managed host; left out, the public one.' }
+        login: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
     Automation:
       type: object
       required: [name, trigger, conditions, action, action_params, is_enabled, position, sentence, status_missing, last_run_at, runs, created_by, updated_by, created_at, updated_at]
@@ -10827,6 +10945,24 @@ components:
               token: { type: string, minLength: 1, maxLength: 200 }
 
   responses:
+    GitIdentities:
+      description: Your git identities.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/GitIdentity' } }
+    MemberGitIdentities:
+      description: The members' git identities.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/MemberGitIdentity' } }
     AutomationRuns:
       description: One page of runs, with `meta.pagination`.
       content:

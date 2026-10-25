@@ -161,6 +161,8 @@ likely to change:
 | `GOOGLE_CLIENT_ID`, `GITHUB_CLIENT_ID` and secret | Sign-in with Google or GitHub. Register `APP_BASE_URL/auth/google/callback` (or `github`) with the provider |
 | `FREE_SEAT_LIMIT`, `FREE_STORAGE_BYTES`           | The member count at which the seat notice starts, and each organisation's storage limit ([Limits and billing](./limits-and-billing.md#self-hosting)) |
 | `ASSET_BASE_URL`                                  | Where the logo in emails loads from. Unset, it loads from the hosted service's public assets |
+| `GITHUB_APP_*`                                    | Your own GitHub App, so organisations connect GitHub in one click ([below](#connect-github-and-gitlab)) |
+| `GIT_ALLOW_PRIVATE_HOSTS`                         | `true` lets organisations connect a GitLab or GitHub Enterprise on your private network |
 
 Product analytics and error reports are off unless you set `POSTHOG_KEY` and turn them on. The
 [environment reference](https://github.com/nothingleft-dev/nothingleft/blob/main/docs/infrastructure.md#environment-configuration)
@@ -169,6 +171,46 @@ lists every variable the API reads.
 After changing `infra/docker/.env`, run the start command again. Compose restarts what changed;
 add `--build` when an address in `APP_BASE_URL`, `API_BASE_URL` or `SUPPORT_EMAIL` changed, since
 the web image carries them.
+
+## Connect GitHub and GitLab
+
+Organisations link repositories so branches, commits and pull requests show on their issues
+([Development](./git.md)).
+
+**GitLab** needs nothing from you: an Org Admin pastes a group or project access token, and the
+server registers its webhooks. A self-managed GitLab on a private network also needs
+`GIT_ALLOW_PRIVATE_HOSTS=true`.
+
+**GitHub** connects in one click once you register a GitHub App for your install. Without one,
+GitHub still works in manual mode: an Org Admin adds a webhook to each repository by hand.
+
+To create the app, open GitHub → **Settings → Developer settings → GitHub Apps → New GitHub App**
+(under your organisation's settings to own it there):
+
+| Field | Value |
+| --- | --- |
+| Callback URL | `APP_BASE_URL/git/connect/github/callback` |
+| Request user authorization (OAuth) during installation | On |
+| Setup URL | the same address, with **Redirect on update** on |
+| Webhook URL | `API_BASE_URL/v1/git/webhooks/github` |
+| Webhook secret | A random string of 16 characters or more |
+| Repository permissions | Metadata, Contents, Pull requests, Checks and Commit statuses: **Read-only** |
+| Subscribe to events | Push, Create, Delete, Pull request, Pull request review, Check run, Status, Repository (installation events arrive without subscribing) |
+| Where can this app be installed | **Any account**, unless only your own organisation will use it |
+
+Then generate a private key and set six values in `infra/docker/.env`:
+
+| Setting | From |
+| --- | --- |
+| `GITHUB_APP_ID` | The app's page: *App ID* |
+| `GITHUB_APP_SLUG` | The last part of the app's public address, `github.com/apps/<slug>` |
+| `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET` | The app's client ID, and a client secret you generate |
+| `GITHUB_APP_WEBHOOK_SECRET` | The webhook secret you chose |
+| `GITHUB_APP_PRIVATE_KEY` | The downloaded `.pem`, on one line with `\n` for each line break |
+
+Set all six or none: the API refuses to start with some. For GitHub Enterprise Server, create the
+app there and set `GITHUB_APP_BASE_URL` to its address. The app is not the one used for signing in
+with GitHub (`GITHUB_CLIENT_ID`); keep them separate.
 
 ## Who can sign up
 

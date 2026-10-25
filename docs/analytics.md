@@ -271,6 +271,9 @@ asked for) and `git_event_failed` (the provider and the failure reason, one of
 `GIT_EVENT_FAILURES`). Never a repository, an account login, a branch, a title, a commit message
 or a URL; the delivery log that holds those stays in the database.
 
+`git_link_created` (the source that found it, e.g. `pr_title` or `manual`, and what it links: branch,
+commit or pull request) and `git_identity_claimed` (the provider; login or email).
+
 Automations (third milestone): `automation_created` (the trigger and action keys) and
 `automation_run` (the trigger and `applied`, once per change an automation makes). Never a rule's
 name, a status name or the cause.

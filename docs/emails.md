@@ -81,6 +81,8 @@ Transactional, to the Org Admins and the Owner (7).
 | Key | Subject | Tokens | Purpose |
 |---|---|---|---|
 | `email.git_connection_attention` | Fix the git connection {connection} | `name`, `org`, `connection`, `reason`, `url` | A connection moved into a problem state: deliveries failing the signature check (50 in an hour), deliveries failing to apply after five attempts, a token refused or expired, the installation suspended or the app uninstalled at the provider. `reason` is one line from `git.connection_reason.*`. Sent once per change of state, by whatever found out, never per failed delivery; nothing is sent when it recovers. |
+| `email.git_token_expiring` | The token for {connection} expires {date} | `name`, `org`, `connection`, `date`, `url` | To each Org Admin, once, when a connection's access token expires within 7 days (`git.token_expiry`, hourly). Sent again only if the expiry moves. When it does expire, `email.git_connection_attention` follows. |
+| `email.git_identity_verify` | Confirm {email} for your commits | `name`, `email`, `url` | To the address a person claims as their commit email; the link (24 hours, once) makes the claim count. Not sent for the account's own verified address. |
 
 ## Organisation export
 

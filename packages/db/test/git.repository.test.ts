@@ -112,6 +112,20 @@ describe('gitConnectionsRepository tenant isolation', () => {
   });
 });
 
+describe('gitConnectionsRepository token expiry', () => {
+  test('the warning is stamped once, in its own organisation only', async () => {
+    await inRolledBackTx(async tx => {
+      const c = gitConnectionsRepository(tx);
+      const { ctxA, ctxB, connA } = await seedGit(tx);
+      await c.update(ctxA, connA.id, { token_expires_at: new Date(at.getTime() + 86_400_000) }, at);
+      expect((await c.expiringAll(sys, new Date(at.getTime() + 2 * 86_400_000))).map(r => r.id)).toContain(connA.id);
+      expect(await c.markWarned(ctxB, connA.id, at)).toBeUndefined();
+      expect((await c.markWarned(ctxA, connA.id, at))?.token_warned_at).toEqual(at);
+      expect(await c.markWarned(ctxA, connA.id, at)).toBeUndefined();
+    });
+  });
+});
+
 describe('gitRepositoriesRepository tenant isolation', () => {
   test('discovery, lookups, lists and updates never reach another organisation', async () => {
     await inRolledBackTx(async tx => {

@@ -1,7 +1,7 @@
-import { and, asc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import type { Queryable } from '../client.ts';
-import { git_identities, type GitIdentityRow, type NewGitIdentityRow } from '../schema/index.ts';
-import type { SystemContext } from '../tenant-context.ts';
+import { git_identities, org_members, type GitIdentityRow, type NewGitIdentityRow } from '../schema/index.ts';
+import type { SystemContext, TenantContext } from '../tenant-context.ts';
 
 /**
  * A person's provider logins and emails. Like `users`, an identity has no organisation: the
@@ -54,6 +54,40 @@ export function gitIdentitiesRepository(db: Queryable) {
         .from(git_identities)
         .where(and(sql`lower(${git_identities.email}) = lower(${email})`, isNotNull(git_identities.verified_at)));
       return row;
+    },
+
+    async findById(_ctx: SystemContext, id: number): Promise<GitIdentityRow | undefined> {
+      const [row] = await db.select().from(git_identities).where(eq(git_identities.id, id));
+      return row;
+    },
+
+    /** The account's own claim of that address, verified or waiting for its link. */
+    async findOwnEmail(_ctx: SystemContext, userId: number, email: string): Promise<GitIdentityRow | undefined> {
+      const [row] = await db
+        .select()
+        .from(git_identities)
+        .where(and(eq(git_identities.user_id, userId), sql`lower(${git_identities.email}) = lower(${email})`));
+      return row;
+    },
+
+    async markVerified(_ctx: SystemContext, id: number, at: Date): Promise<GitIdentityRow | undefined> {
+      const [row] = await db
+        .update(git_identities)
+        .set({ verified_at: at })
+        .where(and(eq(git_identities.id, id), isNull(git_identities.verified_at)))
+        .returning();
+      return row;
+    },
+
+    /** The identities of the organisation's live members, for its admins. */
+    async listForOrg(ctx: TenantContext): Promise<GitIdentityRow[]> {
+      return db
+        .select({ identity: git_identities })
+        .from(git_identities)
+        .innerJoin(org_members, eq(org_members.user_id, git_identities.user_id))
+        .where(and(eq(org_members.org_id, ctx.orgId), isNull(org_members.removed_at)))
+        .orderBy(asc(git_identities.user_id), asc(git_identities.id))
+        .then(rows => rows.map(r => r.identity));
     },
 
     async listForUser(_ctx: SystemContext, userId: number): Promise<GitIdentityRow[]> {

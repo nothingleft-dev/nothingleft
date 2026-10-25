@@ -96,6 +96,9 @@ export const TOOL_GROUPS: Record<string, readonly ToolName[]> = {
     'resync_repository',
     'list_git_events',
     'replay_git_event',
+    'list_git_identities',
+    'claim_git_identity',
+    'remove_git_identity',
   ],
   Automations: [
     'list_automations',

@@ -233,7 +233,12 @@ has: -description                 -- issues with an empty description
 has: -assignee                    -- unassigned
 has: -estimation
 has: -{due date}
+has: {pull request}               -- a pull request is linked
+has: -development                 -- nothing from git is linked
 ```
+
+The git attributes only count what is linked now: an unlinked pull request, a deleted branch or a
+commit a force push dropped no longer matches. See [Development](./git.md).
 
 ## Numbers and durations
 
@@ -289,6 +294,10 @@ To match issues by their own key: `key: ACME-1, ACME-2`.
 | `work type`    | `work type: Testing`          | The type of logged time                    |
 | `comments`     | `comments: {redirect loop}`   | Text inside comments (exact substring)     |
 | `attachments`  | `attachments: screenshot.png` | Attachment file names (not their contents) |
+| `pull request` | `pull request: Open`          | Issues with a linked pull request in that state: `Open`, `Draft`, `Merged`, `Closed`, or `{No pull request}` |
+| `development`  | `development: {CI failing}`   | The development badge: `Merged`, `{CI failing}`, `{Changes requested}`, `Approved`, `{In review}`, `Draft`, `{Branch active}`, `Reverted`, `None` |
+| `repository`   | `repository: acme/web`        | Issues linked to that repository (`web` alone works too) |
+| `branch`       | `branch: login`               | Part of a linked branch's name             |
 | _custom field_ | `severity: High`              | Any custom field, by its slug              |
 
 ## Custom fields

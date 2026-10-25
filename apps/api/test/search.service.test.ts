@@ -32,6 +32,7 @@ function harness(record: () => Promise<void>) {
       listOptions: none,
       listAppliesTo: none,
     } as unknown as SearchDeps['customFields'],
+    gitLinks: { gitEnabledProjects: async () => new Set<number>() },
     analytics,
   });
   const principal = { via: 'session', userId: 9, sessionId: 1, currentOrgId: 5 } as Principal;

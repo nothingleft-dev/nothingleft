@@ -255,6 +255,7 @@ export const EventCatalogue = {
   }),
   git_repository_linked: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), backfill: z.boolean() }),
   git_event_failed: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), reason: z.enum(GIT_EVENT_FAILURES) }),
+  git_identity_claimed: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), kind: z.enum(['login', 'email']) }),
   automation_created: z.object({ trigger: z.enum(AUTOMATION_TRIGGERS), action: z.enum(AUTOMATION_ACTIONS) }),
   automation_run: z.object({ trigger: z.enum(AUTOMATION_TRIGGERS), result: z.enum(AUTOMATION_RUN_RESULTS) }),
   git_link_created: z.object({

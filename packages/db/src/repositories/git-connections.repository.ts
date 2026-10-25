@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
 import type { GitConnectionStatus } from '@nothingleft/types';
 import type { Queryable } from '../client.ts';
 import { git_connections, type GitConnectionRow, type NewGitConnectionRow } from '../schema/index.ts';
@@ -17,6 +17,7 @@ export type GitConnectionPatch = Partial<
     | 'status'
     | 'last_error'
     | 'token_expires_at'
+    | 'token_warned_at'
   >
 >;
 
@@ -149,6 +150,25 @@ export function gitConnectionsRepository(db: Queryable) {
           ),
         );
       return row;
+    },
+
+    /** Stamps the expiry warning once: only the call that stamps it gets the row, so one email goes out. */
+    async markWarned(ctx: TenantContext, id: number, at: Date): Promise<GitConnectionRow | undefined> {
+      const [row] = await db
+        .update(git_connections)
+        .set({ token_warned_at: at })
+        .where(and(inOrg(ctx), eq(git_connections.id, id), live, isNull(git_connections.token_warned_at)))
+        .returning();
+      return row;
+    },
+
+    /** Live connections whose token expires before `before`, across organisations. */
+    async expiringAll(_ctx: SystemContext, before: Date): Promise<GitConnectionRow[]> {
+      return db
+        .select()
+        .from(git_connections)
+        .where(and(live, lte(git_connections.token_expires_at, before)))
+        .orderBy(asc(git_connections.id));
     },
 
     /** Every live connection, across organisations, for the nightly jobs. */

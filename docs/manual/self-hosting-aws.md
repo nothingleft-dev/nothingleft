@@ -381,6 +381,12 @@ EOF
 To sign in with Google or GitHub, add `GOOGLE_CLIENT_SECRET` or `GITHUB_CLIENT_SECRET` here and
 the client ID to the API's settings in step 10.
 
+To let organisations connect GitHub in one click, register a GitHub App as described in
+[Connect GitHub and GitLab](./self-hosting.md#connect-github-and-gitlab), using your web app's and
+API's addresses. Add `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_SECRET` and
+`GITHUB_APP_WEBHOOK_SECRET` here, and `GITHUB_APP_ID`, `GITHUB_APP_SLUG` and `GITHUB_APP_CLIENT_ID`
+to the API's settings in step 10. Without them GitHub connects in manual mode; GitLab needs nothing.
+
 ## 9. Images
 
 Build both images and push them to ECR. The API image gains the RDS certificate bundle, so the

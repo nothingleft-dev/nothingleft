@@ -284,7 +284,7 @@ How the saved-view rows apply (decided 24 Sep 2026, 1c):
 | Manage automations (create, change, enable, delete, test; replay with automations) | ❌ | ❌ | ✅ | ✅ | ✅ |
 | See the repositories available to link | ❌ | ❌ | ✅ | ✅ | ✅ |
 | Connect and disconnect git accounts, read the delivery log, replay deliveries | ❌ | ❌ | ❌ | ✅ | ✅ |
-| Remove another member's git identity | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Remove another member's claimed git login (never a verified email) | ❌ | ❌ | ❌ | ✅ | ✅ |
 
 How the rows apply (decided 25 Oct 2026, 7). Capabilities `git.read`, `git.link_manual`,
 `project.repositories.manage`, `project.automations.manage`, `git.repositories.list`,

@@ -28,6 +28,8 @@ export const git_connections = pgTable(
     last_error: text(),
     last_event_at: timestamp({ withTimezone: true }),
     token_expires_at: timestamp({ withTimezone: true }),
+    // When the Org Admins were warned the token expires soon; cleared when the expiry moves.
+    token_warned_at: timestamp({ withTimezone: true }),
     created_by: bigint({ mode: 'number' })
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),

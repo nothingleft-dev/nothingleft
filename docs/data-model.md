@@ -350,16 +350,16 @@ purged. They share one table rather than occupying four.
 one_time_tokens(
   id, user_id → users,                -- who the token is for
   purpose: 'password_reset' | 'email_verify' | 'email_change'
-         | 'ownership_transfer',
+         | 'ownership_transfer' | 'git_identity_email',
   token_hash   bytea,                 -- SHA-256; the raw token is never stored
   org_id       → organizations NULL,  -- ownership_transfer only
-  new_email    text NULL,             -- email_change only
+  new_email    text NULL,             -- email_change, git_identity_email (the address claimed)
   created_by   → users NULL,          -- ownership_transfer: the current owner
   expires_at, used_at NULL, created_at,
   UNIQUE (token_hash),
   UNIQUE (org_id) WHERE purpose = 'ownership_transfer' AND used_at IS NULL,
   CHECK (purpose <> 'ownership_transfer' OR (org_id IS NOT NULL AND created_by IS NOT NULL)),
-  CHECK (purpose <> 'email_change' OR new_email IS NOT NULL)
+  CHECK (purpose NOT IN ('email_change', 'git_identity_email') OR new_email IS NOT NULL)
 )
 ```
 
@@ -2281,6 +2281,7 @@ git_connections(
   last_error text NULL CHECK in ('signature','processing','token_invalid','token_expired','suspended','uninstalled'),
   last_event_at timestamptz NULL,
   token_expires_at timestamptz NULL,
+  token_warned_at timestamptz NULL,     -- the Org Admins were told it expires soon; cleared when the expiry moves
   created_by → users, created_at, updated_at,
   revoked_at timestamptz NULL,
   UNIQUE (id, org_id),
@@ -2397,6 +2398,18 @@ the table `target_type` says, so it has no foreign key: `git.purge` deletes a co
 request and its link rows in one statement. `git_identities` has no `org_id`, as `users` has
 none: an identity is a person's, and matches inside an organisation only while its owner is a
 member there.
+
+**Claims** (fourth milestone). A person claims a login (`verified_by = 'claim'`, verified at once;
+an Org Admin can remove a wrong one) or an email (`verified_by = 'email'`, `verified_at` NULL until
+the link sent to that address, a `git_identity_email` one-time token, is followed; the account's
+own verified address needs no link). A pending email matches nothing and blocks nobody: only a
+verified one is unique. A claim queues `git.rematch_authors`, which sets `author_user_id` and
+`merged_by_user_id` on the unattributed commits and pull requests it matches, in every
+organisation the account is in; removing a claim sets back to NULL what it matches, then
+re-matches from the account's remaining identities and verified address. An Org Admin removes only
+a claimed login, never a verified email. Confirmation links are limited to one per address per ten
+minutes and five an hour per account. Reviewers inside `git_pull_requests.reviewers` are matched
+when written and are not re-matched.
 
 **What is stored.** A branch, commit or pull request is stored only when it references an issue
 of a project the repository is linked to (every project of the organisation with

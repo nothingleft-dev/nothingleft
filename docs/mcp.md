@@ -404,7 +404,8 @@ bucket's secret or act on it, all are session only, and three confirm with step-
 ## Built in 7 (git integration)
 
 25 Oct 2026, first milestone (connections): ten tools. Second milestone (links): four more; 109 in
-all. Third milestone (automations): six more and the `why-did-it-change` prompt; 115 in all.
+all. Third milestone (automations): six more and the `why-did-it-change` prompt; 115 in all. Fourth
+milestone (polish): three identity tools; 118 in all.
 
 - **Connections are read and repaired, never created, by an agent.** Connecting carries a
   token or a provider's install flow, so `POST …/git/connections`, the install start and
@@ -432,6 +433,11 @@ all. Third milestone (automations): six more and the `why-did-it-change` prompt;
   since a pull request carries no project key.
 - **`link_pull_request` takes the pull request's URL**; `unlink_pull_request` takes `acme/web#42`,
   finds the link on the issue's panel and asks first. Both `issues:write`, Contributor and up.
+- **Git identities are self-service.** `list_git_identities`, `claim_git_identity` (a login counts at
+  once; an email when its emailed link is followed) and `remove_git_identity` (by the login or
+  email, never an id; confirmation) work
+  with any token scope, like notifications; `all_members: true` and `member: true` are the Org
+  Admin's view and removal (`admin:org`). The emailed link's route is `x-mcp-exempt: email_link`.
 - **Automations are named rules, one sentence each.** `list_automations` shows them in the order
   they run, one in detail with `automation`, the templates with `include: "templates"` and the
   trigger catalogue with `include: "catalogue"`. `create_automation` starts from a `template` or a
@@ -706,7 +712,9 @@ Built in 7 — [§ Built in 7](#built-in-7-git-integration). `get_issue_developm
 `refresh_git_connection`, `remove_git_connection` (confirmation), `resync_repository`,
 `list_git_events`, `replay_git_event` — `admin:org`; `list_repositories`, `link_repository`,
 `update_repository_link`, `unlink_repository` (confirmation) — `admin:project` (reading what is
-linked: `issues:read`). Automations: `list_automations`, `list_automation_runs` (`issues:read`);
+linked: `issues:read`). Identities: `list_git_identities`, `claim_git_identity`, `remove_git_identity` (confirmation) —
+any scope, the members' view and removal `admin:org`. Automations: `list_automations`,
+`list_automation_runs` (`issues:read`);
 `create_automation`, `update_automation`, `delete_automation` (confirmation), `test_automation` —
 `admin:project`.
 

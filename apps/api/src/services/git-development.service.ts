@@ -1,3 +1,4 @@
+import type { Analytics } from '@nothingleft/analytics';
 import type {
   GitAuthor,
   GitBranch,
@@ -59,6 +60,7 @@ export interface GitDevelopmentDeps {
   reader: DevelopmentReader;
   linker: Pick<GitLinksService, 'readPullRequest'>;
   inTransaction: InTenantTransaction;
+  analytics: Analytics;
   now?: () => Date;
 }
 
@@ -381,11 +383,11 @@ export function gitDevelopmentService(deps: GitDevelopmentDeps) {
       if (!pr)
         throw new AppError('git.pull_request_not_found', 404, { pull_request: `${repo.full_name}#${number}` }, 'url');
       const at = now();
-      await inTransaction(async r => {
+      const linked = await inTransaction(async r => {
         const [existing] = (await r.gitLinks.forTarget(ctx, { target_type: 'pull_request', target_id: pr.id })).filter(
           l => l.issue_id === issue.id,
         );
-        if (existing && !existing.removed_at && existing.sources.includes('manual')) return;
+        if (existing && !existing.removed_at && existing.sources.includes('manual')) return false;
         const sources = existing && !existing.removed_at ? [...new Set([...existing.sources, 'manual'])] : ['manual'];
         const row = existing
           ? await r.gitLinks.update(ctx, existing.id, {
@@ -406,14 +408,22 @@ export function gitDevelopmentService(deps: GitDevelopmentDeps) {
               created_by: principal.userId,
               at,
             });
-        if ((existing && !existing.removed_at) || !row) return;
+        if ((existing && !existing.removed_at) || !row) return false;
         await recordIssueEvent(
           r.issueActivity,
           { ctx, issueId: issue.id, actorId: principal.userId, changeGroupId: Bun.randomUUIDv7(), at },
           'git_linked',
           { new_value: { ...prSnapshot(repo, pr), sources: row.sources, intent: row.intent } },
         );
+        return true;
       });
+      if (linked) {
+        deps.analytics.capture(
+          'git_link_created',
+          { source: 'manual', target_type: 'pull_request' },
+          { userId: principal.userId, orgId: ctx.orgId },
+        );
+      }
       return panel(project, issue.id);
     },
 

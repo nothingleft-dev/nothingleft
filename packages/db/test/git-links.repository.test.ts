@@ -204,7 +204,54 @@ describe('gitLinksRepository tenant isolation', () => {
   });
 });
 
+describe('attributing authors by identity', () => {
+  test('rematch and unmatch touch only their own organisation, and only unattributed rows', async () => {
+    await inRolledBackTx(async tx => {
+      const e = gitEntitiesRepository(tx);
+      const { ctxA, ctxB, repoA, repoB, alice, bob } = await seed(tx);
+      const authored = { ...commit('c1'), author_login: 'Casey', author_email: 'casey@work.example' };
+      await e.upsertCommits(ctxA, repoA.id, [authored]);
+      await e.upsertCommits(ctxB, repoB.id, [authored]);
+      await e.insertPullRequest(ctxA, repoA.id, { ...pull(3), author_login: 'casey' });
+      const identity = { provider: 'github', base_url: 'https://github.com', login: 'casey', email: null };
+
+      expect(await e.rematchAuthors(ctxA, alice, identity)).toBe(2);
+      expect((await e.commitsBySha(ctxA, repoA.id, ['c1']))[0]!.author_user_id).toBe(alice);
+      expect((await e.commitsBySha(ctxB, repoB.id, ['c1']))[0]!.author_user_id).toBeNull();
+      // Another provider's login of the same name is someone else.
+      expect(
+        await e.rematchAuthors(ctxB, bob, { ...identity, provider: 'gitlab', base_url: 'https://gitlab.com' }),
+      ).toBe(0);
+      expect(await e.rematchAuthors(ctxA, bob, identity)).toBe(0);
+
+      expect(await e.unmatchAuthors(ctxB, alice, identity)).toBe(0);
+      expect(await e.unmatchAuthors(ctxA, alice, identity)).toBe(2);
+      expect(await e.rematchAuthors(ctxA, bob, { ...identity, login: null, email: 'CASEY@work.example' })).toBe(1);
+    });
+  });
+});
+
 describe('gitIdentitiesRepository', () => {
+  test("an organisation's admins see only their live members' identities", async () => {
+    await inRolledBackTx(async tx => {
+      const ids = gitIdentitiesRepository(tx);
+      const { ctxA, ctxB, alice } = await seed(tx);
+      const row = await ids.insert(sys, {
+        user_id: alice,
+        provider: 'github',
+        base_url: 'https://github.com',
+        email: 'alice@work.example',
+        verified_by: 'email',
+      });
+      expect((await ids.listForOrg(ctxA)).map(r => r.id)).toEqual([row.id]);
+      expect(await ids.listForOrg(ctxB)).toEqual([]);
+      expect((await ids.findOwnEmail(sys, alice, 'ALICE@work.example'))?.id).toBe(row.id);
+      expect((await ids.markVerified(sys, row.id, at))?.verified_at).toEqual(at);
+      expect(await ids.markVerified(sys, row.id, at)).toBeUndefined();
+      expect((await ids.findById(sys, row.id))?.user_id).toBe(alice);
+    });
+  });
+
   test('matches by provider id, login (any case) and verified email only', async () => {
     await inRolledBackTx(async tx => {
       const ids = gitIdentitiesRepository(tx);

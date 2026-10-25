@@ -16,6 +16,7 @@ import {
   GIT_CONNECTION_HEALTH,
   GIT_CONNECTION_STATUSES,
   GIT_EVENT_STATUSES,
+  GIT_IDENTITY_VERIFICATIONS,
   GIT_MERGE_BASE_BRANCHES_MAX,
   GIT_PAGE_DEFAULT,
   GIT_PAGE_MAX,
@@ -373,3 +374,44 @@ export const LinkPullRequestSchema = z.object({
   url: z.url().max(2_048),
 });
 export type LinkPullRequest = z.infer<typeof LinkPullRequestSchema>;
+
+// A person's provider login or email, used to attribute commits and pull requests to them; never to sign in.
+export const GitIdentitySchema = z.object({
+  id: z.number().int(),
+  provider: GitProviderKindSchema,
+  base_url: z.string(),
+  login: z.string().nullable(),
+  email: z.string().nullable(),
+  verified_by: z.enum(GIT_IDENTITY_VERIFICATIONS),
+  verified_at: z.string().nullable(),
+  // An email claim waiting for its link: it matches nothing yet.
+  pending: z.boolean(),
+  created_at: z.string(),
+});
+export type GitIdentity = z.infer<typeof GitIdentitySchema>;
+
+export const MemberGitIdentitySchema = GitIdentitySchema.extend({ member: MemberRefSchema });
+export type MemberGitIdentity = z.infer<typeof MemberGitIdentitySchema>;
+
+export const ClaimGitIdentitySchema = z
+  .object({
+    provider: GitProviderKindSchema,
+    // Left out, the provider's public host.
+    base_url: BaseUrlSchema.optional(),
+    login: z
+      .string()
+      .trim()
+      .regex(/^@?[^@\s/]+$/)
+      .max(100)
+      .transform(v => v.replace(/^@/, ''))
+      .optional(),
+    email: z.email().max(254).optional(),
+  })
+  .refine(v => (v.login === undefined) !== (v.email === undefined), {
+    message: 'login or email, not both',
+    path: ['login'],
+  });
+export type ClaimGitIdentity = z.infer<typeof ClaimGitIdentitySchema>;
+
+export const ConfirmGitIdentitySchema = z.object({ token: z.string().min(1).max(200) });
+export type ConfirmGitIdentity = z.infer<typeof ConfirmGitIdentitySchema>;

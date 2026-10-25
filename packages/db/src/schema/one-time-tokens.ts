@@ -23,7 +23,7 @@ export const one_time_tokens = pgTable(
   t => [
     check(
       'one_time_tokens_purpose_check',
-      sql`${t.purpose} in ('password_reset','email_verify','email_change','ownership_transfer')`,
+      sql`${t.purpose} in ('password_reset','email_verify','email_change','ownership_transfer','git_identity_email')`,
     ),
     uniqueIndex('one_time_tokens_one_open_transfer_per_org')
       .on(t.org_id)
@@ -32,7 +32,10 @@ export const one_time_tokens = pgTable(
       'one_time_tokens_transfer_fields_check',
       sql`${t.purpose} <> 'ownership_transfer' or (${t.org_id} is not null and ${t.created_by} is not null)`,
     ),
-    check('one_time_tokens_email_change_check', sql`${t.purpose} <> 'email_change' or ${t.new_email} is not null`),
+    check(
+      'one_time_tokens_email_change_check',
+      sql`${t.purpose} not in ('email_change','git_identity_email') or ${t.new_email} is not null`,
+    ),
   ],
 );
 

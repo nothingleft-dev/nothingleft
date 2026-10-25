@@ -34,6 +34,7 @@ export const ONE_TIME_TOKEN_PURPOSES = [
   'email_verify',
   'email_change',
   'ownership_transfer',
+  'git_identity_email',
 ] as const;
 export type OneTimeTokenPurpose = (typeof ONE_TIME_TOKEN_PURPOSES)[number];
 
@@ -133,6 +134,7 @@ export const ONE_TIME_TOKEN_TTL_SECONDS: Record<OneTimeTokenPurpose, number> = {
   email_verify: 24 * 60 * 60,
   email_change: 24 * 60 * 60,
   ownership_transfer: 7 * 24 * 60 * 60,
+  git_identity_email: 24 * 60 * 60,
 };
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
