@@ -143,7 +143,7 @@ function ConnectForm({
         <SheetDescription>
           {manual
             ? `You add a webhook to each repository yourself. A token is optional: with one, the server also reads a ${provider.pull_request_word}’s commits and recent history.`
-            : `A group or project access token with read_api and read_repository. The server registers a webhook on each repository you link, and the token is never shown again.`}
+            : `A group or project access token with the api scope, from someone with the Maintainer role: the server adds a webhook to each repository you link. The token is never shown again.`}
         </SheetDescription>
       </SheetHeader>
 
@@ -185,7 +185,7 @@ function ConnectForm({
           help={
             manual
               ? 'A fine-grained token with read access to contents, pull requests and checks.'
-              : 'Scopes read_api and read_repository. Group tokens see every project in the group.'
+              : 'Scope api, role Maintainer or above. A group token sees every project in the group.'
           }
           error={errors.token}
           onChange={value => {
@@ -206,6 +206,17 @@ function ConnectForm({
               {checked.token_expires_at ? ` · the token expires ${formatDate(checked.token_expires_at)}` : ''}.
             </span>
           </div>
+        ) : null}
+        {checked?.can_manage_webhooks === false ? (
+          <FormAlert tone="warning" title="This token cannot add webhooks.">
+            Without the api scope and the Maintainer role, nothing reaches issues from the repositories you link. Make a
+            token with both, then Check again.
+          </FormAlert>
+        ) : checked?.can_manage_webhooks === null ? (
+          <p className="text-xs text-text-secondary">
+            This {provider.label} does not say whether the token may add webhooks. If linking a repository fails, give
+            the token the api scope and the Maintainer role.
+          </p>
         ) : null}
       </div>
 

@@ -39,7 +39,7 @@ function Value({ label, value, what }: { label: string; value: string; what: str
   );
 }
 
-/** The one time the webhook secret is on screen: at creation and after a rotation. */
+/** The one time a hand-added webhook's secret is on screen: at creation and after a rotation. */
 export function SecretDialog({
   connection,
   rotated,
@@ -50,7 +50,6 @@ export function SecretDialog({
   onClose: () => void;
 }) {
   const provider = connection ? providerLabel(connection.provider) : '';
-  const manual = connection?.auth_kind === 'manual';
   return (
     <Dialog open={connection !== null} onOpenChange={open => (open ? null : onClose())}>
       <DialogContent className="sm:max-w-xl" onInteractOutside={event => event.preventDefault()}>
@@ -61,9 +60,8 @@ export function SecretDialog({
                 {rotated ? 'New webhook secret' : `${connection.account.login} on ${provider} is connected`}
               </DialogTitle>
               <DialogDescription>
-                {manual
-                  ? `Add a webhook to each repository on ${provider} that should feed issues, with the address and secret below.`
-                  : `The server registers a webhook on each repository you link. Keep the secret in case you add one by hand.`}
+                Add a webhook to each repository on {provider} that should feed issues, with the address and secret
+                below.
               </DialogDescription>
             </DialogHeader>
             <div className="flex min-w-0 flex-col gap-4">
@@ -78,7 +76,7 @@ export function SecretDialog({
               {connection.webhook_secret ? (
                 <Value label="Secret" value={connection.webhook_secret} what="Secret" />
               ) : null}
-              {manual && connection.provider === 'github' ? (
+              {connection.provider === 'github' ? (
                 <div className="flex flex-col gap-1.5 text-xs text-text-secondary">
                   <p>
                     In the repository’s <span className="text-text">Settings → Webhooks → Add webhook</span>: content

@@ -93,7 +93,8 @@ export function IntegrationsTab({ organization }: { organization: Organization }
         onClose={() => setConnecting(null)}
         onConnected={connection => {
           setConnecting(null);
-          if (connection.webhook_secret || connection.webhook_url) setSecret({ connection, rotated: false });
+          // Only a webhook added by hand needs its secret; registered hooks carry their own token.
+          if (connection.auth_kind === 'manual' && connection.webhook_secret) setSecret({ connection, rotated: false });
           else toast.success(`${connection.account.login} on ${providerLabel(connection.provider)} is connected.`);
         }}
       />
@@ -355,7 +356,7 @@ function ConnectionMenu({
           </DropdownMenuItem>
           {canRotate ? (
             <DropdownMenuItem onSelect={() => setConfirm('rotate')}>
-              <KeyRound /> Rotate secret
+              <KeyRound /> {connection.auth_kind === 'manual' ? 'Rotate secret' : 'Replace hook tokens'}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSeparator />
@@ -396,15 +397,16 @@ function ConnectionMenu({
       <ConfirmDialog
         open={confirm === 'rotate'}
         onOpenChange={value => setConfirm(value ? 'rotate' : null)}
-        title="Rotate the webhook secret?"
-        confirmLabel="Rotate secret"
+        title={connection.auth_kind === 'manual' ? 'Rotate the webhook secret?' : 'Replace the hook tokens?'}
+        confirmLabel={connection.auth_kind === 'manual' ? 'Rotate secret' : 'Replace tokens'}
         destructive={false}
         pending={rotate.isPending}
         onConfirm={() =>
           rotate.mutate(connection.name, {
             onSuccess: result => {
               setConfirm(null);
-              onRotated(result);
+              if (result.auth_kind === 'manual' && result.webhook_secret) onRotated(result);
+              else toast.success('Hook tokens replaced on every repository this connection registered a webhook on.');
             },
             onError: error => {
               setConfirm(null);
@@ -413,8 +415,19 @@ function ConnectionMenu({
           })
         }
       >
-        <p>The old secret stops working at once. Deliveries signed with it fail until each webhook has the new one.</p>
-        <p>The new secret is shown once, on the next screen.</p>
+        {connection.auth_kind === 'manual' ? (
+          <>
+            <p>
+              The old secret stops working at once. Deliveries signed with it fail until each webhook has the new one.
+            </p>
+            <p>The new secret is shown once, on the next screen.</p>
+          </>
+        ) : (
+          <p>
+            The server replaces the token on every webhook it registered for this connection. Nothing needs changing at{' '}
+            {provider}.
+          </p>
+        )}
       </ConfirmDialog>
     </>
   );
