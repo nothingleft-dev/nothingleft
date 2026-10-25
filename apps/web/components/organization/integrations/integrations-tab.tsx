@@ -406,7 +406,10 @@ function ConnectionMenu({
             onSuccess: result => {
               setConfirm(null);
               if (result.auth_kind === 'manual' && result.webhook_secret) onRotated(result);
-              else toast.success('Hook tokens replaced on every repository this connection registered a webhook on.');
+              else
+                toast.success(
+                  `Hook tokens replaced at ${provider}. Open the connection to see any webhook it refused.`,
+                );
             },
             onError: error => {
               setConfirm(null);
@@ -424,8 +427,9 @@ function ConnectionMenu({
           </>
         ) : (
           <p>
-            The server replaces the token on every webhook it registered for this connection. Nothing needs changing at{' '}
-            {provider}.
+            Every webhook the server added to this connection’s repositories gets a new token, at {provider}. Deliveries
+            keep arriving; there is nothing for you to paste. A webhook {provider} refuses shows as failing in the
+            connection’s repositories.
           </p>
         )}
       </ConfirmDialog>
