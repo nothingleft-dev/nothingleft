@@ -43,6 +43,9 @@ export const PATHS = {
   reports: '/docs/reports',
   customFields: '/docs/custom-fields',
   mcp: '/docs/mcp',
+  git: '/docs/git',
+  automations: '/docs/automations',
+  gitFeature: '/features/git-integration',
   permissions: '/docs/permissions',
   notImplemented: '/docs/permissions#deliberately-not-implemented',
   limits: '/docs/limits-and-billing',
@@ -193,9 +196,9 @@ export const JIRA_COMPARISON: Comparison = {
       group: 'delivery',
       capability: 'Automation',
       ours: {
-        support: 'no',
-        note: 'No rules engine and no transition rules: any status can follow any status. An agent can run repeated edits through the tools, when asked.',
-        source: doc('Statuses manual', PATHS.statuses),
+        support: 'limited',
+        note: 'Status rules fired by git events and resolved subtasks, such as Close on merge, from a fixed list of triggers; not a general rules engine. No transition rules: any status can follow any status.',
+        source: doc('Automations manual', PATHS.automations),
       },
       theirs: {
         support: 'yes',
@@ -207,9 +210,9 @@ export const JIRA_COMPARISON: Comparison = {
       group: 'delivery',
       capability: 'Integrations',
       ours: {
-        support: 'no',
-        note: 'No source-control, chat or webhook integrations yet. MCP, the REST API and CSV export are the ways in and out.',
-        source: doc('MCP manual', PATHS.mcp),
+        support: 'limited',
+        note: 'GitHub and GitLab: branches, commits and pull requests linked to issues, read-only. No chat or outgoing webhook integrations yet; MCP, the REST API and CSV export are the other ways in and out.',
+        source: doc('Development manual', PATHS.git),
       },
       theirs: {
         support: 'yes',
@@ -393,7 +396,7 @@ export const EVALUATE_FIRST = [
   },
   {
     title: 'Add-ons and automation',
-    body: 'Write down what each Marketplace app and automation rule does for you. There is no rules engine or app directory here yet, so decide which jobs you can drop and which would keep you on Jira.',
+    body: 'Write down what each Marketplace app and automation rule does for you. Automations here only set a status, on git events and resolved subtasks, and there is no app directory, so decide which jobs you can drop and which would keep you on Jira.',
     source: { label: 'Jira automation overview', href: JIRA.automation },
   },
   {
@@ -432,7 +435,7 @@ export const CHOOSE_JIRA = [
     source: { label: 'Plans in Jira Premium', href: JIRA.plans },
   },
   {
-    text: 'Automation rules, Marketplace apps or source-control connections already run part of your process.',
+    text: 'Automation rules beyond status changes, or Marketplace apps, already run part of your process.',
     source: { label: 'Atlassian Marketplace', href: JIRA.marketplace },
   },
   {
@@ -472,7 +475,7 @@ export const JIRA_FAQ: FaqEntry[] = [
     question: 'What needs manual review?',
     answer: [
       'Who is who across the two accounts, how statuses, types and fields map, duplicates, and attachments, which have to be uploaded again. Original reporters, creation dates, comments’ authors and the change history do not transfer as data; the agent can quote them in the description if you ask.',
-      'Workflow rules, automation and app data have no equivalent and stay behind.',
+      'Workflow rules and app data have no equivalent and stay behind. Automation rules do not carry over; one that moves an issue when a pull request merges can be set up again here as an automation.',
     ],
   },
   {

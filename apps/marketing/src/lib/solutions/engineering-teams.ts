@@ -30,6 +30,8 @@ import { TOOL_REFERENCE_PATH } from '@lib/mcp';
 export const ISSUES_FEATURE_PATH = '/features/issue-tracking';
 export const SPRINTS_FEATURE_PATH = '/features/sprints-kanban-boards';
 export const MCP_FEATURE_PATH = '/features/mcp-ai-agents';
+export const GIT_FEATURE_PATH = '/features/git-integration';
+export const GIT_MANUAL_PATH = '/docs/git';
 export const REPORTS_FEATURE_PATH = '/features/project-reports';
 export const KB_FEATURE_PATH = '/features/project-knowledge-base';
 export const PRICING_PATH = '/pricing';
@@ -294,18 +296,24 @@ export const FITS = [
   'Teams that want an AI agent to read and update the tracker as the person who connected it, and no further.',
 ];
 
+export const GIT_FEATURES = [
+  'Branches, commits and pull requests that name ACME-12 show on ACME-12, with review and CI state.',
+  'A badge on list rows and board cards: Merged, CI failing, Changes requested, In review and more.',
+  'Automations that move the issue when a branch is pushed, a pull request opens or the fix merges.',
+];
+
 export const NOT_BUILT = [
-  'Source-control status. Issues show no pull-request or branch badges, and commits do not change an issue.',
-  'Deployment data. Nothing reports what is released where; Fixed means someone set it to Fixed.',
-  'Automatic updates from Git. Cards move when a person moves them, or their agent does as them.',
+  'Deployment data. Nothing reports what is released where; Fixed means someone, or a merge rule, set it to Fixed.',
+  'Writing back to GitHub or GitLab. No comments on pull requests, no commit statuses.',
 ];
 
 export const ENGINEERING_TEAMS_FAQ: FaqEntry[] = [
   {
     question: 'Does it connect to our Git repository?',
     answer: [
-      'Not today. Pull-request and deployment status on issues, and status changes from commits, are not built. Signing in with GitHub is only a way to sign in. An agent that works in your repository can still read an issue and update it for you, as you, through the MCP tools.',
+      'Yes, GitHub and GitLab, including GitHub Enterprise and self-managed GitLab. Name the issue in a branch, a commit message or a pull request and the issue shows that work, with its review and CI state. Automations can move the status when a pull request opens or merges. The connection only reads; deployment status is not built.',
     ],
+    link: { href: GIT_FEATURE_PATH, label: 'GitHub and GitLab' },
   },
   {
     question: 'Can an agent change issues without anyone knowing?',

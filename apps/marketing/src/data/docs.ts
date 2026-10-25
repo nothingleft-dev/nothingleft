@@ -37,6 +37,14 @@ export const DOC_GROUPS: DocGroup[] = [
     docs: [{ slug: 'knowledge-base', label: 'Knowledge base' }],
   },
   {
+    title: 'Development',
+    description: 'Connect GitHub or GitLab, see the work on the issue, and let merges move its status.',
+    docs: [
+      { slug: 'git', label: 'GitHub and GitLab' },
+      { slug: 'automations', label: 'Automations' },
+    ],
+  },
+  {
     title: 'Agents',
     description: 'Connect an AI agent over MCP and see every tool it can call.',
     docs: [

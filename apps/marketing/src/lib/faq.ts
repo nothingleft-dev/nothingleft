@@ -53,14 +53,15 @@ export const HOME_FAQ: FaqEntry[] = [
   {
     question: 'Which integrations exist today?',
     answer: [
-      'MCP for any agent client, over HTTP or locally over stdio. Google and GitHub sign-in. CSV export and generic CSV import.',
-      'Not built yet: pull-request or deployment status on issues, outgoing webhooks, native importers from other trackers, and workflow automation. An agent connected to both your old tracker and this one can help carry issues across, with you reviewing the mapping.',
+      'MCP for any agent client, over HTTP or locally over stdio. GitHub and GitLab: branches, commits and pull requests linked to issues by key, with review and CI state on the issue, and status rules that move an issue on a branch, a pull request or a merge. Google and GitHub sign-in. CSV export and generic CSV import.',
+      'Not built yet: deployment status on issues, outgoing webhooks, native importers from other trackers, Bitbucket, and general workflow rules beyond those status rules. An agent connected to both your old tracker and this one can help carry issues across, with you reviewing the mapping.',
     ],
+    link: { href: '/features/git-integration', label: 'GitHub and GitLab' },
   },
   {
     question: 'What is deliberately left out?',
     answer: [
-      'A workflow or transition-rules engine: any status may follow any status. Custom roles and permission schemes: there are five built-in roles. Per-comment visibility: comments follow the issue. These keep setup short and the agent surface predictable.',
+      'A workflow or transition-rules engine: any status may follow any status, and automations only set a status when git work or subtasks move. Custom roles and permission schemes: there are five built-in roles. Per-comment visibility: comments follow the issue. These keep setup short and the agent surface predictable.',
     ],
   },
 ];

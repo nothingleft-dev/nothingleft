@@ -1,0 +1,62 @@
+---
+import { AGENT, AGENT_TOOLS, MCP_FEATURE_PATH } from '@lib/features/git-integration';
+---
+
+<section class="border-t border-line bg-app" aria-labelledby="gi-agent-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="min-w-0 lg:col-span-5">
+      <h2 id="gi-agent-title" class="h2">
+        Ask your agent whether it merged.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        The development tools call the same API as the web app, so an agent reads what the issue shows and changes only
+        what your role allows. Titles and commit messages from the provider reach it marked as data, not instructions.
+      </p>
+      <ul class="rule-list mt-8">
+        {AGENT_TOOLS.map(item => (
+          <li class="py-3">
+            <code class="mono text-xs text-fg">{item.tool}</code>
+            <p class="mt-1 text-sm text-fg-2">{item.does}</p>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-6 text-sm">
+        <a class="link" href={MCP_FEATURE_PATH}>
+          MCP and AI agents
+          <span class="arr" aria-hidden="true">
+            →
+          </span>
+        </a>
+      </p>
+    </div>
+
+    <div class="min-w-0 lg:col-span-6 lg:col-start-7">
+      <figure class="panel gi-agent" aria-label="An agent checking a merge">
+        <p class="prompt">
+          <span class="mark" aria-hidden="true">
+            ›
+          </span>
+          <span>{AGENT.prompt}</span>
+        </p>
+        <ul class="calls">
+          <li>
+            <span class="tool">{AGENT.call.tool}</span>
+            <span class="args">{AGENT.call.args}</span>
+          </li>
+        </ul>
+        <div class="answer">
+          <p>{AGENT.answer}</p>
+        </div>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gi-agent {
+    overflow: hidden;
+  }
+  .gi-agent .calls {
+    padding-bottom: 12px;
+  }
+</style>

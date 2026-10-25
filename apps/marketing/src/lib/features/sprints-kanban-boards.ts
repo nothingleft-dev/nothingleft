@@ -3,6 +3,7 @@ import {
   backlogAt,
   burndown,
   daysLeft,
+  developmentOf,
   formatDate,
   formatDayMonth,
   formatSprintDates,
@@ -17,6 +18,7 @@ import {
   statusOf,
   sumPoints,
   weekday,
+  type Development,
   type Issue,
   type Person as SamplePerson,
   type Priority as SamplePriority,
@@ -65,6 +67,7 @@ export interface SprintIssue {
   priority: Priority;
   assignees: Person[];
   column: ColumnId;
+  development: Development | null;
 }
 
 const SPRINT_NAME = 'Sprint 08';
@@ -89,6 +92,7 @@ export const SPRINT_ISSUES: SprintIssue[] = issuesInSprint(SPRINT_NAME).map(cand
   priority: candidate.priority,
   assignees: assigneesOf(candidate.key).map(toPerson),
   column: COLUMN_OF_STATUS[statusOf(candidate.key)],
+  development: developmentOf(candidate.key),
 }));
 
 // A card with several assignees sits in the lane of the first one, alphabetically.

@@ -24,6 +24,7 @@ export const LAST_VERIFIED = '2026-10-08';
 export const ISSUES_FEATURE_PATH = '/features/issue-tracking';
 export const TIME_FEATURE_PATH = '/features/time-tracking';
 export const MCP_FEATURE_PATH = '/features/mcp-ai-agents';
+export const GIT_FEATURE_PATH = '/features/git-integration';
 export const PRICING_PATH = '/pricing';
 export const SELF_HOSTING_PATH = '/solutions/self-hosting';
 export const ENGINEERING_PATH = '/solutions/engineering-teams';
@@ -135,9 +136,9 @@ export const LINEAR_COMPARISON: Comparison = {
       group: 'delivery',
       capability: 'Source-control experience',
       ours: {
-        support: 'no',
-        note: 'Not built. Issues show no branch, commit or pull-request status. Signing in with GitHub is only sign-in.',
-        source: ours('Engineering teams', ENGINEERING_PATH),
+        support: 'yes',
+        note: 'GitHub and GitLab: branches, commits and pull requests link to issues by key, with review and CI state on the issue, and status rules move the issue on a branch, a pull request or a merge. Read-only towards the provider, with no issue sync.',
+        source: ours('GitHub and GitLab', GIT_FEATURE_PATH),
       },
       theirs: {
         support: 'yes',
@@ -311,7 +312,7 @@ export const WORKFLOW: WorkflowStep[] = [
     id: 'fix',
     title: 'Fix it and record the time',
     when: formatDayMonth(fixed.at),
-    ours: `${dev} logs ${formatDuration(loggedMinutes(secondLog))} more and moves the card to Fixed: ${formatDuration(spentAt(fixed.at))} spent against the ${estimate} estimate, on the issue, the timesheet and the time report. No pull request is linked; that part happens in your Git host.`,
+    ours: `${dev} logs ${formatDuration(loggedMinutes(secondLog))} more and moves the card to Fixed: ${formatDuration(spentAt(fixed.at))} spent against the ${estimate} estimate, on the issue, the timesheet and the time report. The merged pull request shows on the issue; with Close on merge switched on, the merge would have moved the card for ${dev}.`,
     theirs: {
       text: 'The pull request or merge request links back to the issue, which moves as the work is opened and merged. Hours go to a partner time tracker, such as Harvest, from a button in the issue sidebar.',
       sources: [LINEAR.github, LINEAR.gitlab, LINEAR.harvest],
@@ -325,7 +326,7 @@ export const LINEAR_STRENGTHS: Sourced[] = [
     sources: [LINEAR.initiatives],
   },
   {
-    text: 'Native code workflows: branch names from the issue, pull and merge requests that move it, and two-way GitHub Issues sync.',
+    text: 'Deeper code workflows: branch names from the issue and two-way GitHub Issues sync, beside pull and merge requests that move it.',
     sources: [LINEAR.github],
   },
   {
@@ -399,7 +400,7 @@ export const AGENT_STEPS: SwitchStep[] = [
 
 export const CHOOSE_LINEAR = [
   'You plan across many projects and quarters and want initiatives, milestones and project updates in the tracker.',
-  'You want pull requests and commits to move issues, and GitHub Issues kept in sync.',
+  'You want GitHub Issues kept in sync with the tracker both ways.',
   'You want to assign or delegate issues to coding and triage agents as members of the workspace.',
   'A hosted service with a choice of EU or US data storage suits you.',
 ];
@@ -422,9 +423,9 @@ export const LINEAR_FAQ: FaqEntry[] = [
   {
     question: 'Does Nothing Left connect to GitHub or GitLab like Linear does?',
     answer: [
-      'Not today. Issues show no branch, commit or pull-request status, and nothing moves on merge. Signing in with GitHub is only a way to sign in. An agent working in your repository can still update the issue for you through the MCP tools.',
+      'Yes, for the core of it. Name the issue in a branch, a commit message or a pull request and the issue shows that work with its review and CI state. Automations move the status when a branch is created, a pull request opens or the fix merges. The connection only reads: it does not comment on pull requests or sync GitHub Issues, and deployment status is not built.',
     ],
-    link: { href: ENGINEERING_PATH, label: 'Engineering teams' },
+    link: { href: GIT_FEATURE_PATH, label: 'GitHub and GitLab' },
   },
   {
     question: 'Linear has an MCP server too. What is different here?',

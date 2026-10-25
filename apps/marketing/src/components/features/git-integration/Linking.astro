@@ -1,0 +1,183 @@
+---
+import DevelopmentBadge from '@components/DevelopmentBadge.astro';
+import { PANEL, REFERENCE_PLACES } from '@lib/features/git-integration';
+
+const pr = PANEL.pullRequest;
+const facts = [pr.state, pr.review, pr.ci].filter(Boolean);
+---
+
+<section id="git-linking" class="border-t border-line" aria-labelledby="gi-linking-title">
+  <div class="wrap py-16 md:py-24 grid lg:grid-cols-12 gap-10 lg:gap-12">
+    <div class="min-w-0 lg:col-span-5">
+      <h2 id="gi-linking-title" class="h2">
+        Type the key where you already write.
+      </h2>
+      <p class="prose mt-5 max-w-[46ch]">
+        There is nothing to copy across and no button to press at the provider. Name the issue in one of three places
+        and the work is linked to it.
+      </p>
+      <ol class="rule-list mt-8">
+        {REFERENCE_PLACES.map(place => (
+          <li class="py-5">
+            <h3 class="h3">{place.where}</h3>
+            <p class="quote mt-3">{place.example}</p>
+            <p class="prose mt-3 text-base">{place.body}</p>
+          </li>
+        ))}
+      </ol>
+      <p class="mt-6 text-sm text-fg-2 max-w-[46ch]">
+        A pull request that never named the issue can be linked by pasting its address, and any link can be removed.
+      </p>
+    </div>
+
+    <div class="min-w-0 lg:col-span-6 lg:col-start-7">
+      <figure class="panel gi-panel" aria-label={`The Development tab of ${PANEL.key}`}>
+        <div class="pane-bar">
+          <span class="text-fg">Acme</span>
+          <span class="sep">/</span>
+          <span class="mono text-xs">ACME</span>
+          <span class="sep">/</span>
+          <span>Issues</span>
+        </div>
+        <div class="gi-head">
+          <p class="gi-issue">
+            <span class="mono text-xs text-fg-2">{PANEL.key}</span>
+            <span class="gi-issue-title">{PANEL.title}</span>
+          </p>
+          <p class="gi-issue-meta">
+            <span class="gi-status">
+              <i
+                class:list={['dot', { started: PANEL.status === 'In Progress', done: PANEL.status === 'Fixed' }]}
+                aria-hidden="true"
+              ></i>
+              {PANEL.status}
+            </span>
+            {PANEL.badge && <DevelopmentBadge badge={PANEL.badge} />}
+          </p>
+        </div>
+        <div class="gi-tabs" aria-hidden="true">
+          <span>Comments</span>
+          <span>History</span>
+          <span class="on">Development</span>
+        </div>
+        <div class="gi-repo">
+          <p class="mono text-xs text-fg-2">{PANEL.repository}</p>
+          <p class="gi-sub">Pull requests</p>
+          <div class="gi-pr">
+            <p class="gi-pr-title">
+              <span class="mono text-xs text-fg-2">#{pr.number}</span>
+              <span>{pr.title}</span>
+            </p>
+            <p class="gi-facts">
+              {facts.map(fact => (
+                <span>{fact}</span>
+              ))}
+              {pr.closes && <span class="gi-closes">Closes</span>}
+            </p>
+            <p class="gi-by">
+              {pr.author.name} · {pr.commits} commits · <span class="mono">{pr.branch}</span>
+            </p>
+          </div>
+        </div>
+      </figure>
+      <p class="mt-3 text-xs text-fg-3">
+        A hand-drawn view with fictional data. The panel lists pull requests with their commits inside them, then
+        branches and commits that belong to none.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gi-panel {
+    overflow: hidden;
+  }
+  .gi-head {
+    padding: 16px 16px 12px;
+  }
+  .gi-issue {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+  }
+  .gi-issue-title {
+    font-size: 16px;
+    line-height: 22px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .gi-issue-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .gi-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .gi-tabs {
+    display: flex;
+    gap: 18px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .gi-tabs span {
+    padding: 8px 0;
+  }
+  .gi-tabs .on {
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 var(--text);
+  }
+  .gi-repo {
+    padding: 14px 16px 18px;
+  }
+  .gi-sub {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .gi-pr {
+    margin-top: 6px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .gi-pr-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text);
+  }
+  .gi-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .gi-facts span {
+    font-size: 11.5px;
+    line-height: 18px;
+    padding: 0 6px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-inset);
+    color: var(--text-secondary);
+  }
+  .gi-facts .gi-closes {
+    color: var(--text);
+  }
+  .gi-by {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+</style>

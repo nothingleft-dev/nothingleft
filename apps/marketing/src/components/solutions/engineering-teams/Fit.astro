@@ -1,6 +1,8 @@
 ---
 import {
   FITS,
+  GIT_FEATURE_PATH,
+  GIT_FEATURES,
   ISSUES_FEATURE_PATH,
   MCP_FEATURE_PATH,
   NOT_BUILT,
@@ -11,6 +13,7 @@ import {
 const LINKS = [
   { href: ISSUES_FEATURE_PATH, label: 'Issue tracking' },
   { href: SPRINTS_FEATURE_PATH, label: 'Sprints and boards' },
+  { href: GIT_FEATURE_PATH, label: 'GitHub and GitLab' },
   { href: MCP_FEATURE_PATH, label: 'MCP and AI agents' },
   { href: PRICING_PATH, label: 'Pricing' },
 ];
@@ -20,11 +23,12 @@ const LINKS = [
   <div class="wrap py-16 md:py-24 grid md:grid-cols-12 gap-10 md:gap-12">
     <div class="md:col-span-6 lg:col-span-5">
       <h2 id="et-fit-title" class="h2">
-        It tracks the work. It does not watch your repository.
+        It tracks the work, and it reads your repository.
       </h2>
       <p class="prose mt-5">
-        Source-control status and deployment data are not built in today. If your team wants pull-request badges on
-        issues or tickets that close themselves on merge, this is not that tool yet.
+        Connect GitHub or GitLab and the issue shows the branches and pull requests that name it, with a badge on the
+        board and a rule that can close it on merge. It reads and never writes back, and deployment data is not built in
+        today.
       </p>
       <ul class="mt-6 space-y-2 text-sm">
         {LINKS.map(link => (
@@ -44,6 +48,14 @@ const LINKS = [
         <h3 class="text-sm font-medium">A good fit for</h3>
         <ul class="rule-list mt-3">
           {FITS.map(item => (
+            <li class="py-4 prose text-base">{item}</li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-medium">From your repository</h3>
+        <ul class="rule-list mt-3">
+          {GIT_FEATURES.map(item => (
             <li class="py-4 prose text-base">{item}</li>
           ))}
         </ul>
