@@ -388,6 +388,13 @@ export function gitDevelopmentService(deps: GitDevelopmentDeps) {
         throw new AppError('git.pull_request_not_found', 404, { pull_request: `${repo.full_name}#${number}` }, 'url');
       const at = now();
       const linked = await inTransaction(async r => {
+        // The repository may have been unlinked, removed or disconnected while the pull request was read.
+        if (
+          !(await r.gitConnections.lockEligible(ctx, connection.id)) ||
+          !(await r.gitRepositories.lockServing(ctx, repo.id, project.project.id))
+        ) {
+          throw new AppError('git.url_not_connected', 422, {}, 'url');
+        }
         const [existing] = (await r.gitLinks.forTarget(ctx, { target_type: 'pull_request', target_id: pr.id })).filter(
           l => l.issue_id === issue.id,
         );
@@ -451,6 +458,7 @@ export function gitDevelopmentService(deps: GitDevelopmentDeps) {
               who: `@${project.membership.username}`,
             }),
             causedBy: principal.userId,
+            guard: { connectionId: connection.id, repositoryId: repo.id },
           });
         }
       }

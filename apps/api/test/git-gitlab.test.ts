@@ -790,6 +790,8 @@ describe('describeConnection', () => {
     expect(await provider.describeConnection(auth)).toEqual({
       account: { login: 'acme', avatar_url: 'https://gitlab.com/avatar/acme.png', url: 'https://gitlab.com/acme' },
       token_expires_at: new Date('2026-12-31T00:00:00Z'),
+      // `read_api` reads but cannot add the webhooks the server registers.
+      can_manage_webhooks: false,
     });
     expect(calls.every(c => c.headers['private-token'] === 'glpat-test')).toBe(true);
   });
@@ -807,6 +809,8 @@ describe('describeConnection', () => {
         url: 'https://git.acme.example/alex-lee',
       },
       token_expires_at: null,
+      // This instance does not describe the token's scopes.
+      can_manage_webhooks: null,
     });
     expect(calls.some(c => c.url.includes('/namespaces/'))).toBe(false);
     expect(calls[0]!.url.startsWith('https://git.acme.example/api/v4/')).toBe(true);

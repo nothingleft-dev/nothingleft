@@ -24,6 +24,8 @@ export interface DeliveryRoute {
 export interface ConnectionDescription {
   account: { login: string; avatar_url: string | null; url: string };
   token_expires_at: Date | null;
+  /** Whether the token may add webhooks; null when the provider does not say (or registers none). */
+  can_manage_webhooks?: boolean | null;
 }
 
 export interface WebhookTarget {

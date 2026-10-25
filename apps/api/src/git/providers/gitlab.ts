@@ -571,9 +571,12 @@ export function gitlabProvider(deps: ProviderDeps): GitProvider {
           if (err instanceof GitProviderError && err.reason === 'token_invalid') throw err;
         }
       }
+      // `read_api` lists projects but cannot add hooks; `api` can. Older instances do not describe the token.
+      const scopes = Array.isArray(token?.scopes) ? (token.scopes as unknown[]).map(String) : null;
       return {
         account: { login, avatar_url: avatar, url: `${trimSlash(auth.base_url)}/${login}` },
         token_expires_at: expiryDate(token?.expires_at),
+        can_manage_webhooks: scopes ? scopes.includes('api') : null,
       };
     },
 

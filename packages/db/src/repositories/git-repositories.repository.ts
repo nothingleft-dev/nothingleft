@@ -337,6 +337,42 @@ export function gitRepositoriesRepository(db: Queryable) {
         .where(and(eq(projects.org_id, ctx.orgId), eq(project_repositories.repository_id, repositoryId)));
     },
 
+    /** The repository, if still available to its connection, held until the caller's transaction ends. */
+    async lockAvailable(ctx: TenantContext, id: number): Promise<GitRepositoryRow | undefined> {
+      const [row] = await db
+        .select()
+        .from(git_repositories)
+        .where(and(inOrg(ctx), eq(git_repositories.id, id), isNull(git_repositories.removed_at)))
+        .for('share');
+      return row;
+    },
+
+    /**
+     * Whether the repository serves the project now (available, and linked to it or matching every
+     * project), holding both rows so an unlink waits for the caller's transaction or is seen by it.
+     */
+    async lockServing(ctx: TenantContext, repositoryId: number, projectId: number): Promise<boolean> {
+      const [repo] = await db
+        .select({ match_all_projects: git_repositories.match_all_projects })
+        .from(git_repositories)
+        .where(and(inOrg(ctx), eq(git_repositories.id, repositoryId), isNull(git_repositories.removed_at)))
+        .for('share');
+      if (!repo) return false;
+      if (repo.match_all_projects) return true;
+      const [link] = await db
+        .select({ project_id: project_repositories.project_id })
+        .from(project_repositories)
+        .where(
+          and(
+            eq(project_repositories.org_id, ctx.orgId),
+            eq(project_repositories.repository_id, repositoryId),
+            eq(project_repositories.project_id, projectId),
+          ),
+        )
+        .for('share');
+      return link !== undefined;
+    },
+
     /** Linked repositories of a connection whose webhook we registered, for re-registration and removal. */
     async listHooked(ctx: TenantContext, connectionId: number): Promise<GitRepositoryRow[]> {
       return db

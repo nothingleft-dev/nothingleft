@@ -1,4 +1,3 @@
-import { repositoryHookSecret } from '@git/connection';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { gitlabProject, gitWorld, type GitWorld } from './git-world.ts';
 
@@ -160,7 +159,29 @@ describe('connecting GitLab with a token', () => {
     expect(http.statusCode).toBe(400);
   });
 
-  test('creating shows the webhook secret once and never the token', async () => {
+  test('a token that cannot add webhooks is refused, with the scope it needs', async () => {
+    w.provider.routes['GET https://gitlab.com/api/v4/personal_access_tokens/self'] = {
+      scopes: ['read_api', 'read_repository'],
+      expires_at: null,
+    };
+    const check = await w.call(w.admin, 'POST', connections(), {
+      provider: 'gitlab',
+      mode: 'token',
+      token: TOKEN,
+      dry_run: true,
+    });
+    expect(check.json().data.can_manage_webhooks).toBe(false);
+    const refused = await w.connectGitLab(w.admin, w.slug, TOKEN);
+    expect(refused.statusCode).toBe(422);
+    expect(refused.json().error).toMatchObject({ code: 'git.token_scope_missing', field: 'token' });
+    w.provider.routes['GET https://gitlab.com/api/v4/personal_access_tokens/self'] = {
+      id: 1,
+      expires_at: '2027-01-31',
+      scopes: ['api'],
+    };
+  });
+
+  test('creating a token connection hands out no secret, and never the token', async () => {
     const res = await w.connectGitLab(w.admin, w.slug, TOKEN);
     expect(res.statusCode).toBe(201);
     const created = res.json().data;
@@ -170,13 +191,12 @@ describe('connecting GitLab with a token', () => {
       has_token: true,
       repositories: { known: 1 },
     });
-    expect(created.webhook_secret).toMatch(/^[A-Za-z0-9]{40}$/);
+    expect(created.webhook_secret).toBeNull();
     expect(created.webhook_url).toMatch(/\/v1\/git\/webhooks\/gitlab\/[A-Za-z0-9]{40}$/);
     expect(res.body).not.toContain(TOKEN);
 
     const listed = await w.call(w.admin, 'GET', connections());
     expect(listed.body).not.toContain(TOKEN);
-    expect(listed.body).not.toContain(created.webhook_secret);
     const again = await w.connectGitLab(w.admin, w.slug, TOKEN);
     expect(again.json().error.code).toBe('git.connection_name_taken');
   });
@@ -306,13 +326,14 @@ describe('connection upkeep', () => {
     expect(healed.json().data.health).toBe('active');
   });
 
-  test('rotating the secret shows the new one once and updates our hooks', async () => {
+  test('rotating replaces every hook token we registered, and shows nothing', async () => {
+    const before = w.gitlabHookToken('202');
     const res = await w.call(w.admin, 'POST', `${connections()}/gitlab:acme/rotate-secret`);
     expect(res.statusCode).toBe(200);
-    const secret = res.json().data.webhook_secret;
-    const put = w.provider.calls.findLast(c => c.method === 'PUT' && /\/projects\/202\/hooks\/\d+$/.test(c.url))!;
-    // Each hook gets its repository's own token, derived from the connection's new secret.
-    expect((put.body as { token: string }).token).toBe(repositoryHookSecret(secret, '202'));
+    expect(res.json().data.webhook_secret).toBeNull();
+    const after = w.gitlabHookToken('202');
+    expect(after).toBeDefined();
+    expect(after).not.toBe(before);
     const app = await w.call(w.admin, 'POST', `${connections()}/github:acme-inc/rotate-secret`);
     expect(app.json().error.code).toBe('git.mode_unsupported');
   });

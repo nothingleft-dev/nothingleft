@@ -7207,15 +7207,17 @@ paths:
       summary: Connect with a token, or a webhook added by hand
       description: |
         Org Admins and the Owner, browser session only. `mode: token` (GitLab): a group or project
-        access token with `read_api` and `read_repository`; the server lists its repositories and
-        registers its webhook on each repository when it is linked. `mode: manual` (GitHub without an
+        access token with the `api` scope and the Maintainer role, since the server registers a
+        webhook on each repository when it is linked; a token GitLab says lacks `api` is refused
+        (`git.token_scope_missing`), and *Check* reports it as `can_manage_webhooks: false`. `mode: manual` (GitHub without an
         app, or GitHub Enterprise Server): the admin adds the webhook to each repository; an optional
         token lets the server read pull request commits and backfill, and without one `account`
         names the connection. `base_url` defaults to the provider's own host; a self-managed host
         whose address is on a private network is refused unless the server allows it.
         `dry_run: true` is the connect sheet's *Check*: it describes the account behind the token and
-        saves nothing. Otherwise the answer carries `webhook_secret`, shown this once, and
-        `webhook_url`. The token is sealed and never returned. Writes `git_connection_created`.
+        saves nothing. Otherwise the answer carries `webhook_url`, and for `mode: manual`
+        `webhook_secret`, shown this once (a token connection's hooks each get a token the server
+        derives, so there is nothing to paste and `webhook_secret` is null). The token is sealed and never returned. Writes `git_connection_created`.
       tags: [git]
       requestBody:
         required: true
@@ -7226,7 +7228,7 @@ paths:
         '403': { description: '`forbidden`, or `auth.session_required` for a PAT.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '404': { description: '`organization.not_found`, `git.provider_unknown`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '409': { description: '`git.connection_name_taken`, `git.connection_limit_reached`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
-        '422': { description: '`git.mode_unsupported` (`mode`), `git.token_required` (`token`), `git.account_required` (`account`), `git.base_url_not_allowed` (`base_url`), `git.token_invalid` (`token`).', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '422': { description: '`git.mode_unsupported` (`mode`), `git.token_required` (`token`), `git.account_required` (`account`), `git.base_url_not_allowed` (`base_url`), `git.token_invalid` (`token`), `git.token_scope_missing` (`token`).', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '502': { description: '`git.provider_unreachable`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
         '503': { description: '`git.provider_rate_limited`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
 
@@ -10318,7 +10320,7 @@ components:
         - type: object
           required: [webhook_secret]
           properties:
-            webhook_secret: { type: [string, 'null'], description: Shown this once. }
+            webhook_secret: { type: [string, 'null'], description: 'Shown this once, and only for a manual connection; null for a token connection, whose hooks the server registers with per-repository tokens.' }
     GitConnectionEnvelope:
       allOf:
         - $ref: '#/components/schemas/SuccessEnvelope'
@@ -10326,13 +10328,14 @@ components:
             data: { $ref: '#/components/schemas/GitConnection' }
     GitConnectionCheck:
       type: object
-      required: [provider, base_url, account, repository_count, token_expires_at]
+      required: [provider, base_url, account, repository_count, token_expires_at, can_manage_webhooks]
       properties:
         provider: { type: string, enum: [github, gitlab] }
         base_url: { type: string }
         account: { $ref: '#/components/schemas/GitAccount' }
         repository_count: { type: integer }
         token_expires_at: { type: [string, 'null'], format: date-time }
+        can_manage_webhooks: { type: [boolean, 'null'], description: 'The token may add the webhooks the server registers (GitLab: the `api` scope); null when the provider does not say.' }
     CreateGitConnection:
       type: object
       required: [provider, mode]

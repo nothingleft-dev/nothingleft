@@ -15,6 +15,7 @@ import {
   systemContext,
   type GitCommitRow,
   type GitConnectionRow,
+  type GitConnectionsRepository,
   type GitEntitiesRepository,
   type GitIdentitiesRepository,
   type GitLinksRepository,
@@ -46,6 +47,7 @@ import type { InTenantTransaction, TenantRepos } from '@services/transaction';
 
 export interface GitLinksDeps {
   providers: ProviderRegistry;
+  connections: Pick<GitConnectionsRepository, 'findById'>;
   repositories: GitRepositoriesRepository;
   entities: GitEntitiesRepository;
   links: GitLinksRepository;
@@ -914,6 +916,12 @@ export function gitLinksService(deps: GitLinksDeps) {
     return { commits: null, superseded: [] };
   }
 
+  async function whyIneligible(ctx: TenantContext, connectionId: number) {
+    const current = await deps.connections.findById(ctx, connectionId);
+    if (!current || current.revoked_at) return 'connection_revoked' as const;
+    return current.status === 'suspended' ? ('connection_suspended' as const) : ('repository_removed' as const);
+  }
+
   /** Applies one normalized event to a linked repository: entities, links, history. Returns what it fired. */
   async function applyOne(
     ctx: TenantContext,
@@ -922,7 +930,7 @@ export function gitLinksService(deps: GitLinksDeps) {
     scope: Scope,
     event: NormalizedEvent,
     at: Date,
-  ): Promise<AutomationFiring[]> {
+  ): Promise<AutomationFiring[] | null> {
     const provider = providerOf(providers, connection.provider);
     const author = authorResolver(ctx, connection);
     const prNumber = 'pull_request' in event ? event.pull_request.number : null;
@@ -932,8 +940,15 @@ export function gitLinksService(deps: GitLinksDeps) {
     await Promise.all(actorsOf(event, commits).map(author));
     const changeGroupId = Bun.randomUUIDv7();
     const fired: AutomationFiring[] = [];
+    let eligible = true;
     await inTransaction(async repos => {
       fired.length = 0;
+      // The provider calls above took time: a disconnect, suspension or removal that finished
+      // meanwhile wins, and one still running waits for these writes.
+      eligible =
+        (await repos.gitConnections.lockEligible(ctx, connection.id)) !== undefined &&
+        (await repos.gitRepositories.lockAvailable(ctx, repo.id)) !== undefined;
+      if (!eligible) return;
       if (event.type === 'branch.created' || event.type === 'branch.deleted') {
         const causedBy = event.type === 'branch.created' ? await author(event.actor) : null;
         await applyBranch(repos, ctx, repo, scope, event, fired, causedBy, changeGroupId, at);
@@ -960,7 +975,7 @@ export function gitLinksService(deps: GitLinksDeps) {
         );
       }
     });
-    return fired;
+    return eligible ? fired : null;
   }
 
   return {
@@ -994,11 +1009,13 @@ export function gitLinksService(deps: GitLinksDeps) {
       row: GitWebhookEventRow,
     ): Promise<EntityOutcome> {
       const scope = await scopeOf(ctx, repo);
-      const serves = new Set(scope.projectIdByKey.values());
       for (const event of events) {
         const fired = await applyOne(ctx, connection, repo, scope, event, now());
+        if (fired === null) return { status: 'ignored', reason: await whyIneligible(ctx, connection.id) };
         // Rules run after the event's writes commit, and only for a delivery received live or replayed with them.
         if (!row.run_automations || !deps.automations) continue;
+        // Read again after the writes: an unlink meanwhile narrows what the repository serves.
+        const serves = new Set((await scopeOf(ctx, repo)).projectIdByKey.values());
         for (const firing of fired) {
           // A link kept from before the repository was unlinked from a project is history, not authority.
           const owners = new Map(
@@ -1010,7 +1027,8 @@ export function gitLinksService(deps: GitLinksDeps) {
             ).map(i => [i.id, i.project_id]),
           );
           const issues = firing.issues.filter(i => serves.has(owners.get(i.issueId) ?? -1));
-          if (issues.length > 0) await deps.automations().fire(ctx, { ...firing, issues });
+          const guard = { connectionId: connection.id, repositoryId: repo.id };
+          if (issues.length > 0) await deps.automations().fire(ctx, { ...firing, issues, guard });
         }
       }
       return { status: 'done' };
@@ -1108,6 +1126,12 @@ export function gitLinksService(deps: GitLinksDeps) {
         actorsOf({ type: 'pull_request.edited', repo, pull_request: pr, actor: pr.author }, fetched).map(author),
       );
       return inTransaction(async repos => {
+        if (
+          !(await repos.gitConnections.lockEligible(ctx, connection.id)) ||
+          !(await repos.gitRepositories.lockAvailable(ctx, repo.id))
+        ) {
+          return null;
+        }
         const applied = await applyPullRequest(
           repos,
           ctx,

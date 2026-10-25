@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { GitConnectionStatus } from '@nothingleft/types';
 import type { Queryable } from '../client.ts';
 import { git_connections, type GitConnectionRow, type NewGitConnectionRow } from '../schema/index.ts';
@@ -170,6 +170,19 @@ export function gitConnectionsRepository(db: Queryable) {
             live,
           ),
         );
+      return row;
+    },
+
+    /**
+     * The connection, if it may still feed issues (live, not suspended), held until the caller's
+     * transaction ends: a disconnect or suspension waits for it, or it sees theirs.
+     */
+    async lockEligible(ctx: TenantContext, id: number): Promise<GitConnectionRow | undefined> {
+      const [row] = await db
+        .select()
+        .from(git_connections)
+        .where(and(inOrg(ctx), eq(git_connections.id, id), live, ne(git_connections.status, 'suspended')))
+        .for('share');
       return row;
     },
 

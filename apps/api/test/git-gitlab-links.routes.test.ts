@@ -1,14 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { repositoryHookSecret } from '@git/connection';
 import { gitFixture, signedDelivery } from './git-fixtures.ts';
 import { gitWorld, type GitWorld } from './git-world.ts';
 
 const KEY = 'API';
 let w: GitWorld;
-let hook: { url: string; secret: string };
+let hook: { url: string };
 
 const deliver = async (name: string, delivery: string) => {
-  const res = await w.deliver('gitlab', name, { hookUrl: hook.url, secret: hook.secret, delivery });
+  const res = await w.deliver('gitlab', name, { hookUrl: hook.url, delivery });
   expect(res.statusCode).toBe(202);
   await w.drain();
 };
@@ -17,7 +16,8 @@ beforeAll(async () => {
   w = await gitWorld(KEY);
   for (let i = 1; i <= 8; i++) await w.call(w.admin, 'POST', '/v1/issues', { project: KEY, title: `Issue ${i}` });
   const created = (await w.connectGitLab(w.admin, w.slug)).json().data;
-  hook = { url: created.webhook_url, secret: created.webhook_secret };
+  hook = { url: created.webhook_url };
+  expect(created.webhook_secret).toBeNull();
   await w.call(w.admin, 'PUT', `/v1/projects/${KEY}/repositories/acme%2Fapi`, { backfill: false });
   w.provider.routes['GET https://gitlab.com/api/v4/projects/202/merge_requests/12/commits'] = [
     {
@@ -72,16 +72,12 @@ describe('a GitLab merge request', () => {
     const fixture = gitFixture('gitlab', 'merge_request.merge');
     const body = structuredClone(fixture.body) as { project: Record<string, unknown> };
     body.project = { ...body.project, id: 203, path_with_namespace: 'acme/secret' };
-    const { headers, payload } = signedDelivery('gitlab', fixture, repositoryHookSecret(hook.secret, '202'), {
-      delivery: 'forged-1',
-      body,
-    });
+    const token202 = w.gitlabHookToken('202')!;
+    expect(token202).toBeDefined();
+    const { headers, payload } = signedDelivery('gitlab', fixture, token202, { delivery: 'forged-1', body });
     const res = await w.app.inject({ method: 'POST', url: new URL(hook.url).pathname, headers, payload });
     expect(res.statusCode).toBe(401);
     expect(res.json().error.code).toBe('git.signature_invalid');
-    // The connection's own secret no longer opens any hook either.
-    const shared = signedDelivery('gitlab', fixture, hook.secret, { delivery: 'forged-2' });
-    expect((await w.app.inject({ method: 'POST', url: new URL(hook.url).pathname, ...shared })).statusCode).toBe(401);
   });
 
   test('a project with no linked repository shows nothing git-related', async () => {

@@ -503,6 +503,9 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
       };
       const described = input.token ? await call(provider.kind, () => provider.describeConnection(auth)) : null;
 
+      const canManageWebhooks = provider.supports.webhook_registration
+        ? (described?.can_manage_webhooks ?? null)
+        : null;
       if (input.dry_run) {
         if (!described) throw new AppError('git.token_required', 422, {}, 'token');
         const { repos } = await call(provider.kind, () => provider.listRepositories(auth));
@@ -512,7 +515,17 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
           account: described.account,
           repository_count: repos.length,
           token_expires_at: described.token_expires_at?.toISOString() ?? null,
+          can_manage_webhooks: canManageWebhooks,
         };
+      }
+      // The server registers this provider's webhooks itself; a token that cannot would connect nothing.
+      if (canManageWebhooks === false) {
+        throw new AppError(
+          'git.token_scope_missing',
+          422,
+          { provider: providerLabel(provider.kind), scope: 'api' },
+          'token',
+        );
       }
 
       const login = described?.account.login ?? input.account!;
@@ -568,7 +581,9 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
         { provider: provider.kind, auth_kind: input.mode },
         { userId: principal.userId, orgId: org.ctx.orgId },
       );
-      return { ...(await dtoWithCounts(org.ctx, row)), webhook_secret: secret };
+      // A token connection's hooks are registered by the server, each with its repository's own token:
+      // the connection secret they derive from is never handed out.
+      return { ...(await dtoWithCounts(org.ctx, row)), webhook_secret: input.mode === 'manual' ? secret : null };
     },
 
     async remove(principal: Principal, slug: string, name: string): Promise<GitConnection> {
@@ -672,7 +687,10 @@ export function gitConnectionsService(deps: GitConnectionsDeps) {
         }
       }
       const fresh = (await markHealthy(org.ctx, updated)) ?? updated;
-      return { ...(await dtoWithCounts(org.ctx, fresh)), webhook_secret: secret };
+      return {
+        ...(await dtoWithCounts(org.ctx, fresh)),
+        webhook_secret: fresh.auth_kind === 'manual' ? secret : null,
+      };
     },
   };
 }

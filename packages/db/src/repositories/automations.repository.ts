@@ -59,11 +59,13 @@ export function automationsRepository(db: Queryable) {
         .orderBy(asc(automations.position), asc(automations.id));
     },
 
-    async findById(ctx: TenantContext, id: number): Promise<AutomationRow | undefined> {
+    /** The rule as it stands, held against edits until the caller's transaction ends. */
+    async lockById(ctx: TenantContext, id: number): Promise<AutomationRow | undefined> {
       const [row] = await db
         .select()
         .from(automations)
-        .where(and(inOrg(ctx), eq(automations.id, id)));
+        .where(and(inOrg(ctx), eq(automations.id, id)))
+        .for('share');
       return row;
     },
 

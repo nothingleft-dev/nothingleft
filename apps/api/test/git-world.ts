@@ -80,6 +80,10 @@ export interface GitWorld extends IssueWorld {
     fixture: string,
     opts?: { hookUrl?: string; secret?: string; delivery?: string; body?: Record<string, unknown> },
   ) => ReturnType<IssueWorld['call']>;
+  /** The token the fake GitLab holds for the hook on a project id, as a real delivery would carry. */
+  gitlabHookToken: (project: string) => string | undefined;
+  /** Runs before every provider call: a test can make something happen while a call is in flight. */
+  hooks: { beforeFetch: ((url: string) => Promise<void>) | null };
   /** Runs every queued job (the drains), as pg-boss would once each is due. */
   drain: (now?: Date) => Promise<void>;
   token: (who: Person, scopes: PatScope[]) => Promise<Person>;
@@ -102,7 +106,9 @@ export function fakeProviders() {
     [inst('5001'), { login: 'acme-inc', repos: [githubRepo(101, 'acme-inc/web')] }],
   ]);
   const gitlabProjects = [gitlabProject(202, 'acme/api')];
-  const hooks = new Map<string, { url: string; token: string }>();
+  const hooks = new Map<string, { url: string; token: string; project: string }>();
+  /** The token GitLab holds for the hook on that project: what a real delivery from it carries. */
+  const gitlabHookToken = (project: string) => [...hooks.values()].findLast(h => h.project === project)?.token;
   let nextHook = 70;
 
   const routes: Record<string, FakeReply> = {
@@ -131,7 +137,9 @@ export function fakeProviders() {
     },
   };
   const provider = fakeFetch(routes);
+  const fetchHooks: { beforeFetch: ((url: string) => Promise<void>) | null } = { beforeFetch: null };
   const fetch: typeof provider.fetch = async (input, init) => {
+    if (fetchHooks.beforeFetch) await fetchHooks.beforeFetch(input);
     const url = new URL(input);
     const method = init?.method ?? 'GET';
     const app = /^\/app\/installations\/(\d+)(\/access_tokens)?$/.exec(url.pathname);
@@ -173,11 +181,11 @@ export function fakeProviders() {
       provider.calls.push({ method, url: input, headers: {}, body });
       if (method === 'POST') {
         const id = String(nextHook++);
-        hooks.set(id, { url: body.url, token: body.token });
+        hooks.set(id, { url: body.url, token: body.token, project: hook[1]! });
         return Response.json({ id: Number(id), url: body.url });
       }
       if (method === 'PUT') {
-        hooks.set(hook[2]!, { url: body.url, token: body.token });
+        hooks.set(hook[2]!, { url: body.url, token: body.token, project: hook[1]! });
         return Response.json({ id: Number(hook[2]) });
       }
       if (method === 'DELETE') {
@@ -189,12 +197,12 @@ export function fakeProviders() {
     return provider.fetch(input, init);
   };
 
-  return { fetch, provider, inst, installations, gitlabProjects };
+  return { fetch, provider, inst, installations, gitlabProjects, fetchHooks, gitlabHookToken };
 }
 
 /** An issue world whose GitHub and GitLab are fakes: the routes below answer what a real provider would. */
 export async function gitWorld(key: string, opts: { withApp?: boolean } & BuildOptions = {}): Promise<GitWorld> {
-  const { fetch, provider, inst, installations, gitlabProjects } = fakeProviders();
+  const { fetch, provider, inst, installations, gitlabProjects, fetchHooks, gitlabHookToken } = fakeProviders();
   const world = await issueWorld(key, { gitFetch: fetch, ...opts }, gitEnv(opts.withApp ?? true));
   const queue = world.app.jobQueue as RecordingQueue;
   const organization = await organizationsRepository(world.db).findBySlug(systemContext('test lookup'), world.slug);
@@ -222,10 +230,12 @@ export async function gitWorld(key: string, opts: { withApp?: boolean } & BuildO
     const installation = body['installation'] as { id?: number } | undefined;
     if (installation?.id !== undefined)
       body['installation'] = { ...installation, id: Number(inst(String(installation.id))) };
-    const { headers, payload } = signedDelivery(kind, fixture, o.secret ?? APP_WEBHOOK_SECRET, {
+    const project = (body['project'] as { id?: unknown } | undefined)?.id ?? body['project_id'];
+    const secret =
+      o.secret ?? (kind === 'gitlab' ? (gitlabHookToken(String(project)) ?? 'no-hook') : APP_WEBHOOK_SECRET);
+    const { headers, payload } = signedDelivery(kind, fixture, secret, {
       ...(o.delivery ? { delivery: o.delivery } : {}),
       body,
-      registeredHook: kind === 'gitlab',
     });
     const url = o.hookUrl ? new URL(o.hookUrl).pathname : `/v1/git/webhooks/${kind}`;
     return world.app.inject({ method: 'POST', url, headers, payload });
@@ -252,6 +262,8 @@ export async function gitWorld(key: string, opts: { withApp?: boolean } & BuildO
 
   return {
     ...world,
+    hooks: fetchHooks,
+    gitlabHookToken,
     provider,
     queue,
     orgCtx,

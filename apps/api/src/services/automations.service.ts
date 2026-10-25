@@ -69,6 +69,8 @@ export interface AutomationFiring {
   cause: string;
   /** The member whose git action fired it: everyone but them hears about the change. */
   causedBy: number | null;
+  /** For a git trigger: the change is written only while the connection may still feed issues and the repository serves the issue's project. */
+  guard?: { connectionId: number; repositoryId: number };
 }
 
 export interface AutomationsDeps {
@@ -286,7 +288,7 @@ export function automationsService(deps: AutomationsDeps) {
   async function evaluate(
     ctx: TenantContext,
     issueId: number,
-    firing: Pick<AutomationFiring, 'trigger' | 'ref' | 'cause' | 'causedBy'>,
+    firing: Pick<AutomationFiring, 'trigger' | 'ref' | 'cause' | 'causedBy' | 'guard'>,
     facts: FiringFacts,
   ): Promise<void> {
     const issue = await issues.findById(ctx, issueId);
@@ -353,7 +355,7 @@ export function automationsService(deps: AutomationsDeps) {
   async function evaluateSafely(
     ctx: TenantContext,
     issueId: number,
-    firing: Pick<AutomationFiring, 'trigger' | 'ref' | 'cause' | 'causedBy'>,
+    firing: Pick<AutomationFiring, 'trigger' | 'ref' | 'cause' | 'causedBy' | 'guard'>,
     facts: FiringFacts,
   ): Promise<void> {
     try {
@@ -371,7 +373,7 @@ export function automationsService(deps: AutomationsDeps) {
     issueId: number,
     statuses: readonly WorkflowStatusRow[],
     target: WorkflowStatusRow,
-    firing: Pick<AutomationFiring, 'ref' | 'cause' | 'causedBy'>,
+    firing: Pick<AutomationFiring, 'ref' | 'cause' | 'causedBy' | 'guard'>,
     facts: FiringFacts,
   ): Promise<'applied' | 'already' | 'gone' | 'stale'> {
     const at = now();
@@ -382,12 +384,25 @@ export function automationsService(deps: AutomationsDeps) {
       if (current.status_id === target.id) return 'already';
       const before = statuses.find(s => s.id === current.status_id);
       if (!before) return 'gone';
-      // What was read before the lock may have changed: the rule is judged again on the locked issue.
-      const [live, project] = await Promise.all([
-        r.automations.findById(ctx, rule.id),
+      if (
+        firing.guard &&
+        (!(await r.gitConnections.lockEligible(ctx, firing.guard.connectionId)) ||
+          !(await r.gitRepositories.lockServing(ctx, firing.guard.repositoryId, current.project_id)))
+      ) {
+        return 'gone';
+      }
+      // What was read before the lock may have changed. The rule is held and must be the version
+      // that chose this target (any edit moves `updated_at`), its status must still be the one it
+      // names, and its conditions must hold on the locked issue.
+      const [live, project, fresh] = await Promise.all([
+        r.automations.lockById(ctx, rule.id),
         r.projects.findById(ctx, current.project_id),
+        r.schema.list(ctx, 'statuses', current.project_id),
       ]);
-      if (!live?.is_enabled || !project || project.is_archived) return 'stale';
+      if (!live?.is_enabled || live.updated_at.getTime() !== rule.updated_at.getTime()) return 'stale';
+      if (!project || project.is_archived) return 'stale';
+      const named = findStatus(fresh, String((live.action_params as { status?: unknown }).status ?? ''));
+      if (named?.id !== target.id) return 'stale';
       if (!(await conditionsHold(ctx, live, current, before, facts))) return 'stale';
       const changes = { status: { from: before.name, to: target.name } };
       const run = await r.automations.recordRun(ctx, {

@@ -84,6 +84,8 @@ export type GitConnection = z.infer<typeof GitConnectionSchema>;
 
 // The one response that carries the shared secret: shown once, at creation or rotation.
 export const GitConnectionSecretSchema = GitConnectionSchema.extend({
+  // Shown once, and only for a manual connection: its webhooks are added by hand. A token
+  // connection's hooks each carry a token the server derives, so there is nothing to paste.
   webhook_secret: z.string().nullable(),
 });
 export type GitConnectionSecret = z.infer<typeof GitConnectionSecretSchema>;
@@ -94,6 +96,8 @@ export const GitConnectionCheckSchema = z.object({
   account: GitAccountSchema,
   repository_count: z.number().int().nonnegative(),
   token_expires_at: z.string().nullable(),
+  // The token may add the webhooks the server registers (GitLab: the `api` scope); null when not known.
+  can_manage_webhooks: z.boolean().nullable(),
 });
 export type GitConnectionCheck = z.infer<typeof GitConnectionCheckSchema>;
 

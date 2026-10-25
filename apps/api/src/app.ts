@@ -699,6 +699,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   });
   const gitLinker = gitLinksService({
     providers: gitProviders,
+    connections: repos.gitConnections,
     repositories: repos.gitRepositories,
     entities: repos.gitEntities,
     links: repos.gitLinks,

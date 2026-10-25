@@ -12,8 +12,9 @@ An Org Admin connects an account once for the whole organisation.
 
 - **GitHub**: install the app on your GitHub organisation or account and choose which repositories
   it may read. The installation is the connection; uninstalling it at GitHub disconnects it.
-- **GitLab**: paste a group or project access token with `read_api` and `read_repository`. The
-  server registers a webhook on each repository you link. A self-managed GitLab works the same way,
+- **GitLab**: paste a group or project access token with the `api` scope and the **Maintainer**
+  role. The server adds a webhook to each repository you link, which needs both; a token without
+  `api` is refused when you connect. Each webhook gets its own secret, so there is nothing to copy. A self-managed GitLab works the same way,
   at its own address.
 - **Manual mode** (GitHub without the app, for example on a self-hosted install that has not
   registered one): add a webhook to each repository yourself, with the address and secret shown

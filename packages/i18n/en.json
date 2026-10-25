@@ -414,6 +414,7 @@
   "error.git.mode_unsupported": "{provider} does not connect in {mode} mode here.",
   "error.git.token_required": "Enter an access token.",
   "error.git.account_required": "Without a token, enter the account the webhooks come from.",
+  "error.git.token_scope_missing": "{provider} accepted that token, but it cannot add webhooks. Create one with the {scope} scope and the Maintainer role.",
   "error.git.token_invalid": "{provider} refused that token. Check that it is still valid and has the permissions the setup lists.",
   "error.git.provider_unreachable": "{provider} could not be reached. Try again in a few minutes.",
   "error.git.provider_rate_limited": "{provider} is limiting requests right now. Try again in a few minutes.",
