@@ -40,3 +40,6 @@ export * from './repositories/org-storage-locations.repository.ts';
 export * from './repositories/import-jobs.repository.ts';
 export * from './repositories/export-jobs.repository.ts';
 export * from './repositories/org-export.repository.ts';
+export * from './repositories/git-connections.repository.ts';
+export * from './repositories/git-repositories.repository.ts';
+export * from './repositories/git-events.repository.ts';

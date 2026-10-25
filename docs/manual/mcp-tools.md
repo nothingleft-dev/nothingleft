@@ -1205,7 +1205,7 @@ The organisation's audit log, newest first: invitations, joins, removals, role c
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 | `actor` | string |  | Only what this member did. |
-| `kinds` | list of `member_invited` · `member_joined` · `member_removed` · `role_changed` · `invite_created` · `invite_revoked` · `project_created` · `project_archived` · `project_deleted` · `schema_changed` · `custom_field_changed` · `storage_connected` · `storage_disconnected` · `ownership_transferred` · `org_settings_changed` · `export_requested` · `token_created` · `token_revoked` · `project_updated` · `project_unarchived` · `invite_rotated` · `username_changed` · `deletion_scheduled` · `deletion_cancelled` · `storage_updated` · `tag_renamed` · `tag_merged` · `tag_deleted` |  |  |
+| `kinds` | list of `member_invited` · `member_joined` · `member_removed` · `role_changed` · `invite_created` · `invite_revoked` · `project_created` · `project_archived` · `project_deleted` · `schema_changed` · `custom_field_changed` · `storage_connected` · `storage_disconnected` · `ownership_transferred` · `org_settings_changed` · `export_requested` · `token_created` · `token_revoked` · `project_updated` · `project_unarchived` · `invite_rotated` · `username_changed` · `deletion_scheduled` · `deletion_cancelled` · `storage_updated` · `tag_renamed` · `tag_merged` · `tag_deleted` · `git_connection_created` · `git_connection_removed` · `git_connection_error` · `repository_linked` · `repository_unlinked` |  |  |
 | `from` | string |  | A calendar date, YYYY-MM-DD. |
 | `to` | string |  | A calendar date, YYYY-MM-DD. |
 | `limit` | number |  | Rows per page, 1–50. Default 20. |
@@ -1221,6 +1221,142 @@ Changes your own name or timezone (an IANA name such as "Europe/London"), which 
 |---|---|---|---|
 | `name` | string |  |  |
 | `timezone` | string |  |  |
+
+## Development
+
+### `list_git_connections`
+
+The organisation's GitHub and GitLab connections: health, how many repositories each sees and how many are linked to projects, the last delivery. Connecting a new one carries a token, so it is done in organisation settings, not here. Needs an Org Admin and a token with admin:org.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `refresh_git_connection`
+
+Checks the connection's token again and lists its repositories afresh: new ones appear, ones the provider no longer shows are marked removed. Needs an Org Admin and a token with admin:org.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `connection` | string | yes | Connection by name, e.g. "github:acme-inc" or "gitlab:acme" (list_git_connections names them). |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `remove_git_connection`
+
+Disconnects GitHub or GitLab: deliveries stop, linked repositories and what they already linked stay as read-only history, and automations stop firing. A GitHub App stays installed at GitHub until someone uninstalls it there. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.
+
+*Changes data; asks you to confirm in your MCP client first.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `connection` | string | yes | Connection by name, e.g. "github:acme-inc" or "gitlab:acme" (list_git_connections names them). |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `list_repositories`
+
+With `project` alone: the repositories linked to that project (any member). With `available: true` or no project: the organisation's connected repositories to link from, filtered by `connection`, `q` and `linked` — an Org Admin sees all; a Project Admin passes the project they are linking into. Tokens need issues:read for the first and admin:project or admin:org for the second.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string |  | Project key, e.g. "PP". |
+| `available` | boolean |  | List what can be linked rather than what is linked. |
+| `connection` | string |  | Connection by name, e.g. "github:acme-inc" or "gitlab:acme" (list_git_connections names them). |
+| `q` | string |  | Part of the repository name. |
+| `linked` | boolean |  | Only repositories linked to some project (true) or to none (false). |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `limit` | number |  | Rows per page, 1–50. Default 20. |
+| `offset` | number |  | Rows to skip, from the previous page. Default 0. |
+
+### `link_repository`
+
+Links a connected repository so its branches, commits and pull requests that mention the project's issue keys show on those issues. By default, open pull requests and those of the last 90 days are read in once. Needs a Project Admin and a token with admin:project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `repository` | string | yes | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
+| `connection` | string |  | The connection, when two have a repository of that name. |
+| `match_all_projects` | boolean |  | Match every project key in the organisation, not only the projects it is linked to (a monorepo). |
+| `merge_base_branches` | list of string or null |  | Branches a merge into counts as merged, globs allowed ("main", "release/*"); null follows the default branch. |
+| `backfill` | boolean |  | Read in existing pull requests and branches now. Default true. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `update_repository_link`
+
+Changes which branches count as merged into, or whether the repository matches every project in the organisation. The settings belong to the repository, so every project it is linked to sees them. Needs a Project Admin and a token with admin:project.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `repository` | string | yes | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
+| `connection` | string |  | The connection, when two have a repository of that name. |
+| `match_all_projects` | boolean |  | Match every project key in the organisation, not only the projects it is linked to (a monorepo). |
+| `merge_base_branches` | list of string or null |  | Branches a merge into counts as merged, globs allowed ("main", "release/*"); null follows the default branch. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `unlink_repository`
+
+Stops the repository feeding the project's issues. What it already linked stays in their history; nothing new arrives. Needs a Project Admin and a token with admin:project. Asks you to confirm before acting.
+
+*Changes data; asks you to confirm in your MCP client first.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `project` | string | yes | Project key, e.g. "PP". |
+| `repository` | string | yes | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
+| `connection` | string |  | The connection, when two have a repository of that name. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `resync_repository`
+
+Reads the repository from its provider now (name, default branch, archived, still there), and with `rehook: true` re-registers a missing webhook where the integration registered it. Needs an Org Admin and a token with admin:org.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `repository` | string | yes | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
+| `connection` | string |  | The connection, when two have a repository of that name. |
+| `rehook` | boolean |  | Also put back the webhook we registered on the repository. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+
+### `list_git_events`
+
+The delivery log: what each provider sent, newest first, and what came of it (done, ignored and why, failed and why). Pass `delivery` for one delivery with its stored payload. Use it to answer 'why did nothing show up on the issue?'. Needs an Org Admin and a token with admin:org.
+
+*Reads only.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `delivery` | number |  | One delivery by the number the log shows, with its payload. |
+| `connection` | string |  | Connection by name, e.g. "github:acme-inc" or "gitlab:acme" (list_git_connections names them). |
+| `repository` | string |  | Repository by full name, e.g. "acme/web". When two connections have one of that name, also pass `connection`. |
+| `status` | `pending` · `done` · `ignored` · `failed` |  |  |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `limit` | number |  | Rows per page, 1–50. Default 20. |
+| `offset` | number |  | Rows to skip, from the previous page. Default 0. |
+
+### `replay_git_event`
+
+Applies a stored delivery again, in order with the repository's other deliveries. Automations do not run unless `run_automations` is true. For a delivery that never arrived, use the provider's own redelivery page (list_git_connections does not show it; organisation settings links it). Needs an Org Admin and a token with admin:org.
+
+*Changes data.*
+
+| Argument | Type | Required | Description |
+|---|---|---|---|
+| `delivery` | number | yes | The delivery by the number list_git_events shows. |
+| `run_automations` | boolean |  | Let the replay change issue statuses through automations. |
+| `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
 
 ## Import and export
 

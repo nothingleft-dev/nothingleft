@@ -1,0 +1,84 @@
+{
+  "headers": {
+    "x-gitlab-event": "Job Hook",
+    "x-gitlab-event-uuid": "19f7d608-4a2b-46cd-98f9-0a1b2c3d4e5f"
+  },
+  "body": {
+    "object_kind": "build",
+    "ref": "feat/api-7-login",
+    "tag": false,
+    "before_sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+    "sha": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+    "retries_count": 0,
+    "build_id": 7701,
+    "build_name": "compile",
+    "build_stage": "build",
+    "build_status": "success",
+    "build_created_at": "2026-10-25 10:21:00 UTC",
+    "build_started_at": "2026-10-25 10:21:05 UTC",
+    "build_finished_at": "2026-10-25 10:23:05 UTC",
+    "build_duration": 120,
+    "build_queued_duration": 1.6,
+    "build_allow_failure": false,
+    "build_failure_reason": "unknown_failure",
+    "pipeline_id": 3101,
+    "runner": {
+      "id": 380987,
+      "description": "shared-runners",
+      "runner_type": "instance_type",
+      "active": true,
+      "is_shared": true,
+      "tags": []
+    },
+    "project_id": 202,
+    "project_name": "acme / api",
+    "user": {
+      "id": 9001,
+      "name": "Alex Lee",
+      "username": "alex-lee",
+      "avatar_url": "https://gitlab.com/uploads/-/system/user/avatar/9001/avatar.png",
+      "email": "[REDACTED]"
+    },
+    "commit": {
+      "id": 3101,
+      "name": null,
+      "sha": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+      "message": "API-7: Reject empty passwords\n",
+      "author_name": "Alex Lee",
+      "author_email": "alex@acme.example",
+      "author_url": "https://gitlab.com/alex-lee",
+      "status": "running",
+      "duration": null,
+      "started_at": "2026-10-25 10:21:05 UTC",
+      "finished_at": null
+    },
+    "repository": {
+      "name": "api",
+      "url": "git@gitlab.com:acme/api.git",
+      "description": "Acme API",
+      "homepage": "https://gitlab.com/acme/api",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "visibility_level": 0
+    },
+    "project": {
+      "id": 202,
+      "name": "api",
+      "description": "Acme API",
+      "web_url": "https://gitlab.com/acme/api",
+      "avatar_url": null,
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "namespace": "acme",
+      "visibility_level": 0,
+      "path_with_namespace": "acme/api",
+      "default_branch": "main",
+      "ci_config_path": null,
+      "homepage": "https://gitlab.com/acme/api",
+      "url": "git@gitlab.com:acme/api.git",
+      "ssh_url": "git@gitlab.com:acme/api.git",
+      "http_url": "https://gitlab.com/acme/api.git"
+    },
+    "environment": null
+  }
+}

@@ -16,6 +16,9 @@ import {
   commentsRepository,
   createDb,
   exportJobsRepository,
+  gitConnectionsRepository,
+  gitEventsRepository,
+  gitRepositoriesRepository,
   importJobsRepository,
   orgExportRepository,
   invitationsRepository,
@@ -48,6 +51,7 @@ import {
   encryptionMasterKey,
   fastifyTrustProxy,
   filesBaseUrl,
+  githubApp,
   parseTrustProxy,
   type Env,
 } from '@config/env';
@@ -66,6 +70,9 @@ import { bestEffort, createMailer, type Mailer } from '@lib/email';
 import { avatarMarks, resolveAvatarUrl } from '@lib/avatar';
 import { createOAuthClients, type OAuthClients } from '@lib/oauth';
 import { isPasswordBreached } from '@lib/password';
+import { resolveHost as dnsResolveHost, type ResolveHost } from '@lib/network';
+import { guardedFetch, type GitFetch } from '@git/http';
+import { createProviders } from '@git/providers/index';
 import { createStorage, type Storage } from '@lib/storage';
 import { recordingQueue, startJobs, type JobHandlers, type JobQueue, type QueuedHandlers } from '@lib/jobs';
 import { requestIdOptions } from '@plugins/request-id';
@@ -109,6 +116,8 @@ import ownershipTransfersRoutes from '@routes/ownership-transfers';
 import storageRoutes from '@routes/storage';
 import importsRoutes from '@routes/imports';
 import exportsRoutes from '@routes/exports';
+import gitRoutes from '@routes/git';
+import gitWebhookRoutes from '@routes/git-webhooks';
 import { accessService } from '@services/access';
 import { activityService } from '@services/activity.service';
 import { invitationsService } from '@services/invitations.service';
@@ -145,6 +154,9 @@ import { objectStores } from '@services/object-stores';
 import { storageService } from '@services/storage.service';
 import { importsService } from '@services/imports.service';
 import { exportsService } from '@services/exports.service';
+import { gitConnectionsService } from '@services/git-connections.service';
+import { gitIngestService } from '@services/git-ingest.service';
+import { gitRepositoriesService } from '@services/git-repositories.service';
 import { twoFactorService } from '@services/two-factor.service';
 import { authService } from '@services/auth.service';
 import { meService } from '@services/me.service';
@@ -171,6 +183,10 @@ export interface BuildOptions {
   avatarFetch?: AvatarMirrorDeps['fetch'];
   /** The clock two-factor codes are checked against; tests step it to play an authenticator. */
   now?: () => Date;
+  /** How the git integration reaches GitHub and GitLab; tests answer from recorded responses. */
+  gitFetch?: GitFetch;
+  /** How a self-managed base URL's host is resolved for the private-network check. */
+  gitResolveHost?: ResolveHost;
 }
 
 export async function buildApp(env: Env, opts: BuildOptions = {}) {
@@ -241,6 +257,9 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     importJobs: importJobsRepository(db),
     exportJobs: exportJobsRepository(db),
     orgExport: orgExportRepository(db),
+    gitConnections: gitConnectionsRepository(db),
+    gitRepositories: gitRepositoriesRepository(db),
+    gitEvents: gitEventsRepository(db),
   };
 
   const tenantRepos = (q: Queryable): TenantRepos => ({
@@ -268,6 +287,9 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     organizationPurge: organizationPurgeRepository(q),
     importJobs: importJobsRepository(q),
     exportJobs: exportJobsRepository(q),
+    gitConnections: gitConnectionsRepository(q),
+    gitRepositories: gitRepositoriesRepository(q),
+    gitEvents: gitEventsRepository(q),
   });
   const inTenantTransaction = <T>(body: (r: TenantRepos) => Promise<T>) => db.transaction(tx => body(tenantRepos(tx)));
 
@@ -621,6 +643,56 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     analytics,
     appBaseUrl: env.APP_BASE_URL,
   });
+  const gitProviders = createProviders({
+    fetch: guardedFetch(
+      opts.gitFetch ?? ((url, init) => fetch(url, init)),
+      opts.gitResolveHost ?? dnsResolveHost,
+      env.GIT_ALLOW_PRIVATE_HOSTS,
+    ),
+    now: () => new Date(),
+    githubApp: githubApp(env),
+  });
+  const gitConnections = gitConnectionsService({
+    access,
+    providers: gitProviders,
+    connections: repos.gitConnections,
+    repositories: repos.gitRepositories,
+    organizations: repos.organizations,
+    inTransaction: inTenantTransaction,
+    store: app.redis,
+    mailer: bestEffort(mailer, error => analytics.captureException(error)),
+    analytics,
+    masterKey: encryptionMasterKey(env),
+    apiBaseUrl: env.API_BASE_URL,
+    appBaseUrl: env.APP_BASE_URL,
+    allowPrivateHosts: env.GIT_ALLOW_PRIVATE_HOSTS,
+    resolveHost: opts.gitResolveHost ?? dnsResolveHost,
+  });
+  const gitRepositories = gitRepositoriesService({
+    access,
+    providers: gitProviders,
+    connections: repos.gitConnections,
+    repositories: repos.gitRepositories,
+    organizations: repos.organizations,
+    projects: repos.projects,
+    inTransaction: inTenantTransaction,
+    analytics,
+    masterKey: encryptionMasterKey(env),
+    apiBaseUrl: env.API_BASE_URL,
+  });
+  const gitIngest = gitIngestService({
+    access,
+    providers: gitProviders,
+    connections: repos.gitConnections,
+    repositories: repos.gitRepositories,
+    events: repos.gitEvents,
+    connectionsService: gitConnections,
+    counter: app.redis,
+    queue: () => queue,
+    analytics,
+    masterKey: encryptionMasterKey(env),
+    log: app.log,
+  });
   const services = {
     auth: authSvc,
     tenancy,
@@ -826,6 +898,13 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
   await app.register(boardsRoutes, { boards });
   await app.register(reportsRoutes, { reports });
   await app.register(notificationsRoutes, { notifications });
+  await app.register(gitRoutes, {
+    connections: gitConnections,
+    repositories: gitRepositories,
+    ingest: gitIngest,
+    cookie: { secure: env.NODE_ENV === 'production', domain: env.SESSION_COOKIE_DOMAIN },
+  });
+  await app.register(gitWebhookRoutes, { ingest: gitIngest, ...(opts.now ? { now: opts.now } : {}) });
   await app.register(mcpRoutes, {
     apiBaseUrl: env.MCP_API_BASE_URL ?? `http://127.0.0.1:${env.PORT}`,
     appBaseUrl: env.APP_BASE_URL,
@@ -848,6 +927,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'org.delete': now => organizationLifecycle.deleteDue(now),
     'storage.reconcile': now => storageSvc.reconcile(now),
     'transfers.sweep': async now => (await imports.sweep(now)) + (await exports.sweep(now)),
+    'git.purge': now => gitIngest.purge(now),
   };
   const queuedHandlers: QueuedHandlers = {
     'notify.fanout': (job, now) => fanout.fanout(job, now),
@@ -855,6 +935,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
     'storage.migrate': (job, now) => storageSvc.migrate(job, now),
     'import.csv': (job, now) => imports.run(job, now),
     'export.org': (job, now) => exports.run(job, now),
+    'git.process_events': (job, now) => gitIngest.drain(job, now),
   };
   // Route tests run a job the way the schedule would, without pg-boss.
   app.decorate('jobHandlers', jobHandlers);

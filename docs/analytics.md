@@ -263,6 +263,14 @@ articles affected, saved views rewritten). Adoption is ever-used and weekly-used
 for every feature (20.11). Never a filename, a header, a cell, a mapping, a tag name or an
 organisation name.
 
+### Git integration
+
+Built in 7 (25 Oct 2026). `git_connection_created` (the provider and how it connects: app
+installation, token or manual), `git_repository_linked` (the provider; whether a backfill was
+asked for) and `git_event_failed` (the provider and the failure reason, one of
+`GIT_EVENT_FAILURES`). Never a repository, an account login, a branch, a title, a commit message
+or a URL; the delivery log that holds those stays in the database.
+
 ## MCP — the metrics that matter most
 
 One `mcp_tool_called` event per call — `tool`, `ok`, `error_code`, `duration_ms`,

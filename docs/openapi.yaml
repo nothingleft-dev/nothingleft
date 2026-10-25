@@ -7099,6 +7099,422 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/ArticleNotFound' }
 
+  /v1/git/providers:
+    get:
+      summary: The git providers this server connects to
+      description: |
+        Any signed-in account. Kinds, labels, the provider's word for a pull request (*merge
+        request* on GitLab), the ways each connects here (`app` when this server has a GitHub
+        App, `token`, `manual`) and what each supports. The web app builds its connect cards from
+        it, so a new provider needs no web change beyond an icon.
+      tags: [git]
+      responses:
+        '200':
+          description: One entry per provider.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/GitProviderInfo' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/organizations/{slug}/git/connect/{provider}/start:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitProvider'
+    post:
+      x-mcp-exempt: credentials
+      summary: Start connecting a provider by installing its app
+      description: |
+        Org Admins and the Owner, browser session only. Answers the provider's install page and
+        sets a short-lived `git_connect_state` cookie (path `/v1/git/connect`) binding the attempt to
+        this browser. The provider sends the person back to the web app's callback page, which
+        posts to `/v1/git/connect/{provider}/callback`. The app must request user authorisation
+        during installation, so the callback carries a `code` that proves the person can
+        administer the installation.
+      tags: [git]
+      responses:
+        '200':
+          description: Where to send the browser.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: object, required: [install_url], properties: { install_url: { type: string } } }
+        '403': { description: '`forbidden`, or `auth.session_required` for a PAT.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '404': { $ref: '#/components/responses/OrganizationNotFound' }
+        '409': { description: '`git.app_not_configured` (this server has no app: connect in manual mode), `git.connection_limit_reached`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/git/connect/{provider}/callback:
+    parameters:
+      - $ref: '#/components/parameters/GitProvider'
+    post:
+      x-mcp-exempt: credentials
+      summary: Finish connecting an app installation
+      description: |
+        Browser session only, by the person who started. The state must match the cookie and the
+        stored attempt; the `code` is exchanged with the provider and the installation must be one
+        that person can administer. An installation a live connection of this organisation
+        already holds is refreshed (its repositories listed again); one another organisation holds
+        is refused without naming it. Seeing an installation is not enough: the person must
+        administer its account (be that user, or an admin of that organisation). Writes
+        `git_connection_created`.
+      tags: [git]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state, code, installation_id]
+              properties:
+                state: { type: string }
+                code: { type: string }
+                installation_id: { type: string, pattern: '^\d{1,20}$' }
+                setup_action: { type: string }
+      responses:
+        '200': { description: 'The connection.', content: { application/json: { schema: { $ref: '#/components/schemas/GitConnectionEnvelope' } } } }
+        '400': { description: '`git.connect_state_invalid`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '403': { description: '`git.installation_forbidden`, `forbidden`, or `auth.session_required`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.installation_already_connected`, `git.connection_limit_reached`, `git.app_not_configured`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '502': { description: '`git.provider_unreachable`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/connections:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+    get:
+      summary: The organisation's git connections
+      description: Org Admins and the Owner; a token needs `admin:org`. Live connections first, then disconnected ones. Never carries a token or a secret.
+      tags: [git]
+      responses:
+        '200':
+          description: The connections.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/GitConnection' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrganizationNotFound' }
+    post:
+      x-mcp-exempt: credentials
+      summary: Connect with a token, or a webhook added by hand
+      description: |
+        Org Admins and the Owner, browser session only. `mode: token` (GitLab): a group or project
+        access token with `read_api` and `read_repository`; the server lists its repositories and
+        registers its webhook on each repository when it is linked. `mode: manual` (GitHub without an
+        app, or GitHub Enterprise Server): the admin adds the webhook to each repository; an optional
+        token lets the server read pull request commits and backfill, and without one `account`
+        names the connection. `base_url` defaults to the provider's own host; a self-managed host
+        whose address is on a private network is refused unless the server allows it.
+        `dry_run: true` is the connect sheet's *Check*: it describes the account behind the token and
+        saves nothing. Otherwise the answer carries `webhook_secret`, shown this once, and
+        `webhook_url`. The token is sealed and never returned. Writes `git_connection_created`.
+      tags: [git]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateGitConnection' } } }
+      responses:
+        '200': { description: '`dry_run`: what the token sees.', content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { properties: { data: { $ref: '#/components/schemas/GitConnectionCheck' } } }] } } } }
+        '201': { description: 'The connection, with its webhook secret this once.', content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { properties: { data: { $ref: '#/components/schemas/GitConnectionSecret' } } }] } } } }
+        '403': { description: '`forbidden`, or `auth.session_required` for a PAT.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '404': { description: '`organization.not_found`, `git.provider_unknown`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.connection_name_taken`, `git.connection_limit_reached`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '422': { description: '`git.mode_unsupported` (`mode`), `git.token_required` (`token`), `git.account_required` (`account`), `git.base_url_not_allowed` (`base_url`), `git.token_invalid` (`token`).', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '502': { description: '`git.provider_unreachable`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '503': { description: '`git.provider_rate_limited`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/connections/{connection}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitConnectionName'
+    delete:
+      summary: Disconnect
+      description: |
+        Org Admins and the Owner; a token needs `admin:org`. The row stays with `revoked_at`; its
+        token and secret are forgotten, deliveries stop routing, the webhooks the server registered
+        are removed (best effort), and its repositories, links and history stay read-only. A GitHub
+        App stays installed at GitHub until uninstalled there. Writes `git_connection_removed`.
+      tags: [git]
+      responses:
+        '200': { description: 'The connection, now disconnected.', content: { application/json: { schema: { $ref: '#/components/schemas/GitConnectionEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`organization.not_found`, `git.connection_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/connections/{connection}/refresh:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitConnectionName'
+    post:
+      summary: Check the token again and list the repositories afresh
+      description: |
+        Org Admins and the Owner; a token needs `admin:org`. New repositories appear; ones the
+        provider no longer lists are marked removed. A refused token marks the connection
+        `failing` (`token_invalid`) or `token_expired`, records `git_connection_error` and emails the
+        Org Admins, once per change; a working one makes it `active` again.
+      tags: [git]
+      responses:
+        '200': { description: 'The connection.', content: { application/json: { schema: { $ref: '#/components/schemas/GitConnectionEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`organization.not_found`, `git.connection_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '502': { description: '`git.provider_unreachable`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/connections/{connection}/rotate-secret:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitConnectionName'
+    post:
+      x-mcp-exempt: credentials
+      summary: Rotate the webhook secret
+      description: |
+        Org Admins and the Owner, browser session only; token and manual connections. A new shared
+        secret, returned this once; the webhook URL stays. Webhooks the server registered are
+        updated to it; hand-added ones must be updated by the admin. `git.mode_unsupported` for an
+        app installation, whose secret is the server's.
+      tags: [git]
+      responses:
+        '200': { description: 'The connection with its new secret.', content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { properties: { data: { $ref: '#/components/schemas/GitConnectionSecret' } } }] } } } }
+        '403': { description: '`forbidden`, or `auth.session_required` for a PAT.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '404': { description: '`git.connection_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.mode_unsupported`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/repositories:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+    get:
+      summary: Repositories the organisation's connections can see
+      description: |
+        The list to link from. An Org Admin sees every repository of the live connections (and,
+        with `connection`, that connection's, removed ones included). Anyone else must name
+        `project`, a project they administer (`git.project_required` when they administer one and
+        did not; `forbidden` when they administer none). `projects` lists the linked projects the
+        caller can read. A token needs `admin:org`, or `admin:project` with `project`.
+      tags: [git]
+      parameters:
+        - { name: connection, in: query, schema: { type: string }, description: 'A connection by name, `github:acme-inc`.' }
+        - { name: q, in: query, schema: { type: string, maxLength: 200 }, description: Part of the full name. }
+        - { name: linked, in: query, schema: { type: string, enum: ['true', 'false'] } }
+        - { name: project, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          description: A page of repositories, ordered by name.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/GitRepository' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`organization.not_found`, `project.not_found`, `git.connection_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '422': { description: '`git.project_required`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/repositories/{repository}/resync:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitRepositoryRef'
+      - $ref: '#/components/parameters/GitConnectionQuery'
+    post:
+      summary: Read one repository from its provider now
+      description: Org Admins and the Owner; a token needs `admin:org`. Name, default branch, archived, private, and whether the provider still has it (else it is marked removed).
+      tags: [git]
+      responses:
+        '200': { description: 'The repository.', content: { application/json: { schema: { $ref: '#/components/schemas/GitRepositoryEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`git.repository_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.repository_ambiguous` — pass `connection`; `valid_values` lists the connections.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '502': { description: '`git.provider_unreachable`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/repositories/{repository}/rehook:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitRepositoryRef'
+      - $ref: '#/components/parameters/GitConnectionQuery'
+    post:
+      summary: Re-register the repository's webhook
+      description: Org Admins and the Owner; a token needs `admin:org`. For a token connection, puts back (or updates) the webhook the server registered. An app installation needs none. A manual connection's webhooks are added by hand (`git.webhook_manual`).
+      tags: [git]
+      responses:
+        '200': { description: 'The repository, `webhook_status` as it now stands.', content: { application/json: { schema: { $ref: '#/components/schemas/GitRepositoryEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`git.repository_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.webhook_manual`, `git.repository_ambiguous`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/projects/{key}/repositories:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+    get:
+      summary: Repositories linked to the project
+      description: Anyone who reads the project; a token needs `issues:read`. A project with at least one linked repository is git-enabled.
+      tags: [git]
+      responses:
+        '200':
+          description: The linked repositories, by name.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/ProjectRepository' } }
+        '404': { $ref: '#/components/responses/ProjectNotFound' }
+
+  /v1/projects/{key}/repositories/{repository}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectKey'
+      - $ref: '#/components/parameters/GitRepositoryRef'
+      - $ref: '#/components/parameters/GitConnectionQuery'
+    put:
+      summary: Link a repository to the project
+      description: |
+        Project Admins and up; a token needs `admin:project`. Any repository of the organisation's
+        live connections that the provider still has. For a token connection the server registers
+        its webhook on the repository (`webhook_status: missing` when the provider refuses; an Org
+        Admin re-registers it). `merge_base_branches` and `match_all_projects` belong to the
+        repository, shared by every project it is linked to. `backfill` (default true) reads in open
+        pull requests and those of the last 90 days. Writes `repository_linked`.
+      tags: [git]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LinkRepository' } } }
+      responses:
+        '201': { description: 'The linked repository.', content: { application/json: { schema: { $ref: '#/components/schemas/ProjectRepositoryEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`project.not_found`, `git.repository_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '409': { description: '`git.repository_already_linked`, `git.repository_removed`, `git.repository_ambiguous`, `git.repository_limit_reached`, `project.archived`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    patch:
+      summary: Change a linked repository's settings
+      description: Project Admins and up; a token needs `admin:project`. `merge_base_branches` (null follows the default branch) and `match_all_projects`.
+      tags: [git]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateRepositoryLink' } } }
+      responses:
+        '200': { description: 'The linked repository.', content: { application/json: { schema: { $ref: '#/components/schemas/ProjectRepositoryEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`project.not_found`, `git.repository_not_linked`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+    delete:
+      summary: Unlink a repository from the project
+      description: Project Admins and up; a token needs `admin:project`. What it linked stays in the issues' history. When no project links it any more, the webhook the server registered is removed. Writes `repository_unlinked`. Answers the repositories still linked.
+      tags: [git]
+      responses:
+        '200':
+          description: The repositories still linked.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/ProjectRepository' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`project.not_found`, `git.repository_not_linked`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/events:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+    get:
+      summary: The webhook delivery log
+      description: Org Admins and the Owner; a token needs `admin:org`. Newest first, kept 7 days. `error` is a reason code; `git.event_reason.<code>` in the catalogue says it in words.
+      tags: [git]
+      parameters:
+        - { name: connection, in: query, schema: { type: string } }
+        - { name: repository, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [pending, done, ignored, failed] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        '200':
+          description: A page of deliveries.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/GitWebhookEvent' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/OrganizationNotFound' }
+
+  /v1/organizations/{slug}/git/events/{id}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitEventId'
+    get:
+      summary: One delivery, with its stored payload
+      description: Org Admins and the Owner; a token needs `admin:org`. The payload is the provider's text, untrusted; a delivery over 1 MB is stored trimmed (`truncated`).
+      tags: [git]
+      responses:
+        '200': { description: 'The delivery.', content: { application/json: { schema: { $ref: '#/components/schemas/GitWebhookEventDetailEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`git.event_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/organizations/{slug}/git/events/{id}/replay:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationSlug'
+      - $ref: '#/components/parameters/GitEventId'
+    post:
+      summary: Apply a stored delivery again
+      description: Org Admins and the Owner; a token needs `admin:org`. Back to `pending`, applied in order with its repository's other deliveries. Automations run only with `run_automations`.
+      tags: [git]
+      requestBody:
+        required: false
+        content: { application/json: { schema: { type: object, properties: { run_automations: { type: boolean, default: false } } } } }
+      responses:
+        '202': { description: 'The delivery, pending again.', content: { application/json: { schema: { $ref: '#/components/schemas/GitWebhookEventDetailEnvelope' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: '`git.event_not_found`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+
+  /v1/git/webhooks/{provider}:
+    parameters:
+      - $ref: '#/components/parameters/GitProvider'
+    post:
+      x-mcp-exempt: integration_inbound
+      summary: Deliveries from a provider's app (every installation)
+      description: |
+        Called by the provider, never by a person: no session, no `X-Organization`. The signature
+        (`X-Hub-Signature-256` with the app's webhook secret) is checked over the raw body before
+        anything else; the payload's installation routes it to a connection. An installation no
+        connection holds is acknowledged with `accepted: false` and dropped. A delivery id already
+        stored is acknowledged and not stored again. Bodies up to 25 MB are accepted and checked
+        whole; over 1 MB, a trimmed copy is stored. Rate limited per sending address.
+      tags: [git]
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '202': { description: 'Stored for processing (or dropped, `accepted false`).', content: { application/json: { schema: { $ref: '#/components/schemas/GitWebhookAcceptedEnvelope' } } } }
+        '401': { description: '`git.signature_invalid`, with nothing else.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/git/webhooks/{provider}/{hook_id}:
+    parameters:
+      - $ref: '#/components/parameters/GitProvider'
+      - { name: hook_id, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9]{32,64}$' } }
+    post:
+      x-mcp-exempt: integration_inbound
+      summary: Deliveries to one connection's hook URL (token and manual connections)
+      description: |
+        Called by the provider. The hook id routes to one connection (stored hashed); the shared
+        secret (`X-Gitlab-Token`, or the GitHub signature) must match too. Failed signatures are
+        counted per connection; the 50th in an hour marks it `failing` (`signature`) and emails its
+        Org Admins once. An unknown hook id is refused before the body is read. Otherwise as the
+        app route. Rate limited per hook.
+      tags: [git]
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        '202': { description: 'Stored for processing.', content: { application/json: { schema: { $ref: '#/components/schemas/GitWebhookAcceptedEnvelope' } } } }
+        '401': { description: '`git.signature_invalid`.', content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -9479,7 +9895,216 @@ components:
                 kinds: { type: array, items: { $ref: '#/components/schemas/NotificationKind' } }
                 cadence: { type: [string, 'null'], enum: [daily, weekly, null] }
                 applied: { type: boolean }
+    GitProviderInfo:
+      type: object
+      required: [kind, label, pull_request_word, pull_request_word_plural, connect_kind, connect_kinds, default_base_url, supports]
+      properties:
+        kind: { type: string, enum: [github, gitlab] }
+        label: { type: string, example: GitHub }
+        pull_request_word: { type: string, example: pull request }
+        pull_request_word_plural: { type: string, example: pull requests }
+        connect_kind: { type: string, enum: [app, token, manual] }
+        connect_kinds: { type: array, items: { type: string, enum: [app, token, manual] } }
+        default_base_url: { type: string }
+        supports:
+          type: object
+          required: [checks, reviews, compare, webhook_registration]
+          properties:
+            checks: { type: boolean }
+            reviews: { type: boolean }
+            compare: { type: boolean }
+            webhook_registration: { type: boolean }
+    GitAccount:
+      type: object
+      required: [login, avatar_url, url]
+      properties:
+        login: { type: string }
+        avatar_url: { type: [string, 'null'] }
+        url: { type: string }
+    GitConnection:
+      type: object
+      required: [name, provider, base_url, auth_kind, account, status, health, last_error, last_event_at, token_expires_at, has_token, webhook_url, redelivery_url, repositories, created_by, created_at, revoked_at]
+      properties:
+        name: { type: string, example: 'github:acme-inc' }
+        provider: { type: string, enum: [github, gitlab] }
+        base_url: { type: string }
+        auth_kind: { type: string, enum: [app_installation, token, manual] }
+        account: { $ref: '#/components/schemas/GitAccount' }
+        status: { type: string, enum: [active, suspended, token_expired, failing, revoked] }
+        health: { type: string, enum: [active, failing, token_expired, expiring, suspended, removed_at_provider, disconnected], description: 'What the connection card shows. `expiring`: the token expires within 7 days.' }
+        last_error: { type: [string, 'null'], enum: [signature, processing, token_invalid, token_expired, suspended, uninstalled, null] }
+        last_event_at: { type: [string, 'null'], format: date-time }
+        token_expires_at: { type: [string, 'null'], format: date-time }
+        has_token: { type: boolean }
+        webhook_url: { type: [string, 'null'], description: Where the provider delivers, for token and manual connections. }
+        redelivery_url: { type: [string, 'null'], description: "The provider's page for resending deliveries we never received." }
+        repositories:
+          type: object
+          required: [known, linked, webhooks_missing]
+          properties:
+            known: { type: integer }
+            linked: { type: integer }
+            webhooks_missing: { type: integer }
+        created_by: { oneOf: [{ $ref: '#/components/schemas/MemberRef' }, { type: 'null' }] }
+        created_at: { type: string, format: date-time }
+        revoked_at: { type: [string, 'null'], format: date-time }
+    GitConnectionSecret:
+      allOf:
+        - $ref: '#/components/schemas/GitConnection'
+        - type: object
+          required: [webhook_secret]
+          properties:
+            webhook_secret: { type: [string, 'null'], description: Shown this once. }
+    GitConnectionEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/GitConnection' }
+    GitConnectionCheck:
+      type: object
+      required: [provider, base_url, account, repository_count, token_expires_at]
+      properties:
+        provider: { type: string, enum: [github, gitlab] }
+        base_url: { type: string }
+        account: { $ref: '#/components/schemas/GitAccount' }
+        repository_count: { type: integer }
+        token_expires_at: { type: [string, 'null'], format: date-time }
+    CreateGitConnection:
+      type: object
+      required: [provider, mode]
+      properties:
+        provider: { type: string, enum: [github, gitlab] }
+        mode: { type: string, enum: [token, manual] }
+        base_url: { type: string, format: uri, description: 'https only; the provider''s own host when omitted.' }
+        token: { type: string, maxLength: 512 }
+        account: { type: string, description: Manual mode without a token. }
+        dry_run: { type: boolean }
+    GitBackfill:
+      type: object
+      required: [state, pull_requests, branches, started_at, finished_at, error]
+      properties:
+        state: { type: string, enum: [queued, running, done, failed] }
+        pull_requests: { type: integer }
+        branches: { type: integer }
+        started_at: { type: [string, 'null'], format: date-time }
+        finished_at: { type: [string, 'null'], format: date-time }
+        error: { type: [string, 'null'] }
+    GitRepository:
+      type: object
+      required: [full_name, provider, connection, html_url, default_branch, is_private, is_archived, removed, webhook_status, webhook_last_status_code, match_all_projects, merge_base_branches, effective_merge_base_branches, last_event_at, projects, backfill]
+      properties:
+        full_name: { type: string, example: acme/web }
+        provider: { type: string, enum: [github, gitlab] }
+        connection: { type: string }
+        html_url: { type: string }
+        default_branch: { type: string }
+        is_private: { type: boolean }
+        is_archived: { type: boolean }
+        removed: { type: boolean, description: Gone from the installation or deleted at the provider. }
+        webhook_status: { type: string, enum: [active, failing, missing, not_applicable] }
+        webhook_last_status_code: { type: [integer, 'null'] }
+        match_all_projects: { type: boolean }
+        merge_base_branches: { type: [array, 'null'], items: { type: string } }
+        effective_merge_base_branches: { type: array, items: { type: string } }
+        last_event_at: { type: [string, 'null'], format: date-time }
+        projects: { type: array, items: { type: string }, description: Keys of the linked projects the caller can read. }
+        backfill: { oneOf: [{ $ref: '#/components/schemas/GitBackfill' }, { type: 'null' }] }
+    GitRepositoryEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/GitRepository' }
+    ProjectRepository:
+      allOf:
+        - $ref: '#/components/schemas/GitRepository'
+        - type: object
+          required: [linked_by, linked_at]
+          properties:
+            linked_by: { oneOf: [{ $ref: '#/components/schemas/MemberRef' }, { type: 'null' }] }
+            linked_at: { type: string, format: date-time }
+    ProjectRepositoryEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { $ref: '#/components/schemas/ProjectRepository' }
+    LinkRepository:
+      type: object
+      properties:
+        connection: { type: string, description: 'The connection, when two have a repository of that name (`git.repository_ambiguous` lists them).' }
+        match_all_projects: { type: boolean }
+        merge_base_branches: { type: [array, 'null'], maxItems: 20, items: { type: string, maxLength: 255 } }
+        backfill: { type: boolean, default: true }
+    UpdateRepositoryLink:
+      type: object
+      properties:
+        connection: { type: string }
+        match_all_projects: { type: boolean }
+        merge_base_branches: { type: [array, 'null'], maxItems: 20, items: { type: string, maxLength: 255 } }
+    GitWebhookEvent:
+      type: object
+      required: [id, connection, repository, delivery_id, event, status, error, attempts, received_at, processed_at, truncated, run_automations]
+      properties:
+        id: { type: integer }
+        connection: { type: string }
+        repository: { type: [string, 'null'] }
+        delivery_id: { type: string }
+        event: { type: string, example: pull_request }
+        status: { type: string, enum: [pending, done, ignored, failed] }
+        error: { type: [string, 'null'], description: 'Ignored: `repository_unknown`, `repository_not_linked`, `connection_revoked`, `event_unused`. Failed: `provider_unreachable`, `provider_rate_limited`, `token_invalid`, `payload_truncated`, `internal`.' }
+        attempts: { type: integer }
+        received_at: { type: string, format: date-time }
+        processed_at: { type: [string, 'null'], format: date-time }
+        truncated: { type: boolean }
+        run_automations: { type: boolean }
+    GitWebhookEventDetailEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/GitWebhookEvent'
+                - type: object
+                  required: [payload]
+                  properties:
+                    payload: { description: "The provider's payload as stored: untrusted text." }
+    GitWebhookAcceptedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - properties:
+            data: { type: object, required: [accepted], properties: { accepted: { type: boolean } } }
   parameters:
+    GitProvider:
+      name: provider
+      in: path
+      required: true
+      schema: { type: string, enum: [github, gitlab] }
+    GitConnectionName:
+      name: connection
+      in: path
+      required: true
+      description: '`provider:account`, e.g. `github:acme-inc`; `provider:account@host` away from the provider''s own host.'
+      schema: { type: string, minLength: 1, maxLength: 300, example: 'github:acme-inc' }
+    GitRepositoryRef:
+      name: repository
+      in: path
+      required: true
+      description: |
+        The repository's full name as **one** path segment, its slashes percent-encoded
+        (`acme%2Fweb`, `group%2Fsub%2Frepo`), because GitLab names nest. A provider prefix,
+        `gitlab:acme/web`, narrows it; when two connections still have one of that name, the
+        `connection` query parameter (or body field) names which.
+      schema: { type: string, minLength: 1, maxLength: 500, example: 'acme%2Fweb' }
+    GitConnectionQuery:
+      name: connection
+      in: query
+      required: false
+      description: The connection whose repository is meant, when two have one of that name. PUT and PATCH may carry it in the body instead.
+      schema: { type: string }
+    GitEventId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
     ReportQuery:
       name: q
       in: query

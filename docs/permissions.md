@@ -274,6 +274,32 @@ How the saved-view rows apply (decided 24 Sep 2026, 1c):
 - Search, the list, CSV export and the figures behind the dashboard all run
   the one scoped query (search-query-language.md § Implementation).
 
+### Development (git integration)
+
+| Capability | Observer | Contributor | Project Admin | Org Admin | Org Owner |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Read the development panel, pull request detail, linked repositories, automations and their runs | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Link or unlink a pull request by hand | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Link and unlink repositories to the project, set merge base branches, start a backfill | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Manage automations (create, change, enable, delete, test; replay with automations) | ❌ | ❌ | ✅ | ✅ | ✅ |
+| See the repositories available to link | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Connect and disconnect git accounts, read the delivery log, replay deliveries | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Remove another member's git identity | ❌ | ❌ | ❌ | ✅ | ✅ |
+
+How the rows apply (decided 25 Oct 2026, 7). Capabilities `git.read`, `git.link_manual`,
+`project.repositories.manage`, `project.automations.manage`, `git.repositories.list`,
+`org.git.manage` and `org.git.identities.manage`; tokens need `issues:read`, `issues:write`,
+`admin:project` (the next three) and `admin:org` (the last two). Reading follows *Read project*.
+**Connecting** an account carries a token or a provider's install flow, so it is browser-session
+only (`auth.session_required` for a PAT), as is rotating a webhook secret, which shows it.
+**Seeing what can be linked** is checked in a project: an Org Admin lists every repository of the
+organisation's connections; anyone else names a project they administer (the link picker always
+has one). A repository's settings (`merge_base_branches`, `match_all_projects`) belong to the
+repository, so a Project Admin of any project it is linked to may change them. Nothing is linked
+or unlinked in an archived project. A delivery from org A's connection can only reach org A's
+repositories and issues: the webhook routes resolve the connection first, by its hook id or its
+app installation, and every lookup after that is within it.
+
 ### Self-service
 
 Available to every authenticated account regardless of role:
@@ -287,6 +313,8 @@ Available to every authenticated account regardless of role:
 - Read own notifications and mark them read
 - Deactivate own account
 - Accept or decline an ownership transfer offered to oneself
+- Claim and remove one's own git identities (a provider login or a verified email), with a
+  token of any scope: they carry no secret and attribute only one's own commits (7)
 
 Erasing an account is not self-service: the person or an Org Admin emails the platform
 operator, who does it by hand (owner, 27 Sep 2026; user-lifecycle.md § Account erasure).

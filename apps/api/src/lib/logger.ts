@@ -32,6 +32,10 @@ function redactDeep(value: unknown, messages: Map<string, string>, depth = 0, se
   }
 }
 
+export function maskHookId(url: string | undefined): string | undefined {
+  return url?.replace(/(\/v1\/git\/webhooks\/[^/?]+\/)[^/?]+/, '$1[redacted]');
+}
+
 export function loggerOptions(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>): LoggerOptions {
   return {
     level: env.LOG_LEVEL,
@@ -40,7 +44,23 @@ export function loggerOptions(env: Pick<Env, 'LOG_LEVEL' | 'NODE_ENV'>): LoggerO
       paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
       censor: '[redacted]',
     },
-    serializers: { err: (err: unknown) => stdSerializers.err(redactError(err) as Error) },
+    serializers: {
+      err: (err: unknown) => stdSerializers.err(redactError(err) as Error),
+      // Fastify's own request fields, with a git hook URL's id masked: it routes deliveries to a connection.
+      req: (req: {
+        method?: string;
+        url?: string;
+        hostname?: string;
+        ip?: string;
+        socket?: { remotePort?: number };
+      }) => ({
+        method: req.method,
+        url: maskHookId(req.url),
+        host: req.hostname,
+        remoteAddress: req.ip,
+        remotePort: req.socket?.remotePort,
+      }),
+    },
     hooks: {
       // Given no message, pino copies the error's own message into `msg`, past the serializer.
       logMethod(args, method) {

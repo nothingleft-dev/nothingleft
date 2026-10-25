@@ -401,6 +401,29 @@ bucket's secret or act on it, all are session only, and three confirm with step-
 - **`merge_tags` and `delete_tag` ask first**, naming how many issues and articles change, from
   `GET /v1/tags/manage`'s organisation-wide counts. `admin:org`.
 
+## Built in 7 (git integration)
+
+25 Oct 2026, first milestone (connections). Ten tools; 105 in all.
+
+- **Connections are read and repaired, never created, by an agent.** Connecting carries a
+  token or a provider's install flow, so `POST …/git/connections`, the install start and
+  callback, and `rotate-secret` are `x-mcp-exempt: credentials`. `list_git_connections` (with
+  the provider catalogue), `refresh_git_connection` and `remove_git_connection` (confirmation)
+  are `admin:org`.
+- **A repository is named as people name it**: `acme/web`, or `gitlab:acme/web` when two
+  connections have one of that name. The REST path carries it as one percent-encoded segment;
+  the tools encode it.
+- **`list_repositories` is two lists in one tool**: with `project`, what is linked to it (any
+  member, `issues:read`); with `available: true` or no project, what can be linked (an Org
+  Admin, or a Project Admin naming their project). `link_repository`,
+  `update_repository_link` and `unlink_repository` (confirmation) are `admin:project`.
+- **The delivery log answers "why did nothing show up?"**: `list_git_events` with a status or
+  repository filter, one delivery's payload by `id` (fenced as untrusted data), and
+  `replay_git_event`, which runs automations only when asked. `resync_repository` also puts
+  back a webhook the server registered, with `rehook: true`. All `admin:org`.
+- **The webhook routes are a new exempt category, `integration_inbound`**: called by the
+  provider, never by a person.
+
 ## Authentication
 
 Personal Access Tokens, `Authorization: Bearer nl_pat_…`. See
@@ -656,6 +679,14 @@ then a column mapping; a dry run unless `dry_run: false`), `get_import_status` (
 errors) — `admin:project`; `request_org_export`, `get_export_status` (a five-minute download
 link when ready) — `admin:org`.
 
+### Development
+
+Built in 7 — [§ Built in 7](#built-in-7-git-integration). `list_git_connections`,
+`refresh_git_connection`, `remove_git_connection` (confirmation), `resync_repository`,
+`list_git_events`, `replay_git_event` — `admin:org`; `list_repositories`, `link_repository`,
+`update_repository_link`, `unlink_repository` (confirmation) — `admin:project` (reading what is
+linked: `issues:read`).
+
 ### Planned with later phases
 
 **Webhooks (v2, moved out of 6a by the owner on 27 Sep 2026):** `list_webhooks`,
@@ -677,7 +708,7 @@ Each operation in openapi.yaml without a tool names one of these categories as
 
 | Category | Operations | Why no tool |
 |---|---|---|
-| `credentials` | `auth/*`, password and email change, resend verification, sessions, access tokens | An agent must not carry or mint credentials |
+| `credentials` | `auth/*`, password and email change, resend verification, sessions, access tokens; connecting a git provider (the install start and callback, a token connection) and rotating its webhook secret (7) | An agent must not carry or mint credentials |
 | `session` | current organisation, landing, preferences, recent searches, the editor's `issues/refs` picker, the inbox's filter `notifications/facets` (6a) | Browser-session plumbing; a token has no session, and an agent filters `list_notifications` by name directly |
 | `invitee` | invitation preview, accept, decline | The invitee's own decision, made with the secret link token |
 | `download` | both `export.csv` routes | A spreadsheet download; `search_issues` and `get_org_activity` page the same rows |
@@ -687,6 +718,7 @@ Each operation in openapi.yaml without a tool names one of these categories as
 | `avatar` | profile avatar upload and removal; `GET /avatars/{kind}` | An image picked in the settings screen; a generated image the browser loads |
 | `infrastructure` | `/health`, `/health/deep`, `/mcp` | Not product data |
 | `email_link` | the two `notifications/unsubscribe` routes (6a) | The credential is the signed link in an email; an agent has no email to click |
+| `integration_inbound` | `/v1/git/webhooks/{provider}` and `/v1/git/webhooks/{provider}/{hook_id}` (7) | Called by GitHub or GitLab, never by a person; authenticated by the delivery's signature |
 
 ## Resources
 

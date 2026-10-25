@@ -130,6 +130,28 @@ date" becomes unreachable.
 Splitting it means every client reassembles it, and the MCP contract — human
 identifiers, never internal IDs — depends on passing it whole.
 
+## Git names in paths
+
+A repository is one path segment too: its full name with the slashes percent-encoded,
+`/v1/projects/ACME/repositories/acme%2Fweb`, because a GitLab name nests
+(`group%2Fsub%2Frepo`) and a fixed two-segment `{owner}/{name}` cannot carry it. When two
+connections have a repository of that name, the provider prefixes it: `gitlab%3Aacme%2Fweb`;
+the bare name then answers `409 git.repository_ambiguous` listing the prefixed ones. A
+connection is `provider:account` (`github:acme-inc`), with `@host` when it is not on the
+provider's own host (decided 25 Oct 2026, 7).
+
+## Webhooks from providers
+
+`/v1/git/webhooks/{provider}` and `/v1/git/webhooks/{provider}/{hook_id}` are the only routes
+called by a machine that is not ours. No session, no `X-Organization`, no CSRF or origin check:
+the signature over the raw body is the authentication, checked before the body is believed. A
+delivery answers `202` with `{ accepted }` and is processed later; a bad signature answers `401
+git.signature_invalid` with nothing else; an unknown provider or hook id `404`. Bodies up to
+25 MB are read so the whole body is checked (the general limit is 1 MB); an unknown hook id is
+refused before its body is read. The hook route's rate limit is per hook id, since the
+providers' addresses are shared by every customer; the app route's is per sending address, so
+one sender flooding it cannot starve every installation.
+
 ## Organisation selection
 
 Browser requests act within `sessions.current_org_id`. PAT requests may send

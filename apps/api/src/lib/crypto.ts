@@ -65,6 +65,17 @@ export interface PkcePair {
   challenge: string;
 }
 
+/** A hook URL's routing id: unguessable, base62 so it reads cleanly in a URL; only its hash is stored. */
+export function issueHookId(): IssuedToken {
+  const token = base62(40);
+  return { token, token_hash: sha256(token) };
+}
+
+/** A webhook's shared secret, shown to the admin once. */
+export function issueHookSecret(): string {
+  return base62(40);
+}
+
 export function issuePkcePair(): PkcePair {
   const verifier = randomToken();
   return { verifier, challenge: sha256(verifier).toString('base64url') };
@@ -88,7 +99,7 @@ export function verifyLink(secret: string, token: string): string | null {
   return given.length === expected.length && timingSafeEqual(given, expected) ? payload : null;
 }
 
-export type SealPurpose = 'totp' | 'byo_storage';
+export type SealPurpose = 'totp' | 'byo_storage' | 'git_connection' | 'git_hook';
 export type KeyPurpose = SealPurpose | 'mcp-confirm';
 
 const SEAL_VERSION = 'v1';

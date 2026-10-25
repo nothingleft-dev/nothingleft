@@ -131,11 +131,19 @@ S3_PUBLIC_BUCKET              nl-public     avatars only — public read, never 
 S3_PUBLIC_BUCKET_BASE_URL     https://static.nothingleft.dev
 S3_ACCESS_KEY_ID              both or neither; neither signs with the runtime's role (ECS task role) through the SDK's default chain
 S3_SECRET_ACCESS_KEY
-ENCRYPTION_MASTER_KEY         32 bytes, base64 — seals two-factor secrets (6b) and BYO storage secrets (6c, purpose `byo_storage`, the connection's row as additional data), and signs MCP confirmation state (purpose `mcp-confirm`); required in production, never rotated (no rotation in v1)
+ENCRYPTION_MASTER_KEY         32 bytes, base64 — seals two-factor secrets (6b), BYO storage secrets (6c, purpose `byo_storage`, the connection's row as additional data) and git tokens and webhook secrets (7, purposes `git_connection` and `git_hook`), and signs MCP confirmation state (purpose `mcp-confirm`); required in production, never rotated (no rotation in v1)
 SESSION_COOKIE_DOMAIN         .nothingleft.dev  required whenever the web app and the API are on different hosts: the web app's proxy reads the session cookie
 TRUST_PROXY                   1             proxy hops in front of the API, or their IPs / CIDRs (comma-separated); false trusts none. Unset: 1 in production, false elsewhere
 GOOGLE_CLIENT_ID / _SECRET
-GITHUB_CLIENT_ID / _SECRET
+GITHUB_CLIENT_ID / _SECRET    GitHub sign-in (0b); separate from the git integration's app
+GITHUB_APP_ID                 the git integration's GitHub App (7). The six GITHUB_APP_* values are set together or not
+GITHUB_APP_PRIVATE_KEY        at all; unset, GitHub connects in manual mode only (a webhook added per repository). The
+GITHUB_APP_WEBHOOK_SECRET     key is the app's PEM (a single line with \n escapes works); the webhook secret is 16+
+GITHUB_APP_SLUG               characters; the slug names the install page; the client id and secret let the install
+GITHUB_APP_CLIENT_ID          callback confirm the person can administer the installation, so the app must request
+GITHUB_APP_CLIENT_SECRET      user authorisation during installation
+GITHUB_APP_BASE_URL           https://github.com, or a GitHub Enterprise Server origin
+GIT_ALLOW_PRIVATE_HOSTS       false         a self-managed GitLab or GitHub Enterprise on a private network may be connected; off, every provider request first resolves its host and refuses a private, loopback, link-local or otherwise reserved address (IPv4, and IPv6 including mapped and NAT64 forms). Checked per request, not pinned, so a host re-pointed between the check and the connection is the remaining window; provider calls follow no redirects and no page link to another origin
 EMAIL_PROVIDER                resend (default) | zoho | smtp — how mail is sent
 RESEND_API_KEY                provider resend: required in production; unset elsewhere, mail is logged instead of sent (with its body only in development)
 ZOHO_EMAIL_API_KEY            provider zoho: the Send Mail token, with or without its `Zoho-enczapikey ` prefix; required in production

@@ -54,3 +54,7 @@ export * from './org-storage-locations.ts';
 export * from './org-storage-configs.ts';
 export * from './import-jobs.ts';
 export * from './export-jobs.ts';
+export * from './git-connections.ts';
+export * from './git-repositories.ts';
+export * from './project-repositories.ts';
+export * from './git-webhook-events.ts';

@@ -5,9 +5,12 @@ import {
   BYO_PROVIDERS,
   CUSTOM_FIELD_TYPES,
   DIGEST_CADENCES,
+  GIT_AUTH_KINDS,
+  GIT_EVENT_FAILURES,
   NOTIFICATION_KINDS,
   REPORT_NAMES,
 } from './constants.ts';
+import { GIT_PROVIDER_KINDS } from './git.ts';
 
 // Each schema is the property allow-list: the adapter drops undeclared keys, so no customer text leaks.
 
@@ -243,6 +246,13 @@ export const EventCatalogue = {
     kind: z.enum(NOTIFICATION_KINDS).optional(),
     one_click: z.boolean(),
   }),
+  // Git integration. Kinds, providers and counts only: never a repository, a login or a title.
+  git_connection_created: z.object({
+    provider: z.enum(GIT_PROVIDER_KINDS),
+    auth_kind: z.enum(GIT_AUTH_KINDS),
+  }),
+  git_repository_linked: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), backfill: z.boolean() }),
+  git_event_failed: z.object({ provider: z.enum(GIT_PROVIDER_KINDS), reason: z.enum(GIT_EVENT_FAILURES) }),
   // One per MCP tool call. Tool names and error codes are ours, never the caller's text; arguments are only counted.
   two_factor_enabled: z.object({}),
   two_factor_disabled: z.object({ with_recovery_code: z.boolean() }),

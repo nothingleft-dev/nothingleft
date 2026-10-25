@@ -33,6 +33,11 @@ export const ACTIVITY_LABELS: Record<OrgActivityKind, string> = {
   tag_renamed: 'renamed a tag',
   tag_merged: 'merged tags',
   tag_deleted: 'deleted a tag',
+  git_connection_created: 'connected a git account',
+  git_connection_removed: 'disconnected a git account',
+  git_connection_error: 'a git connection needs attention',
+  repository_linked: 'linked a repository',
+  repository_unlinked: 'unlinked a repository',
 };
 
 // Internal ids carry no meaning to a reader, so the values that do - usernames, keys,

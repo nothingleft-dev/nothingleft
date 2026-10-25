@@ -1,4 +1,4 @@
-import type { OrgRole, PatScope, Principal, ProjectRole } from '@nothingleft/types';
+import { PAT_SCOPES, type OrgRole, type PatScope, type Principal, type ProjectRole } from '@nothingleft/types';
 
 // Built cell-for-cell from docs/permissions.md. Every capability below is one row of
 // that table; the REST API and the MCP server both reach it through can().
@@ -17,6 +17,8 @@ export const CAPABILITIES = [
   'org.export',
   'org.transfer_ownership',
   'org.delete',
+  'org.git.manage',
+  'org.git.identities.manage',
 
   'project.read',
   'project.create',
@@ -28,6 +30,9 @@ export const CAPABILITIES = [
   'project.agile.manage',
   'project.archive',
   'project.delete',
+  'project.repositories.manage',
+  'project.automations.manage',
+  'git.repositories.list',
 
   'issue.read',
   'issue.create',
@@ -82,6 +87,9 @@ export const CAPABILITIES = [
   'saved_view.update_shared',
   'report.read',
   'report.export',
+
+  'git.read',
+  'git.link_manual',
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -128,6 +136,8 @@ export const MATRIX: Record<Capability, Row> = {
   'org.export': fromOrgAdmin,
   'org.transfer_ownership': row(false, false, false, false, true),
   'org.delete': row(false, false, false, false, true),
+  'org.git.manage': fromOrgAdmin,
+  'org.git.identities.manage': fromOrgAdmin,
 
   'project.read': all,
   'project.create': fromOrgAdmin,
@@ -139,6 +149,9 @@ export const MATRIX: Record<Capability, Row> = {
   'project.agile.manage': fromProjectAdmin,
   'project.archive': fromProjectAdmin,
   'project.delete': fromOrgAdmin,
+  'project.repositories.manage': fromProjectAdmin,
+  'project.automations.manage': fromProjectAdmin,
+  'git.repositories.list': fromProjectAdmin,
 
   'issue.read': all,
   'issue.create': fromContributor,
@@ -193,6 +206,9 @@ export const MATRIX: Record<Capability, Row> = {
   'saved_view.update_shared': ownFromContributor,
   'report.read': all,
   'report.export': all,
+
+  'git.read': all,
+  'git.link_manual': fromContributor,
 };
 
 // Rule 2: scopes narrow, never widen. A capability absent from this map needs no scope
@@ -209,6 +225,8 @@ export const REQUIRED_SCOPES: Partial<Record<Capability, readonly PatScope[]>> =
   'org.export': ['admin:org'],
   'org.transfer_ownership': ['admin:org'],
   'org.delete': ['admin:org'],
+  'org.git.manage': ['admin:org'],
+  'org.git.identities.manage': ['admin:org'],
 
   'project.read': ['issues:read'],
   'project.create': ['admin:org'],
@@ -220,6 +238,9 @@ export const REQUIRED_SCOPES: Partial<Record<Capability, readonly PatScope[]>> =
   'project.agile.manage': ['admin:project'],
   'project.archive': ['admin:project'],
   'project.delete': ['admin:org'],
+  'project.repositories.manage': ['admin:project'],
+  'project.automations.manage': ['admin:project'],
+  'git.repositories.list': ['admin:project'],
 
   'issue.read': ['issues:read'],
   'issue.create': ['issues:write'],
@@ -273,6 +294,9 @@ export const REQUIRED_SCOPES: Partial<Record<Capability, readonly PatScope[]>> =
   'saved_view.update_shared': ['issues:write'],
   'report.read': ['issues:read'],
   'report.export': ['issues:read'],
+
+  'git.read': ['issues:read'],
+  'git.link_manual': ['issues:write'],
 };
 
 export interface Membership {
@@ -355,12 +379,14 @@ export function projectRolesWith(capability: Capability): ProjectRole[] {
 
 // Self-service (docs/permissions.md § Self-service): every account may do these for itself,
 // whatever its roles or memberships, so no level applies — only a token's scopes narrow them.
-export const SELF_SERVICE_CAPABILITIES = ['notification.read', 'notification.manage'] as const;
+export const SELF_SERVICE_CAPABILITIES = ['notification.read', 'notification.manage', 'git_identity.manage'] as const;
 export type SelfServiceCapability = (typeof SELF_SERVICE_CAPABILITIES)[number];
 
 export const SELF_SERVICE_SCOPES: Record<SelfServiceCapability, readonly PatScope[]> = {
   'notification.read': ['issues:read'],
   'notification.manage': ['issues:write'],
+  // Any scope: an identity is attribution of one's own commits, and carries no secret.
+  'git_identity.manage': PAT_SCOPES,
 };
 
 /** The scope a token needs for a self-service capability, or null when it may proceed. */

@@ -74,6 +74,14 @@ the organisation uploads, so each change to it is announced the way a new access
 | `email.storage_disconnected` | Your storage bucket was disconnected from {org} | `name`, `org`, `actor`, `bucket`, `url` | Its files stay in the bucket and stop opening until the same bucket (same account or region, same name) is connected again; uploads use the built-in storage again. |
 | `email.storage_byo_failed` | Fix the storage connection for {org} | `name`, `org`, `bucket`, `url` | The bucket refused its key (revoked, or a permission removed). Sent once, by the request that found out; files there and uploads stop until the key is updated. |
 
+## Git integration
+
+Transactional, to the Org Admins and the Owner (7).
+
+| Key | Subject | Tokens | Purpose |
+|---|---|---|---|
+| `email.git_connection_attention` | Fix the git connection {connection} | `name`, `org`, `connection`, `reason`, `url` | A connection moved into a problem state: deliveries failing the signature check (50 in an hour), deliveries failing to apply after five attempts, a token refused or expired, the installation suspended or the app uninstalled at the provider. `reason` is one line from `git.connection_reason.*`. Sent once per change of state, by whatever found out, never per failed delivery; nothing is sent when it recovers. |
+
 ## Organisation export
 
 Transactional, to the Org Admin or Owner who asked for it (6d).

@@ -172,6 +172,10 @@ The full list of these integrity keys:
 | `personal_access_token_projects` | — | `(project_id, org_id)` → `projects` |
 | `org_storage_locations` | `(id, org_id)` | — |
 | `attachments`, `org_storage_configs` | — | `(storage_location_id, org_id)` and `(location_id, org_id)` → `org_storage_locations` |
+| `git_connections` | `(id, org_id)` | — |
+| `git_repositories` | `(id, org_id)` | `(connection_id, org_id)` → `git_connections` |
+| `project_repositories` | — | `(project_id, org_id)` → `projects`; `(repository_id, org_id)` → `git_repositories` |
+| `git_webhook_events` | — | `(connection_id, org_id)` → `git_connections`; `(repository_id, org_id)` → `git_repositories` |
 
 Every one cascades on delete, except the value-table, parent and sprint keys on
 `issues`, the parent key on `articles`, the work-type key on `work_items`, the option key on `issue_field_values`, the
@@ -2004,7 +2008,9 @@ org_activity(
         'export_requested' | 'token_created' | 'token_revoked' |
         'project_updated' | 'project_unarchived' | 'invite_rotated' |
         'username_changed' | 'deletion_scheduled' | 'deletion_cancelled' |
-        'storage_updated' | 'tag_renamed' | 'tag_merged' | 'tag_deleted',
+        'storage_updated' | 'tag_renamed' | 'tag_merged' | 'tag_deleted' |
+        'git_connection_created' | 'git_connection_removed' |
+        'git_connection_error' | 'repository_linked' | 'repository_unlinked',
   target_type, target_id,
   old_value jsonb NULL, new_value jsonb NULL,
   ip inet NULL, created_at
@@ -2047,6 +2053,8 @@ what the log says.
 | `project` | project id | `project_created`, `project_updated`, `project_archived`, `project_unarchived` |
 | `invitation` | invitation id | `member_invited` (email), `invite_created` (link), `invite_rotated`, `invite_revoked` |
 | `tag` | tag id | `tag_renamed` (`name` on each side), `tag_merged` (the target; `names` of the merged tags before, `name` of the target after), `tag_deleted` (`name`, `issue_count`, `article_count` before; nothing after). A recolour is not logged (6d) |
+| `git_connection` | connection id | `git_connection_created`, `git_connection_removed` (7: `connection` name and `provider` after), `git_connection_error` (7: written with no actor when the connection moves into a problem state — `status` before, `status` and `reason` after — once per change, never per failed delivery) |
+| `project` (7) | project id | `repository_linked`, `repository_unlinked` — `repository` full name and `project` key after |
 | `custom_field` | field id | `custom_field_changed` — a field or one of its options created, changed, archived or deleted; each side carries `project_key`, `slug`, `name`, `action` and the changed keys (Phase 4) |
 
 Work item attributes and their values record `schema_changed` with `table:
@@ -2230,6 +2238,106 @@ pointing an agent at the MCP server.
 
 ---
 
+## Git integration
+
+Built in 7 (first milestone, 25 Oct 2026): connections, repositories and the webhook delivery
+log. Branches, commits, pull requests, links and automations follow in later milestones of the
+same sub-phase, each in its own migration.
+
+```
+git_connections(
+  id bigint PK,
+  org_id → organizations ON DELETE CASCADE,
+  provider text,                        -- 'github' | 'gitlab'; no CHECK, see below
+  base_url text,                        -- https://github.com, https://gitlab.com or a self-hosted origin
+  auth_kind text CHECK in ('app_installation','token','manual'),
+  installation_id text NULL,            -- an app installation
+  account_login text, account_avatar_url text NULL, account_url text,
+  token_ciphertext text NULL,           -- sealed, purpose git_connection
+  hook_id_hash bytea NULL UNIQUE,       -- SHA-256 of the hook URL's id
+  hook_secret_ciphertext text NULL,     -- sealed {hook_id, secret}, purpose git_hook
+  status text DEFAULT 'active' CHECK in ('active','suspended','token_expired','failing','revoked'),
+  last_error text NULL CHECK in ('signature','processing','token_invalid','token_expired','suspended','uninstalled'),
+  last_event_at timestamptz NULL,
+  token_expires_at timestamptz NULL,
+  created_by → users, created_at, updated_at,
+  revoked_at timestamptz NULL,
+  UNIQUE (id, org_id),
+  UNIQUE (provider, base_url, installation_id) WHERE revoked_at IS NULL AND installation_id IS NOT NULL,
+  UNIQUE (org_id, provider, base_url, lower(account_login)) WHERE revoked_at IS NULL
+)
+
+git_repositories(
+  id bigint PK,
+  org_id → organizations ON DELETE CASCADE,
+  connection_id,                        -- (connection_id, org_id) → git_connections ON DELETE CASCADE
+  provider_repo_id text,                -- the provider's own id, which survives a rename
+  full_name text, html_url text, default_branch text,
+  is_private boolean, is_archived boolean DEFAULT false,
+  provider_webhook_id text NULL,        -- the hook we registered (token connections)
+  webhook_status text DEFAULT 'not_applicable' CHECK in ('active','failing','missing','not_applicable'),
+  webhook_last_status_code integer NULL,
+  match_all_projects boolean DEFAULT false,
+  merge_base_branches text[] NULL,      -- NULL follows default_branch; globs allowed
+  last_event_at timestamptz NULL,
+  backfill_state jsonb NULL,
+  created_at, updated_at,
+  removed_at timestamptz NULL,          -- gone from the installation, or deleted at the provider
+  UNIQUE (id, org_id), UNIQUE (connection_id, provider_repo_id)
+)
+
+project_repositories(
+  project_id, repository_id, org_id → organizations ON DELETE CASCADE,
+  linked_by → users, linked_at,
+  PRIMARY KEY (project_id, repository_id)
+  -- (project_id, org_id) → projects and (repository_id, org_id) → git_repositories, both ON DELETE CASCADE
+)
+
+git_webhook_events(
+  id bigint PK,
+  org_id → organizations ON DELETE CASCADE,
+  connection_id,                        -- (connection_id, org_id) → git_connections ON DELETE CASCADE
+  repository_id NULL,                   -- (repository_id, org_id) → git_repositories ON DELETE CASCADE
+  provider_repo_id text NULL,           -- from the payload, kept when no repository row matches yet
+  delivery_id text, event_name text,
+  received_at, processed_at timestamptz NULL,
+  status text DEFAULT 'pending' CHECK in ('pending','done','ignored','failed'),
+  error text NULL,                      -- the ignored reason or the failure, as a code
+  attempts smallint DEFAULT 0, next_attempt_at timestamptz NULL,
+  run_automations boolean DEFAULT false,
+  payload jsonb, truncated boolean DEFAULT false,
+  UNIQUE (connection_id, delivery_id)
+)
+```
+
+**`provider` has no CHECK.** The API's provider registry is the list of providers; the service
+refuses a kind the registry lacks. Adding a provider is one module and one entry in
+`GIT_PROVIDER_KINDS`, with no migration (owner, 25 Oct 2026).
+
+**A connection is never deleted.** Disconnecting stamps `revoked_at`, sets `status: revoked`
+and nulls the token, the hook hash and the hook secret; the row, its repositories and their
+links stay so history keeps its attribution. An app uninstalled at the provider is revoked the
+same way with `last_error: uninstalled`. The two partial keys therefore cover live rows only: a
+reinstalled app or a reconnected account gets a new row.
+
+**Names.** A connection is addressed as `provider:account` (`github:acme-inc`), with `@host`
+when its `base_url` is not the provider's own (`gitlab:acme@gitlab.example.com`). A repository is
+its `full_name`; when two connections have one of that name, the provider prefixes it
+(`gitlab:acme/web`).
+
+**Secrets.** The token and the hook's shared secret are sealed as `org_storage_configs` seals its
+key (`seal` in `@lib/crypto`): AES-256-GCM under an HKDF subkey of `ENCRYPTION_MASTER_KEY`, purposes
+`git_connection` and `git_hook`, the row `git_connections:<id>` as additional data. Neither is
+returned by any route; the hook secret is shown once, at creation and at rotation. The hook URL's
+id is looked up by its hash, like a token, but is sealed beside the secret too, because
+registering the hook on a repository linked later needs the URL again.
+
+**Deliveries.** Every accepted delivery is a row, applied by a per-repository job in the order
+received; a duplicate delivery id inserts nothing. A delivery over 1 MB is stored trimmed
+(per-commit file lists dropped, the first 100 commits kept) or, if still too large, as `{}`,
+with `truncated`. A failed apply is retried after 1, 4, 16 and 64 minutes and is `failed` after
+the fifth attempt; a replay resets `attempts` and `processed_at`.
+
 ## Tables defined in other documents
 
 This document is the map of the schema, so the tables specified elsewhere are
@@ -2265,6 +2373,7 @@ Nothing in the product deletes these on a user's behalf, so a job does.
 | `organizations` (deletion scheduled) | rows (`org_storage_configs` and `org_storage_locations` included) and platform-bucket objects deleted 14 days after `deletion_scheduled_at` unless cancelled; objects in the organisation's own bucket are never touched; the org row and `org_activity` stay | `org.delete`, hourly at :45 (reminder: `org.deletion_reminder`, hourly at :40) |
 | `notifications` | read 30 days after reading, unread 90 days after writing | `notifications.purge`, nightly at 03:15 UTC |
 | `webhook_deliveries` (v2) | 30 days | `webhooks.purge`, nightly |
+| `git_webhook_events` | 7 days after `received_at`, whatever their status (7) | `git.purge`, nightly at 03:20 UTC |
 | `one_time_tokens` | on expiry | `tokens.gc`, hourly |
 | `sessions` | on expiry | `session.gc`, hourly |
 
@@ -2322,6 +2431,8 @@ loudly, which is the point.
 | Colours are palette token names | every `color` column: the 40 label-grid names for statuses, priorities, types and tags; the 14 hues for project avatars | — |
 | Invite limits | `use_count ≤ max_uses`, `expires_at` in the future | — a moving clock is no CHECK |
 | Quotas | 5GB per organisation on `free` (the plan's quota), 100MB per file, 50 attachments per issue and per article — pending uploads count toward both the quota and the 50; with a verified bucket of its own an organisation has no storage quota, while the other limits still apply (6c) | — |
+| One live connection per app installation across every organisation; one per account per organisation | `git_connections` (7) | `git_connections_installation_unique`, `git_connections_org_account_unique` (partial, live rows); a second claim of an installation answers `git.installation_already_connected` without naming the holder |
+| Git plan caps: on `free`, 2 live connections per organisation and 10 linked repositories per project | `git_connections`, `project_repositories` (7) | — counted by the service |
 | A `byo` attachment is served, and its object deleted, only through a verified connection whose location is the row's | `attachments`, `org_storage_configs` (6c) | which location a file is at: `attachments_storage_location_org_fk`, `attachments_storage_location_check` |
 
 One of these could be a constraint and deliberately is not: the one-parent rule

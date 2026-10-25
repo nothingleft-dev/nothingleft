@@ -241,6 +241,8 @@ worthwhile only under load).
 | `org.delete` | Grace period elapsed | Delete an organisation whose deletion was scheduled |
 | `export.org` | Export requested | Produce the JSON + files archive for a full org export: a temporary file, then one checked upload to the platform bucket; may run for hours, so its queue expires jobs after 6 (6d) |
 | `transfers.sweep` | Cron, hourly at :50 | Delete export archives past their 7 days and import files whose job ended or was never run within a day (6d) |
+| `git.process_events` | A webhook delivery stored (7) | Apply one repository's pending deliveries in the order received, on a stately queue keyed by the repository (a connection's own events by the connection): one runs, one waits, and a delivery stored meanwhile is picked up by the waiting run. A failure stops the run and is retried after 1, 4, 16 and 64 minutes, then marked `failed`, so a poison delivery holds its repository back only that long |
+| `git.purge` | Cron, nightly at 03:20 (7) | Delete webhook deliveries older than 7 days, 5,000 at a time |
 
 There is **no search reindex job.** `issues.search_tsv` and
 `articles.search_tsv` are generated columns, so they cannot be stale — see

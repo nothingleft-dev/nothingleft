@@ -13,7 +13,9 @@ import {
   JOB_SWEEP_CRON,
   JOB_TRANSFER_SWEEP_CRON,
   EXPORT_JOB_EXPIRE_SECONDS,
+  JOB_GIT_PURGE_CRON,
 } from '@config/constants';
+import type { GitEventsJob } from '@services/git-ingest.service';
 
 export interface JobHandlers {
   'session.gc': () => Promise<number>;
@@ -28,6 +30,7 @@ export interface JobHandlers {
   'org.delete': (now?: Date) => Promise<number>;
   'storage.reconcile': (now?: Date) => Promise<number>;
   'transfers.sweep': (now?: Date) => Promise<number>;
+  'git.purge': (now?: Date) => Promise<number>;
 }
 
 export type FanoutJob =
@@ -69,6 +72,7 @@ export interface QueuedHandlers {
   'storage.migrate': (data: StorageMigrateJob, now?: Date) => Promise<number>;
   'import.csv': (data: ImportCsvJob, now?: Date) => Promise<number>;
   'export.org': (data: ExportOrgJob, now?: Date) => Promise<number>;
+  'git.process_events': (data: GitEventsJob, now?: Date) => Promise<number>;
 }
 
 export type QueuedJob = {
@@ -105,6 +109,8 @@ export function runQueued(handlers: QueuedHandlers, job: QueuedJob, now?: Date):
       return handlers[job.name](job.data, now);
     case 'export.org':
       return handlers[job.name](job.data, now);
+    case 'git.process_events':
+      return handlers[job.name](job.data, now);
     case 'avatar.mirror':
       return handlers[job.name](job.data);
   }
@@ -134,6 +140,7 @@ const SCHEDULES: Record<keyof JobHandlers, string> = {
   'org.delete': JOB_ORG_DELETE_CRON,
   'storage.reconcile': JOB_RECONCILE_CRON,
   'transfers.sweep': JOB_TRANSFER_SWEEP_CRON,
+  'git.purge': JOB_GIT_PURGE_CRON,
 };
 
 const QUEUE_OPTIONS: Partial<Record<keyof QueuedHandlers, { expireInSeconds: number }>> = {

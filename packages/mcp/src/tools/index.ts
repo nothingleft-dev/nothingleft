@@ -78,6 +78,18 @@ import {
 import { runReport } from './reports.ts';
 import { listFiles } from './storage.ts';
 import {
+  linkRepository,
+  listGitConnections,
+  listGitEvents,
+  listRepositories,
+  refreshGitConnection,
+  removeGitConnection,
+  replayGitEvent,
+  resyncRepository,
+  unlinkRepository,
+  updateRepositoryLink,
+} from './git.ts';
+import {
   getNotificationPreferences,
   listNotifications,
   markNotificationsRead,
@@ -180,4 +192,14 @@ export const TOOLS = [
   getImportStatus,
   requestOrgExport,
   getExportStatus,
+  listGitConnections,
+  refreshGitConnection,
+  removeGitConnection,
+  listRepositories,
+  linkRepository,
+  updateRepositoryLink,
+  unlinkRepository,
+  resyncRepository,
+  listGitEvents,
+  replayGitEvent,
 ] as const;

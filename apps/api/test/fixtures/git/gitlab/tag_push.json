@@ -1,0 +1,52 @@
+{
+  "headers": {
+    "x-gitlab-event": "Tag Push Hook",
+    "x-gitlab-event-uuid": "6e4c2b5d-9f70-4b12-8d4e-5f60718293a4"
+  },
+  "body": {
+    "object_kind": "tag_push",
+    "event_name": "tag_push",
+    "before": "0000000000000000000000000000000000000000",
+    "after": "d4e5f60718293a4b5c6d7e8f9012345678901234",
+    "ref": "refs/tags/v1.2.0",
+    "ref_protected": false,
+    "checkout_sha": "d4e5f60718293a4b5c6d7e8f9012345678901234",
+    "message": null,
+    "user_id": 9001,
+    "user_name": "Alex Lee",
+    "user_username": "alex-lee",
+    "user_email": "",
+    "user_avatar": "https://gitlab.com/uploads/-/system/user/avatar/9001/avatar.png",
+    "project_id": 202,
+    "project": {
+      "id": 202,
+      "name": "api",
+      "description": "Acme API",
+      "web_url": "https://gitlab.com/acme/api",
+      "avatar_url": null,
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "namespace": "acme",
+      "visibility_level": 0,
+      "path_with_namespace": "acme/api",
+      "default_branch": "main",
+      "ci_config_path": null,
+      "homepage": "https://gitlab.com/acme/api",
+      "url": "git@gitlab.com:acme/api.git",
+      "ssh_url": "git@gitlab.com:acme/api.git",
+      "http_url": "https://gitlab.com/acme/api.git"
+    },
+    "commits": [],
+    "total_commits_count": 0,
+    "push_options": {},
+    "repository": {
+      "name": "api",
+      "url": "git@gitlab.com:acme/api.git",
+      "description": "Acme API",
+      "homepage": "https://gitlab.com/acme/api",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "visibility_level": 0
+    }
+  }
+}

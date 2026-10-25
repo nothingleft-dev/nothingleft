@@ -1,0 +1,64 @@
+{
+  "headers": {
+    "x-gitlab-event": "Note Hook",
+    "x-gitlab-event-uuid": "2a08e719-5b3c-47de-890a-1b2c3d4e5f60"
+  },
+  "body": {
+    "object_kind": "note",
+    "event_type": "note",
+    "user": {
+      "id": 9002,
+      "name": "Casey Kim",
+      "username": "casey-kim",
+      "avatar_url": "https://gitlab.com/uploads/-/system/user/avatar/9002/avatar.png",
+      "email": "[REDACTED]"
+    },
+    "project_id": 202,
+    "project": {
+      "id": 202,
+      "name": "api",
+      "description": "Acme API",
+      "web_url": "https://gitlab.com/acme/api",
+      "avatar_url": null,
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "namespace": "acme",
+      "visibility_level": 0,
+      "path_with_namespace": "acme/api",
+      "default_branch": "main",
+      "ci_config_path": null,
+      "homepage": "https://gitlab.com/acme/api",
+      "url": "git@gitlab.com:acme/api.git",
+      "ssh_url": "git@gitlab.com:acme/api.git",
+      "http_url": "https://gitlab.com/acme/api.git"
+    },
+    "object_attributes": {
+      "id": 55001,
+      "note": "Looks good, see API-7",
+      "noteable_type": "MergeRequest",
+      "author_id": 9002,
+      "created_at": "2026-10-25 10:40:00 UTC",
+      "updated_at": "2026-10-25 10:40:00 UTC",
+      "project_id": 202,
+      "noteable_id": 99012,
+      "system": false,
+      "url": "https://gitlab.com/acme/api/-/merge_requests/12#note_55001",
+      "action": "create"
+    },
+    "repository": {
+      "name": "api",
+      "url": "git@gitlab.com:acme/api.git",
+      "description": "Acme API",
+      "homepage": "https://gitlab.com/acme/api",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "visibility_level": 0
+    },
+    "merge_request": {
+      "id": 99012,
+      "iid": 12,
+      "title": "API-7: Fix login",
+      "state": "opened"
+    }
+  }
+}

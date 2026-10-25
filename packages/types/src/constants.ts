@@ -69,6 +69,11 @@ export const ORG_ACTIVITY_KINDS = [
   'tag_renamed',
   'tag_merged',
   'tag_deleted',
+  'git_connection_created',
+  'git_connection_removed',
+  'git_connection_error',
+  'repository_linked',
+  'repository_unlinked',
 ] as const;
 export type OrgActivityKind = (typeof ORG_ACTIVITY_KINDS)[number];
 
@@ -525,3 +530,58 @@ export const ORG_EXPORT_TTL_DAYS = 7;
 export const ORG_EXPORT_FORMAT_VERSION = 1;
 
 export const TAG_MERGE_MAX_SOURCES = 50;
+
+export const GIT_AUTH_KINDS = ['app_installation', 'token', 'manual'] as const;
+export type GitAuthKind = (typeof GIT_AUTH_KINDS)[number];
+export const GIT_CONNECT_KINDS = ['app', 'token', 'manual'] as const;
+export type GitConnectKind = (typeof GIT_CONNECT_KINDS)[number];
+export const GIT_CONNECTION_STATUSES = ['active', 'suspended', 'token_expired', 'failing', 'revoked'] as const;
+export type GitConnectionStatus = (typeof GIT_CONNECTION_STATUSES)[number];
+// What went wrong, as the connection card says it; `last_error` holds one of these.
+export const GIT_CONNECTION_ERRORS = [
+  'signature',
+  'processing',
+  'token_invalid',
+  'token_expired',
+  'suspended',
+  'uninstalled',
+] as const;
+export type GitConnectionError = (typeof GIT_CONNECTION_ERRORS)[number];
+export const GIT_CONNECTION_HEALTH = [
+  'active',
+  'failing',
+  'token_expired',
+  'expiring',
+  'suspended',
+  'removed_at_provider',
+  'disconnected',
+] as const;
+export type GitConnectionHealth = (typeof GIT_CONNECTION_HEALTH)[number];
+export const GIT_WEBHOOK_STATUSES = ['active', 'failing', 'missing', 'not_applicable'] as const;
+export type GitWebhookStatus = (typeof GIT_WEBHOOK_STATUSES)[number];
+export const GIT_EVENT_STATUSES = ['pending', 'done', 'ignored', 'failed'] as const;
+export type GitEventStatus = (typeof GIT_EVENT_STATUSES)[number];
+// Why an event ended `failed`, as stored in its `error` and counted in analytics.
+export const GIT_EVENT_FAILURES = [
+  'provider_unreachable',
+  'provider_rate_limited',
+  'token_invalid',
+  'payload_truncated',
+  'internal',
+] as const;
+export type GitEventFailure = (typeof GIT_EVENT_FAILURES)[number];
+// Why an event ended `ignored`.
+export const GIT_EVENT_IGNORED = [
+  'repository_unknown',
+  'repository_not_linked',
+  'connection_revoked',
+  'event_unused',
+] as const;
+export type GitEventIgnored = (typeof GIT_EVENT_IGNORED)[number];
+export const GIT_BACKFILL_STATES = ['queued', 'running', 'done', 'failed'] as const;
+export type GitBackfillState = (typeof GIT_BACKFILL_STATES)[number];
+export const GIT_EVENT_ATTEMPTS_MAX = 5;
+export const GIT_TOKEN_EXPIRY_WARNING_DAYS = 7;
+export const GIT_MERGE_BASE_BRANCHES_MAX = 20;
+export const GIT_PAGE_DEFAULT = 50;
+export const GIT_PAGE_MAX = 100;

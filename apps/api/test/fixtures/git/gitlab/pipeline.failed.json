@@ -1,0 +1,150 @@
+{
+  "headers": {
+    "x-gitlab-event": "Pipeline Hook",
+    "x-gitlab-event-uuid": "f7d5b4e6-2809-44ab-96d7-e8f90a1b2c3d"
+  },
+  "body": {
+    "object_kind": "pipeline",
+    "object_attributes": {
+      "id": 3101,
+      "iid": 31,
+      "name": null,
+      "ref": "feat/api-7-login",
+      "tag": false,
+      "sha": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+      "before_sha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+      "source": "push",
+      "status": "failed",
+      "detailed_status": "failed",
+      "stages": ["build", "test"],
+      "created_at": "2026-10-25 10:21:00 UTC",
+      "finished_at": "2026-10-25 10:25:00 UTC",
+      "duration": 240,
+      "queued_duration": 2,
+      "variables": [],
+      "url": "https://gitlab.com/acme/api/-/pipelines/3101"
+    },
+    "merge_request": {
+      "id": 99012,
+      "iid": 12,
+      "title": "API-7: Fix login",
+      "source_branch": "feat/api-7-login",
+      "source_project_id": 202,
+      "target_branch": "main",
+      "target_project_id": 202,
+      "state": "opened",
+      "merge_status": "can_be_merged",
+      "detailed_merge_status": "mergeable",
+      "url": "https://gitlab.com/acme/api/-/merge_requests/12"
+    },
+    "user": {
+      "id": 9001,
+      "name": "Alex Lee",
+      "username": "alex-lee",
+      "avatar_url": "https://gitlab.com/uploads/-/system/user/avatar/9001/avatar.png",
+      "email": "[REDACTED]"
+    },
+    "project": {
+      "id": 202,
+      "name": "api",
+      "description": "Acme API",
+      "web_url": "https://gitlab.com/acme/api",
+      "avatar_url": null,
+      "git_ssh_url": "git@gitlab.com:acme/api.git",
+      "git_http_url": "https://gitlab.com/acme/api.git",
+      "namespace": "acme",
+      "visibility_level": 0,
+      "path_with_namespace": "acme/api",
+      "default_branch": "main",
+      "ci_config_path": null,
+      "homepage": "https://gitlab.com/acme/api",
+      "url": "git@gitlab.com:acme/api.git",
+      "ssh_url": "git@gitlab.com:acme/api.git",
+      "http_url": "https://gitlab.com/acme/api.git"
+    },
+    "commit": {
+      "id": "b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+      "message": "API-7: Reject empty passwords\n",
+      "title": "API-7: Reject empty passwords",
+      "timestamp": "2026-10-25T10:20:00+00:00",
+      "url": "https://gitlab.com/acme/api/-/commit/b2c3d4e5f60718293a4b5c6d7e8f901234567890",
+      "author": {
+        "name": "Alex Lee",
+        "email": "alex@acme.example"
+      }
+    },
+    "source_pipeline": null,
+    "builds": [
+      {
+        "id": 7701,
+        "stage": "build",
+        "name": "compile",
+        "status": "success",
+        "created_at": "2026-10-25 10:21:00 UTC",
+        "started_at": "2026-10-25 10:21:05 UTC",
+        "finished_at": "2026-10-25 10:23:05 UTC",
+        "duration": 120.4,
+        "queued_duration": 1.6,
+        "failure_reason": null,
+        "when": "on_success",
+        "manual": false,
+        "allow_failure": false,
+        "user": {
+          "id": 9001,
+          "name": "Alex Lee",
+          "username": "alex-lee",
+          "avatar_url": "https://gitlab.com/uploads/-/system/user/avatar/9001/avatar.png",
+          "email": "[REDACTED]"
+        },
+        "runner": {
+          "id": 380987,
+          "description": "shared-runners",
+          "runner_type": "instance_type",
+          "active": true,
+          "is_shared": true,
+          "tags": []
+        },
+        "artifacts_file": {
+          "filename": null,
+          "size": null
+        },
+        "environment": null
+      },
+      {
+        "id": 7702,
+        "stage": "test",
+        "name": "unit tests",
+        "status": "failed",
+        "created_at": "2026-10-25 10:21:00 UTC",
+        "started_at": "2026-10-25 10:23:10 UTC",
+        "finished_at": "2026-10-25 10:25:00 UTC",
+        "duration": 120.4,
+        "queued_duration": 1.6,
+        "failure_reason": "script_failure",
+        "when": "on_success",
+        "manual": false,
+        "allow_failure": false,
+        "user": {
+          "id": 9001,
+          "name": "Alex Lee",
+          "username": "alex-lee",
+          "avatar_url": "https://gitlab.com/uploads/-/system/user/avatar/9001/avatar.png",
+          "email": "[REDACTED]"
+        },
+        "runner": {
+          "id": 380987,
+          "description": "shared-runners",
+          "runner_type": "instance_type",
+          "active": true,
+          "is_shared": true,
+          "tags": []
+        },
+        "artifacts_file": {
+          "filename": null,
+          "size": null
+        },
+        "environment": null
+      }
+    ]
+  }
+}

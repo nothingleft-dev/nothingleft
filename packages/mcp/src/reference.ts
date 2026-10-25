@@ -81,6 +81,18 @@ export const TOOL_GROUPS: Record<string, readonly ToolName[]> = {
     'get_org_activity',
     'update_profile',
   ],
+  Development: [
+    'list_git_connections',
+    'refresh_git_connection',
+    'remove_git_connection',
+    'list_repositories',
+    'link_repository',
+    'update_repository_link',
+    'unlink_repository',
+    'resync_repository',
+    'list_git_events',
+    'replay_git_event',
+  ],
   'Import and export': ['start_csv_import', 'get_import_status', 'request_org_export', 'get_export_status'],
   People: [
     'list_members',
