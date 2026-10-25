@@ -151,6 +151,7 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
             <AutomationsSettings
               projectKey={projectKey}
               canEdit={canEdit}
+              orgAdmin={orgAdmin}
               readOnlyReason={
                 project.data.is_archived
                   ? readOnlyReason

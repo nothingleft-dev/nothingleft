@@ -37,6 +37,7 @@ import {
   useUpdateAutomation,
 } from '@hooks/use-automations';
 import { useUpdateRepositoryLink } from '@hooks/use-git';
+import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
 
 // The git matrix's rows (owner, 25 Oct 2026); a commit pushed rule lives under Other automations.
@@ -52,11 +53,18 @@ const MATRIX: readonly AutomationTrigger[] = [
 interface AutomationsSettingsProps {
   projectKey: string;
   canEdit: boolean;
+  orgAdmin: boolean;
   readOnlyReason: string;
   repositories: readonly ProjectRepository[];
 }
 
-export function AutomationsSettings({ projectKey, canEdit, readOnlyReason, repositories }: AutomationsSettingsProps) {
+export function AutomationsSettings({
+  projectKey,
+  canEdit,
+  orgAdmin,
+  readOnlyReason,
+  repositories,
+}: AutomationsSettingsProps) {
   const router = useRouter();
   const params = useSearchParams();
   const rules = useAutomations(projectKey);
@@ -150,7 +158,7 @@ export function AutomationsSettings({ projectKey, canEdit, readOnlyReason, repos
               }
             >
               <GitMatrix catalogue={cat} rules={matrixRules} {...shared} />
-              <MergedInto projectKey={projectKey} repositories={repositories} canEdit={canEdit} />
+              <MergedInto projectKey={projectKey} repositories={repositories} canEdit={canEdit} orgAdmin={orgAdmin} />
             </SettingsSection>
           ) : null}
 
@@ -344,10 +352,12 @@ function MergedInto({
   projectKey,
   repositories,
   canEdit,
+  orgAdmin,
 }: {
   projectKey: string;
   repositories: readonly ProjectRepository[];
   canEdit: boolean;
+  orgAdmin: boolean;
 }) {
   const update = useUpdateRepositoryLink(projectKey);
   return (
@@ -365,7 +375,7 @@ function MergedInto({
             </span>
             <BranchChips
               repository={repository}
-              disabled={!canEdit}
+              disabled={!canEdit || repositoryLocks(repository, projectKey, orgAdmin).branches !== null}
               onChange={branches =>
                 update.mutate(
                   {
@@ -379,6 +389,11 @@ function MergedInto({
           </li>
         ))}
       </ul>
+      {canEdit && repositories.some(r => repositoryLocks(r, projectKey, orgAdmin).branches) ? (
+        <p className="text-2xs text-text-secondary">
+          Only an Org Admin can change the branches of a repository other projects use too.
+        </p>
+      ) : null}
     </div>
   );
 }

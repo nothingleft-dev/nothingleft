@@ -33,6 +33,7 @@ import {
 import { useDebounced } from '@hooks/use-debounced';
 import { WEBHOOK_STATUS, count } from '@lib/git/words';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
+import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
 
 interface RepositoriesSettingsProps {
@@ -91,6 +92,7 @@ export function RepositoriesSettings({
                 projectKey={projectKey}
                 repository={repository}
                 canEdit={canEdit}
+                orgAdmin={orgAdmin}
               />
             ))}
           </ul>
@@ -157,11 +159,14 @@ function RepositoryRow({
   projectKey,
   repository,
   canEdit,
+  orgAdmin,
 }: {
   projectKey: string;
   repository: ProjectRepository;
   canEdit: boolean;
+  orgAdmin: boolean;
 }) {
+  const locks = repositoryLocks(repository, projectKey, orgAdmin);
   const update = useUpdateRepositoryLink(projectKey);
   const unlink = useUnlinkRepository(projectKey);
   const [confirming, setConfirming] = useState(false);
@@ -206,17 +211,20 @@ function RepositoryRow({
       <dl className="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 text-xs">
         <dt className="text-text-secondary">Merged into</dt>
         <dd>
-          <BranchChips
-            repository={repository}
-            disabled={!canEdit}
-            onChange={branches => patch({ merge_base_branches: branches })}
-          />
+          <span className="flex flex-col gap-1">
+            <BranchChips
+              repository={repository}
+              disabled={!canEdit || locks.branches !== null}
+              onChange={branches => patch({ merge_base_branches: branches })}
+            />
+            {canEdit && locks.branches ? <span className="text-2xs text-text-secondary">{locks.branches}</span> : null}
+          </span>
         </dd>
         <dt className="text-text-secondary">Every project</dt>
         <dd className="flex items-center gap-2">
           <Switch
             checked={repository.match_all_projects}
-            disabled={!canEdit}
+            disabled={!canEdit || locks.everyProject !== null}
             aria-label="Reference issues of every project in the organisation"
             onCheckedChange={value => patch({ match_all_projects: value })}
           />
@@ -224,6 +232,7 @@ function RepositoryRow({
             {repository.match_all_projects
               ? 'Names an issue of any project in the organisation.'
               : 'Names only issues of projects it is linked to.'}
+            {canEdit && locks.everyProject ? ` ${locks.everyProject}` : ''}
           </span>
         </dd>
       </dl>

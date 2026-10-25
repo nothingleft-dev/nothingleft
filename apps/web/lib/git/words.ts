@@ -132,6 +132,8 @@ export const EVENT_STATUS: Record<GitEventStatus, string> = {
 // The API's git.event_reason.* catalogue: an event's `error` is one of these codes.
 const EVENT_REASON: Record<string, string> = {
   repository_unknown: 'The repository is not known to this connection.',
+  repository_removed: 'The repository was no longer available to the connection when this arrived.',
+  connection_suspended: 'The installation was suspended at the provider when this arrived.',
   repository_not_linked: 'The repository is not linked to any project.',
   connection_revoked: 'The connection was disconnected.',
   event_unused: 'Nothing in this event is used.',
