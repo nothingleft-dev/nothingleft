@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { CalendarClock, CheckCheck, ChevronRight, FileText, Timer } from 'lucide-react';
+import { Bot, CalendarClock, CheckCheck, ChevronRight, CircleX, FileText, GitMerge, Timer } from 'lucide-react';
 import type { Notification, NotificationGroup } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -119,7 +119,13 @@ export function InboxEntry({ group, showOrganization, onMark }: EntryProps) {
           </span>
           {latest ? (
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">
-              <span className="truncate">{latest.summary}</span>
+              {latest.actor === null && SYSTEM_KINDS.includes(latest.kind) ? (
+                <SystemMark notification={latest} />
+              ) : null}
+              <span className="truncate">
+                {latest.summary}
+                <PullRequestTitle notification={latest} />
+              </span>
               {latest.actor?.former_member ? <FormerMemberChip /> : null}
             </span>
           ) : null}
@@ -184,8 +190,45 @@ function EntryLines({ group, onMark }: { group: NotificationGroup; onMark: (targ
   );
 }
 
+// What nobody did by hand: a provider event, or a status an automation set (actor null).
+function SystemMark({ notification }: { notification: Notification }) {
+  const kind = notification.kind;
+  const Icon = kind === 'pull_request_merged' ? GitMerge : kind === 'ci_failed' ? CircleX : Bot;
+  return (
+    <span
+      title={kind === 'pull_request_merged' || kind === 'ci_failed' ? undefined : 'Nothing Left Bot'}
+      className={cn(
+        'grid size-5 flex-none place-items-center rounded-sm bg-inset',
+        kind === 'pull_request_merged'
+          ? 'c-green text-c-fg'
+          : kind === 'ci_failed'
+            ? 'text-danger-fg'
+            : 'text-text-secondary',
+      )}
+      aria-hidden
+    >
+      <Icon className="size-3" />
+    </span>
+  );
+}
+
+const SYSTEM_KINDS: readonly Notification['kind'][] = [
+  'pull_request_merged',
+  'ci_failed',
+  'status_changed',
+  'resolved',
+];
+
+/** The pull request's own title, the provider's plain text, after the summary that names it. */
+export function PullRequestTitle({ notification }: { notification: Notification }) {
+  const title = notification.detail.pull_request_title;
+  if (!title) return null;
+  return <span className="text-text-muted"> · {title}</span>;
+}
+
 function LineMark({ notification }: { notification: Notification }) {
   if (notification.actor) return <MemberAvatar member={notification.actor} className="size-5 flex-none" />;
+  if (SYSTEM_KINDS.includes(notification.kind)) return <SystemMark notification={notification} />;
   const overdue = notification.kind === 'overdue';
   return (
     <span
@@ -228,6 +271,7 @@ export function NotificationLine({
         className={cn('min-w-0 flex-1 leading-5', unread ? 'text-text' : 'text-text-secondary')}
       >
         {notification.summary}
+        <PullRequestTitle notification={notification} />
         {notification.actor?.former_member ? <FormerMemberChip className="ml-1.5 align-[1px]" /> : null}
       </Link>
       <RelativeTime value={notification.created_at} className="flex-none text-xs leading-5" />

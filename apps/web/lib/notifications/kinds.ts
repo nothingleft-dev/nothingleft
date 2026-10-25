@@ -78,6 +78,8 @@ export const KIND_FILTERS: readonly KindFilter[] = [
   { value: 'mentioned', label: 'Mentions', area: 'comments', kinds: ['mentioned'] },
   { value: 'commented', label: 'Comments', area: 'comments', kinds: ['commented'] },
   { value: 'sprint', label: 'Sprints', area: 'agile', kinds: ['sprint_started', 'sprint_finished'] },
+  { value: 'pull_request_merged', label: 'Pull request merged', area: 'development', kinds: ['pull_request_merged'] },
+  { value: 'ci_failed', label: 'CI failing', area: 'development', kinds: ['ci_failed'] },
   { value: 'article', label: 'Articles', area: 'knowledge_base', kinds: ['article_published', 'article_updated'] },
 ];
 
