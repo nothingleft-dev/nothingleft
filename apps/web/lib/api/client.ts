@@ -36,10 +36,16 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler) {
 export function redirectToSignIn() {
   if (typeof window === 'undefined') return;
   const here = window.location.pathname + window.location.search;
-  if (isAnonymousRoute(window.location.pathname)) return;
   const target = new URL(SIGN_IN_PATH, window.location.origin);
   target.searchParams.set('next', here);
   window.location.assign(target.toString());
+}
+
+// Checked before the handler, not inside it: clearing the cache on an anonymous page strands
+// the queries still waiting on it, such as the invitation preview.
+function sessionEnded() {
+  if (typeof window !== 'undefined' && isAnonymousRoute(window.location.pathname)) return;
+  onUnauthorized();
 }
 
 export function buildUrl(path: string, query?: Record<string, QueryEntry>) {
@@ -100,7 +106,7 @@ async function send<T>(method: string, path: string, opts: RequestOptions, attem
     const error = parsed.success
       ? ApiError.fromBody(response.status, parsed.data.error)
       : new ApiError(response.status, 'unknown', response.statusText, requestId);
-    if (error.isSignedOut) onUnauthorized();
+    if (error.isSignedOut) sessionEnded();
     throw error;
   }
 
