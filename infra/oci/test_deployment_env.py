@@ -32,6 +32,24 @@ class EnvironmentContract(unittest.TestCase):
         self.assertEqual(ui['values']['NEXT_PUBLIC_API_BASE_URL'], 'https://example.invalid')
         self.assertNotIn('DATABASE_URL', ui['values'])
 
+    def test_github_app_is_all_or_nothing_with_its_secrets_private(self):
+        values = self.api()
+        secrets = {'API_' + key: value for key, value in values.items() if key in API_SENSITIVE}
+        variables = {'API_' + key: value for key, value in values.items() if key not in API_SENSITIVE}
+        partial = dict(variables, API_GITHUB_APP_ID='123')
+        with self.assertRaisesRegex(ValueError, 'GitHub App configuration needs all of'):
+            collect('API', partial, secrets)
+        variables.update(API_GITHUB_APP_ID='123', API_GITHUB_APP_SLUG='nothing-left', API_GITHUB_APP_CLIENT_ID='Iv1.x')
+        secrets.update(API_GITHUB_APP_CLIENT_SECRET='s', API_GITHUB_APP_WEBHOOK_SECRET='w' * 32,
+                       API_GITHUB_APP_PRIVATE_KEY='-----BEGIN RSA PRIVATE KEY-----\\nabc\\n-----END RSA PRIVATE KEY-----')
+        payload = collect('API', variables, secrets)
+        self.assertEqual(payload['values']['GITHUB_APP_SLUG'], 'nothing-left')
+        with self.assertRaisesRegex(ValueError, 'must be a GitHub Secret'):
+            collect('API', dict(variables, API_GITHUB_APP_PRIVATE_KEY='k'), {
+                k: v for k, v in secrets.items() if k != 'API_GITHUB_APP_PRIVATE_KEY'})
+        with self.assertRaisesRegex(ValueError, 'GIT_ALLOW_PRIVATE_HOSTS'):
+            collect('API', dict(variables, API_GIT_ALLOW_PRIVATE_HOSTS='true'), secrets)
+
     def test_ui_reuses_the_marketing_ga_id(self):
         variables = {'UI_NEXT_PUBLIC_API_BASE_URL': 'https://example.invalid', 'MARKETING_PUBLIC_GA_MEASUREMENT_ID': 'G-TEST'}
         self.assertEqual(collect('UI', variables, {})['values']['NEXT_PUBLIC_GA_MEASUREMENT_ID'], 'G-TEST')
