@@ -121,7 +121,7 @@ TanStack Query · Tiptap · Prettier · ESLint
 ```
 apps/web  apps/marketing  apps/api
 packages/db  packages/types  packages/format  packages/i18n  packages/markdown
-packages/query  packages/mcp  packages/mcp-stdio  packages/analytics  packages/config
+packages/query  packages/mcp  packages/mcp-stdio  packages/analytics  packages/config  packages/brand
 ```
 
 ## Conventions
@@ -153,11 +153,13 @@ Sitemap and JSON-LD are controlled per page in `apps/marketing/src/data/`. A new
 entry in `schema-config.ts` (title, description, JSON-LD nodes) and, if indexable, in
 `sitemap-config.mjs`; bump its `lastmod` there when the page changes, which also updates the
 page's JSON-LD `dateModified`. The build fails when the two disagree.
-Marketing link previews are 1200×630 PNGs rendered at build time to `/og/<slug>.png` from
-`apps/marketing/src/data/og-cards.ts` (one card per route: template, hero text, alt), by
-`src/pages/og/[slug].png.ts` with Satori and resvg. A new page gets a card there; a page without
-one uses the home card. Templates live in `src/lib/og/templates.ts`; the design references are
-private.
+Link previews are 1200×630 PNGs rendered at build time, never uploaded. Marketing renders
+`/og/<slug>.png` from `apps/marketing/src/data/og-cards.ts` (one card per route: template, hero
+text, alt) through `src/pages/og/[slug].png.ts` with Satori and resvg; a new page gets a card
+there, and a page without one uses the home card. The web app renders its auth-page cards from
+`AUTH_PAGES` in `apps/web/lib/auth-metadata.ts` through `app/og/[card]/route.ts` with `next/og`.
+Logo geometry, the card fonts and the shared card helpers live in `packages/brand`; the design
+references are private.
 Docs articles render from `docs/manual/*.md`; publishing one also means adding its slug to
 `PUBLISHED_DOCS` and its nav entry in `apps/marketing/src/data/docs.ts`, and its `lastmod` there
 is the "Updated" date readers see.

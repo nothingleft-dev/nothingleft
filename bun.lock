@@ -56,13 +56,14 @@
     },
     "apps/marketing": {
       "name": "@nothingleft/marketing",
-      "version": "0.0.0",
+      "version": "0.0.1",
       "dependencies": {
         "@astrojs/markdown-remark": "^7.3.5",
         "@astrojs/sitemap": "^3.7.4",
         "@fontsource/inter": "^5.3.0",
         "@fontsource/jetbrains-mono": "^5.3.0",
         "@lucide/astro": "^1.63.0",
+        "@nothingleft/brand": "workspace:*",
         "@resvg/resvg-js": "^2.6.2",
         "@tailwindcss/vite": "^4.3.3",
         "astro": "^7.4.3",
@@ -85,6 +86,7 @@
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
+        "@nothingleft/brand": "workspace:*",
         "@nothingleft/format": "workspace:*",
         "@nothingleft/markdown": "workspace:*",
         "@nothingleft/types": "workspace:*",
@@ -136,6 +138,13 @@
         "@nothingleft/types": "workspace:*",
         "posthog-node": "^5.52.4",
       },
+      "devDependencies": {
+        "@nothingleft/config": "workspace:*",
+      },
+    },
+    "packages/brand": {
+      "name": "@nothingleft/brand",
+      "version": "0.0.0",
       "devDependencies": {
         "@nothingleft/config": "workspace:*",
       },
@@ -664,6 +673,8 @@
     "@nothingleft/analytics": ["@nothingleft/analytics@workspace:packages/analytics"],
 
     "@nothingleft/api": ["@nothingleft/api@workspace:apps/api"],
+
+    "@nothingleft/brand": ["@nothingleft/brand@workspace:packages/brand"],
 
     "@nothingleft/config": ["@nothingleft/config@workspace:packages/config"],
 
@@ -2657,7 +2668,7 @@
 
     "yocto-queue": ["yocto-queue@1.2.2", "", {}, "sha512-4LCcse/U2MHZ63HAJVE+v71o7yOdIe4cZ70Wpf8D/IyjDKYQLV5GD46B+hSTjJsvV5PztjvHoU580EftxjDZFQ=="],
 
-    "zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
+    "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "zod-validation-error": ["zod-validation-error@4.0.2", "", { "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-Q6/nZLe6jxuU80qb/4uJ4t5v2VEZ44lzQjPDhYJNztRQ4wyWc6VF3D3Kb/fAuPetZQnhS3hnajCf9CsWesghLQ=="],
 
@@ -2720,8 +2731,6 @@
     "anymatch/picomatch": ["picomatch@2.3.2", "", {}, "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA=="],
 
     "astro/@astrojs/compiler-rs": ["@astrojs/compiler-rs@0.5.1", "", { "dependencies": { "@astrojs/compiler-binding": "0.5.1" } }, "sha512-1k1acnX7DepIiea9U9/Y+d1hdAFfylu1ZQQkkYgRSwBOBAsXInolyZuh/2tax+83vu/A+hOYP6P3+265RvMTvw=="],
-
-    "astro/zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "astro-eslint-parser/@astrojs/compiler-rs": ["@astrojs/compiler-rs@0.5.1", "", { "dependencies": { "@astrojs/compiler-binding": "0.5.1" } }, "sha512-1k1acnX7DepIiea9U9/Y+d1hdAFfylu1ZQQkkYgRSwBOBAsXInolyZuh/2tax+83vu/A+hOYP6P3+265RvMTvw=="],
 

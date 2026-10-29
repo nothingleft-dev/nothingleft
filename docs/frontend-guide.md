@@ -472,6 +472,13 @@ other strict flag from the shared config is on.
   each `page.tsx` exports `metadata = { title: 'Inbox' }`, or `generateMetadata`
   when the title depends on params (`PP-123`). Description, Open Graph and
   robots go in the same object.
+- **Link previews for the auth pages**: `lib/auth-metadata.ts` holds one entry per
+  page (sign-in, sign-up, reset-password, invite) with its title, description, alt
+  text and the card's copy. `app/og/[card]/route.ts` renders each card to
+  `/og/<page>.png` at build time with `next/og`, using the logo geometry, fonts and
+  card helpers from `packages/brand`. Change the copy there and the card follows;
+  nothing is uploaded. The invitation card deliberately lives outside
+  `/invite/[token]` so no token ever appears in share metadata.
 - **Scripts on every page**: `components/site-scripts.tsx`, rendered once by
   the root layout with `next/script`. Each tag is gated by its own
   `NEXT_PUBLIC_*` variable (`NEXT_PUBLIC_GA_MEASUREMENT_ID` is the worked

@@ -1,11 +1,21 @@
 import type { CompareCard, DocCard, HeadlineCard, OgCard, SampleCard, SolutionCard } from '@data/og-cards';
 import { ISSUES, assigneesOf, isResolvedAt, statusOf, type Status } from '@data/sample';
 import { SITE_URL } from '@lib/site';
-import { mark, markSvg, wordmark } from './lockup';
-import { box, col, el, row, svgImage, text, type OgNode, type Style } from './node';
-
-export const OG_WIDTH = 1200;
-export const OG_HEIGHT = 630;
+import {
+  box,
+  col,
+  lockup as brandLockup,
+  mark,
+  markSvg,
+  OG_HEIGHT,
+  OG_WIDTH,
+  row,
+  sentence,
+  svgImage,
+  text,
+  type OgNode,
+  type Style,
+} from '@nothingleft/brand/og';
 
 // The cards are always dark, whatever the site theme, so the palette lives here rather than in tokens.
 const C = {
@@ -44,16 +54,10 @@ const frame = (style: Style, ...children: OgNode[]) =>
     ...children,
   );
 
-// The sentence's last mark is the brand's amber full stop.
 const title = (content: string, end: string, style: Style) =>
-  el(
-    'div',
-    { display: 'block', fontWeight: 600, letterSpacing: '-0.035em', lineHeight: 1.02, ...style },
-    content,
-    el('span', { color: C.amber }, end),
-  );
+  sentence(content, end, C.amber, { letterSpacing: '-0.035em', lineHeight: 1.02, ...style });
 
-const lockup = (size = 40) => row({ gap: 14 }, mark(size, C.fg, C.amber), wordmark(size * 0.75, C.fg, C.amber));
+const lockup = (size = 40) => brandLockup(size, C.fg, C.amber);
 
 const url = (path: string, style: Style = {}) =>
   text(mono(20, { color: C.fg3, flexShrink: 0, whiteSpace: 'nowrap', ...style }), HOST + (path === '/' ? '' : path));
