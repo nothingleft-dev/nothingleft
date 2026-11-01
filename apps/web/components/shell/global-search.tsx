@@ -115,8 +115,9 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
         <div
           id="global-search-results"
           role="listbox"
+          aria-busy={Boolean(result) && (typing || search.isFetching)}
           onMouseDown={e => e.preventDefault()}
-          className="absolute inset-x-0 top-full z-50 mt-1 max-h-[min(560px,70vh)] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover"
+          className="absolute inset-x-0 top-full z-50 mt-1 max-h-[min(560px,70vh)] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover transition-opacity duration-(--dur-fast) aria-busy:opacity-60"
         >
           {!result && (search.isPending || typing) ? (
             <PanelNote>Searching…</PanelNote>

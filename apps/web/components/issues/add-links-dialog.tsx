@@ -88,7 +88,7 @@ function AddLinksForm({
     >
       <DialogHeader>
         <DialogTitle>Add links</DialogTitle>
-        <DialogDescription className="text-xs text-text-secondary">
+        <DialogDescription className="text-xs break-words text-text-secondary">
           From <span className="font-mono text-text">{issueKey}</span> {issueTitle}
         </DialogDescription>
       </DialogHeader>
@@ -170,7 +170,18 @@ export function LinkTargetSearch({ projectKey, exclude, onPick }: LinkTargetSear
     <Command shouldFilter={false} className="rounded-md border">
       <CommandInput placeholder="Find by key or title" value={search} onValueChange={setSearch} />
       <CommandList className="max-h-56">
-        {results.isPending ? <PickerSkeleton rows={4} /> : <CommandEmpty>No issue matches.</CommandEmpty>}
+        {results.isPending ? (
+          <PickerSkeleton rows={4} />
+        ) : results.isError ? (
+          <div role="alert" className="flex items-center justify-between gap-2 px-3 py-4 text-sm text-text-secondary">
+            The search could not run.
+            <Button type="button" variant="outline" size="sm" onClick={() => void results.refetch()}>
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <CommandEmpty>No issue matches.</CommandEmpty>
+        )}
         {options.map(issue => (
           <CommandItem
             key={issue.key}

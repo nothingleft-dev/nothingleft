@@ -71,7 +71,15 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
   const repositories = useProjectRepositories(projectKey, requested === 'automations');
 
   if (project.isPending) return <PageSkeleton rows={5} />;
-  if (project.isError || !project.data) return <FormAlert title="This project could not be loaded." />;
+  if (project.isError || !project.data) {
+    return (
+      <FormAlert title="This project could not be loaded.">
+        <Button size="sm" variant="outline" className="mt-2" onClick={() => void project.refetch()}>
+          Retry
+        </Button>
+      </FormAlert>
+    );
+  }
 
   const isAdmin = project.data.my_role === 'project_admin';
   const canEdit = isAdmin && !project.data.is_archived;

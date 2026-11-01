@@ -3,11 +3,18 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
-import { ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { Check, ChevronRight } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
 import { NavItem } from '@components/shell/nav-item';
 import { ProjectMark } from '@components/projects/project-mark';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu';
 import type { ProjectNav } from '@hooks/use-shell-data';
 import { cn } from '@lib/utils';
 
@@ -25,63 +32,124 @@ export function ProjectNavItem({ project, collapsed }: { project: ProjectNav; co
   const base = `/projects/${project.key}` as const;
   const within = pathname.startsWith(`${base}/`);
   const [open, setOpen] = useState(within);
-  const expanded = open || within;
+  // Entering a project opens its group once; after that the chevron is the person's to toggle.
+  const [wasWithin, setWasWithin] = useState(within);
+  if (within !== wasWithin) {
+    setWasWithin(within);
+    if (within) setOpen(true);
+  }
 
   const keyMark = <ProjectMark project={project} className="size-avatar-sm rounded-sm text-[10px]" />;
 
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            href={`${base}/issues` as Route}
-            aria-current={within ? 'page' : undefined}
-            className={cn(
-              'flex h-control items-center justify-center rounded-sm hover:bg-hover',
-              within && 'bg-active',
-            )}
-          >
-            {keyMark}
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">{project.name}</TooltipContent>
-      </Tooltip>
-    );
-  }
+  if (collapsed) return <CollapsedProject project={project} base={base} within={within} mark={keyMark} />;
 
   return (
     <div>
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        aria-expanded={expanded}
+        aria-expanded={open}
         className="flex h-control w-full items-center gap-2 rounded-sm px-2 text-left text-text-secondary hover:bg-hover hover:text-text"
       >
         <ChevronRight
           className={cn(
             'size-3 flex-none text-text-muted transition-transform duration-(--dur-fast)',
-            expanded && 'rotate-90',
+            open && 'rotate-90',
           )}
         />
         {keyMark}
         <span className="min-w-0 flex-1 truncate">{project.name}</span>
         <span className="font-mono text-2xs text-text-muted">{project.key}</span>
       </button>
-      {expanded ? (
+      {open ? (
         <ul className="ml-[22px] border-l pl-1.5">
-          {SECTIONS.map(([label, slug]) => (
-            <li key={slug}>
-              {/* Non-issue sections remain scaffold links until their routes land. */}
-              <NavItem href={`${base}/${slug}` as Route} label={label} size="sub" />
+          {sectionsOf(project, base).map(({ label, href }) => (
+            <li key={href}>
+              <NavItem href={href as Route} label={label} size="sub" />
             </li>
           ))}
-          {project.canAdmin ? (
-            <li>
-              <NavItem href={`${base}/settings` as Route} label="Settings" size="sub" />
-            </li>
-          ) : null}
         </ul>
       ) : null}
     </div>
+  );
+}
+
+const sectionsOf = (project: ProjectNav, base: string) => [
+  ...SECTIONS.map(([label, slug]) => ({ label, href: `${base}/${slug}` })),
+  ...(project.canAdmin ? [{ label: 'Settings', href: `${base}/settings` }] : []),
+];
+
+// The collapsed rail has no room for the sections, so the mark opens them: on hover, click or keyboard.
+function CollapsedProject({
+  project,
+  base,
+  within,
+  mark,
+}: {
+  project: ProjectNav;
+  base: string;
+  within: boolean;
+  mark: ReactNode;
+}) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const closing = useRef<number | null>(null);
+  const hold = () => {
+    if (closing.current !== null) window.clearTimeout(closing.current);
+    closing.current = null;
+  };
+  const show = () => {
+    hold();
+    setOpen(true);
+  };
+  const hide = () => {
+    hold();
+    closing.current = window.setTimeout(() => setOpen(false), 150);
+  };
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${project.name} sections`}
+          aria-current={within ? 'page' : undefined}
+          onPointerEnter={event => event.pointerType === 'mouse' && show()}
+          onPointerLeave={event => event.pointerType === 'mouse' && hide()}
+          className={cn(
+            'flex h-control w-full items-center justify-center rounded-sm hover:bg-hover data-[state=open]:bg-hover',
+            within && 'bg-active',
+          )}
+        >
+          {mark}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="right"
+        align="start"
+        sideOffset={6}
+        className="min-w-48"
+        onPointerEnter={hold}
+        onPointerLeave={hide}
+        onCloseAutoFocus={event => event.preventDefault()}
+      >
+        <DropdownMenuLabel className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate">{project.name}</span>
+          <span className="font-mono text-2xs font-normal text-text-muted">{project.key}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {sectionsOf(project, base).map(({ label, href }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <DropdownMenuItem key={href} asChild>
+              <Link href={href as Route} aria-current={active ? 'page' : undefined}>
+                <span className="flex-1">{label}</span>
+                {active ? <Check className="size-icon-sm text-text-muted" /> : null}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

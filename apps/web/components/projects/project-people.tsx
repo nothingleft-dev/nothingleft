@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { PROJECT_ROLES, type Project, type ProjectRole } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -55,7 +55,12 @@ export function ProjectPeople({
   const error = useApiError(add.error ?? update.error ?? remove.error);
 
   const [role, setRole] = useState<ProjectRole>('contributor');
-  const rows = members.data ?? [];
+  const [search, setSearch] = useState('');
+  const all = members.data ?? [];
+  const needle = search.trim().toLowerCase().replace(/^@/, '');
+  const rows = needle
+    ? all.filter(m => m.name.toLowerCase().includes(needle) || m.username.toLowerCase().includes(needle))
+    : all;
 
   return (
     <SettingsSection
@@ -72,20 +77,42 @@ export function ProjectPeople({
             </div>
             <AddMember
               orgSlug={orgSlug}
-              exclude={rows.map(r => r.username)}
+              exclude={all.map(r => r.username)}
               pending={add.isPending}
               onPick={username => add.mutate({ username, role }, { onSuccess: m => toast.success(`${m.name} added.`) })}
             />
           </div>
         ) : null}
 
+        {all.length > 0 ? (
+          <div className="flex items-center gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-icon-sm -translate-y-1/2 text-text-muted" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by name or username"
+                aria-label="Search people in this project"
+                className="h-control w-full rounded-md border bg-surface pr-3 pl-8 text-sm text-text placeholder:text-text-muted hover:border-border-strong focus:border-border-strong"
+              />
+            </div>
+            <span className="text-xs text-text-muted" aria-live="polite">
+              {needle ? `${rows.length} of ${all.length}` : all.length} {all.length === 1 ? 'person' : 'people'}
+            </span>
+          </div>
+        ) : null}
+
         {members.isPending ? (
           <RowsSkeleton rows={4} />
-        ) : rows.length === 0 ? (
+        ) : members.isError && all.length === 0 ? (
+          <FormAlert title="The people in this project could not be loaded." />
+        ) : all.length === 0 ? (
           <EmptyState
             title="Nobody has been added yet."
             description="Add people from the organisation above, or invite new ones from the Invites tab."
           />
+        ) : rows.length === 0 ? (
+          <EmptyState title="Nobody here matches." description="Clear the search to see everyone." />
         ) : (
           <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
             {rows.map(member => (
@@ -101,7 +128,9 @@ export function ProjectPeople({
                 </div>
 
                 <span className="w-32 text-xs text-text-secondary">{PROJECT_ROLE_LABELS[member.role]}</span>
-                <RelativeTime value={member.added_at} className="w-24 text-right text-xs max-sm:hidden" />
+                <span className="w-32 text-right text-xs text-text-muted max-sm:hidden">
+                  Added <RelativeTime value={member.added_at} />
+                </span>
 
                 {canEdit ? (
                   <DropdownMenu>

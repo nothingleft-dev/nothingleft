@@ -23,6 +23,23 @@ interface ValueCommandProps {
   onSelect: (name: string) => void;
   /** The list is still on its way: rows of skeleton, never "nothing matches". */
   loading?: boolean;
+  /** Set when the list failed to load: the picker says so and offers this, never "nothing matches". */
+  onRetry?: () => void;
+}
+
+/** A query's retry, but only while it has failed: the `onRetry` the pickers take. */
+export const retryOf = (query: { isError: boolean; refetch: () => unknown }) =>
+  query.isError ? () => void query.refetch() : undefined;
+
+function PickerFailure({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex items-center justify-between gap-2 px-3 py-3 text-xs text-text-secondary">
+      The list could not be loaded.
+      <Button type="button" variant="outline" size="xs" onClick={onRetry}>
+        Retry
+      </Button>
+    </div>
+  );
 }
 
 /** Shaped like the rows it stands in for, so the popover does not jump when they arrive. */
@@ -39,12 +56,25 @@ export function PickerSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
-export function ValueCommand({ options, selected, placeholder, onSelect, loading = false }: ValueCommandProps) {
+export function ValueCommand({
+  options,
+  selected,
+  placeholder,
+  onSelect,
+  loading = false,
+  onRetry,
+}: ValueCommandProps) {
   return (
     <Command>
       <CommandInput placeholder={placeholder} />
       <CommandList>
-        {loading ? <PickerSkeleton /> : <CommandEmpty>No value matches.</CommandEmpty>}
+        {loading ? (
+          <PickerSkeleton />
+        ) : onRetry && options.length === 0 ? (
+          <PickerFailure onRetry={onRetry} />
+        ) : (
+          <CommandEmpty>No value matches.</CommandEmpty>
+        )}
         {options.map(option => (
           <CommandItem key={option.name} value={option.name} onSelect={() => onSelect(option.name)}>
             {option.mark}
@@ -62,15 +92,22 @@ interface AssigneeCommandProps {
   selected: readonly string[];
   onToggle: (username: string) => void;
   loading?: boolean;
+  onRetry?: () => void;
 }
 
 /** Stays open while toggling: several people are often assigned in one go. */
-export function AssigneeCommand({ people, selected, onToggle, loading = false }: AssigneeCommandProps) {
+export function AssigneeCommand({ people, selected, onToggle, loading = false, onRetry }: AssigneeCommandProps) {
   return (
     <Command>
       <CommandInput placeholder="Find a person" />
       <CommandList>
-        {loading ? <PickerSkeleton /> : <CommandEmpty>Nobody in this project matches.</CommandEmpty>}
+        {loading ? (
+          <PickerSkeleton />
+        ) : onRetry && people.length === 0 ? (
+          <PickerFailure onRetry={onRetry} />
+        ) : (
+          <CommandEmpty>Nobody in this project matches.</CommandEmpty>
+        )}
         {people.map(person => {
           const on = selected.includes(person.username);
           return (

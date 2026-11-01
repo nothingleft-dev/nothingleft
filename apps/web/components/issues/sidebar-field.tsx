@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { Pencil } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { useMediaQuery } from '@hooks/use-media-query';
 import { cn } from '@lib/utils';
 
 interface SidebarFieldProps {
@@ -20,10 +21,14 @@ interface SidebarFieldProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   contentClassName?: string;
+  /** `strip`: one cell of the key-field strip under the title, its mark inline rather than aside. */
+  variant?: 'rail' | 'strip';
 }
 
-const rowClass =
-  'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-sm px-2 py-[7px] text-left';
+const ROW_CLASS = {
+  rail: 'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-sm px-2 py-[7px] text-left',
+  strip: 'grid min-w-32 grid-cols-[minmax(0,1fr)] content-start gap-y-0.5 px-3 py-2 text-left',
+};
 
 function Body({
   label,
@@ -67,8 +72,14 @@ function Body({
   );
 }
 
+/** Left of the rail while it sits beside the issue; below the row once the rail spans the page. */
+export const useRailPopoverSide = () => (useMediaQuery('(min-width: 1100px)') ? 'left' : 'bottom');
+
 export function SidebarField(props: SidebarFieldProps) {
-  const { label, editor, disabled, open, onOpenChange, contentClassName } = props;
+  const { label, editor, disabled, open, onOpenChange, contentClassName, variant = 'rail' } = props;
+  const railSide = useRailPopoverSide();
+  const side = variant === 'strip' ? 'bottom' : railSide;
+  const rowClass = ROW_CLASS[variant];
 
   if (!editor || disabled) {
     return (
@@ -91,7 +102,8 @@ export function SidebarField(props: SidebarFieldProps) {
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        side="left"
+        side={side}
+        collisionPadding={16}
         className={cn('w-[280px] max-w-[calc(100vw-32px)] p-0', contentClassName)}
       >
         {editor}

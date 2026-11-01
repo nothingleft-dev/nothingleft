@@ -230,9 +230,9 @@ change that reverts to its original value removes the entry entirely. An
 assignee set wrongly and corrected twenty seconds later leaves one clean
 line, or none. See [data-model.md](./data-model.md).
 
-**Sidebar:** Project, Priority, Type, Status, Assignee, Sprint, Due Date,
-Estimation, Spent time (with a `+` to log time), Story points, Boards, then
-any custom fields. As built in 1e (25 Sep 2026): Spent time reads `3h of 4h` with a
+**Fields** (2 Nov 2026): Status, Priority, Type, Assignee, Sprint and Due Date in a strip under
+the title; Project, Start date, Story points, Estimation, Spent time (with a `+` to log time),
+then any custom fields in the sidebar beside the issue (DESIGN-SYSTEM.md § Issue page). As built in 1e (25 Sep 2026): Spent time reads `3h of 4h` with a
 4px meter under it; past the estimate the meter turns red and `· 1h over` follows in
 the danger colour — the one place the field wears colour. With no estimate it shows the
 spent time alone; with nothing logged, `?`, as Estimation does. The value is the rollup, so an

@@ -12,7 +12,7 @@ import { Meter } from '@components/dashboard/meter';
 import { Duration } from '@components/duration';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
-import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand } from '@components/issues/pickers';
+import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
 import { SidebarField } from '@components/issues/sidebar-field';
 import { DevelopmentField } from '@components/git/development-field';
 import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
@@ -43,6 +43,8 @@ type Editor =
   | null;
 
 interface IssueSidebarProps {
+  /** `primary`: the strip of key fields under the title. `rest`: the rail beside the issue. */
+  part: 'primary' | 'rest';
   issue: Issue;
   canEdit: boolean;
   time: TimeTracking;
@@ -52,6 +54,7 @@ interface IssueSidebarProps {
 }
 
 export function IssueSidebar({
+  part,
   issue,
   canEdit,
   time,
@@ -117,8 +120,10 @@ export function IssueSidebar({
     setDraftAssignees(issue.assignees.map(a => a.username));
     setEditing('assignees');
   };
-  useShortcut('s', () => setEditing('status'), canEdit && editing === null);
-  useShortcut('a', openAssignees, canEdit && editing === null);
+  const strip = part === 'primary';
+  const variant = strip ? 'strip' : 'rail';
+  useShortcut('s', () => setEditing('status'), strip && canEdit && editing === null);
+  useShortcut('a', openAssignees, strip && canEdit && editing === null);
 
   const today = todayCalendarDate(timeZone);
   const resolved = RESOLVED_STATUS_CATEGORIES.includes(issue.status.category);
@@ -137,8 +142,174 @@ export function IssueSidebar({
     save({ body: { [field]: value }, optimistic: i => ({ ...i, [field]: value }) });
   };
 
+  if (part === 'primary') {
+    return (
+      <div
+        role="group"
+        aria-label="Key fields"
+        className="mt-4 flex flex-wrap rounded-md border [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0"
+      >
+        <SidebarField
+          variant={variant}
+          label="Status"
+          disabled={!canEdit}
+          {...openProps('status')}
+          editor={
+            <ValueCommand
+              placeholder="Change status"
+              loading={statuses.isPending}
+              onRetry={retryOf(statuses)}
+              selected={issue.status.name}
+              options={(statuses.data ?? [])
+                .filter(s => !s.is_archived)
+                .map(s => ({ name: s.name, mark: <StatusDot category={s.category} color={s.color} /> }))}
+              onSelect={name => {
+                const next = statuses.data?.find(s => s.name === name);
+                pick('status', name, i => (next ? { ...i, status: next } : i));
+              }}
+            />
+          }
+        >
+          <StatusDot category={issue.status.category} color={issue.status.color} />
+          {issue.status.name}
+        </SidebarField>
+        <SidebarField
+          label="Priority"
+          disabled={!canEdit}
+          variant={variant}
+          aside={strip ? undefined : <PriorityBadge priority={issue.priority} />}
+          {...openProps('priority')}
+          editor={
+            <ValueCommand
+              placeholder="Change priority"
+              loading={priorities.isPending}
+              onRetry={retryOf(priorities)}
+              selected={issue.priority.name}
+              options={(priorities.data ?? []).map(p => ({ name: p.name, mark: <PriorityBadge priority={p} /> }))}
+              onSelect={name => {
+                const next = priorities.data?.find(p => p.name === name);
+                pick('priority', name, i => (next ? { ...i, priority: next } : i));
+              }}
+            />
+          }
+        >
+          {strip ? <PriorityBadge priority={issue.priority} /> : null}
+          {issue.priority.name}
+        </SidebarField>
+        <SidebarField
+          label="Type"
+          disabled={!canEdit}
+          variant={variant}
+          aside={strip ? undefined : <TypeBadge type={issue.type} />}
+          {...openProps('type')}
+          editor={
+            <ValueCommand
+              placeholder="Change type"
+              loading={types.isPending}
+              onRetry={retryOf(types)}
+              selected={issue.type.name}
+              options={(types.data ?? []).map(t => ({ name: t.name, mark: <TypeBadge type={t} /> }))}
+              onSelect={name => {
+                const next = types.data?.find(t => t.name === name);
+                pick('type', name, i => (next ? { ...i, type: next } : i));
+              }}
+            />
+          }
+        >
+          {strip ? <TypeBadge type={issue.type} /> : null}
+          {issue.type.name}
+        </SidebarField>
+        <SidebarField
+          variant={variant}
+          label="Assignees"
+          disabled={!canEdit}
+          empty={issue.assignees.length === 0}
+          open={assigneesOpen}
+          onOpenChange={open => {
+            if (open) openAssignees();
+            else closeAssignees();
+          }}
+          editor={
+            <AssigneeCommand
+              people={assignees.data ?? []}
+              loading={assignees.isPending}
+              onRetry={retryOf(assignees)}
+              selected={draftAssignees}
+              onToggle={username =>
+                setDraftAssignees(current =>
+                  current.includes(username) ? current.filter(u => u !== username) : [...current, username],
+                )
+              }
+            />
+          }
+        >
+          {issue.assignees.length === 0
+            ? 'Unassigned'
+            : issue.assignees.map(a => (
+                <span key={a.username} className="inline-flex items-center gap-1.5">
+                  <MemberAvatar member={a} className="size-5" />
+                  <PersonName person={a} />
+                </span>
+              ))}
+        </SidebarField>
+        <SidebarField
+          variant={variant}
+          label="Sprint"
+          disabled={!canEdit}
+          empty={issue.sprint === null}
+          {...openProps('sprint')}
+          editor={
+            <SprintCommand
+              sprints={sprints.data ?? []}
+              loading={sprints.isPending}
+              selected={issue.sprint?.slug ?? null}
+              onSelect={slug => {
+                setEditing(null);
+                if ((issue.sprint?.slug ?? null) === slug) return;
+                const next = slug === null ? null : sprints.data?.find(s => s.slug === slug);
+                save({
+                  body: { sprint: slug },
+                  optimistic: i => ({
+                    ...i,
+                    sprint: next ? { name: next.name, slug: next.slug, state: next.state } : null,
+                  }),
+                });
+              }}
+            />
+          }
+        >
+          {issue.sprint ? issue.sprint.name : UNSCHEDULED}
+        </SidebarField>
+        <SidebarField
+          variant={variant}
+          label="Due date"
+          disabled={!canEdit}
+          empty={issue.due_date === null}
+          contentClassName="w-[284px]"
+          {...openProps('due_date')}
+          editor={<DateEditor value={issue.due_date} onChange={v => setDate('due_date', v)} />}
+        >
+          {issue.due_date ? (
+            <span
+              className={cn(
+                dueTone === 'overdue' && 'font-medium text-danger-fg',
+                dueTone === 'today' && 'font-medium text-text',
+              )}
+            >
+              {formatCalendarDate(issue.due_date)}
+              {dueTone === 'today' ? ', today' : dueTone === 'overdue' ? ', overdue' : ''}
+            </span>
+          ) : (
+            'No due date'
+          )}
+        </SidebarField>
+      </div>
+    );
+  }
+
   return (
     <aside
+      id="issue-fields"
       aria-label="Issue fields"
       className="flex flex-col gap-0.5 min-[1100px]:sticky min-[1100px]:top-0 min-[1100px]:max-h-[calc(100vh-var(--topbar)-var(--space-5))] min-[1100px]:overflow-y-auto"
     >
@@ -152,104 +323,6 @@ export function IssueSidebar({
       >
         {issue.project.name}
       </SidebarField>
-
-      <SidebarField
-        label="Priority"
-        disabled={!canEdit}
-        aside={<PriorityBadge priority={issue.priority} />}
-        {...openProps('priority')}
-        editor={
-          <ValueCommand
-            placeholder="Change priority"
-            loading={priorities.isPending}
-            selected={issue.priority.name}
-            options={(priorities.data ?? []).map(p => ({ name: p.name, mark: <PriorityBadge priority={p} /> }))}
-            onSelect={name => {
-              const next = priorities.data?.find(p => p.name === name);
-              pick('priority', name, i => (next ? { ...i, priority: next } : i));
-            }}
-          />
-        }
-      >
-        {issue.priority.name}
-      </SidebarField>
-
-      <SidebarField
-        label="Type"
-        disabled={!canEdit}
-        aside={<TypeBadge type={issue.type} />}
-        {...openProps('type')}
-        editor={
-          <ValueCommand
-            placeholder="Change type"
-            loading={types.isPending}
-            selected={issue.type.name}
-            options={(types.data ?? []).map(t => ({ name: t.name, mark: <TypeBadge type={t} /> }))}
-            onSelect={name => {
-              const next = types.data?.find(t => t.name === name);
-              pick('type', name, i => (next ? { ...i, type: next } : i));
-            }}
-          />
-        }
-      >
-        {issue.type.name}
-      </SidebarField>
-
-      <SidebarField
-        label="Status"
-        disabled={!canEdit}
-        {...openProps('status')}
-        editor={
-          <ValueCommand
-            placeholder="Change status"
-            loading={statuses.isPending}
-            selected={issue.status.name}
-            options={(statuses.data ?? [])
-              .filter(s => !s.is_archived)
-              .map(s => ({ name: s.name, mark: <StatusDot category={s.category} color={s.color} /> }))}
-            onSelect={name => {
-              const next = statuses.data?.find(s => s.name === name);
-              pick('status', name, i => (next ? { ...i, status: next } : i));
-            }}
-          />
-        }
-      >
-        <StatusDot category={issue.status.category} color={issue.status.color} />
-        {issue.status.name}
-      </SidebarField>
-
-      <SidebarField
-        label="Assignees"
-        disabled={!canEdit}
-        empty={issue.assignees.length === 0}
-        open={assigneesOpen}
-        onOpenChange={open => {
-          if (open) openAssignees();
-          else closeAssignees();
-        }}
-        editor={
-          <AssigneeCommand
-            people={assignees.data ?? []}
-            loading={assignees.isPending}
-            selected={draftAssignees}
-            onToggle={username =>
-              setDraftAssignees(current =>
-                current.includes(username) ? current.filter(u => u !== username) : [...current, username],
-              )
-            }
-          />
-        }
-      >
-        {issue.assignees.length === 0
-          ? 'Unassigned'
-          : issue.assignees.map(a => (
-              <span key={a.username} className="inline-flex items-center gap-1.5">
-                <MemberAvatar member={a} className="size-5" />
-                <PersonName person={a} />
-              </span>
-            ))}
-      </SidebarField>
-
       <SidebarField
         label="Start date"
         disabled={!canEdit}
@@ -260,58 +333,6 @@ export function IssueSidebar({
       >
         {issue.start_date ? formatCalendarDate(issue.start_date) : 'No start date'}
       </SidebarField>
-
-      <SidebarField
-        label="Due date"
-        disabled={!canEdit}
-        empty={issue.due_date === null}
-        contentClassName="w-[284px]"
-        {...openProps('due_date')}
-        editor={<DateEditor value={issue.due_date} onChange={v => setDate('due_date', v)} />}
-      >
-        {issue.due_date ? (
-          <span
-            className={cn(
-              dueTone === 'overdue' && 'font-medium text-danger-fg',
-              dueTone === 'today' && 'font-medium text-text',
-            )}
-          >
-            {formatCalendarDate(issue.due_date)}
-            {dueTone === 'today' ? ', today' : dueTone === 'overdue' ? ', overdue' : ''}
-          </span>
-        ) : (
-          'No due date'
-        )}
-      </SidebarField>
-
-      <SidebarField
-        label="Sprint"
-        disabled={!canEdit}
-        empty={issue.sprint === null}
-        {...openProps('sprint')}
-        editor={
-          <SprintCommand
-            sprints={sprints.data ?? []}
-            loading={sprints.isPending}
-            selected={issue.sprint?.slug ?? null}
-            onSelect={slug => {
-              setEditing(null);
-              if ((issue.sprint?.slug ?? null) === slug) return;
-              const next = slug === null ? null : sprints.data?.find(s => s.slug === slug);
-              save({
-                body: { sprint: slug },
-                optimistic: i => ({
-                  ...i,
-                  sprint: next ? { name: next.name, slug: next.slug, state: next.state } : null,
-                }),
-              });
-            }}
-          />
-        }
-      >
-        {issue.sprint ? issue.sprint.name : UNSCHEDULED}
-      </SidebarField>
-
       <SidebarField
         label="Story points"
         mono
@@ -346,7 +367,6 @@ export function IssueSidebar({
           <span className="font-mono tabular">{issue.story_points_rollup}</span> in subtasks
         </p>
       ) : null}
-
       {time.enabled ? (
         <>
           <SidebarField

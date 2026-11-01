@@ -20,7 +20,7 @@ import { LINK_OPTIONS, LinkTargetSearch, linkLabel } from '@components/issues/ad
 import { TagChip, TagPicker } from '@components/issues/issue-tags';
 import { MarkdownSizeNote } from '@components/issues/markdown-size-note';
 import { MemberAvatar } from '@components/issues/member-avatar';
-import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand } from '@components/issues/pickers';
+import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
 import { SidebarField } from '@components/issues/sidebar-field';
 import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
@@ -84,6 +84,7 @@ function useFieldSpecs(
         <ValueCommand
           placeholder="Type"
           loading={types.isPending}
+          onRetry={retryOf(types)}
           selected={type?.name ?? null}
           options={(types.data ?? []).map(t => ({ name: t.name, mark: <TypeBadge type={t} /> }))}
           onSelect={name => (set({ type: name }), close())}
@@ -101,6 +102,7 @@ function useFieldSpecs(
         <ValueCommand
           placeholder="Priority"
           loading={priorities.isPending}
+          onRetry={retryOf(priorities)}
           selected={priority?.name ?? null}
           options={(priorities.data ?? []).map(p => ({ name: p.name, mark: <PriorityBadge priority={p} /> }))}
           onSelect={name => (set({ priority: name }), close())}
@@ -122,6 +124,7 @@ function useFieldSpecs(
         <ValueCommand
           placeholder="Status"
           loading={statuses.isPending}
+          onRetry={retryOf(statuses)}
           selected={status?.name ?? null}
           options={(statuses.data ?? [])
             .filter(s => !s.is_archived)
@@ -147,6 +150,7 @@ function useFieldSpecs(
         <AssigneeCommand
           people={people.data ?? []}
           loading={people.isPending}
+          onRetry={retryOf(people)}
           selected={fields.assignees}
           onToggle={username =>
             setFields(f => ({

@@ -86,7 +86,7 @@ export function DrillLink({
 }) {
   if (!query) return <span className={className}>{children}</span>;
   return (
-    <Link href={listHref(query)} className={cn('hover:underline hover:underline-offset-4', className)}>
+    <Link href={listHref(query)} className={cn('text-link', className)}>
       {children}
     </Link>
   );

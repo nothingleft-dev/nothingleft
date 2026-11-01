@@ -115,10 +115,21 @@ export function Markdown({ source, variant = 'description', className, onToggleT
       box.disabled = !onToggleTask;
       box.setAttribute('aria-label', onToggleTask ? 'Toggle task' : 'Task');
     }
+    // A pasted link to this app is not external: it opens in place, without the new-tab cue.
+    for (const link of el.querySelectorAll<HTMLAnchorElement>('a[target="_blank"]')) {
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin) continue;
+      link.setAttribute('href', url.pathname + url.search + url.hash);
+      link.removeAttribute('target');
+      link.removeAttribute('rel');
+    }
     // A key nobody can open reads as plain text once the lookup has answered.
     if (!refs.isSuccess) return;
     for (const link of el.querySelectorAll<HTMLAnchorElement>('a[data-issue-key]')) {
-      link.classList.toggle('missing', !byKey.has(link.dataset.issueKey ?? ''));
+      const missing = !byKey.has(link.dataset.issueKey ?? '');
+      link.classList.toggle('missing', missing);
+      if (missing) link.title = 'This issue does not exist, or you cannot open it.';
+      else link.removeAttribute('title');
     }
   }, [html, onToggleTask, byKey, refs.isSuccess]);
 

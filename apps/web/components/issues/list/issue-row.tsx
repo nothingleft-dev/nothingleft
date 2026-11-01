@@ -12,7 +12,7 @@ import { IssueKey } from '@components/issue-key';
 import { RelativeTime } from '@components/relative-time';
 import { AssigneeStack } from '@components/issues/assignee-stack';
 import { DueDate } from '@components/issues/due-date';
-import { AssigneeCommand, ValueCommand } from '@components/issues/pickers';
+import { AssigneeCommand, ValueCommand, retryOf } from '@components/issues/pickers';
 import { StatusPill } from '@components/issues/status-pill';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { useProjectAssignees } from '@hooks/use-projects';
@@ -227,6 +227,7 @@ export function IssueRow({
       <span className="min-w-0 truncate">
         <Link
           href={href}
+          title={issue.title}
           className={cn('text-text', resolved && 'text-text-muted line-through decoration-border-strong')}
         >
           {issue.title}
@@ -297,6 +298,7 @@ function StatusEditor({
     <ValueCommand
       placeholder="Change status"
       loading={statuses.isPending}
+      onRetry={retryOf(statuses)}
       selected={issue.status.name}
       options={(statuses.data ?? [])
         .filter(s => !s.is_archived || s.name === issue.status.name)
@@ -352,6 +354,7 @@ function PriorityEditor({
     <ValueCommand
       placeholder="Change priority"
       loading={priorities.isPending}
+      onRetry={retryOf(priorities)}
       selected={issue.priority.name}
       options={(priorities.data ?? []).map(p => ({ name: p.name, mark: <PriorityBadge priority={p} /> }))}
       onSelect={name => {
@@ -362,11 +365,31 @@ function PriorityEditor({
   );
 }
 
+// Every way of closing saves, as in the sidebar and on the board: one PATCH for several toggles.
 function AssigneeCell({ issue, canEdit, onUpdate }: CellProps) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<string[]>([]);
+  const people = useProjectAssignees(open ? issue.project.key : null);
   if (!canEdit) return <AssigneeStack assignees={issue.assignees} className="max-w-full" />;
+
+  const commit = () => {
+    const before = issue.assignees.map(a => a.username).sort();
+    const after = [...draft].sort();
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    const list = people.data ?? [];
+    onUpdate(issue.key, { assignees: after }, i => ({
+      ...i,
+      assignees: after.map(u => list.find(p => p.username === u) ?? i.assignees.find(a => a.username === u)!),
+    }));
+  };
+  const change = (next: boolean) => {
+    if (next) setDraft(issue.assignees.map(a => a.username));
+    else commit();
+    setOpen(next);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={change}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -378,55 +401,26 @@ function AssigneeCell({ issue, canEdit, onUpdate }: CellProps) {
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[280px] p-0" data-inline>
-        {open ? <AssigneeEditor issue={issue} onClose={() => setOpen(false)} onUpdate={onUpdate} /> : null}
+        <AssigneeCommand
+          people={people.data ?? []}
+          loading={people.isPending}
+          onRetry={retryOf(people)}
+          selected={draft}
+          onToggle={username =>
+            setDraft(d => (d.includes(username) ? d.filter(u => u !== username) : [...d, username]))
+          }
+        />
+        <div className="flex items-center justify-between border-t px-3 py-2 text-2xs text-text-muted">
+          <span>{draft.length === 0 ? 'Unassigned' : `${draft.length} assigned`}</span>
+          <button
+            type="button"
+            onClick={() => change(false)}
+            className="font-medium text-text-secondary hover:text-text"
+          >
+            Done
+          </button>
+        </div>
       </PopoverContent>
     </Popover>
-  );
-}
-
-/** Saves once, when the popover closes, so toggling three people is one PATCH. */
-function AssigneeEditor({
-  issue,
-  onClose,
-  onUpdate,
-}: {
-  issue: IssueListItem;
-  onClose: () => void;
-  onUpdate: RowUpdate;
-}) {
-  const people = useProjectAssignees(issue.project.key);
-  const [draft, setDraft] = useState(() => issue.assignees.map(a => a.username));
-
-  const commit = () => {
-    const before = issue.assignees.map(a => a.username).sort();
-    const after = [...draft].sort();
-    onClose();
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    const list = people.data ?? [];
-    onUpdate(issue.key, { assignees: after }, i => ({
-      ...i,
-      assignees: after.map(u => list.find(p => p.username === u) ?? i.assignees.find(a => a.username === u)!),
-    }));
-  };
-
-  return (
-    <div
-      onKeyDown={event => {
-        if (event.key === 'Escape') commit();
-      }}
-    >
-      <AssigneeCommand
-        people={people.data ?? []}
-        loading={people.isPending}
-        selected={draft}
-        onToggle={username => setDraft(d => (d.includes(username) ? d.filter(u => u !== username) : [...d, username]))}
-      />
-      <div className="flex items-center justify-between border-t px-3 py-2 text-2xs text-text-muted">
-        <span>{draft.length === 0 ? 'Unassigned' : `${draft.length} assigned`}</span>
-        <button type="button" onClick={commit} className="font-medium text-text-secondary hover:text-text">
-          Done
-        </button>
-      </div>
-    </div>
   );
 }

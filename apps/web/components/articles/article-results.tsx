@@ -72,6 +72,9 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
       ) : search.isError && !problem ? (
         <FormAlert title="The articles could not be loaded.">
           {search.error instanceof Error ? search.error.message : null}
+          <Button size="sm" variant="outline" className="mt-2 block" onClick={() => void search.refetch()}>
+            Retry
+          </Button>
         </FormAlert>
       ) : problem && !search.data ? (
         <EmptyState
