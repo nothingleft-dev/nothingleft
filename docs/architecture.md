@@ -76,9 +76,11 @@ contain (`db`, `types`, `markdown`, `query`, `i18n`), not for their layer.
 
 ### `packages/markdown` — the one renderer
 
-unified / remark / rehype, `rehype-sanitize` last. Pure: no I/O, no
-framework; imports `format` for the key and username rules and `types` for
-the size limits.
+unified / remark / rehype, `rehype-sanitize` last. A single newline renders as a line break
+(`remark-breaks`, 1 Nov 2026): most people expect it, and text pasted, imported or written by an
+agent arrives with single newlines. The editor parses the same way (`breaks` on `@tiptap/markdown`).
+Pure: no I/O, no framework; imports `format` for the key and username rules and `types` for the
+size limits.
 
 | Function | Used by |
 |---|---|
