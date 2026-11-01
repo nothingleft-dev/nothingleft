@@ -14,6 +14,11 @@ claude mcp add nothingleft \
   -- npx -y @nothingleft/mcp
 ```
 
+This connects it in the current project only. Add `--scope user` for every project, or
+`--scope project` to share it through the repository's `.mcp.json` (with
+`NOTHINGLEFT_TOKEN=${NOTHINGLEFT_TOKEN}`, so the token stays out of the file). Options go before the
+server name: anything after `--` is passed to this package, which ignores it.
+
 ## Claude Desktop
 
 Open **Settings → Developer → Edit Config** and add:

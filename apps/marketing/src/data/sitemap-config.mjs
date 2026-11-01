@@ -25,7 +25,7 @@ export const SITEMAP_PAGES = {
   '/compare/asana-alternative': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/compare/notion-projects-alternative': { lastmod: '2026-10-22T12:00:00+05:30' },
   '/docs': { lastmod: '2026-10-26T00:11:14+05:30' },
-  '/docs/mcp': { lastmod: '2026-10-26T00:11:14+05:30' },
+  '/docs/mcp': { lastmod: '2026-11-01T12:00:00+05:30' },
   '/docs/getting-started': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/members': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/limits-and-billing': { lastmod: '2026-10-26T00:11:14+05:30' },
