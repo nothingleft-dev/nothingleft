@@ -13,9 +13,9 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-/** `slugify`, then `-2`, `-3`… until it is not in `taken`. */
+/** `urlSlug`, then `-2`, `-3`… until it is not in `taken`. */
 export function uniqueSlug(value: string, taken: ReadonlySet<string>): string {
-  const base = slugify(value);
+  const base = urlSlug(value);
   if (!taken.has(base)) return base;
   for (let suffix = 2; ; suffix += 1) {
     const candidate = `${base}-${suffix}`;
@@ -42,17 +42,28 @@ export function customFieldSlug(name: string): string | null {
 
 export const isCustomFieldSlug = (slug: string): boolean => CUSTOM_FIELD_SLUG_PATTERN.test(slug);
 
+/**
+ * A name as a URL segment (an issue title, a board or sprint name) or a branch-name tail: ASCII
+ * letters, digits and hyphens only. A colon in a path segment sends the web client's link prefetch
+ * into an endless loop.
+ */
+export function urlSlug(value: string): string {
+  return urlSegment(value).replace(/-+$/, '');
+}
+
 /** A knowledge base article's slug: its URL segment, so ASCII letters, digits and hyphens only. Empty when none remain. */
 export function articleSlug(value: string): string {
+  return urlSegment(value).slice(0, ARTICLE_SLUG_MAX_LENGTH).replace(/-+$/, '');
+}
+
+function urlSegment(value: string): string {
   return value
     .trim()
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .slice(0, ARTICLE_SLUG_MAX_LENGTH)
-    .replace(/-+$/, '');
+    .replace(/^-+/, '');
 }
 
 /** `articleSlug`, falling back to `article`, then `-2`, `-3`… until it is not in `taken` (lower-case slugs). */
