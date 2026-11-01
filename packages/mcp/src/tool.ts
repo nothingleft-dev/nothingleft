@@ -31,6 +31,8 @@ export interface ToolDefinition<S extends z.ZodObject = z.ZodObject> {
   input: S;
   kind: ToolKind;
   endpoints: readonly Endpoint[];
+  /** A destructive tool that deletes only on some calls: whether this one does. Absent, every call does. */
+  deletes?: (args: z.output<S>) => boolean;
   /** Destructive tools: what the call would do, put to the person before it runs. */
   describeAction?: (ctx: ToolContext, args: z.output<S>) => Promise<string>;
   run: (ctx: ToolContext, args: z.output<S>) => Promise<ToolResult>;

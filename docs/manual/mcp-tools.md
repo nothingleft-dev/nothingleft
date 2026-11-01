@@ -287,9 +287,9 @@ Adds a custom field to a project: name, type, options for a select, the issue ty
 
 ### `update_custom_field`
 
-Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. Asks you to confirm before acting.
+Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. A call that removes options asks you to confirm first.
 
-*Changes data; asks you to confirm in your MCP client first.*
+*Changes data; a call that deletes or removes asks you to confirm in your MCP client first.*
 
 | Argument | Type | Required | Description |
 |---|---|---|---|
@@ -1148,9 +1148,9 @@ Changes a project: name, key (only before its first issue), description, lead, t
 
 ### `update_project_schema`
 
-Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change, so it asks you to confirm before acting, and needs a Project Admin and admin:project.
+Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change. A delete asks you to confirm first. Needs a Project Admin and admin:project.
 
-*Changes data; asks you to confirm in your MCP client first.*
+*Changes data; a call that deletes or removes asks you to confirm in your MCP client first.*
 
 | Argument | Type | Required | Description |
 |---|---|---|---|
@@ -1642,9 +1642,9 @@ Creates a share link that lets anyone who opens it join the organisation, or a p
 
 ### `manage_roles`
 
-Changes one member's organisation role, or their role in one project - adding them to the project or removing them from it. Asks you to confirm before acting.
+Changes one member's organisation role, or their role in one project - adding them to the project or removing them from it. Removing someone asks you to confirm first.
 
-*Changes data; asks you to confirm in your MCP client first.*
+*Changes data; a call that deletes or removes asks you to confirm in your MCP client first.*
 
 | Argument | Type | Required | Description |
 |---|---|---|---|

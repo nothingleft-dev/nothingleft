@@ -240,7 +240,7 @@ function registerTool(
 
       try {
         const args = parseArguments(tool.name, tool.input, raw);
-        if (tool.kind === 'destructive') {
+        if (tool.kind === 'destructive' && (tool.deletes?.(args) ?? true)) {
           const question = await confirmation(codec, tool, ctx, args, request);
           // The answer arrives as a retry of this call; that retry is the call reported.
           if (question) return question;

@@ -163,6 +163,7 @@ const KIND: Record<ToolKind, string> = {
   write: 'Changes data.',
   destructive: 'Changes data; asks you to confirm in your MCP client first.',
 };
+const DELETES_SOMETIMES = 'Changes data; a call that deletes or removes asks you to confirm in your MCP client first.';
 
 /** docs/manual/mcp-tools.md, built from the definitions the server registers. */
 export function toolReference(): string {
@@ -172,9 +173,12 @@ export function toolReference(): string {
       `## ${group}`,
       ...names.map(name => {
         const tool = byName.get(name)!;
-        return [`### \`${tool.name}\``, `${tool.description}`, `*${KIND[tool.kind]}*`, argumentTable(tool.input)].join(
-          '\n\n',
-        );
+        return [
+          `### \`${tool.name}\``,
+          `${tool.description}`,
+          `*${tool.deletes ? DELETES_SOMETIMES : KIND[tool.kind]}*`,
+          argumentTable(tool.input),
+        ].join('\n\n');
       }),
     ].join('\n\n'),
   );

@@ -571,7 +571,6 @@
   "mcp.action.custom_field.remove_options": "remove the options {options}",
   "mcp.action.custom_field.remove_option_moving": "“{option}” (its issues move to “{move_to}”)",
   "mcp.action.schema_delete": "delete the {list} “{name}” from {project}{move}",
-  "mcp.action.schema_change": "change the {list} “{name}” in {project}",
   "mcp.action.git_connection_remove": "disconnect {connection} from {org} (its repositories and links stay, read-only)",
   "mcp.action.repository_unlink": "unlink {repository} from {project}",
   "mcp.action.pull_request_unlink": "unlink {pull_request} from {key}",

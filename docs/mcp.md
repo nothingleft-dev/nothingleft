@@ -506,8 +506,15 @@ model's retry succeeds.
 `delete_issue`, `delete_comment`, `delete_work_item`, `delete_attachment`, `delete_view`,
 `delete_sprint`, `delete_board`, `delete_custom_field`, `delete_article`, `update_custom_field`,
 `update_project_schema`, `manage_roles`, `remove_member`, `revoke_invitation` and
-`rotate_invite_link` are destructive. Every call asks the person, through their client, before
-anything changes (1 Oct 2026):
+`rotate_invite_link` are destructive. Every call that deletes or takes access away asks the person,
+through their client, before anything changes (1 Oct 2026):
+
+- **Only the deleting calls ask (1 Nov 2026).** Three of them also make ordinary changes, and those
+  run without a question, like any write: `update_project_schema` asks only for `action: delete`,
+  `update_custom_field` only when it has `remove_options`, and `manage_roles` only for
+  `project_role: None`. Adding a status or changing a role is no more harmful from an agent than
+  from the web app, and refusing it in clients that cannot ask sent people to the web app for
+  routine setup. The tool's `deletes(args)` makes the call; without one, every call asks.
 
 - The tool works out what it would do — the real counts for `remove_member` — and answers
   `input_required` with a form elicitation: *"delete_issue will delete PP-12 “Login loops”

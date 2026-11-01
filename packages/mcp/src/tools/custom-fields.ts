@@ -365,9 +365,10 @@ export const updateCustomField = defineTool({
   name: 'update_custom_field',
   title: 'Update custom field',
   description:
-    'Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. Asks you to confirm before acting.',
+    'Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. A call that removes options asks you to confirm first.',
   input: updateCustomFieldInput,
   kind: 'destructive',
+  deletes: args => Boolean(args.remove_options?.length),
   endpoints: [
     'GET /v1/projects/{key}/custom-fields/{slug}',
     'PATCH /v1/projects/{key}/custom-fields/{slug}',
