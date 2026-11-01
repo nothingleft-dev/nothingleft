@@ -58,6 +58,21 @@ claude mcp add nothingleft \
   -- npx -y @nothingleft/mcp
 ```
 
+Either command connects Nothing Left in the current project only, for you alone. Add
+`--scope user` to connect it in every project, or `--scope project` to share it with everyone who
+works in the repository. Options go before the server name: anything after `--` is passed to the
+shim, which ignores it.
+
+```sh
+claude mcp add --scope user nothingleft \
+  -e NOTHINGLEFT_TOKEN=nl_pat_… \
+  -- npx -y @nothingleft/mcp
+```
+
+`--scope project` writes the setting, token included, to `.mcp.json` in the repository, which is
+usually committed. Keep the token out of it: write `NOTHINGLEFT_TOKEN=${NOTHINGLEFT_TOKEN}` in place
+of the token, and have each person set `NOTHINGLEFT_TOKEN` in their own shell.
+
 Run `claude mcp list` to check it connected, then ask Claude _"Who am I in
 Nothing Left?"_. It should call `whoami` and answer with your name, your token's
 scopes and your organisations.

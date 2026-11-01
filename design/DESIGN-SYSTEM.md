@@ -118,7 +118,7 @@ as body text on the surface.
 --accent-l: 0.81 | 0.83                     /* per theme */
 --accent:      oklch(var(--accent-l) var(--accent-c) var(--accent-h));
 --accent-soft: color-mix(in oklch, var(--accent) 15%, var(--bg-surface));   /* active nav, selected rows */
---accent-text: oklch(0.39 …) | oklch(0.85 …) /* the same hue at a text-safe lightness: links */
+--accent-text: oklch(0.52 …) | oklch(0.85 …) /* the same hue at a text-safe lightness: links (≥ 5:1, never near body ink) */
 --on-accent:   oklch(0.17 0 0)               /* text on an accent fill: the unread badge */
 --focus:       darker step on light, = accent on dark   /* focus ring */
 ```
@@ -317,7 +317,7 @@ category as a 4 px left edge — the board card's dot, stretched — hatched whe
 | Icon | 16 (14 in dense rows) |
 | Letter badge | 18 × 18, radius 3 |
 | Avatar | 26; 22 in rows; 32 in headers. Square for orgs/projects, round for people. |
-| Sidebar | 248, collapsed 56 (`[` toggles; state remembered per user) |
+| Sidebar | 248, collapsed 56 (`[` toggles; state remembered per user). Collapsed, a project's mark opens its sections in a flyout on hover, click or keyboard (1 Nov 2026) |
 | Top bar | 48 |
 | Right rail | 336 |
 | Page padding | 24; 16 on phones |
@@ -555,7 +555,7 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
    date in the tooltip. Right: star (accent when on, implies watch), vote with count.
 2. Title (26 px) with inline actions: edit (`e`), tag, link, more.
 3. Tags as removable chips directly under the title, plus `+`. This is the one place
-   tags wear their palette colour.
+   tags wear their palette colour. The key-field strip follows (below).
 4. Description: rendered markdown, 15 px / 22, 72ch max, checkable task lists,
    inline code, images as bordered blocks. Click to edit in place.
 5. Links: tabs per link type with counts (`Parent for 3`), `Add links`. Rows: P, T,
@@ -572,13 +572,22 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
    block, table, image; `Visual | Markdown` toggle; `Add comment ⌘↵`, `Cancel`,
    `Add spent time` right-aligned. No visibility dropdown, no AI button.
 
-**Sticky sidebar**: label above value, 13 px, value badge or avatar in the right column.
-An editable value wears a dotted hairline underline in `--border-strong` as its standing
+**Key-field strip** (option C, owner, 2 Nov 2026): under the tags, one hairline-bordered
+row of cells, label above value: Status, Priority, Type, Assignees, Sprint, Due date. Priority
+and Type wear their letter badge inline before the name. The cells wrap at narrow widths, and
+their pickers open below the cell. Below 1100 px a *More fields ↓* link under the strip jumps
+to the rail.
+
+**Rail** (`--rail-slim`, 280 px, sticky): the remaining fields — Project, Start date, Story
+points, Estimation, Spent time (`+` logs time; shows `of 4h`), then **Custom fields**,
+Development, then Watchers and Votes. The issue column (max 960 px) and the rail are centred
+together, so at any window width content and fields read as one workspace; below 1100 px the
+rail drops under the issue. Label above value, 13 px, value badge or avatar in the right column.
+
+In both, an editable value wears a dotted hairline underline in `--border-strong` as its standing
 cue, and hover adds the `--bg-hover` surface, darkens the rule and shows a small pencil
 beside the label. A surface that only appears on hover leaves people unsure what they
-can change. Read-only rows carry none of it. Order: Project, Priority, Type, Status, Assignees,
-Sprint, Start date, Due date, Estimation, Spent time (`+` logs time; shows `of 4h`),
-Story points, Boards, then **Custom fields**, then Watchers and Votes. Empty values
+can change. Read-only rows carry none of it. Empty values
 render their configured label in muted text: `No severity`, `No customer`.
 
 ---

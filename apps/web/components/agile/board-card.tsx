@@ -97,7 +97,7 @@ export function BoardCard({
         overlay && 'rotate-1 shadow-lg',
       )}
     >
-      <p className="line-clamp-3 text-sm leading-5">
+      <p className="line-clamp-3 text-sm leading-5" title={card.title}>
         <a href={`/issue/${card.key}`} target="_blank" rel="noopener" {...own} className="mr-1.5 hover:underline">
           <IssueKey issueKey={card.key} resolved={card.resolved} />
         </a>

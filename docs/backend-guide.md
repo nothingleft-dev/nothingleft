@@ -47,6 +47,8 @@ packages/analytics   The only PostHog import. Kill switches, allow-list, excepti
 packages/mcp         @nothingleft/mcp-server: the MCP tools, a client of the REST API over HTTP only
                      (mcp.md § Built in 2a). Mounted at /mcp by routes/mcp.ts.
 packages/mcp-stdio   @nothingleft/mcp: the published `npx` stdio shim. No runtime dependency.
+packages/brand       Logo geometry, link-preview card helpers and their fonts, shared by the web
+                     app and the marketing site. No runtime dependency.
 packages/config      tsconfig / eslint / prettier shared by all workspaces, the custom lint
                      rules (tech-stack.md § Custom lint rules) and the CI check scripts in ci/.
 ```

@@ -125,7 +125,15 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
     if (modal) return <FormAlert title={`${issueKey} does not exist, or you cannot open it.`} />;
     notFound();
   }
-  if (issue.isError) return <FormAlert title="This issue could not be loaded." />;
+  if (issue.isError) {
+    return (
+      <FormAlert title="This issue could not be loaded.">
+        <Button size="sm" variant="outline" className="mt-2" onClick={() => void issue.refetch()}>
+          Retry
+        </Button>
+      </FormAlert>
+    );
+  }
   if (issue.isPending) return <IssueSkeleton />;
 
   const data = issue.data;
@@ -153,8 +161,8 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
-      <div className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,1fr)_var(--rail)]">
-        <div className="min-w-0 max-w-[900px]">
+      <div className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center">
+        <div className="min-w-0">
           {archived ? (
             <div role="status" className="mb-4 rounded-md bg-inset px-3 py-2 text-xs text-text-secondary">
               {data.project.name} is archived, so this issue is read-only. Starring, voting and watching still work.
@@ -165,7 +173,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
           <IssueParent issue={data} canEdit={canEdit} picking={pickingParent} onPickingChange={setPickingParent} />
 
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-4 max-sm:flex-col max-sm:gap-1">
             <IssueTitle issue={data} canEdit={canEdit} />
             <div className="mt-0.5 flex flex-none gap-0.5">
               {canEdit ? (
@@ -199,6 +207,15 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
           </div>
 
           <IssueTags issue={data} canEdit={canEdit} pickerOpen={tagging} onPickerOpenChange={setTagging} />
+
+          <IssueSidebar part="primary" issue={data} canEdit={canEdit} time={time} timeZone={timeZone} />
+          <button
+            type="button"
+            onClick={() => document.getElementById('issue-fields')?.scrollIntoView({ behavior: 'smooth' })}
+            className="mt-1.5 text-xs text-text-secondary hover:text-text hover:underline min-[1100px]:hidden"
+          >
+            More fields ↓
+          </button>
 
           <IssueDescription
             issue={data}
@@ -277,6 +294,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
         ) : null}
 
         <IssueSidebar
+          part="rest"
           issue={data}
           canEdit={canEdit}
           time={time}
@@ -494,13 +512,14 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
 function IssueSkeleton() {
   return (
     <div
-      className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,1fr)_var(--rail)]"
+      className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center"
       role="status"
       aria-label="Loading"
     >
-      <div className="flex max-w-[900px] flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <Skeleton className="h-3 w-80" />
         <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-[54px] w-full rounded-md" />
         <div className="mt-2 flex flex-col gap-2">
           <Skeleton className="h-4 w-full max-w-[72ch]" />
           <Skeleton className="h-4 w-5/6 max-w-[60ch]" />

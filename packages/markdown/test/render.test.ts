@@ -16,6 +16,16 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<ol>');
   });
 
+  test('a single newline is a line break; a blank line still starts a paragraph', () => {
+    const html = render('Line one\nLine two\n\nNext paragraph');
+    expect(html).toContain('<p>Line one<br>\nLine two</p>');
+    expect(html).toContain('<p>Next paragraph</p>');
+  });
+
+  test('a newline inside a code block stays a newline', () => {
+    expect(render('```\na\nb\n```')).not.toContain('<br>');
+  });
+
   test('renders GFM strikethrough, tables and autolinks', () => {
     const html = render('~~gone~~\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nwww.example.com');
     expect(html).toContain('<del>gone</del>');

@@ -555,35 +555,31 @@ describe('configuration', () => {
     );
   });
 
-  test('update_project_schema adds, changes and deletes a value, once the person confirms', async () => {
-    const asked = await tool(
+  test('update_project_schema adds and changes a value at once, and deletes one once the person confirms', async () => {
+    // Adding and changing delete nothing, so they run even where the client cannot ask.
+    const added = await tool(
       t.admin,
       'update_project_schema',
-      {
-        project: KEY,
-        list: 'status',
-        action: 'add',
-        name: 'In Review',
-        category: 'started',
-      },
-      'declines',
+      { project: KEY, list: 'status', action: 'add', name: 'In Review', category: 'started' },
+      'legacy',
     );
-    expect(asked.code).toBe('mcp.confirm_declined');
-    const added = await ok(t.admin, 'update_project_schema', {
-      project: KEY,
-      list: 'status',
-      action: 'add',
-      name: 'In Review',
-      category: 'started',
-    });
-    expect(added).toContain('In Review');
-    await ok(t.admin, 'update_project_schema', {
-      project: KEY,
-      list: 'status',
-      action: 'update',
-      name: 'In Review',
-      new_name: 'Reviewing',
-    });
+    expect(added.isError).toBe(false);
+    expect(added.asked).toBeNull();
+    expect(added.text).toContain('In Review');
+    const renamed = await tool(
+      t.admin,
+      'update_project_schema',
+      { project: KEY, list: 'status', action: 'update', name: 'In Review', new_name: 'Reviewing' },
+      'no_elicitation',
+    );
+    expect(renamed.isError).toBe(false);
+    const unasked = await tool(
+      t.admin,
+      'update_project_schema',
+      { project: KEY, list: 'status', action: 'delete', name: 'Reviewing', move_to: 'Open' },
+      'legacy',
+    );
+    expect(unasked.code).toBe('mcp.confirm_unavailable');
     const deleted = await ok(t.admin, 'update_project_schema', {
       project: KEY,
       list: 'status',
@@ -1527,14 +1523,14 @@ describe('destructive tools ask the person, every time', () => {
     },
     { name: 'delete_custom_field', who: 'admin', args: () => ({ project: KEY, field: 'Keep field' }) },
     { name: 'delete_article', who: 'contributor', args: () => ({ project: KEY, article: 'Keep article' }) },
-    { name: 'manage_roles', who: 'admin', args: () => ({ user: f.robin, project: KEY, project_role: 'Observer' }) },
+    { name: 'manage_roles', who: 'admin', args: () => ({ user: f.robin, project: KEY, project_role: 'None' }) },
     { name: 'remove_member', who: 'admin', args: () => ({ user: f.robin, org: w.slug }) },
     { name: 'revoke_invitation', who: 'admin', args: () => ({ invitation: 'keep@test.local', org: w.slug }) },
     { name: 'rotate_invite_link', who: 'admin', args: () => ({ link: f.link, org: w.slug }) },
     {
       name: 'update_project_schema',
       who: 'admin',
-      args: () => ({ project: KEY, list: 'priority', action: 'add', name: 'Keep priority' }),
+      args: () => ({ project: KEY, list: 'priority', action: 'delete', name: 'Keep priority' }),
     },
     { name: 'merge_tags', who: 'admin', args: () => ({ tags: ['keep-tag-a'], into: 'keep-tag-b' }) },
     { name: 'delete_tag', who: 'admin', args: () => ({ tag: 'keep-tag-c' }) },
@@ -1579,6 +1575,13 @@ describe('destructive tools ask the person, every time', () => {
       .exec(await ok(t.admin, 'create_invite_link', { org: w.slug }))![1]!
       .replace(/[)|`]+$/, '');
     f.robin = (await signUpAndJoin('Robin')).username;
+    await ok(t.admin, 'manage_roles', { user: f.robin, project: KEY, project_role: 'Observer' });
+    await ok(t.admin, 'update_project_schema', {
+      project: KEY,
+      list: 'priority',
+      action: 'add',
+      name: 'Keep priority',
+    });
     f.identity = `keep-${Date.now().toString(36)}`;
     await w.call(w.contributor, 'POST', '/v1/me/git-identities', {
       provider: 'gitlab',
@@ -1613,6 +1616,26 @@ describe('destructive tools ask the person, every time', () => {
     const prDelivery = signedDelivery('github', prFixture, webhook_secret, { delivery: 'keep-2', body: pr });
     await w.app.inject({ method: 'POST', url: new URL(webhook_url).pathname, ...prDelivery });
     for (const job of queue.pending.splice(0)) await runQueued(w.app.queuedHandlers, job);
+  });
+
+  test('a call that deletes nothing runs without asking, even where the client cannot ask', async () => {
+    const field = await tool(
+      tokens.admin,
+      'update_custom_field',
+      { project: KEY, field: 'Keep field', add_options: ['C'] },
+      'legacy',
+    );
+    expect(field.isError).toBe(false);
+    expect(field.asked).toBeNull();
+    const role = await tool(
+      tokens.admin,
+      'manage_roles',
+      { user: f.robin, project: KEY, project_role: 'Contributor' },
+      'legacy',
+    );
+    expect(role.isError).toBe(false);
+    expect(role.asked).toBeNull();
+    await ok(tokens.admin, 'manage_roles', { user: f.robin, project: KEY, project_role: 'Observer' });
   });
 
   test('a yes to deleting one issue does not delete another', async () => {

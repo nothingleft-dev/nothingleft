@@ -15,7 +15,25 @@ function useMeMutation<TInput>(fn: (input: TInput) => Promise<{ data: Me }>) {
 }
 
 export const useUpdateMe = () => useMeMutation((body: UpdateMe) => updateMe(body));
-export const useUpdatePreferences = () => useMeMutation((body: UpdatePreferences) => updatePreferences(body));
+// The theme lands in the cached Me before the request does: useAccountTheme reverts the device to
+// whatever Me holds, so a stale copy there flips the page back until the save returns.
+export function useUpdatePreferences() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdatePreferences) => updatePreferences(body).then(r => r.data),
+    onMutate: async ({ theme }) => {
+      if (!theme) return undefined;
+      await client.cancelQueries({ queryKey: queryKeys.me() });
+      const before = client.getQueryData<Me>(queryKeys.me());
+      if (before) client.setQueryData<Me>(queryKeys.me(), { ...before, preferences: { ...before.preferences, theme } });
+      return before;
+    },
+    onError: (_error, _body, before) => {
+      if (before) client.setQueryData(queryKeys.me(), before);
+    },
+    onSuccess: me => client.setQueryData(queryKeys.me(), me),
+  });
+}
 export const useRemoveAvatar = () => useMeMutation(() => removeAvatar());
 
 export function useUploadAvatar() {

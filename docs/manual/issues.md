@@ -38,6 +38,10 @@ it is fixed, because every key already handed out would stop working.
 
 In the issue list, an empty cell shows `--`.
 
+On the issue page, **Status, Priority, Type, Assignee, Sprint and Due date** sit in a strip
+under the title, where you change them most. The other fields are in the sidebar beside the
+issue; on a narrow screen it moves below, and **More fields** under the strip jumps to it.
+
 **Development** shows only in a project with a linked GitHub or GitLab repository. It is set
 by the code work that names the issue, never by hand; its menu copies a branch name for the
 issue and its checkout command. See [Development: GitHub and GitLab](./git.md).

@@ -57,7 +57,7 @@ combobox: assignee, tag, sprint, status, issue link, mention, and the global
 | **Virtualised long lists** | `@tanstack/react-virtual` |
 | Drag and drop — board, backlog, article tree, field order | `@dnd-kit/core`, `@dnd-kit/sortable` |
 | Markdown editor | `@tiptap/react` + starter kit + markdown serialiser |
-| Markdown rendering | `unified`, `remark-parse`, `remark-gfm`, `rehype-sanitize`, `rehype-highlight` |
+| Markdown rendering | `unified`, `remark-parse`, `remark-gfm`, `remark-breaks`, `rehype-sanitize`, `rehype-highlight` |
 | Charts | `recharts` |
 | Date arithmetic | `date-fns` |
 | Date **formatting and timezone conversion** | native `Intl.DateTimeFormat` |

@@ -375,21 +375,25 @@ describe('people', () => {
 });
 
 describe('manage_roles', () => {
-  test('declined: it said what it would do, and nothing changed', async () => {
+  test('removal declined: it said what it would do, and nothing changed', async () => {
     const r = await tool(
       w.full,
       'manage_roles',
-      {
-        user: `@${w.caseyName}`,
-        project: KEY,
-        project_role: 'Project Admin',
-        org: w.slugA,
-      },
+      { user: `@${w.caseyName}`, project: KEY, project_role: 'None', org: w.slugA },
       'declines',
     );
     expect(r.isError).toBe(true);
     expect(r.code).toBe('mcp.confirm_declined');
-    expect(r.asked).toContain(`make @${w.caseyName} Project Admin in project ${KEY}`);
+    expect(r.asked).toContain(`remove @${w.caseyName} from project ${KEY}`);
+    expect(await projectRole(w.caseyName)).toBe('contributor');
+  });
+
+  test('a role change removes no one, so it runs without asking', async () => {
+    const base = { user: w.caseyName, project: KEY, org: w.slugA };
+    const r = await tool(w.full, 'manage_roles', { ...base, project_role: 'Observer' }, 'legacy');
+    expect(r.asked).toBeNull();
+    expect(r.text).toContain('is now **Observer** in project MCP (was Contributor)');
+    await tool(w.full, 'manage_roles', { ...base, project_role: 'Contributor' }, 'legacy');
     expect(await projectRole(w.caseyName)).toBe('contributor');
   });
 

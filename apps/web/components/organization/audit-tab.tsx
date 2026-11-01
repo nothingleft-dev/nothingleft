@@ -12,7 +12,7 @@ import { RowsSkeleton } from '@components/skeletons';
 import { RelativeTime } from '@components/relative-time';
 import { FormAlert } from '@components/auth/form-alert';
 import { DatePicker } from '@components/date-picker';
-import { ACTIVITY_LABELS, activityDetail } from '@components/organization/activity-labels';
+import { ACTIVITY_LABELS, activityDetail, activityLabel } from '@components/organization/activity-labels';
 import { FormerMemberChip, deactivatedInk } from '@components/former-member-chip';
 import { useActivity, useActivityExport } from '@hooks/use-activity';
 import { useMembers } from '@hooks/use-members';
@@ -105,7 +105,7 @@ export function AuditTab({ organization }: { organization: Organization }) {
                         {row.actor?.name ?? 'Somebody no longer here'}
                       </span>{' '}
                       {row.actor?.former_member ? <FormerMemberChip className="mr-1 align-middle" /> : null}
-                      {ACTIVITY_LABELS[row.kind]}
+                      {activityLabel(row)}
                     </span>
                     {detail ? <span className="truncate font-mono text-xs text-text-muted">{detail}</span> : null}
                   </div>

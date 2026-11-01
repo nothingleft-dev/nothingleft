@@ -2,6 +2,7 @@ import type { Element, Root as HastRoot } from 'hast';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
+import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
@@ -76,6 +77,7 @@ function processor(options: RenderOptions) {
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkBreaks)
     .use(remarkReferenceLinks, links)
     .use(remarkRehype)
     .use(rehypeHighlight)

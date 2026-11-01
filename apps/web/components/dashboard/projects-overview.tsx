@@ -16,7 +16,7 @@ import { StatusStrip } from '@components/dashboard/status-strip';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { ProjectMark } from '@components/projects/project-mark';
 import { SeatBanner } from '@components/invitations/seat-notice';
-import { ACTIVITY_LABELS, activitySubject } from '@components/organization/activity-labels';
+import { ACTIVITY_LABELS, activitySubject, projectJoin } from '@components/organization/activity-labels';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
 import { FormerMemberChip, PersonName, deactivatedInk } from '@components/former-member-chip';
@@ -268,6 +268,7 @@ function MembersAndLimits({ org }: { org: Organization }) {
 
 function ActivityRow({ row }: { row: OrgActivity }) {
   const subject = activitySubject(row);
+  const join = projectJoin(row);
   return (
     <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 border-b border-border-subtle px-2 py-1.5 text-xs text-text-secondary">
       <MemberAvatar member={row.actor ?? { name: '-', avatar_url: null }} className="size-5" />
@@ -276,11 +277,11 @@ function ActivityRow({ row }: { row: OrgActivity }) {
           {row.actor?.name ?? 'Somebody no longer here'}
         </b>{' '}
         {row.actor?.former_member ? <FormerMemberChip className="mr-1 align-middle" /> : null}
-        {ACTIVITY_LABELS[row.kind]}
+        {join === 'self' ? 'joined' : join === 'other' ? 'added' : ACTIVITY_LABELS[row.kind]}
         {subject.text ? <span className="text-text"> {subject.text}</span> : null}
         {subject.projectKey ? (
           <>
-            {' in '}
+            {join === 'self' ? ' ' : join === 'other' ? ' to ' : ' in '}
             <Link href={`/projects/${subject.projectKey}` as Route} className="font-mono text-text hover:underline">
               {subject.projectKey}
             </Link>

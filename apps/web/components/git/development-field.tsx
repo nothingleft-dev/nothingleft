@@ -2,7 +2,7 @@
 
 import { Copy, Link2, MoreHorizontal, SquareTerminal } from 'lucide-react';
 import { toast } from 'sonner';
-import { slugify } from '@nothingleft/format';
+import { urlSlug } from '@nothingleft/format';
 import type { Issue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import {
@@ -34,7 +34,7 @@ async function copy(text: string, what: string) {
 /** The sidebar's Development row: the badge, what it counts, and the developer's shortcuts. */
 export function DevelopmentField({ issue, onOpen, onLink }: DevelopmentFieldProps) {
   const summary = issue.development;
-  const branch = branchNameFor(issue.key, slugify(issue.title));
+  const branch = branchNameFor(issue.key, urlSlug(issue.title));
   const rollup = summary?.rollup ?? 'none';
   const counts = summary ? summaryCounts(summary) : '';
 

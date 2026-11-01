@@ -626,6 +626,7 @@ function IssueLine({
       <IssueKey issueKey={issue.key} resolved={resolved} />
       <Link
         href={issuePath(issue) as Route}
+        title={issue.title}
         className={cn('truncate hover:underline', resolved && 'text-text-muted line-through')}
       >
         {issue.title}

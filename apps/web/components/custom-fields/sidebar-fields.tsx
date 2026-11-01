@@ -7,7 +7,7 @@ import { Button } from '@components/ui/button';
 import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
 import { Switch } from '@components/ui/switch';
 import { Markdown } from '@components/markdown/markdown';
-import { SidebarField } from '@components/issues/sidebar-field';
+import { SidebarField, useRailPopoverSide } from '@components/issues/sidebar-field';
 import { FieldValue, isEmptyValue } from '@components/custom-fields/field-value';
 import {
   FieldEditor,
@@ -219,6 +219,7 @@ interface MarkdownRowProps {
 
 /** Rendered text can hold links, so it sits beside its edit button rather than inside it. */
 function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, onSave }: MarkdownRowProps) {
+  const side = useRailPopoverSide();
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
@@ -254,7 +255,12 @@ function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, o
           )}
         </div>
       </PopoverAnchor>
-      <PopoverContent align="start" side="left" className="w-[560px] max-w-[calc(100vw-32px)] p-0">
+      <PopoverContent
+        align="start"
+        side={side}
+        collisionPadding={16}
+        className="w-[560px] max-w-[calc(100vw-32px)] p-0"
+      >
         <MarkdownValueEditor
           label={entry.name}
           value={entry.value}

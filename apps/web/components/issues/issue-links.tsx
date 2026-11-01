@@ -148,7 +148,7 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
         className="flex min-w-0 flex-1 items-center gap-2 self-stretch hover:underline"
       >
         <IssueKey issueKey={issue.key} resolved={issue.resolved} className="flex-none" />
-        <span className={cn('truncate text-sm', issue.resolved && 'text-text-muted line-through')}>{issue.title}</span>
+        <span className={cn('truncate text-sm', issue.resolved && 'text-text-muted')}>{issue.title}</span>
       </Link>
       <StatusPill status={issue.status} className="flex-none max-sm:hidden" />
       {onRemove ? (

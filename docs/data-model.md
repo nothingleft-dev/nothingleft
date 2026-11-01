@@ -1563,7 +1563,8 @@ sprints(id, org_id, project_id, name, slug, goal_md NULL,
 ```
 
 `slug` is derived from the name (`September 2026` → `september-2026`), suffixed on
-collision, always lower-case, and is what URLs and the `sprint://PROJ/<slug>` resource use.
+collision, ASCII letters, digits and hyphens only (`urlSlug`; a colon in a URL path loops the
+web client's link prefetch), and is what URLs and the `sprint://PROJ/<slug>` resource use.
 Internal ids never appear in a URL.
 
 - **Dates are optional** while a sprint is planned: `NULL` reads *Unscheduled*, as in
@@ -1604,8 +1605,8 @@ board_columns(id, org_id, board_id, name, position, wip_min NULL, wip_max NULL,
               CHECK (wip_min IS NULL OR wip_max IS NULL OR wip_min <= wip_max))
 ```
 
-The board slug is unique per **organisation**, not per project, so the short
-route `/board/<slug>/current` resolves without a project segment; the
+The board slug is built like a sprint's (`urlSlug`) and is unique per **organisation**, not per
+project, so the short route `/board/<slug>/current` resolves without a project segment; the
 canonical route `/projects/PROJ/board/<slug>/…` carries the project anyway.
 See [frontend-guide.md § Routes](./frontend-guide.md#routes).
 

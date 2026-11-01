@@ -80,7 +80,8 @@ export function editorExtensions(placeholder: string, bridge: ReferenceBridge): 
     TableKit.configure({ table: { resizable: false } }),
     Image,
     Placeholder.configure({ placeholder }),
-    Markdown,
+    // A single newline is a line break, as the renderer shows it (packages/markdown).
+    Markdown.configure({ markedOptions: { breaks: true } }),
     referenceSuggestion('@', bridge),
     referenceSuggestion('#', bridge),
     submitShortcut(bridge),

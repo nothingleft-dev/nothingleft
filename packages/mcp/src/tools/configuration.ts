@@ -481,7 +481,7 @@ export const updateProjectSchema = defineTool({
   name: 'update_project_schema',
   title: 'Change a project value list',
   description:
-    'Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change, so it asks you to confirm before acting, and needs a Project Admin and admin:project.',
+    'Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change. A delete asks you to confirm first. Needs a Project Admin and admin:project.',
   input: schemaInput,
   kind: 'destructive',
   endpoints: [
@@ -509,18 +509,14 @@ export const updateProjectSchema = defineTool({
     'PATCH /v1/projects/{key}/work-item-attributes/{name}/values/{value}',
     'DELETE /v1/projects/{key}/work-item-attributes/{name}/values/{value}',
   ],
+  deletes: args => args.action === 'delete',
   async describeAction(_ctx, args) {
-    const key = args.project.toUpperCase();
-    if (args.action === 'delete') {
-      return t('mcp.action.schema_delete', {
-        list: args.list,
-        name: args.name,
-        project: key,
-        move: args.move_to ? `, moving its issues to “${args.move_to}”` : '',
-      });
-    }
-    if (args.action === 'add') return `add the ${args.list} “${args.name}” to ${key}`;
-    return t('mcp.action.schema_change', { list: args.list, name: args.name, project: key });
+    return t('mcp.action.schema_delete', {
+      list: args.list,
+      name: args.name,
+      project: args.project.toUpperCase(),
+      move: args.move_to ? `, moving its issues to “${args.move_to}”` : '',
+    });
   },
   async run(ctx, args) {
     const key = args.project.toUpperCase();

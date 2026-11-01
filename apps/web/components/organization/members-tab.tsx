@@ -58,6 +58,8 @@ export function MembersTab({ organization, isAdmin }: { organization: Organizati
 
       {members.isPending ? (
         <RowsSkeleton rows={6} />
+      ) : members.isError && rows.length === 0 ? (
+        <FormAlert title="The members could not be loaded." />
       ) : rows.length === 0 ? (
         <EmptyState
           title={q ? `Nobody matches “${q}”.` : 'No members yet.'}
@@ -83,7 +85,9 @@ export function MembersTab({ organization, isAdmin }: { organization: Organizati
 
               <span className="w-28 text-xs text-text-secondary">{orgRoleLabel(member.org_role, member.is_owner)}</span>
 
-              <RelativeTime value={member.joined_at} className="w-24 text-right text-xs max-sm:hidden" />
+              <span className="w-32 text-right text-xs text-text-muted max-sm:hidden">
+                Joined <RelativeTime value={member.joined_at} />
+              </span>
 
               {isAdmin && !member.is_owner ? (
                 <MemberMenu

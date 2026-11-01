@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   articleSlug,
+  urlSlug,
   customFieldSlug,
   isCustomFieldSlug,
   slugify,
@@ -46,6 +47,7 @@ describe('slugify', () => {
 describe('uniqueSlug', () => {
   test('slugifies, then suffixes on collision', () => {
     expect(uniqueSlug('Partner Portal', new Set())).toBe('partner-portal');
+    expect(uniqueSlug('Sprint 1: Launch v1.2', new Set())).toBe('sprint-1-launch-v1-2');
     expect(uniqueSlug('Partner Portal', new Set(['partner-portal', 'partner-portal-2']))).toBe('partner-portal-3');
   });
 });
@@ -71,6 +73,22 @@ describe('customFieldSlug', () => {
     expect(isCustomFieldSlug('Severity')).toBe(false);
     expect(isCustomFieldSlug('due_date')).toBe(false);
     expect(isCustomFieldSlug('1st')).toBe(false);
+  });
+});
+
+describe('urlSlug', () => {
+  test.each([
+    ['BE: Patient portal: reactivate cancelled treatment', 'be-patient-portal-reactivate-cancelled-treatment'],
+    ['Upgrade to v1.2_beta', 'upgrade-to-v1-2-beta'],
+    ['Café crème', 'cafe-creme'],
+    ['  -- Needs Review -- ', 'needs-review'],
+    ['!!!', ''],
+  ])('%p → %p', (title, slug) => {
+    expect(urlSlug(title)).toBe(slug);
+  });
+
+  test('keeps a long title whole', () => {
+    expect(urlSlug('word '.repeat(100))).toBe(Array(100).fill('word').join('-'));
   });
 });
 

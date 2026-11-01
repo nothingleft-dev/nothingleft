@@ -238,7 +238,7 @@ organisations, articles, boards and sprints by slug, users by username.
 | `/my-issues`, `/starred`                                                                | Fixed issue lists                                                                                                                                                                                                                 |
 | `/issues?q=`                                                                            | Cross-project issue list; the query bar drives it and the URL mirrors it                                                                                                                                                          |
 | `/issues/PROJ?q=`                                                                       | Alias of `/projects/PROJ/issues` (a `rewrites` entry in `next.config.ts`, not a redirect)                                                                                                                                         |
-| `/issue/PROJ-847/<title-slug>`                                                          | Issue page. The slug is derived from the title, **optional and ignored for lookup**; the client replaces the URL with the current slug on load so stale links still resolve                                                       |
+| `/issue/PROJ-847/<title-slug>`                                                          | Issue page. The slug is derived from the title (`urlSlug`), **optional and ignored for lookup**; the client replaces the URL with the current slug on load so stale links still resolve                                                       |
 | `/new-issue?project=PROJ`                                                               | Create an issue on a full page; the dialog's expand button carries its draft here (decided 24 Sep 2026)                                                                                                                           |
 | `/projects`                                                                             | Project list                                                                                                                                                                                                                      |
 | `/projects/PROJ`                                                                        | Project dashboard                                                                                                                                                                                                                 |
@@ -409,8 +409,9 @@ only place a date is turned into text:
 `@nothingleft/format`, because the API, the MCP server and the query parser
 need the same two functions — see
 [architecture.md](./architecture.md#packagesformat--shared-domain-parsing).
-`slugify`, `parseIssueKey` / `formatIssueKey` and `generateProjectKey` live
-there too.
+`slugify`, `urlSlug`, `parseIssueKey` / `formatIssueKey` and `generateProjectKey` live
+there too. An issue URL and its suggested branch name use `urlSlug` (ASCII letters, digits and
+hyphens), never `slugify`, whose colons send link prefetching into a loop.
 
 Every function takes an optional IANA `timeZone`. Without one it uses the signed-in
 profile's zone, which `AppShell` hands to `setProfileTimeZone` on every render (1g: a
@@ -472,6 +473,13 @@ other strict flag from the shared config is on.
   each `page.tsx` exports `metadata = { title: 'Inbox' }`, or `generateMetadata`
   when the title depends on params (`PP-123`). Description, Open Graph and
   robots go in the same object.
+- **Link previews for the auth pages**: `lib/auth-metadata.ts` holds one entry per
+  page (sign-in, sign-up, reset-password, invite) with its title, description, alt
+  text and the card's copy. `app/og/[card]/route.ts` renders each card to
+  `/og/<page>.png` at build time with `next/og`, using the logo geometry, fonts and
+  card helpers from `packages/brand`. Change the copy there and the card follows;
+  nothing is uploaded. The invitation card deliberately lives outside
+  `/invite/[token]` so no token ever appears in share metadata.
 - **Scripts on every page**: `components/site-scripts.tsx`, rendered once by
   the root layout with `next/script`. Each tag is gated by its own
   `NEXT_PUBLIC_*` variable (`NEXT_PUBLIC_GA_MEASUREMENT_ID` is the worked

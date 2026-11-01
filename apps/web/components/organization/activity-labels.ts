@@ -79,3 +79,16 @@ export function activitySubject(row: OrgActivity): { text: string | null; projec
   const text = username ? (self ? null : `@${username}`) : name;
   return { text, projectKey };
 }
+
+// member_joined also records joining a project; the organisation sentence would misstate it.
+export function projectJoin(row: OrgActivity): 'self' | 'other' | null {
+  if (row.kind !== 'member_joined' || row.target_type !== 'project_member') return null;
+  const username = field(row.new_value, 'username');
+  return username !== null && username !== row.actor?.username ? 'other' : 'self';
+}
+
+export function activityLabel(row: OrgActivity): string {
+  const join = projectJoin(row);
+  if (join === null) return ACTIVITY_LABELS[row.kind];
+  return join === 'self' ? 'joined a project' : 'added someone to a project';
+}
