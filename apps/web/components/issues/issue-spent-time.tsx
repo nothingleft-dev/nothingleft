@@ -169,7 +169,7 @@ function SpentTimeRow({ item, ownIssue, durationText, onEdit }: SpentTimeRowProp
           ) : null}
         </div>
         {item.description_md.trim() ? (
-          <Markdown source={item.description_md} variant="comment" className="mt-0.5" />
+          <Markdown source={item.description_md} variant="comment" className="mt-0.5 max-w-none" />
         ) : null}
       </div>
       <div className="flex h-6 items-center gap-2">

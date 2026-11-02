@@ -321,7 +321,7 @@ category as a 4 px left edge — the board card's dot, stretched — hatched whe
 | Top bar | 48 |
 | Right rail | 336 |
 | Page padding | 24; 16 on phones |
-| Content max width | **none** — pages are fluid and fill the viewport at every sidebar state; only prose (markdown) is capped, at 72ch. `--content-max` is unused by the shell. |
+| Content max width | **none** — pages are fluid and fill the viewport at every sidebar state; only article prose is capped, at 72ch; on the issue page the 960 px column sets the width. `--content-max` is unused by the shell. |
 
 Radius: 3 badge · 4 buttons, inputs, tags, pills · 6 cards, panels · 8 dialogs, popovers.
 Radius encodes hierarchy: the bigger the floating surface, the rounder.
@@ -556,7 +556,8 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
 2. Title (26 px) with inline actions: edit (`e`), tag, link, more.
 3. Tags as removable chips directly under the title, plus `+`. This is the one place
    tags wear their palette colour. The key-field strip follows (below).
-4. Description: rendered markdown, 15 px / 22, 72ch max, checkable task lists,
+4. Description: rendered markdown, 15 px / 22, as wide as the issue column (max 960 px), the
+   same width as its editor and the key-field strip (owner, 2 Nov 2026), checkable task lists,
    inline code, images as bordered blocks. Click to edit in place.
 5. Links: tabs per link type with counts (`Parent for 3`), `Add links`. Rows: P, T,
    key (struck when resolved), title, status pill.

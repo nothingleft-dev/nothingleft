@@ -444,6 +444,9 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 - **Inline creation** is per cell (_New card_ on hover), not per column header: the new
   issue takes the sprint, the column's first status and the lane's value (assignee,
   priority, type) or parent (issue lanes).
+- **Column width** (owner, 2 Nov 2026): each column is 280–380 px. Columns widen to fill the
+  window up to 380 px and never narrow past 280 px; a board with more columns than fit scrolls
+  sideways instead of squeezing its cards. A collapsed column is 40 px.
 - **Column counts** read `count` alone, or `count of total` when a filter hides cards;
   WIP limits show as `min 2 · max 4`, red over the maximum, amber under the minimum.
 - **The strip follows the column field** (owner, 26 Sep 2026): by status on a status board,
