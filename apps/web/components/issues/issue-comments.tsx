@@ -86,7 +86,7 @@ export function CommentBody({ scope, projectKey, comment, editing, onEditingChan
     <Markdown
       source={comment.body_md}
       variant="comment"
-      className="mt-1"
+      className="mt-1 max-w-none"
       onToggleTask={
         comment.me.can_edit
           ? (index, checked) =>

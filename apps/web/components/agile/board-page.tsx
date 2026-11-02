@@ -60,6 +60,12 @@ import { todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { deactivatedInk } from '@components/former-member-chip';
 
+// A column never narrows past a readable card, and stops widening where cards would sprawl;
+// past the minimum the board scrolls sideways instead of squeezing.
+const COLUMN_MIN = 280;
+const COLUMN_MAX = 380;
+const COLLAPSED_COLUMN = 40;
+
 /**
  * What `current` reads: the active sprint; with nothing running, the planned sprint whose dates
  * hold today, else the first planned one; with nothing planned either, every open issue. Starting
@@ -498,8 +504,10 @@ function BoardGrid({ projectKey, view, sprint, canPlan, today, filtered, onOpen 
     return next;
   };
 
-  const template = view.columns.map(c => (collapsed.has(c.name) ? '40px' : 'minmax(248px, 1fr)')).join(' ');
-  const minWidth = view.columns.reduce((sum, c) => sum + (collapsed.has(c.name) ? 40 : 248), 0);
+  const template = view.columns
+    .map(c => (collapsed.has(c.name) ? `${COLLAPSED_COLUMN}px` : `minmax(${COLUMN_MIN}px, ${COLUMN_MAX}px)`))
+    .join(' ');
+  const minWidth = view.columns.reduce((sum, c) => sum + (collapsed.has(c.name) ? COLLAPSED_COLUMN : COLUMN_MIN), 0);
   const canCreate = canPlan && sprint?.state !== 'completed';
 
   const onDragStart = (event: DragStartEvent) => setDragging(event.active.data.current as CardData);

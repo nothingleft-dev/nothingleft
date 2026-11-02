@@ -33,7 +33,7 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
       <button
         type="button"
         onClick={() => onEditingChange(true)}
-        className="mt-4 w-full max-w-[72ch] rounded-md border border-dashed px-3 py-4 text-left text-sm text-text-secondary hover:border-border-strong hover:text-text"
+        className="mt-4 w-full rounded-md border border-dashed px-3 py-4 text-left text-sm text-text-secondary hover:border-border-strong hover:text-text"
       >
         Add a description <Kbd className="ml-1">e</Kbd>
       </button>
@@ -43,7 +43,7 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
   return (
     <Markdown
       source={source}
-      className="mt-4"
+      className="mt-4 max-w-none"
       onToggleTask={
         canEdit
           ? (index, checked) => toggle.mutate({ index, checked }, { onError: error => toast.error(error.message) })
