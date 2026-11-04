@@ -7,7 +7,8 @@
     "packages/*"
   ],
   "engines": {
-    "bun": ">=1.4"
+    "bun": ">=1.4",
+    "node": "24.x"
   },
   "scripts": {
     "dev": "turbo run dev --ui=stream",

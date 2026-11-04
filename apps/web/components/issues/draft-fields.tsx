@@ -24,7 +24,7 @@ import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } fr
 import { SidebarField } from '@components/issues/sidebar-field';
 import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
-import { draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
+import { draftSprint, draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { useSprints } from '@hooks/use-sprints';
@@ -69,7 +69,7 @@ function useFieldSpecs(
   const priority = priorities.data?.find(p => (fields.priority ? p.name === fields.priority : p.is_default));
   const status = statuses.data?.find(s => (fields.status ? s.name === fields.status : s.is_default));
   const assigned = (people.data ?? []).filter(p => fields.assignees.includes(p.username));
-  const sprint = fields.sprint ? sprints.data?.find(s => s.slug === fields.sprint) : undefined;
+  const sprint = draftSprint(fields, sprints.data);
   const set = (patch: Partial<DraftFields>) => setFields(f => ({ ...f, ...patch }));
 
   const specs: FieldSpec[] = [
@@ -205,8 +205,8 @@ function useFieldSpecs(
         <SprintCommand
           sprints={sprints.data ?? []}
           loading={sprints.isPending}
-          selected={fields.sprint ?? null}
-          onSelect={slug => (set({ sprint: slug ?? undefined }), close())}
+          selected={sprint?.slug ?? null}
+          onSelect={slug => (set({ sprint: slug }), close())}
         />
       ),
     },

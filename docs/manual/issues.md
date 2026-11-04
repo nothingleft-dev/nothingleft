@@ -97,6 +97,10 @@ required; status, priority and type start at the project's defaults
 without regard to case, so `in progress` means `In Progress`. A value the
 project does not have is refused, and the error lists the ones it does.
 
+In the app, a new issue joins the project's running sprint unless you pick another one, or
+_Unscheduled_ to leave it in the backlog. Created through the API or an AI agent, an issue
+joins a sprint only when the request names one.
+
 Only people who can open the issue can be assigned: members of the project,
 and the organisation's admins.
 
