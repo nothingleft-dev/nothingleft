@@ -261,8 +261,11 @@
   --chart-7: var(--palette-violet-solid);
   --chart-8: var(--palette-red-solid);
   --chart-grid: var(--border-subtle);
-  --chart-axis: var(--text-muted);
-  --chart-ideal: var(--text-disabled);
+  --chart-axis: var(--text-secondary);
+  --chart-ideal: var(--text-muted);
+  /* Burndown backgrounds, kept quieter than the lines: non-working days, and days still to come. */
+  --chart-off-day: color-mix(in oklab, var(--text) 5%, var(--bg-surface));
+  --chart-future: color-mix(in oklab, var(--text) 2.5%, var(--bg-surface));
   /* Matrix cell shade: five grey steps mixed from the text colour into the surface, capped so
      ink text clears 4.5:1 on every step in both themes (8.2:1 light, 6.2:1 dark at the deepest). */
   --heat-1: color-mix(in oklab, var(--text) 5%, var(--bg-surface));

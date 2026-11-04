@@ -164,9 +164,55 @@ describe('issues per assignee', () => {
     expect(countOf(without.groups, 'Unassigned')).toBe(0);
   });
 
+  test('a person carries their picture, as everywhere else; other groups never do', async () => {
+    const pictureOf = async (username: string) =>
+      (await w.call(w.admin, 'GET', `/v1/organizations/${w.slug}/members/${username}`)).json().data.avatar_url;
+    const data = await report(w.admin, 'issues-per-assignee');
+    for (const g of data.groups) {
+      expect(g.avatar_url).toBe(g.value === null ? null : await pictureOf(g.value));
+    }
+    expect(data.groups.some((g: { avatar_url: string | null }) => g.avatar_url !== null)).toBe(true);
+    const byProject = await report(w.admin, 'issues-per-project');
+    expect(byProject.groups.every((g: { avatar_url: string | null }) => g.avatar_url === null)).toBe(true);
+    const byUser = await report(w.admin, 'time', { ...PERIOD, group_by: 'user' });
+    for (const r of byUser.rows) expect(r.avatar_url).toBe(await pictureOf(r.value));
+    const byIssue = await report(w.admin, 'time', { ...PERIOD, group_by: 'issue' });
+    expect(byIssue.rows.every((r: { avatar_url: string | null }) => r.avatar_url === null)).toBe(true);
+  });
+
   test('each group’s query lists exactly the issues it counts', async () => {
     const data = await report(w.admin, 'issues-per-assignee');
     for (const g of data.groups) expect(await issueCount(w.admin, g.query)).toBe(g.count);
+  });
+});
+
+describe('project colours', () => {
+  const colour = async (key: string, avatar_color: string) => {
+    const res = await w.call(w.admin, 'PATCH', `/v1/projects/${key}`, { avatar_color });
+    if (res.statusCode !== 200) throw new Error(res.body);
+  };
+  const huesOf = (groups: { value: string | null; hue: string | null; hue_adjusted: boolean }[]) =>
+    Object.fromEntries(groups.map(g => [g.value, [g.hue, g.hue_adjusted]]));
+
+  test('a project wears its own colour; a later one sharing it takes a free hue, and only while both show', async () => {
+    await colour(KEY, 'green');
+    await colour(OTHER, 'red');
+    const apart = await report(w.admin, 'issues-per-project');
+    expect(apart.palette).toBe('project');
+    expect(huesOf(apart.groups)).toEqual({ [KEY]: ['green', false], [OTHER]: ['red', false] });
+
+    await colour(OTHER, 'green');
+    const shared = await report(w.admin, 'issues-per-project');
+    // RP was created first, so it keeps green whatever the counts; RQ takes the first hue neither uses.
+    expect(huesOf(shared.groups)).toEqual({ [KEY]: ['green', false], [OTHER]: ['red', true] });
+    const byTime = await report(w.admin, 'time', { ...PERIOD, group_by: 'project' });
+    expect(huesOf(byTime.rows)[OTHER]).toEqual(['red', true]);
+
+    const alone = await report(w.admin, 'issues-per-project', { projects: OTHER });
+    expect(huesOf(alone.groups)).toEqual({ [OTHER]: ['green', false] });
+
+    const byAssignee = await report(w.admin, 'issues-per-assignee');
+    expect(byAssignee.groups.every((g: { hue: string | null }) => g.hue === null)).toBe(true);
   });
 });
 

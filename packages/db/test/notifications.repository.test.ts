@@ -82,8 +82,11 @@ describe('notificationsRepository tenant isolation', () => {
       expect((await repo.unreadGroupsByOrg(scopeA(w))).get(w.orgA)).toBe(1);
       expect((await repo.unreadGroupsByOrg(scopeA(w))).has(w.orgB)).toBe(false);
       expect(await repo.projectsInInbox(scopeA(w))).toEqual([
-        { org_id: w.orgA, project_id: w.projectA, key: 'AC', name: 'Acme' },
+        expect.objectContaining({ org_id: w.orgA, project_id: w.projectA, key: 'AC', name: 'Acme' }),
       ]);
+      const [inbox] = await repo.projectsInInbox(scopeA(w));
+      expect(inbox!.avatar_color).toEqual(expect.any(String));
+      expect(inbox!.avatar_initials).toEqual(expect.any(String));
       // A project the reader cannot open hides its rows.
       expect(
         await repo.countGroups(

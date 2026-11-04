@@ -13,6 +13,7 @@ import { ReportMultiPicker, ReportPicker, type ReportOption } from '@components/
 import { InboxEntry, InboxEntrySkeletons } from '@components/notifications/inbox-entry';
 import { entryId, useInbox, useMarkRead, useNotificationFacets, useUnreadCount } from '@hooks/use-notifications';
 import type { InboxFilter } from '@lib/api/notifications';
+import { ProjectMark } from '@components/projects/project-mark';
 import { useOrganizations } from '@hooks/use-organizations';
 import { isApiError } from '@lib/api/errors';
 import { AREA_LABELS, KIND_FILTERS, kindsOf, parseKindFilters } from '@lib/notifications/kinds';
@@ -194,6 +195,7 @@ function InboxFilters({
       value: projectValue(p.organization.slug, p.key),
       label: `${p.name} (${p.key})`,
       group: severalOrgs ? p.organization.name : undefined,
+      mark: <ProjectMark project={p} size="xs" />,
     })),
   ];
   const chosenProject = state.project && state.org ? projectValue(state.org, state.project) : '';

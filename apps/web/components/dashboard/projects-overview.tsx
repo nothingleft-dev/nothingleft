@@ -321,7 +321,7 @@ function ProjectFiguresCard({
   return (
     <article className="flex flex-col gap-3 rounded-md border bg-surface px-4 py-3">
       <div className="flex items-center gap-2">
-        <ProjectMark project={project} className="size-avatar rounded-sm" />
+        <ProjectMark project={project} size="md" />
         <Link href={base as Route} className="truncate font-semibold hover:underline">
           {project.name}
         </Link>

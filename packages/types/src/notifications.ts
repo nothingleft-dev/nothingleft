@@ -5,6 +5,7 @@ import {
   NOTIFICATION_EMAIL_OPTIONS,
   NOTIFICATION_KINDS,
   NOTIFICATIONS_MARK_MAX,
+  PALETTE_HUES,
 } from './constants.ts';
 import { MemberRefSchema } from './organizations.ts';
 
@@ -80,7 +81,17 @@ const OrganizationRefSchema = z.object({ slug: z.string(), name: z.string() });
 // What the inbox's organisation and project pickers offer, across every organisation.
 export const NotificationFacetsSchema = z.object({
   organizations: z.array(OrganizationRefSchema),
-  projects: z.array(z.object({ key: z.string(), name: z.string(), organization: OrganizationRefSchema })),
+  // The mark fields draw the project's own mark beside it, as everywhere a project is named.
+  projects: z.array(
+    z.object({
+      key: z.string(),
+      name: z.string(),
+      avatar_color: z.enum(PALETTE_HUES),
+      avatar_initials: z.string(),
+      avatar_url: z.string(),
+      organization: OrganizationRefSchema,
+    }),
+  ),
 });
 export type NotificationFacets = z.infer<typeof NotificationFacetsSchema>;
 

@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { IssueGroup, IssueGroupBy, LabelColor, StatusCategory } from '@nothingleft/types';
 import { StatusDot } from '@components/issues/value-marks';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { cn } from '@lib/utils';
 
 interface GroupHeaderProps {
@@ -42,6 +43,8 @@ export function GroupHeader({ group, groupBy, category, loaded, collapsed, onTog
         />
         {groupBy === 'status' && group.color ? (
           <StatusDot category={category ?? 'unstarted'} color={group.color as LabelColor} />
+        ) : groupBy === 'project' && group.value ? (
+          <ProjectMarkByKey projectKey={group.value} />
         ) : groupBy.startsWith('custom:') && group.color ? (
           <i aria-hidden className={cn(`l-${group.color}`, 'inline-block size-2 flex-none rounded-full bg-c-solid')} />
         ) : null}

@@ -28,6 +28,7 @@ import { useShortcut } from '@hooks/use-shortcut';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { isApiError } from '@lib/api/errors';
 import { formatCalendarDate, todayCalendarDate } from '@lib/datetime';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { cn } from '@lib/utils';
 
 type Editor =
@@ -313,14 +314,7 @@ export function IssueSidebar({
       aria-label="Issue fields"
       className="flex flex-col gap-0.5 min-[1100px]:sticky min-[1100px]:top-0 min-[1100px]:max-h-[calc(100vh-var(--topbar)-var(--space-5))] min-[1100px]:overflow-y-auto"
     >
-      <SidebarField
-        label="Project"
-        aside={
-          <span className="grid size-avatar-sm place-items-center rounded-sm bg-inset text-[10px] font-semibold text-text-secondary">
-            {issue.project.key}
-          </span>
-        }
-      >
+      <SidebarField label="Project" aside={<ProjectMarkByKey projectKey={issue.project.key} size="sm" />}>
         {issue.project.name}
       </SidebarField>
       <SidebarField

@@ -181,8 +181,22 @@ One route per report, each with its CSV twin, all `GET` and all *View reports* /
   1–8 (`--chart-N`), numbered in the field's own order — position for statuses, priorities,
   types and options, name for people, projects, tags and sprints — never by rank, so a colour
   follows its entity. The rest fold into Other. `palette` says what colours a chart: `series`,
-  `label` (grouped by status: the statuses' own label colours) or `category` (by category).
+  `label` (grouped by status: the statuses' own label colours), `category` (by category) or
+  `project` (by project: each group's `hue`).
   A filter that removes a series between two others renumbers the ones after it; accepted.
+- **A project is drawn in its own colour** (owner, 5 Nov 2026), on every report that groups by
+  project: issues per project, issues per field, a matrix axis, average age and time. Each project
+  group carries `hue`, its `avatar_color`. When projects in one result share a colour, the one
+  created first keeps it and each later one takes the first hue in `PALETTE_HUES` (gray aside) no
+  project in the result owns or wears, with `hue_adjusted: true`. Once every hue is worn the next
+  clash is drawn **striped** (`hue_striped: true`): its own hue first, then the first hue nobody
+  wears striped; past those 26 treatments it repeats its own striped hue and its name tells it
+  apart. Stripes run at 45°, never the 135° of the cancelled hatch. Ordering by id means the choice
+  never follows counts or sorting (`resolveProjectHues`), and a project gets its own colour back
+  wherever the clash is filtered out. Project marks never change.
+- **A person group carries `avatar_url`** - the assignee or person-field value's picture, as
+  a `MemberRef` gives it; null for every other group and for Unassigned. Time rows by person
+  carry it too.
 - Limits: 500 groups per table (`truncated`), 50 × 50 matrix axes (the rest merge into an
   `other` group), 500 Gantt bars and 500 missing-dates issues, a 62-day timesheet, a 366-day
   time report, 200 named users, 100 named projects. Over a limit is `400` naming it.
@@ -194,6 +208,9 @@ One route per report, each with its CSV twin, all `GET` and all *View reports* /
   `multi_valued_issues` how many issues have more than one value — the MCP table states it
   (*12 issues; 3 have more than one value, so the groups add up to 15*). Shares are of
   `total_counted`, so a pie adds up to 100%.
+- **Time's `other`** is what a chart folds: the rows without a series, which `rows` also lists,
+  plus any beyond the 500 listed. The web lists every row and adds an *Other* row only for the
+  ones beyond the 500, so nothing is counted twice.
 - **Group by category** (`by_category=true`, status only) gives the five status categories,
   merged across projects; `by_category_available` is true when the projects in scope name their
   statuses differently, which is when the web offers the toggle.
@@ -320,18 +337,31 @@ Proposed to the owner before building; the visual choices were picked from rende
 
 ### The page
 
-- Header: the report's name, *as of 8:48pm* (`generated_at`, with the zone in the tooltip) and
-  **Export CSV**, disabled while the report is empty or failed.
+- Header: the report's name, *Updated 8:48pm* (`generated_at`, with the zone in the tooltip), a
+  refresh button that refetches (the cache is keyed by the organisation's data version, so a
+  refetch after a change recomputes), and **Export CSV**, disabled while the report is empty or
+  failed.
 - The scope row: the issue list's query bar (autocomplete, the at-fault span underlined, no
-  *Save view*), then **View**, **Projects** and the report's own pickers in one wrapping row,
-  with the display toggles on the right. Burndown takes no query; Gantt takes one project.
+  *Save view*), then **Saved view**, **Projects** and the report's own pickers in one wrapping
+  row, with the display toggles on the right. Burndown takes no query; Gantt takes one project.
+  The project pickers show each project's mark, in the list and on the trigger.
 - A sentence under the pickers says what the figures cover: *242 issues in Partner Portal,
-  Mobile app. 25 have more than one assignee, so the bars add up to 267.*
-- Every chart has a table with the same numbers under it (or beside it for the pie); every
-  label, count and cell links to the issue list for its `query`. Other is plain text.
+  Mobile app. 25 have more than one assignee, so the counts add up to 267 assignee entries.*
+  With no projects picked it says so - *in all 3 projects you can open (A, B, C)* - rather than
+  listing names the picker does not show.
+- Every chart has its numbers beside it: a bar chart is one table of name, bar, figure and share
+  (`BarTable`), so names are listed once; the pie, line and matrix charts keep a table under or
+  beside them. Every label, count and cell links to the issue list for its `query`. Other is
+  plain text. People carry their avatar wherever a person is named - table rows (24 px), chart
+  axis labels, legends and tooltips (16 px), matrix headers and the timesheet's people picker;
+  Unassigned is the dashed ring. Projects carry their mark and colour.
+- **Units.** Durations read `1w 1d 1h` by default, or in working days or hours (`unit=days`,
+  `unit=hours`) on the time report and the remaining-estimate burndown; a line states the working
+  day and week behind `d` and `w`.
 - **URL.** Parameters carry the API's names and are left out at their defaults, so the
-  address is the request. UI-only parameters: `chart=pie` (distribution), `chart=stacked` and
-  `cells=length` (matrix), `zoom=month` (Gantt), `issue=KEY` (the Gantt's issue modal).
+  address is the request. UI-only parameters: `chart=pie` and `sort=name` (distribution),
+  `unit` (time, burndown), `chart=stacked` and `cells=length` (matrix), `zoom=month` (Gantt),
+  `issue=KEY` (the Gantt's issue modal).
   Committing a query pushes a history entry; a picker replaces it.
 - **Refetch** keeps the previous figures on screen at 60 % opacity. Report pages never poll.
 - Burndown and Gantt without a project in the address take the last project visited, else
@@ -359,24 +389,38 @@ series, the status's `--label-*-solid` for `palette: label`, the category colour
 strip for `category`, `--border-strong` for Other; cancelled hatched, backlog faded. Text is
 always a text token. Bars are at most 20 px with a 4 px rounded end; tooltips lead with the value.
 
-- **Distribution**: horizontal bars in the API's order, value at the tip; or a donut with the
-  counted total in the middle. *Statuses | Categories* appears for status when
-  `by_category_available`. *Include unassigned* is a switch.
+- **Distribution**: a bar table, largest first (**Most first | A–Z**; A–Z is the API's order),
+  or a donut with the counted total in the middle - *issues*, or *assignee entries* when an issue
+  can count more than once - whose groups without a series merge into one *Other* slice while
+  the table beside it lists everyone. Bars are neutral ink for the `series` palette (the names
+  say who; colour is kept for status, category and project). Issues per assignee leads with a
+  stat row: issues, (assignee entries,) people assigned, and Unassigned with its share, linked
+  to the list. A closing line says the report counts issues, not effort. *Statuses |
+  Categories* appears for status when `by_category_available`. *Include unassigned* is a switch.
 - **Matrix**: **Table | Stacked**. The table has sticky row headers, totals both ways, blank
   zero cells, and two cell styles the viewer picks (owner, 27 Sep 2026): **Shade** — five grey
   steps mixed from the text colour into the surface (`--heat-1…5`), capped so ink clears 4.5:1
   on every step in both themes — and **Length**, a hairline bar under each count proportional to
   the largest cell. Rows and columns swap with one button.
-- **Burndown**: a stat row (committed at the start · scope added since, amber when non-zero ·
-  completed · remaining · days left or finished), then Remaining (`--chart-1`, dots, the live
-  day hollow), Scope (`--chart-2`, stepped) and Ideal (`--chart-ideal`, dashed), non-working days
-  shaded, a *Today* rule, gaps where a day has no figure, and a *Daily figures* table on request.
-  Remaining estimate reads `1w 1d 1h` on the axis.
+- **Burndown**: a sentence against the plan (the latest recorded day's remaining against its
+  ideal: on plan within 5 % of the starting scope, else behind - amber - or ahead, by how much),
+  a stat row of remaining · completed · scope change since the start (amber when non-zero),
+  then *committed at the start* and the days left, finished, or how long ago it passed its end
+  date. Remaining (`--chart-1`, 2.5 px, dots, the live day hollow, its latest figure labelled),
+  Scope (`--chart-2`, 1.5 px, stepped) and Ideal (`--chart-ideal`, 2 px, dashed);
+  non-working days `--chart-off-day`, days still to come `--chart-future`, both quieter than
+  the lines; a dotted *Today* rule on the live day (the snapshots' own day, which the viewer's
+  calendar can be one off); gaps where a day has no figure; and a *Daily figures* table on
+  request, whose scope change and completed are to date. Duration ticks are round in the unit
+  read: whole weeks past five weeks.
 - **Average age**: bars of the average with an ink rule at the overall average; the table names
   each group's oldest issue.
-- **Time**: bars of spent time on round duration ticks; the table's Estimate is `--` where the
-  grouping has none and Difference is signed, over the estimate in `--danger-fg`; the footnote
-  names each project's estimate source, or says why a person or work type has none.
+- **Time**: a bar table of spent time, largest first; people with their avatar, projects in
+  their colour, everything else neutral. Estimate and Difference appear only for issue and
+  project groupings; an issue with no estimate reads *No estimate*, and Difference is signed,
+  over the estimate in `--danger-fg`. The footnotes name each project's estimate source or say
+  why a person or work type has none, state the working calendar, and say that logged time is
+  not a measure of how well anyone worked.
 - **Gantt** (not Recharts): issues on the left, the timeline on the right in **Days | Weeks**,
   non-working days shaded, a *Today* rule, group bands linking to their list. Bars are neutral
   with the status category on a 4 px left edge (owner's pick, 27 Sep 2026), cancelled hatched,

@@ -272,6 +272,18 @@ its rank; a filter that changes the series count must not repaint survivors. Ser
 labels and values wear text tokens, never the series colour. Status-category colours
 are used only when the chart *is* grouped by status.
 
+**A project is its own colour** (owner, 5 Nov 2026): a chart grouped by project paints each
+project in its `avatar_color`'s `solid`, not a series slot, so the bar matches the mark in the
+sidebar. Two projects in one chart that share a colour: the one created first keeps it and the
+later one takes a hue no project in the chart wears, said in a line under the chart; once every
+hue is taken, the next is striped (45°, so it never reads as the cancelled hatch). The mark
+itself never changes. Wherever a project is named as a thing to pick or a group heading (pickers,
+the issue's Project field, list and knowledge-base groups), its mark sits beside the name.
+
+**Colour only where it means something.** A bar table of people or work types is neutral ink
+(`--text-muted`): the names identify them, and eight hues would only compete. Status, category
+and project colours stay, because there the colour is the meaning.
+
 **Magnitude in a grid** (the matrix report) is a neutral ramp, not a hue: `--heat-1…5`
 mix the text colour into the surface at 5 / 10 / 16 / 23 / 31 %, so ink text clears 4.5:1 on every
 step in both themes (8.2:1 light, 6.2:1 dark at the deepest). The alternative the viewer can pick

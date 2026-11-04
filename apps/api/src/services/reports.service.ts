@@ -10,6 +10,7 @@ import {
 } from '@nothingleft/query';
 import {
   CUSTOM_GROUP_PREFIX,
+  PALETTE_HUES,
   REPORT_GANTT_MAX_BARS,
   REPORT_MATRIX_MAX_AXIS,
   REPORT_MAX_GROUPS,
@@ -35,6 +36,7 @@ import {
   type MatrixReport,
   type MemberRef,
   type Pagination,
+  type PaletteHue,
   type Principal,
   type ReportEmpty,
   type ReportFilter,
@@ -174,6 +176,33 @@ export function seriesSlots(weights: readonly number[], naturalOrder: readonly n
   const slots: (number | null)[] = weights.map(() => null);
   chosen.forEach((x, n) => (slots[x.i] = n + 1));
   return slots;
+}
+
+const CHART_HUES = PALETTE_HUES.filter(h => h !== 'gray');
+
+/**
+ * Each project's chart treatment, keyed by project key, decided in project id order so it never
+ * follows counts or sorting. A project wears its own colour. When an earlier project already wears
+ * it, it takes the first hue no project in the set owns or wears; when every hue is worn, a striped
+ * hue: its own, else the first nobody wears striped. Past that (26 treatments) it repeats its own
+ * striped colour and its name tells it apart. Gray is left to Other.
+ */
+export function resolveProjectHues(
+  projects: readonly { id: number; key: string; avatar_color: string }[],
+): Map<string, { hue: PaletteHue; hue_adjusted: boolean; hue_striped: boolean }> {
+  const ordered = projects.toSorted((a, b) => a.id - b.id);
+  const own = new Set(ordered.map(p => p.avatar_color));
+  const worn = new Set<string>();
+  const treatments = new Map<string, { hue: PaletteHue; hue_adjusted: boolean; hue_striped: boolean }>();
+  for (const p of ordered) {
+    const colour = p.avatar_color as PaletteHue;
+    const free = worn.has(colour) ? CHART_HUES.find(h => !own.has(h) && !worn.has(h)) : colour;
+    const striped = free === undefined;
+    const hue = free ?? [colour, ...CHART_HUES].find(h => !worn.has(`${h}/striped`)) ?? colour;
+    worn.add(striped ? `${hue}/striped` : hue);
+    treatments.set(p.key, { hue, hue_adjusted: striped || hue !== colour, hue_striped: striped });
+  }
+  return treatments;
 }
 
 /** Keeps the `max` heaviest items, in their original order. */
@@ -418,16 +447,57 @@ export function reportsService(deps: ReportsDeps) {
   }
 
   const paletteOf = (field: GroupSourceField): ReportPalette =>
-    field === 'status' ? 'label' : field === STATUS_CATEGORY_GROUP ? 'category' : 'series';
+    field === 'status'
+      ? 'label'
+      : field === STATUS_CATEGORY_GROUP
+        ? 'category'
+        : field === 'project'
+          ? 'project'
+          : 'series';
 
-  function groupDtos(
+  type ProjectHue = { hue: PaletteHue | null; hue_adjusted: boolean; hue_striped: boolean };
+  const NO_HUE: ProjectHue = { hue: null, hue_adjusted: false, hue_striped: false };
+
+  const projectHues = (s: Scoped, keys: readonly (string | null)[]): Map<string, ProjectHue> =>
+    resolveProjectHues(s.sc.projects.filter(p => keys.includes(p.key)));
+
+  function isPersonField(s: Scoped, field: GroupSourceField): boolean {
+    if (field === 'assignee') return true;
+    if (!field.startsWith(CUSTOM_GROUP_PREFIX)) return false;
+    const type = s.sc.catalogue.fields.find(f => f.slug === field.slice(CUSTOM_GROUP_PREFIX.length))?.type;
+    return type === 'user' || type === 'multi_user';
+  }
+
+  /** Avatar URLs by lowercased username; a removed member keeps theirs, so the report still shows who it was. */
+  async function avatarsOf(s: Scoped, usernames: readonly (string | null)[]): Promise<Map<string, string | null>> {
+    const names = usernames.filter((u): u is string => u !== null);
+    const found = await organizations.findMembersByUsernames(s.sc.ctx, names, { includeRemoved: true });
+    return new Map(
+      found.map(f => [f.membership.username.toLowerCase(), access.memberRef(f.user, f.membership).avatar_url]),
+    );
+  }
+
+  async function groupDtos(
     s: Scoped,
     field: GroupSourceField,
     rows: ReportGroupRow[],
     total: number,
     categories: Map<StatusCategory, string[]> | null,
     withSeries = true,
-  ): ReportGroup[] {
+  ): Promise<ReportGroup[]> {
+    const avatars = isPersonField(s, field)
+      ? await avatarsOf(
+          s,
+          rows.map(r => r.value),
+        )
+      : null;
+    const hues =
+      field === 'project'
+        ? projectHues(
+            s,
+            rows.map(r => r.value),
+          )
+        : null;
     const slots = withSeries
       ? seriesSlots(
           rows.map(r => r.count),
@@ -449,6 +519,8 @@ export function reportsService(deps: ReportsDeps) {
       share: share(row.count, total),
       query: drill(s, clauseFor(s, field, row, categories)),
       other: false,
+      avatar_url: (row.value && avatars?.get(row.value.toLowerCase())) ?? null,
+      ...((row.value && hues?.get(row.value)) || NO_HUE),
     }));
   }
 
@@ -462,6 +534,8 @@ export function reportsService(deps: ReportsDeps) {
     share: share(count, total),
     query: null,
     other: true,
+    avatar_url: null,
+    ...NO_HUE,
   });
 
   function fieldSource(s: Scoped, field: IssueGroupBy, byCategory = false): GroupSourceField {
@@ -592,7 +666,7 @@ export function reportsService(deps: ReportsDeps) {
         }
         const { kept, dropped } = keepHeaviest(rows, r => r.count, REPORT_MAX_GROUPS);
         const counted = rows.reduce((sum, r) => sum + r.count, 0);
-        const groups = groupDtos(s, source, kept, counted, statuses?.byCategory ?? null);
+        const groups = await groupDtos(s, source, kept, counted, statuses?.byCategory ?? null);
         const folded = groups.filter(g => g.series === null);
         const foldedCount = folded.reduce((sum, g) => sum + g.count, 0) + dropped.reduce((sum, r) => sum + r.count, 0);
         return {
@@ -640,10 +714,10 @@ export function reportsService(deps: ReportsDeps) {
           needsStatuses ? statusNamesByCategory(s) : null,
         ]);
         const total = rowsResult.total;
-        const axis = (field: GroupSourceField, rows: ReportGroupRow[], series: boolean) => {
+        const axis = async (field: GroupSourceField, rows: ReportGroupRow[], series: boolean) => {
           const ordered = byDisplayOrder(rows);
           const { kept, dropped } = keepHeaviest(ordered, r => r.count, REPORT_MATRIX_MAX_AXIS);
-          const groups = groupDtos(s, field, kept, total, statuses?.byCategory ?? null, series);
+          const groups = await groupDtos(s, field, kept, total, statuses?.byCategory ?? null, series);
           const index = new Map(kept.map((r, i) => [r.key, i]));
           if (dropped.length > 0) {
             groups.push(
@@ -656,8 +730,10 @@ export function reportsService(deps: ReportsDeps) {
           }
           return { axis: { field, palette: paletteOf(field), groups, truncated: dropped.length > 0 }, index };
         };
-        const rowAxis = axis(rowField, rowsResult.groups, false);
-        const columnAxis = axis(columnField, columnsResult.groups, true);
+        const [rowAxis, columnAxis] = await Promise.all([
+          axis(rowField, rowsResult.groups, false),
+          axis(columnField, columnsResult.groups, true),
+        ]);
         const merged = new Map<string, { row: number; column: number; count: number }>();
         for (const cell of cells) {
           const row = rowAxis.index.get(cell.row_key);
@@ -730,7 +806,7 @@ export function reportsService(deps: ReportsDeps) {
           s.sc.ctx,
           [...kept, ...(all ? [all] : [])].flatMap(r => (r.oldest_issue_id === null ? [] : [r.oldest_issue_id])),
         );
-        const dtos = field ? groupDtos(s, field, kept, count, statuses?.byCategory ?? null) : [];
+        const dtos = field ? await groupDtos(s, field, kept, count, statuses?.byCategory ?? null) : [];
         const days = (seconds: number) => round1(seconds / DAY_SECONDS);
         const extra: ReportFilter[] = input.unresolved_only
           ? [{ kind: 'unresolved_only', label: t('report.filter.unresolved_only'), widen_query: null }]
@@ -825,6 +901,20 @@ export function reportsService(deps: ReportsDeps) {
               return null;
           }
         };
+        const avatars =
+          grouping.kind === 'user'
+            ? await avatarsOf(
+                s,
+                kept.map(r => r.value),
+              )
+            : null;
+        const hues =
+          grouping.kind === 'project'
+            ? projectHues(
+                s,
+                kept.map(r => r.value),
+              )
+            : null;
         const estimateTotal = perIssue ? rows.reduce((sum, r) => sum + (r.estimate_minutes ?? 0), 0) : null;
         const folded = slots.filter(slot => slot === null).length + dropped.length;
         const roles = s.sc.catalogue.roles;
@@ -843,6 +933,8 @@ export function reportsService(deps: ReportsDeps) {
             difference_minutes: perIssue ? (r.estimate_minutes ?? 0) - r.spent_minutes : null,
             share: share(r.spent_minutes, total),
             query: drill(s, clause(r)),
+            avatar_url: (r.value && avatars?.get(r.value.toLowerCase())) ?? null,
+            ...((r.value && hues?.get(r.value)) || NO_HUE),
           })),
           other:
             folded > 0

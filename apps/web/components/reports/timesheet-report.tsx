@@ -16,7 +16,7 @@ import { PickerSkeleton } from '@components/issues/pickers';
 import { PeriodPicker } from '@components/reports/period-picker';
 import { ReportFrame } from '@components/reports/report-frame';
 import { ReportMultiPicker } from '@components/reports/report-picker';
-import { plural, scopeText } from '@components/reports/report-bits';
+import { PersonMark, plural, scopeText } from '@components/reports/report-bits';
 import { useReportState, type ReportState } from '@components/reports/report-state';
 import { useMembers } from '@hooks/use-members';
 import { useReport, useTimesheetWorkItems } from '@hooks/use-reports';
@@ -43,9 +43,19 @@ function PeoplePicker({ state }: { state: ReportState }) {
   const members = useMembers(slug, { limit: 200 });
   const raw = state.params.get('users');
   const values = raw === EVERYONE ? [] : raw ? raw.split(',').filter(Boolean) : ['me'];
+  const me = session.status === 'signed-in' ? session.user : null;
   const options = [
-    { value: 'me', label: 'Me' },
-    ...(members.data ?? []).map(m => ({ value: m.username, label: m.name, group: 'People' })),
+    {
+      value: 'me',
+      label: 'Me',
+      ...(me ? { mark: <PersonMark name={me.name} avatarUrl={me.avatar_url} nobody={false} small /> } : {}),
+    },
+    ...(members.data ?? []).map(m => ({
+      value: m.username,
+      label: m.name,
+      group: 'People',
+      mark: <PersonMark name={m.name} avatarUrl={m.avatar_url} nobody={false} small />,
+    })),
   ];
   return (
     <ReportMultiPicker
@@ -89,7 +99,7 @@ export function TimesheetReport() {
           <Duration minutes={d.total} calendar={calendarOf(d)} className="text-text" /> logged by{' '}
           {plural(d.rows.length, 'person', 'people')}
           {d.scope.period ? ` ${formatCalendarRange(d.scope.period.from, d.scope.period.to)}` : ''} on issues{' '}
-          {scopeText(d.scope)}.
+          {scopeText(d.scope, Boolean(state.get('projects')))}.
         </>
       )}
     >

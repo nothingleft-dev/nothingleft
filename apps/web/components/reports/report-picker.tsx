@@ -47,7 +47,18 @@ interface MultiProps extends BaseProps {
   clearLabel: string;
 }
 
-function Trigger({ label, text, disabled }: { label: string; text: string; disabled?: boolean }) {
+function Trigger({
+  label,
+  text,
+  marks,
+  disabled,
+}: {
+  label: string;
+  text: string;
+  /** The chosen options' own marks, so a value reads the same in the trigger as in the list. */
+  marks?: ReactNode;
+  disabled?: boolean;
+}) {
   return (
     <PopoverTrigger asChild>
       <Button
@@ -56,7 +67,9 @@ function Trigger({ label, text, disabled }: { label: string; text: string; disab
         className="max-w-full gap-1.5 font-normal text-text-secondary"
         disabled={disabled}
       >
-        {label} <span className="max-w-48 truncate font-medium text-text">{text}</span>
+        {label}
+        {marks ? <span className="-mr-0.5 flex items-center gap-0.5">{marks}</span> : null}
+        <span className="max-w-48 truncate font-medium text-text">{text}</span>
         <ChevronDown className="size-3 text-text-muted" />
       </Button>
     </PopoverTrigger>
@@ -124,7 +137,12 @@ export function ReportPicker({ label, value, options, onChange, fallback, width 
   const selected = options.find(o => o.value === value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Trigger label={label} text={selected?.label ?? fallback ?? value} disabled={rest.disabled} />
+      <Trigger
+        label={label}
+        text={selected?.label ?? fallback ?? value}
+        marks={selected?.mark}
+        disabled={rest.disabled}
+      />
       <PopoverContent align="start" className={cn('max-w-[calc(100vw-32px)] p-0', width)}>
         <Options
           {...rest}
@@ -152,13 +170,18 @@ export function ReportMultiPicker({
   width = 'w-64',
   ...rest
 }: MultiProps) {
-  const labels = values.map(v => options.find(o => o.value === v)?.label ?? v);
+  const chosen = values.map(v => options.find(o => o.value === v));
+  const labels = chosen.map((o, i) => o?.label ?? values[i]!);
   const text = values.length === 0 ? none : values.length <= 2 ? labels.join(', ') : many(values.length);
+  const marks =
+    values.length > 0 && values.length <= 2 && chosen.every(o => o?.mark)
+      ? chosen.map((o, i) => <Fragment key={values[i]}>{o!.mark}</Fragment>)
+      : null;
   const toggle = (value: string) =>
     onChange(values.includes(value) ? values.filter(v => v !== value) : [...values, value]);
   return (
     <Popover>
-      <Trigger label={label} text={text} disabled={rest.disabled} />
+      <Trigger label={label} text={text} marks={marks} disabled={rest.disabled} />
       <PopoverContent align="start" className={cn('max-w-[calc(100vw-32px)] p-0', width)}>
         <Options
           {...rest}

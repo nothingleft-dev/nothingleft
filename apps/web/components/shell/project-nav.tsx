@@ -39,7 +39,7 @@ export function ProjectNavItem({ project, collapsed }: { project: ProjectNav; co
     if (within) setOpen(true);
   }
 
-  const keyMark = <ProjectMark project={project} className="size-avatar-sm rounded-sm text-[10px]" />;
+  const keyMark = <ProjectMark project={project} size="sm" />;
 
   if (collapsed) return <CollapsedProject project={project} base={base} within={within} mark={keyMark} />;
 

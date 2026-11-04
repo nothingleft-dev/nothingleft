@@ -33,7 +33,7 @@ export const SITEMAP_PAGES = {
   '/docs/custom-fields': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/search': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/agile': { lastmod: '2026-10-14T08:37:50+05:30' },
-  '/docs/reports': { lastmod: '2026-10-13T11:11:10+05:30' },
+  '/docs/reports': { lastmod: '2026-11-05T12:00:00+05:30' },
   '/docs/knowledge-base': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/git': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/automations': { lastmod: '2026-10-26T00:11:14+05:30' },

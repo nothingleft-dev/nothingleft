@@ -23,6 +23,7 @@ import { useProjects } from '@hooks/use-projects';
 import { STORAGE_FILES_PAGE, useDeleteStorageFile, useStorageFiles } from '@hooks/use-organization-storage';
 import type { StorageFilesFilter } from '@lib/api/organization-storage';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
+import { ProjectMark, ProjectMarkByKey } from '@components/projects/project-mark';
 import { isInlineImage } from '@lib/files';
 import { cn } from '@lib/utils';
 
@@ -72,10 +73,14 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
 
   const projectOptions = [
     { value: '', label: 'All projects' },
-    ...(projects.data ?? []).map(p => ({ value: p.key, label: p.name, mark: <ProjectKey value={p.key} /> })),
+    ...(projects.data ?? []).map(p => ({ value: p.key, label: p.name, mark: <ProjectMark project={p} size="xs" /> })),
   ];
   if (filter.project && !projectOptions.some(o => o.value === filter.project)) {
-    projectOptions.push({ value: filter.project, label: filter.project, mark: <ProjectKey value={filter.project} /> });
+    projectOptions.push({
+      value: filter.project,
+      label: filter.project,
+      mark: <ProjectMarkByKey projectKey={filter.project} />,
+    });
   }
 
   return (
@@ -230,10 +235,6 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
 function holderName(file: StorageFile) {
   if (file.article) return `the article “${file.article.title}”`;
   return file.issue ?? file.project;
-}
-
-function ProjectKey({ value }: { value: string }) {
-  return <span className="w-10 flex-none font-mono text-2xs text-text-muted">{value}</span>;
 }
 
 interface FileRowProps {

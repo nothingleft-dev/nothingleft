@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   LABEL_COLORS,
+  PALETTE_HUES,
   REPORT_MAX_PROJECTS,
   REPORT_MAX_USERS,
   REPORT_NAMES,
@@ -132,9 +133,19 @@ export const ReportEmptySchema = z.object({
 });
 export type ReportEmpty = z.infer<typeof ReportEmptySchema>;
 
-// What colours a chart: series slots (`--chart-N`), the entities' own label colours (status), or status categories.
-export const ReportPaletteSchema = z.enum(['series', 'label', 'category']);
+// What colours a chart: series slots (`--chart-N`), the entities' own label colours (status), status
+// categories, or projects' own colours (`hue`).
+export const ReportPaletteSchema = z.enum(['series', 'label', 'category', 'project']);
 export type ReportPalette = z.infer<typeof ReportPaletteSchema>;
+
+// A project group's chart colour: the project's own, or a free hue when an earlier project in the
+// same report (by creation) already wears it, striped once every hue is worn. Null for anything
+// that is not a project.
+const ProjectHueShape = {
+  hue: z.enum(PALETTE_HUES).nullable(),
+  hue_adjusted: z.boolean(),
+  hue_striped: z.boolean(),
+};
 
 export const ReportGroupSchema = z.object({
   // The name to search by (username, key, option); null for the empty group and Other.
@@ -151,6 +162,9 @@ export const ReportGroupSchema = z.object({
   query: z.string().nullable(),
   // The synthetic group that holds what did not fit.
   other: z.boolean(),
+  // A person's picture when the group is one (assignee, a person field), as MemberRef gives it; else null.
+  avatar_url: z.string().nullable(),
+  ...ProjectHueShape,
 });
 export type ReportGroup = z.infer<typeof ReportGroupSchema>;
 
@@ -277,6 +291,9 @@ export const TimeRowSchema = z.object({
   difference_minutes: z.number().int().nullable(),
   share: z.number(),
   query: z.string().nullable(),
+  // Grouped by person: their picture, as MemberRef gives it; else null.
+  avatar_url: z.string().nullable(),
+  ...ProjectHueShape,
 });
 export const TimeReportSchema = ReportBaseSchema.extend({
   report: z.literal('time'),

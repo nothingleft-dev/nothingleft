@@ -16,6 +16,7 @@ import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { useApiError } from '@hooks/use-api-error';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useCreateSavedView, useUpdateSavedView } from '@hooks/use-saved-views';
 import type { ColumnId } from '@lib/issue-list/columns';
@@ -80,6 +81,7 @@ function SaveViewForm({
     value: p.key,
     label: p.name,
     hint: p.key,
+    mark: <ProjectMarkByKey projectKey={p.key} />,
   }));
   const visibilityOptions = VISIBILITY.map(o =>
     o.value === 'private' || canShare ? o : { ...o, hint: `${o.hint} Needs Contributor in a project.` },
