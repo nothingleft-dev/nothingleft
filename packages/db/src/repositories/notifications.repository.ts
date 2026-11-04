@@ -310,12 +310,14 @@ export function notificationsRepository(db: Queryable) {
     /** The projects with anything in the reader's inbox, for its filter. */
     async projectsInInbox(
       scope: InboxScope,
-    ): Promise<{ org_id: number; project_id: number; key: string; name: string }[]> {
+    ): Promise<
+      { org_id: number; project_id: number; key: string; name: string; avatar_color: string; avatar_initials: string }[]
+    > {
       const v = visible(scope, {});
       if (!v) return [];
       const result = await db.execute<Raw>(sql`
         with v as (${v})
-        select distinct p.org_id, p.id, p.key, p.name from v
+        select distinct p.org_id, p.id, p.key, p.name, p.avatar_color, p.avatar_initials from v
         join projects p on p.org_id = v.org_id and p.id = v.live_project_id
         order by p.name, p.key`);
       return result.rows.map(r => ({
@@ -323,6 +325,8 @@ export function notificationsRepository(db: Queryable) {
         project_id: num(r.id),
         key: r.key as string,
         name: r.name as string,
+        avatar_color: r.avatar_color as string,
+        avatar_initials: r.avatar_initials as string,
       }));
     },
 

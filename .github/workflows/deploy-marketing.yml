@@ -37,6 +37,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 infra/oci/check-deploy-ci.py
+      # Astro runs on Node, not Bun: without this the build gets whatever Node the runner image ships.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json

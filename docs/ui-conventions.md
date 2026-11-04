@@ -274,7 +274,11 @@ Opened with `c` or *Create issue* in the top bar (decided 24 Sep 2026):
   (owner, 24 Sep 2026). Tags and links are sent with the create request, so a refused
   link creates nothing.
 - One row of compact chips — Type, Priority, Status, Assignees, Estimation, Start date,
-  Due date — each showing the project default or the empty label until changed.
+  Due date, Sprint, Story points — each showing the project default or the empty label until
+  changed. Sprint defaults to the project's running sprint (owner, 3 Nov 2026), so new work
+  lands on the board; choosing *Unscheduled* sends it to the backlog instead. With no sprint
+  running it starts unscheduled. The API keeps no default: a create without `sprint` stays
+  unscheduled.
 - An expand button opens the same draft at `/new-issue`, a full page with the text on
   the left and the issue page's field column on the right.
 - `⌘/Ctrl + Enter` creates. A toast names the new key with an *Open* action; *Create

@@ -1,62 +1,109 @@
 'use client';
 
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, Pie, PieChart, Tooltip, XAxis, YAxis } from 'recharts';
+import { Cell, Pie, PieChart, Tooltip } from 'recharts';
 import type { DistributionReport as Distribution, ReportGroup } from '@nothingleft/types';
+import { StatRow, type Stat } from '@components/dashboard/stat-row';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
+import { BarTable } from '@components/reports/bar-table';
 import { FieldPicker } from '@components/reports/field-picker';
 import { ReportFrame } from '@components/reports/report-frame';
-import { DrillLink, plural, scopeText, SwitchParam, ToggleGroup, formatCount } from '@components/reports/report-bits';
-import { useReportState } from '@components/reports/report-state';
 import {
-  AXIS_TICK,
-  CategoryTick,
-  ChartTooltipBody,
-  HatchDefs,
-  Swatch,
-  svgFill,
-  svgOpacity,
-} from '@components/reports/chart/chart-parts';
+  DrillLink,
+  HueNote,
+  PersonMark,
+  plural,
+  scopeText,
+  SwitchParam,
+  ToggleGroup,
+  formatCount,
+} from '@components/reports/report-bits';
+import { useReportState } from '@components/reports/report-state';
+import { ChartTooltipBody, HatchDefs, Swatch, svgFill, svgOpacity } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
 import { listHref } from '@lib/issue-list/links';
-import { markPaint, type MarkPaint } from '@lib/reports/colors';
+import { markPaint, OTHER_FILL, type MarkPaint } from '@lib/reports/colors';
 
 type DistributionName = Distribution['report'];
 
 interface Row {
   key: string;
   label: string;
-  count: number;
+  amount: number;
   share: number;
   query: string | null;
   paint: MarkPaint;
-  other: boolean;
+  /** Without a series of its own: one slice of the pie's Other. */
+  folded: boolean;
+  person?: { avatarUrl: string | null; nobody: boolean };
+  projectKey?: string;
 }
 
-const rowsOf = (data: Distribution): Row[] =>
-  data.groups.map((g: ReportGroup, i) => ({
+type Sort = 'count' | 'name';
+
+/** Person-valued groups carry a picture; their empty group is the person nobody. */
+const isPeople = (data: Distribution) => data.field === 'assignee' || data.groups.some(g => g.avatar_url !== null);
+
+function rowsOf(data: Distribution, sort: Sort): Row[] {
+  const people = isPeople(data);
+  const rows = data.groups.map((g: ReportGroup, i) => ({
     key: `${g.value ?? g.label}-${i}`,
-    label: g.other && data.other ? `${g.label} · ${plural(data.other.groups, 'value')}` : g.label,
-    count: g.count,
+    label: g.label,
+    amount: g.count,
     share: g.share,
     query: g.query,
     paint: markPaint(g, data.palette),
-    other: g.other,
+    folded: data.palette === 'series' && g.series === null,
+    ...(people ? { person: { avatarUrl: g.avatar_url, nobody: g.value === null } } : {}),
+    ...(data.field === 'project' && g.value ? { projectKey: g.value } : {}),
   }));
+  // The API returns the field's own order, which is name order for people: Name keeps it.
+  return sort === 'name' ? rows : rows.toSorted((a, b) => b.amount - a.amount);
+}
 
-const NOUN: Record<string, string> = { assignee: 'assignee', tag: 'tag' };
+const NOUN: Record<string, { one: string; many: string; entries: string }> = {
+  assignee: { one: 'assignee', many: 'people', entries: 'assignee entries' },
+  tag: { one: 'tag', many: 'tags', entries: 'tag entries' },
+  project: { one: 'project', many: 'projects', entries: 'issues' },
+};
+const nounOf = (field: string) => NOUN[field] ?? { one: 'value', many: 'values', entries: 'values counted' };
 
-/** The arithmetic of a multi-valued field, stated so the bars do not look wrong. */
+/** The arithmetic of a multi-valued field, stated so the counts do not look wrong in either chart. */
 function countingNote(data: Distribution) {
   if (data.total_counted === data.total_issues) return null;
-  const noun = NOUN[data.field] ?? 'value';
+  const noun = nounOf(data.field);
   const n = data.multi_valued_issues;
-  return `${formatCount(n)} ${n === 1 ? 'has' : 'have'} more than one ${noun}, so the bars add up to ${formatCount(data.total_counted)}.`;
+  return `${formatCount(n)} ${n === 1 ? 'has' : 'have'} more than one ${noun.one}, so the counts add up to ${formatCount(data.total_counted)} ${noun.entries}.`;
+}
+
+/** The figures to read first: how many issues, over how many people, and how many have nobody. */
+function AssigneeStats({ data }: { data: Distribution }) {
+  const unassigned = data.groups.find(g => g.value === null);
+  const people = data.groups.filter(g => g.value !== null).length;
+  const stats: Stat[] = [
+    { label: 'Issues', value: formatCount(data.total_issues) },
+    ...(data.total_counted !== data.total_issues
+      ? [{ label: 'Assignee entries', value: formatCount(data.total_counted) }]
+      : []),
+    { label: people === 1 ? 'Person assigned' : 'People assigned', value: formatCount(people) },
+    unassigned
+      ? {
+          label: 'Unassigned',
+          value: formatCount(unassigned.count),
+          unit: `${data.total_issues ? Math.round((unassigned.count / data.total_issues) * 1000) / 10 : 0}% of issues`,
+          ...(unassigned.query ? { href: listHref(unassigned.query) as Route } : {}),
+        }
+      : { label: 'Unassigned', value: 'Hidden' },
+  ];
+  return <StatRow stats={stats} />;
 }
 
 export function DistributionReport({ name }: { name: DistributionName }) {
   const state = useReportState(name);
   const result = useReport(name, state.query);
   const chart = state.params.get('chart') === 'pie' ? 'pie' : 'bar';
+  const sort: Sort = state.params.get('sort') === 'name' ? 'name' : 'count';
   const field = state.get('field');
   const byCategory = state.get('by_category') === 'true';
   const data = result.data;
@@ -99,38 +146,76 @@ export function DistributionReport({ name }: { name: DistributionName }) {
       scope={{ query: true, projects: true }}
       controls={controls}
       display={
-        <ToggleGroup
-          label="Chart"
-          value={chart}
-          options={[
-            { value: 'bar', label: 'Bar' },
-            { value: 'pie', label: 'Pie' },
-          ]}
-          onChange={v => state.set({ chart: v === 'pie' ? 'pie' : null })}
-        />
+        <>
+          <ToggleGroup
+            label="Sort"
+            value={sort}
+            options={[
+              { value: 'count', label: 'Most first' },
+              { value: 'name', label: 'A–Z' },
+            ]}
+            onChange={v => state.set({ sort: v === 'name' ? 'name' : null })}
+          />
+          <ToggleGroup
+            label="Chart"
+            value={chart}
+            options={[
+              { value: 'bar', label: 'Bar' },
+              { value: 'pie', label: 'Pie' },
+            ]}
+            onChange={v => state.set({ chart: v === 'pie' ? 'pie' : null })}
+          />
+        </>
       }
       skeleton="bars"
       summary={d => (
         <>
-          {plural(d.total_issues, 'issue')} {scopeText(d.scope)}.{countingNote(d) ? ` ${countingNote(d)}` : null}
+          {plural(d.total_issues, 'issue')} {scopeText(d.scope, Boolean(state.get('projects')))}.
+          {countingNote(d) ? ` ${countingNote(d)}` : null}
         </>
       )}
     >
       {d => {
-        const rows = rowsOf(d);
+        const rows = rowsOf(d, sort);
+        const noun = nounOf(d.field);
         return (
           <>
+            {name === 'issues-per-assignee' ? <AssigneeStats data={d} /> : null}
             {chart === 'pie' ? (
               <div className="grid items-start gap-8 md:grid-cols-[288px_minmax(0,1fr)]">
-                <DistributionPie rows={rows} total={d.total_counted} />
-                <DistributionTable rows={rows} total={d.total_counted} truncated={d.truncated} />
+                <DistributionPie
+                  rows={rows}
+                  total={d.total_counted}
+                  centre={d.total_counted === d.total_issues ? 'issues' : noun.entries}
+                  otherNoun={noun.many}
+                />
+                <DistributionTable
+                  rows={rows}
+                  total={d.total_counted}
+                  truncated={d.truncated}
+                  heading={NOUN[d.field] ? capitalise(noun.one) : 'Value'}
+                />
               </div>
             ) : (
               <>
-                <DistributionBars rows={rows} />
-                <DistributionTable rows={rows} total={d.total_counted} truncated={d.truncated} />
+                <BarTable
+                  heading={NOUN[d.field] ? capitalise(noun.one) : 'Value'}
+                  amountHeading="Issues"
+                  rows={rows.map(r => ({ ...r, paint: d.palette === 'series' ? null : r.paint, folded: false }))}
+                  formatAmount={formatCount}
+                  total={d.total_counted}
+                />
+                {d.truncated ? (
+                  <p className="text-xs text-text-secondary">
+                    Only the first 500 groups are listed; the total counts them all.
+                  </p>
+                ) : null}
               </>
             )}
+            <HueNote groups={d.groups} />
+            <p className="text-xs text-text-secondary">
+              A count of issues, not of effort: a one-line fix and a month of work count the same.
+            </p>
           </>
         );
       }}
@@ -138,78 +223,62 @@ export function DistributionReport({ name }: { name: DistributionName }) {
   );
 }
 
+const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 function RowTooltip({ row }: { row: Row }) {
   return (
     <ChartTooltipBody
-      rows={[{ key: row.key, paint: row.paint, value: formatCount(row.count), label: row.label }]}
+      rows={[{ key: row.key, paint: row.paint, value: formatCount(row.amount), label: row.label, person: row.person }]}
       note={`${row.share}% of the total${row.query ? ' · click to open the issues' : ''}`}
     />
   );
 }
 
-export function DistributionBars({ rows }: { rows: readonly Row[] }) {
-  const router = useRouter();
-  const open = (row: Row) => row.query && router.push(listHref(row.query));
-  return (
-    <BarChart
-      layout="vertical"
-      data={rows as Row[]}
-      responsive
-      style={{ width: '100%', height: rows.length * 32 + 36 }}
-      margin={{ top: 4, right: 48, bottom: 4, left: 8 }}
-      barCategoryGap={8}
-      accessibilityLayer
-    >
-      <HatchDefs />
-      <CartesianGrid horizontal={false} stroke="var(--chart-grid)" />
-      <XAxis type="number" allowDecimals={false} tick={AXIS_TICK} axisLine={false} tickLine={false} />
-      <YAxis
-        type="category"
-        dataKey="label"
-        width={176}
-        tick={<CategoryTick />}
-        axisLine={{ stroke: 'var(--border)' }}
-        tickLine={false}
-        interval={0}
-      />
-      <Tooltip
-        cursor={{ fill: 'var(--bg-hover)' }}
-        isAnimationActive={false}
-        content={({ active, payload }) =>
-          active && payload?.[0] ? <RowTooltip row={payload[0].payload as Row} /> : null
-        }
-      />
-      <Bar dataKey="count" maxBarSize={20} radius={[0, 4, 4, 0]} isAnimationActive={false}>
-        {rows.map(row => (
-          <Cell
-            key={row.key}
-            fill={svgFill(row.paint)}
-            fillOpacity={svgOpacity(row.paint)}
-            cursor={row.query ? 'pointer' : 'default'}
-            onClick={() => open(row)}
-          />
-        ))}
-        <LabelList dataKey="count" position="right" fill="var(--text-secondary)" fontSize={12} />
-      </Bar>
-    </BarChart>
-  );
+/** The pie keeps a slice per series and folds the rest into one Other; the table beside it lists everyone. */
+function pieSlices(rows: readonly Row[], noun: string): Row[] {
+  const folded = rows.filter(r => r.folded);
+  if (folded.length < 2) return rows as Row[];
+  const amount = folded.reduce((sum, r) => sum + r.amount, 0);
+  return [
+    ...rows.filter(r => !r.folded),
+    {
+      key: 'other',
+      label: `Other · ${formatCount(folded.length)} ${noun}`,
+      amount,
+      share: Math.round(folded.reduce((sum, r) => sum + r.share, 0) * 10) / 10,
+      query: null,
+      paint: { fill: OTHER_FILL, hatched: false, faded: false },
+      folded: true,
+    },
+  ];
 }
 
-function DistributionPie({ rows, total }: { rows: readonly Row[]; total: number }) {
+function DistributionPie({
+  rows,
+  total,
+  centre,
+  otherNoun,
+}: {
+  rows: readonly Row[];
+  total: number;
+  centre: string;
+  otherNoun: string;
+}) {
   const router = useRouter();
+  const slices = pieSlices(rows, otherNoun);
   return (
     <div className="relative mx-auto size-[288px]">
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
         <div>
           <p className="text-2xl font-semibold tracking-tight">{formatCount(total)}</p>
-          <p className="text-xs text-text-secondary">counted</p>
+          <p className="text-xs text-text-secondary">{centre}</p>
         </div>
       </div>
       <PieChart responsive style={{ width: 288, height: 288 }} accessibilityLayer>
         <HatchDefs />
         <Pie
-          data={rows as Row[]}
-          dataKey="count"
+          data={slices}
+          dataKey="amount"
           nameKey="label"
           innerRadius={84}
           outerRadius={136}
@@ -219,7 +288,7 @@ function DistributionPie({ rows, total }: { rows: readonly Row[]; total: number 
           strokeWidth={2}
           isAnimationActive={false}
         >
-          {rows.map(row => (
+          {slices.map(row => (
             <Cell
               key={row.key}
               fill={svgFill(row.paint)}
@@ -244,11 +313,13 @@ export function DistributionTable({
   rows,
   total,
   truncated,
+  heading,
   valueLabel = 'Issues',
 }: {
   rows: readonly Row[];
   total: number;
   truncated: boolean;
+  heading: string;
   valueLabel?: string;
 }) {
   return (
@@ -256,7 +327,7 @@ export function DistributionTable({
       <table className="w-full text-sm tabular">
         <thead>
           <tr className="h-8 border-b text-left text-xs text-text-secondary">
-            <th className="font-medium">Value</th>
+            <th className="font-medium">{heading}</th>
             <th className="w-28 text-right font-medium">{valueLabel}</th>
             <th className="w-28 text-right font-medium">Share</th>
           </tr>
@@ -267,13 +338,17 @@ export function DistributionTable({
               <td className="max-w-0">
                 <span className="flex min-w-0 items-center gap-2">
                   <Swatch paint={row.paint} />
+                  {row.person ? (
+                    <PersonMark name={row.label} avatarUrl={row.person.avatarUrl} nobody={row.person.nobody} />
+                  ) : null}
+                  {row.projectKey ? <ProjectMarkByKey projectKey={row.projectKey} /> : null}
                   <DrillLink query={row.query} className="truncate">
                     {row.label}
                   </DrillLink>
                 </span>
               </td>
               <td className="text-right">
-                <DrillLink query={row.query}>{formatCount(row.count)}</DrillLink>
+                <DrillLink query={row.query}>{formatCount(row.amount)}</DrillLink>
               </td>
               <td className="text-right text-text-secondary">{row.share}%</td>
             </tr>

@@ -8,7 +8,7 @@ Every entry lists the choice, the reason, and the constraint it satisfies.
 |---|---|---|
 | Language | TypeScript | Everywhere: API, web, marketing, MCP, shared packages |
 | TS version | **5.x pinned now** | `typescript@next` runs in a CI-only job so the day TS 7 (the Go-native compiler) is clean on Drizzle/Fastify/Next typings is visible immediately. Not a blocker either way. `tsc --noEmit` is typecheck only; Bun executes the source. |
-| Runtime | **Bun** | Runs TypeScript source directly — no build step for the API or packages. Node is not installed in CI or production. Decided 21 Sep 2026. |
+| Runtime | **Bun** | Runs TypeScript source directly — no build step for the API or packages. Node is not installed in CI or production, with one exception: the marketing site's Astro build runs on Node, so its CI and deploy jobs set up the version in the root `package.json` `engines.node` (3 Nov 2026; the runner's own Node fell below Astro's minimum). Decided 21 Sep 2026. |
 | Package manager | **Bun** (`bun install`, workspaces, `bun.lock`) | One tool for runtime, install and test. Everything at `@latest`; reproducibility from the committed lockfile |
 | Monorepo orchestration | **Turborepo** | Task graph over Bun workspaces, remote caching, `turbo prune` for lean Docker images |
 | Formatter | **Prettier** | Single config in `packages/config` |

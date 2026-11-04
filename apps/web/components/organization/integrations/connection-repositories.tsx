@@ -26,6 +26,7 @@ import {
   useResyncGitRepository,
 } from '@hooks/use-git';
 import { useDebounced } from '@hooks/use-debounced';
+import { ProjectMark, ProjectMarkByKey } from '@components/projects/project-mark';
 import { useProjects } from '@hooks/use-projects';
 import { WEBHOOK_STATUS } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
@@ -180,8 +181,9 @@ function RepositoryRow({
               <Link
                 key={key}
                 href={`/projects/${key}/settings?tab=repositories` as Route}
-                className="inline-flex h-5 items-center rounded-sm border px-1.5 font-mono text-2xs text-text-secondary hover:border-border-strong hover:text-text"
+                className="inline-flex h-5 items-center gap-1 rounded-sm border px-1 font-mono text-2xs text-text-secondary hover:border-border-strong hover:text-text"
               >
+                <ProjectMarkByKey projectKey={key} />
                 {key}
               </Link>
             ))}
@@ -306,8 +308,9 @@ function LinkToProject({ repository }: { repository: GitRepository }) {
                   );
                 }}
               >
-                <span className="w-12 font-mono text-2xs text-text-secondary">{project.key}</span>
-                <span className="truncate">{project.name}</span>
+                <ProjectMark project={project} size="xs" />
+                <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                <span className="font-mono text-2xs text-text-muted">{project.key}</span>
               </CommandItem>
             ))}
           </CommandList>

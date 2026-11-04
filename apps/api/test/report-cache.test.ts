@@ -6,7 +6,7 @@ import {
   type ReportCacheStore,
   type ReportCacheTransaction,
 } from '../src/services/report-cache.ts';
-import { seriesSlots } from '../src/services/reports.service.ts';
+import { resolveProjectHues, seriesSlots } from '../src/services/reports.service.ts';
 
 function memoryStore() {
   const data = new Map<string, string>();
@@ -159,5 +159,39 @@ describe('series slots', () => {
 
   test('a filter that drops a small series keeps the others’ colours when the set is unchanged', () => {
     expect(seriesSlots([5, 0, 3], [0, 1, 2])).toEqual([1, null, 2]);
+  });
+});
+
+describe('project chart colours', () => {
+  const projects = (colours: string[]) =>
+    colours.map((avatar_color, i) => ({ id: i + 1, key: `P${i + 1}`, avatar_color }));
+
+  test('distinct colours stay; a later clash takes a hue no project owns', () => {
+    const hues = resolveProjectHues(projects(['green', 'green', 'yellow', 'red']));
+    expect([...hues.values()]).toEqual([
+      { hue: 'green', hue_adjusted: false, hue_striped: false },
+      { hue: 'orange', hue_adjusted: true, hue_striped: false },
+      { hue: 'yellow', hue_adjusted: false, hue_striped: false },
+      { hue: 'red', hue_adjusted: false, hue_striped: false },
+    ]);
+  });
+
+  test('the order is by id, never by the order given', () => {
+    const forward = resolveProjectHues(projects(['green', 'green']));
+    const backward = resolveProjectHues(projects(['green', 'green']).toReversed());
+    expect(backward).toEqual(forward);
+  });
+
+  test('once every hue is worn, the next clash is striped and never shares a plain treatment', () => {
+    const hues = [...resolveProjectHues(projects(Array(28).fill('green'))).values()];
+    const plain = hues.filter(h => !h.hue_striped);
+    expect(plain).toHaveLength(13);
+    expect(new Set(plain.map(h => h.hue)).size).toBe(13);
+    expect(plain.some(h => h.hue === 'gray')).toBe(false);
+    expect(hues[13]).toEqual({ hue: 'green', hue_adjusted: true, hue_striped: true });
+    const striped = hues.slice(13, 26);
+    expect(new Set(striped.map(h => h.hue)).size).toBe(13);
+    // Past 26 treatments, names alone tell projects apart.
+    expect(hues[26]).toEqual({ hue: 'green', hue_adjusted: true, hue_striped: true });
   });
 });

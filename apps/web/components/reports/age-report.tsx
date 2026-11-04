@@ -9,11 +9,22 @@ import { StatRow } from '@components/dashboard/stat-row';
 import { IssueKey } from '@components/issue-key';
 import { FieldPicker } from '@components/reports/field-picker';
 import { ReportFrame } from '@components/reports/report-frame';
-import { DrillLink, plural, scopeText, SwitchParam, formatCount } from '@components/reports/report-bits';
+import {
+  DrillLink,
+  HueNote,
+  isPeopleField,
+  PersonMark,
+  personOf,
+  plural,
+  scopeText,
+  SwitchParam,
+  formatCount,
+} from '@components/reports/report-bits';
 import { useReportState } from '@components/reports/report-state';
 import {
   AXIS_TICK,
   CategoryTick,
+  peopleByLabel,
   ChartTooltipBody,
   HatchDefs,
   niceTicks,
@@ -24,6 +35,7 @@ import {
 import { useReport } from '@hooks/use-reports';
 import { listHref } from '@lib/issue-list/links';
 import { markPaint } from '@lib/reports/colors';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
 
 const days = (n: number) => `${n.toFixed(1)} ${n === 1 ? 'day' : 'days'}`;
 
@@ -55,7 +67,7 @@ export function AgeReport() {
       }
       skeleton="bars"
       summary={d =>
-        `${plural(d.overall.count, d.unresolved_only ? 'unresolved issue' : 'issue')} ${scopeText(d.scope)}, aged from creation to ${
+        `${plural(d.overall.count, d.unresolved_only ? 'unresolved issue' : 'issue')} ${scopeText(d.scope, Boolean(state.get('projects')))}, aged from creation to ${
           d.unresolved_only ? 'now' : 'resolution, or to now while open'
         }.`
       }
@@ -77,6 +89,7 @@ export function AgeReport() {
             <>
               <AgeBars data={d} />
               <AgeTable data={d} />
+              <HueNote groups={d.groups} />
             </>
           ) : null}
         </div>
@@ -96,10 +109,12 @@ function OldestKey({ issueKey }: { issueKey: string }) {
 function AgeBars({ data }: { data: AverageAge }) {
   const ticks = niceTicks(Math.max(1, ...data.groups.map(g => g.average_days), data.overall.average_days) * 1.05);
   const router = useRouter();
+  const people = isPeopleField(data.group_by, data.groups);
   const rows = data.groups.map((g, i) => ({
     ...g,
     key: `${g.value ?? g.label}-${i}`,
     paint: markPaint(g, data.palette),
+    person: personOf(g, people),
   }));
   return (
     <BarChart
@@ -126,7 +141,7 @@ function AgeBars({ data }: { data: AverageAge }) {
         type="category"
         dataKey="label"
         width={176}
-        tick={<CategoryTick />}
+        tick={<CategoryTick people={peopleByLabel(data.groups, people)} />}
         axisLine={{ stroke: 'var(--border)' }}
         tickLine={false}
         interval={0}
@@ -151,6 +166,7 @@ function AgeBars({ data }: { data: AverageAge }) {
           return (
             <ChartTooltipBody
               title={row.label}
+              titlePerson={row.person}
               rows={[{ key: row.key, paint: row.paint, value: days(row.average_days), label: 'on average' }]}
               note={`${plural(row.count, 'issue')} · oldest ${days(row.oldest_days)}`}
             />
@@ -180,6 +196,7 @@ function AgeBars({ data }: { data: AverageAge }) {
 }
 
 function AgeTable({ data }: { data: AverageAge }) {
+  const people = isPeopleField(data.group_by, data.groups);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm tabular">
@@ -197,6 +214,8 @@ function AgeTable({ data }: { data: AverageAge }) {
               <td className="max-w-0">
                 <span className="flex min-w-0 items-center gap-2">
                   <Swatch paint={markPaint(g, data.palette)} />
+                  {data.palette === 'project' && g.value ? <ProjectMarkByKey projectKey={g.value} /> : null}
+                  {people ? <PersonMark name={g.label} {...personOf(g, true)!} /> : null}
                   <DrillLink query={g.query} className="truncate">
                     {g.label}
                   </DrillLink>

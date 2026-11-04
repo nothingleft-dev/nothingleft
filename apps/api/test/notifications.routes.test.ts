@@ -283,6 +283,9 @@ describe('across organisations', () => {
     expect(facets.projects).toContainEqual({
       key: 'XT',
       name: 'Elsewhere Ops',
+      avatar_color: expect.any(String),
+      avatar_initials: 'XT',
+      avatar_url: expect.stringContaining('/avatars/project?seed=XT'),
       organization: { slug: other, name: 'Elsewhere' },
     });
     expect(facets.projects.some((p: { key: string }) => p.key === KEY)).toBe(true);

@@ -15,12 +15,20 @@ table the chart is drawn from, so an agent and a chart never disagree.
 Across the top of a report:
 
 - The **search bar** narrows it with a query, exactly as on the issue list.
-- **View** picks a saved view, and **Projects** picks one or several projects.
+- **Saved view** picks one of your saved views, and **Projects** picks one or several projects.
 - Then come the report's own choices: the field, the sprint, the period, the people.
 - **Export CSV** downloads the numbers on screen.
 
-A table with the same numbers sits under every chart. Hover a bar, slice or cell to read its
-figure; click it to open the issues it counts.
+Beside the title, *Updated 8:48pm* says when the figures were worked out; the refresh button
+next to it picks up anything that has changed since. A report does not refresh by itself.
+
+A bar chart lists each name once, with its bar, figure and share on the same row; a pie or
+line chart has a table with the same numbers under or beside it. Hover a slice or point to
+read its figure; click a name, a figure or a slice to open the issues it counts. People appear
+with their pictures, and projects in their own colours.
+
+Durations can be read three ways - **1w 1d** (`1w 2d 3h`), **Days** or **Hours**. Days and
+weeks are your organisation's working ones, and the report says how long they are.
 
 ## Choosing what a report covers
 
@@ -46,10 +54,16 @@ year* rather than dropped.
 
 ### Issues per assignee
 
-How issues spread over the people they are assigned to. An issue assigned to both Alex Lee and
-Casey Kim counts once for each, so the report states both numbers: *12 issues; 3 have more than
-one assignee, so the bars add up to 15*. Unassigned issues are their own bar, which you can
-leave out.
+How issues spread over the people they are assigned to. Three figures lead: the issues, the
+people assigned, and how many issues have nobody - click that one for the list. People are
+listed with the most issues first; **A-Z** sorts them by name instead.
+
+An issue assigned to both Alex Lee and Casey Kim counts once for each, so the report states
+both numbers: *12 issues; 3 have more than one assignee, so the counts add up to 15 assignee
+entries*. Unassigned issues are their own row, which you can leave out. The pie shows the eight
+largest groups and puts the rest together as *Other*; the table beside it still lists everyone.
+
+It counts issues, not effort: a one-line fix and a month of work count the same.
 
 ### Issues per project
 
@@ -80,11 +94,18 @@ Remaining work across a sprint, day by day, against a straight ideal line that r
 the sprint's end date and falls only on working days. Measure it in story points, issue count
 or remaining estimate.
 
+A sentence at the top answers the question a burndown is opened for - *Behind plan by 12 points
+today: 30 left where the ideal line is at 18* - then come what is remaining, what is completed
+and how much the scope has changed since the start, with what was committed at the start and
+the days left underneath.
+
 The figures are recorded every night and when the sprint starts and finishes, so the chart
 shows how the sprint really went even after issues are edited later; today's point is read
-live. **Scope added after the start is its own line**, so *we finished nothing* and *they added
-30 points on Tuesday* look different. A sprint that has not started yet has no figures. Choose the project and the sprint at the top;
-**Daily figures** under the chart lists every day's numbers.
+live and labelled with its figure. **Scope added after the start is its own line**, so *we
+finished nothing* and *they added 30 points on Tuesday* look different. Days still to come are
+shaded. A sprint that has not started yet has no figures. Choose the project and the sprint at
+the top; **Daily figures** under the chart lists every day's numbers, with scope change and
+completed work counted from the start of the sprint to that day.
 
 ### Average issue age
 
@@ -100,8 +121,8 @@ subtask's time is never counted twice through its parent.
 
 Grouped by issue or project, each row also shows the estimate - the project's Estimation field
 if it has chosen one - the difference (negative means over the estimate) and its share of the
-total. An estimate belongs to a whole issue, so a report by person or work type shows no
-estimate.
+total; an issue nobody estimated says *No estimate*. An estimate belongs to a whole issue, so a
+report by person or work type has no estimate columns.
 
 The period is two dates, or words the search language knows: *Last week*, *This month*,
 *2026-09*, *2026-09-01 .. 2026-09-14*. It is this week unless you say otherwise, and covers at
@@ -133,6 +154,15 @@ behind it - or a person's total, for the whole period. **People** adds colleague
 Each chart uses up to eight colours, given to the eight largest groups in the field's own order,
 so a person or a priority keeps its colour however the numbers move. Anything smaller is added
 up as *Other*. A chart by status uses the statuses' own colours.
+
+A chart by project uses **each project's own colour**, the one picked in its settings. When two
+projects in the same chart share a colour, the one created later is drawn in a colour no other
+project there uses - striped, once a chart has used every colour - and a line under the chart
+says which; its settings are not changed, and it gets its own colour back in any chart where the
+two do not meet.
+
+A bar chart of people or work types is drawn in grey: the names say who, and colour is kept for
+what it means, such as a status or a project.
 
 ## Exporting
 

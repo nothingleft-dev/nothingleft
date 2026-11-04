@@ -6863,10 +6863,13 @@ paths:
                             type: array
                             items:
                               type: object
-                              required: [key, name, organization]
+                              required: [key, name, avatar_color, avatar_initials, avatar_url, organization]
                               properties:
                                 key: { type: string }
                                 name: { type: string }
+                                avatar_color: { $ref: '#/components/schemas/PaletteHue' }
+                                avatar_initials: { type: string }
+                                avatar_url: { type: string, description: The project's mark, as on Project. }
                                 organization:
                                   type: object
                                   required: [slug, name]
@@ -9893,7 +9896,7 @@ components:
         filters: { type: array, items: { $ref: '#/components/schemas/ReportFilter' } }
     ReportGroup:
       type: object
-      required: [value, label, color, category, series, count, share, query, other]
+      required: [value, label, color, category, series, count, share, query, other, avatar_url, hue, hue_adjusted, hue_striped]
       properties:
         value: { type: [string, 'null'], description: 'The name to search by; null for the empty group and Other.' }
         label: { type: string }
@@ -9904,7 +9907,14 @@ components:
         share: { type: number, description: 'Percent of the counted total, one decimal.' }
         query: { type: [string, 'null'], description: 'The issue-list query for this group; null for Other.' }
         other: { type: boolean }
-    ReportPalette: { type: string, enum: [series, label, category], description: 'Series slots, the entities'' own label colours (status), or status categories.' }
+        avatar_url: { type: [string, 'null'], description: 'The person''s picture, as a MemberRef gives it, when the group is one (assignee, a person field); null otherwise.' }
+        hue: { $ref: '#/components/schemas/ReportProjectHue' }
+        hue_adjusted: { type: boolean, description: 'True when the chart does not draw the project in its own plain colour because an earlier project in the report wears it.' }
+        hue_striped: { type: boolean, description: 'Draw `hue` striped: every plain hue is already worn in this report.' }
+    ReportProjectHue:
+      oneOf: [{ $ref: '#/components/schemas/PaletteHue' }, { type: 'null' }]
+      description: A project group's chart colour - the project's own, or the first hue no project in the report uses when an earlier project (by creation) already wears it, so the choice never follows counts or sorting. Once every hue is worn, a hue drawn striped (`hue_striped`). Null for anything that is not a project.
+    ReportPalette: { type: string, enum: [series, label, category, project], description: 'Series slots, the entities'' own label colours (status), status categories, or the projects'' own colours (`hue`).' }
     ReportCalendar:
       type: object
       required: [workday_minutes, workweek_days]
@@ -10044,7 +10054,7 @@ components:
           description: Largest first; at most 500.
           items:
             type: object
-            required: [value, label, series, spent_minutes, estimate_minutes, difference_minutes, share, query]
+            required: [value, label, series, spent_minutes, estimate_minutes, difference_minutes, share, query, avatar_url, hue, hue_adjusted, hue_striped]
             properties:
               value: { type: [string, 'null'] }
               label: { type: string }
@@ -10054,7 +10064,14 @@ components:
               difference_minutes: { type: [integer, 'null'], description: 'estimate − spent; negative is over.' }
               share: { type: number }
               query: { type: [string, 'null'] }
-        other: { type: [object, 'null'], properties: { spent_minutes: { type: integer }, groups: { type: integer } } }
+              avatar_url: { type: [string, 'null'], description: 'Grouped by person: their picture, as a MemberRef gives it; null otherwise.' }
+              hue: { $ref: '#/components/schemas/ReportProjectHue' }
+              hue_adjusted: { type: boolean }
+              hue_striped: { type: boolean }
+        other:
+          type: [object, 'null']
+          description: What a chart folds into Other - the rows without a series, which `rows` also lists, plus any beyond the 500 listed.
+          properties: { spent_minutes: { type: integer }, groups: { type: integer } }
         totals:
           type: object
           properties:

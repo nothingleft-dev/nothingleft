@@ -288,12 +288,13 @@ PR and every push to `main`; the nightly schedule runs only the report jobs.
 | Lint and typecheck | PR, push | `bun install --frozen-lockfile`, dependency policy, `format:check`, `lint`, `typecheck` |
 | Unit and integration tests | PR, push | Postgres 16 and Redis 7 as GitHub Actions **service containers**, injected as `DATABASE_URL` / `DATABASE_URL_POOLED` / `REDIS_URL` (decided 21 Sep 2026; no Testcontainers library). Migrates, then `bun run test` |
 | Migrations apply to a fresh database | PR, push | `db:migrate` from zero on its own empty Postgres, then `db:generate` must leave `packages/db/migrations` untouched — a schema edit without its migration fails here |
+| Build the marketing site | PR, push | `bun run build` in `apps/marketing` on the Node from `engines.node`, so a dependency that raises its Node floor fails here rather than at deploy |
 | **docs-sync** | PR, push | `packages/config/ci/docs-sync.ts` — fails if `apps/api/src/routes/**` changed without `docs/openapi.yaml`. No override label |
 | `typescript@next` typecheck | nightly, manual | `tsc` from `typescript@next` in every workspace. Non-blocking. Only the compiler is swapped; the `typescript@~5` library stays, because the error-catalogue test uses its compiler API, which 7.x does not ship |
 | Outdated dependencies | nightly, manual | `bun outdated --recursive`, report only |
 | Deploy API | CI green on `main`, or manual | `.github/workflows/deploy-oci.yml`: builds a release on the runner and hands it to the host's deployment controller (`infra/oci/`) |
 | Deploy web | CI green on `main`, or manual | `.github/workflows/deploy-vercel.yml` |
-| Deploy marketing | CI green on `main`, or manual | `.github/workflows/deploy-marketing.yml`: builds `apps/marketing` on the runner, runs `wrangler deploy` and sets the Worker's secrets through the Cloudflare API |
+| Deploy marketing | CI green on `main`, or manual | `.github/workflows/deploy-marketing.yml`: builds `apps/marketing` on the runner (Node from `engines.node`), runs `wrangler deploy` and sets the Worker's secrets through the Cloudflare API |
 
 Every run gets a fresh database, which the tests rely on: they leave rows
 behind by design (`users` are never deleted; each run uses unique emails).

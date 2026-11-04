@@ -4,21 +4,29 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { ChevronRight } from 'lucide-react';
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
-import { formatDuration, type WorkCalendar } from '@nothingleft/format';
+import { Bar, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
+import type { WorkCalendar } from '@nothingleft/format';
 import type { BurndownReport as Burndown, Sprint } from '@nothingleft/types';
 import { StatRow, type Stat } from '@components/dashboard/stat-row';
 import { ReportFrame } from '@components/reports/report-frame';
 import { ReportPicker } from '@components/reports/report-picker';
-import { ToggleGroup, formatCount } from '@components/reports/report-bits';
+import {
+  calendarNote,
+  durationUnitOf,
+  formatCount,
+  formatMinutes,
+  ToggleGroup,
+  UnitToggle,
+  type DurationUnit,
+} from '@components/reports/report-bits';
 import { useDefaultProject, useReportState } from '@components/reports/report-state';
 import { ProjectPicker } from '@components/reports/scope-pickers';
 import {
   AXIS_TICK,
   ChartLegend,
   ChartTooltipBody,
-  durationTicks,
   niceTicks,
+  unitTicks,
   type TooltipRow,
 } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
@@ -45,18 +53,20 @@ const calendarOf = (data: Burndown): WorkCalendar => ({
   workweekDays: data.calendar.workweek_days,
 });
 
-/** A figure in the report's unit: points to one decimal, issues whole, minutes as `1w 1d`. */
-function formatter(data: Burndown) {
+/** A figure in the report's unit: points to one decimal, issues whole, minutes in the viewer's unit. */
+function formatter(data: Burndown, unit: DurationUnit) {
   const calendar = calendarOf(data);
   const format = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return '--';
-    // Scope can shrink, so a figure may be negative; the duration format has no sign of its own.
+    if (value === null || value === undefined) return '–';
     if (value < 0) return `−${format(-value)}`;
-    if (data.unit === 'minutes') return value === 0 ? '0m' : formatDuration(Math.round(value), calendar);
+    if (data.unit === 'minutes') return formatMinutes(value, unit, calendar);
     return Number.isInteger(value) ? formatCount(value) : value.toFixed(1);
   };
   return format;
 }
+
+/** The last day with a recorded figure: today's live one for a running sprint. */
+const latestDay = (data: Burndown) => data.days.findLast(d => d.remaining !== null) ?? null;
 
 export function BurndownReport() {
   const state = useReportState('burndown');
@@ -64,6 +74,7 @@ export function BurndownReport() {
   const result = useReport('burndown', state.query, project !== null);
   const sprints = useSprints(project);
   const sprint = result.data?.sprint.slug ?? state.query.sprint ?? '';
+  const unit = durationUnitOf(state.params.get('unit'));
 
   const sprintOptions = (sprints.data ?? [])
     .toSorted(
@@ -98,6 +109,11 @@ export function BurndownReport() {
           />
         </>
       }
+      display={
+        state.get('measure') === 'remaining_estimate' ? (
+          <UnitToggle value={unit} onChange={u => state.set({ unit: u === 'duration' ? null : u })} />
+        ) : null
+      }
       pickValue={(field, value) =>
         field === 'sprint' && project
           ? state.set({ sprint: burndownSprintParam(project, value), project: null })
@@ -122,64 +138,106 @@ export function BurndownReport() {
         } · ${SPRINT_GROUP[d.sprint.state].toLowerCase()}`
       }
     >
-      {d => <BurndownBody data={d} />}
+      {d => <BurndownBody data={d} unit={unit} />}
     </ReportFrame>
   );
 }
 
-function BurndownBody({ data }: { data: Burndown }) {
-  const format = formatter(data);
+/** Where the sprint stands against its plan, in a sentence: the question a burndown is opened to answer. */
+function planSentence(data: Burndown, format: (v: number | null) => string) {
+  const day = latestDay(data);
+  if (!day || day.remaining === null || day.ideal === null) return null;
+  const gap = day.remaining - day.ideal;
+  const tolerance = Math.max(data.summary.start_scope ?? 0, 1) * 0.05;
+  const when = day.live ? 'today' : `on ${formatCalendarDateShort(day.date)}`;
+  if (Math.abs(gap) <= tolerance)
+    return { tone: 'neutral', text: `On plan ${when}: ${format(day.remaining)} left, close to the ideal line.` };
+  return gap > 0
+    ? {
+        tone: 'behind',
+        text: `Behind plan by ${format(gap)} ${when}: ${format(day.remaining)} left where the ideal line is at ${format(day.ideal)}.`,
+      }
+    : {
+        tone: 'ahead',
+        text: `Ahead of plan by ${format(-gap)} ${when}: ${format(day.remaining)} left where the ideal line is at ${format(day.ideal)}.`,
+      };
+}
+
+function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
+  const format = formatter(data, unit);
   const today = todayCalendarDate();
   const { summary } = data;
-  const added = Math.round(summary.scope_added ?? 0);
-  const daysLeft =
-    data.sprint.state === 'active' && data.sprint.end_date
-      ? Math.max(0, Math.round((Date.parse(data.sprint.end_date) - Date.parse(today)) / 86_400_000))
-      : null;
+  const added = summary.scope_added ?? 0;
+  const end = data.sprint.end_date;
+  const daysTo = end ? Math.round((Date.parse(end) - Date.parse(today)) / 86_400_000) : null;
+  const plan = planSentence(data, format);
 
   const stats: Stat[] = [
-    { label: 'Committed at the start', value: format(summary.start_scope) },
+    { label: 'Remaining', value: format(summary.remaining) },
+    { label: 'Completed', value: format(summary.completed) },
     {
-      label: 'Scope added since',
+      label: 'Scope change since the start',
       value: (
-        <span className={cn(added !== 0 && 'text-warning-fg')}>
+        <span className={cn(Math.round(added) !== 0 && 'text-warning-fg')}>
           {added > 0 ? '+' : ''}
-          {format(summary.scope_added)}
+          {Math.round(added) === 0 ? 'None' : format(added)}
         </span>
       ),
     },
-    { label: 'Completed', value: format(summary.completed) },
-    { label: 'Remaining', value: format(summary.remaining) },
-    data.sprint.state === 'completed' && data.sprint.completed_at
-      ? { label: 'Finished', value: formatCalendarDateShort(data.sprint.completed_at.slice(0, 10)) }
-      : { label: 'Days left', value: daysLeft ?? '--' },
   ];
 
+  const timing =
+    data.sprint.state === 'completed' && data.sprint.completed_at
+      ? `Finished ${formatCalendarDateShort(data.sprint.completed_at.slice(0, 10))}`
+      : data.sprint.state === 'active' && daysTo !== null && end
+        ? daysTo > 0
+          ? `${daysTo} ${daysTo === 1 ? 'day' : 'days'} left, ending ${formatCalendarDateShort(end)}`
+          : daysTo === 0
+            ? 'Ends today'
+            : `Ended ${formatCalendarDateShort(end)}, ${-daysTo} ${daysTo === -1 ? 'day' : 'days'} ago, and still running`
+        : null;
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
+      {plan ? (
+        <p className={cn('text-base font-medium', plan.tone === 'behind' && 'text-warning-fg')}>{plan.text}</p>
+      ) : null}
       <StatRow stats={stats} />
+      <p className="text-xs text-text-secondary">
+        Committed at the start: <span className="font-medium text-text tabular">{format(summary.start_scope)}</span>
+        {timing ? ` · ${timing}` : null}
+      </p>
       <ChartLegend
         items={[
           { key: 'remaining', label: 'Remaining', paint: REMAINING, shape: 'line' },
-          { key: 'scope', label: 'Scope', paint: SCOPE, shape: 'line' },
+          { key: 'scope', label: 'Scope (total committed)', paint: SCOPE, shape: 'line' },
           { key: 'ideal', label: 'Ideal', paint: IDEAL, shape: 'line' },
-          { key: 'off', label: 'Non-working day', paint: line('var(--bg-inset)') },
+          { key: 'off', label: 'Non-working day', paint: line('var(--chart-off-day)') },
+          ...(data.days.some(d => d.remaining === null && d.date > (latestDay(data)?.date ?? ''))
+            ? [{ key: 'ahead', label: 'Still to come', paint: line('var(--chart-future)') }]
+            : []),
         ]}
       />
-      <BurndownChart data={data} today={today} />
-      <DailyFigures data={data} />
+      <BurndownChart data={data} unit={unit} />
+      {data.unit === 'minutes' && unit !== 'hours' ? (
+        <p className="text-xs text-text-secondary">{calendarNote(calendarOf(data))}</p>
+      ) : null}
+      <DailyFigures data={data} unit={unit} />
     </div>
   );
 }
 
-function BurndownChart({ data, today }: { data: Burndown; today: string }) {
-  const format = formatter(data);
+function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
+  const format = formatter(data, unit);
   const peak = Math.max(1, ...data.days.flatMap(d => [d.remaining ?? 0, d.scope ?? 0, d.ideal ?? 0]));
-  const ticks =
-    data.unit === 'minutes' ? durationTicks(peak * 1.05, data.calendar.workday_minutes) : niceTicks(peak * 1.05);
+  const ticks = data.unit === 'minutes' ? unitTicks(peak * 1.05, unit, calendarOf(data)) : niceTicks(peak * 1.05);
   const top = ticks.at(-1)!;
   const rows = data.days.map(d => ({ ...d, shade: d.working_day ? null : top }));
-  const showToday = data.sprint.state === 'active' && data.days.some(d => d.date === today);
+  // The live point is today in the snapshots' own days, which the viewer's calendar can be a day off.
+  const today = data.days.find(d => d.live)?.date ?? null;
+  const latest = latestDay(data);
+  const lastIndex = latest ? data.days.indexOf(latest) : -1;
+  const future = latest ? data.days.filter(d => d.date > latest.date) : [];
 
   return (
     <ComposedChart
@@ -209,20 +267,29 @@ function BurndownChart({ data, today }: { data: Burndown; today: string }) {
         tickFormatter={(v: number) => format(v)}
         ticks={ticks}
       />
-      <Bar dataKey="shade" fill="var(--bg-inset)" isAnimationActive={false} activeBar={false} />
-      {showToday ? (
+      <Bar dataKey="shade" fill="var(--chart-off-day)" isAnimationActive={false} activeBar={false} />
+      {future.length > 0 ? (
+        <ReferenceArea
+          x1={future[0]!.date}
+          x2={future.at(-1)!.date}
+          fill="var(--chart-future)"
+          fillOpacity={1}
+          ifOverflow="extendDomain"
+        />
+      ) : null}
+      {today ? (
         <ReferenceLine
           x={today}
-          stroke="var(--text)"
-          strokeWidth={1}
-          label={{ value: 'Today', position: 'insideTopRight', fill: 'var(--text-secondary)', fontSize: 12 }}
+          stroke="var(--border-strong)"
+          strokeDasharray="2 3"
+          label={{ value: 'Today', position: 'insideTopLeft', fill: 'var(--text-muted)', fontSize: 11 }}
         />
       ) : null}
       <Line
         dataKey="ideal"
         stroke={IDEAL.fill}
-        strokeWidth={1.5}
-        strokeDasharray="4 4"
+        strokeWidth={2}
+        strokeDasharray="6 4"
         dot={false}
         activeDot={false}
         isAnimationActive={false}
@@ -231,7 +298,7 @@ function BurndownChart({ data, today }: { data: Burndown; today: string }) {
         dataKey="scope"
         type="stepAfter"
         stroke={SCOPE.fill}
-        strokeWidth={2}
+        strokeWidth={1.5}
         dot={false}
         activeDot={{ r: 4, stroke: 'var(--bg-surface)', strokeWidth: 2 }}
         isAnimationActive={false}
@@ -239,9 +306,26 @@ function BurndownChart({ data, today }: { data: Burndown; today: string }) {
       <Line
         dataKey="remaining"
         stroke={REMAINING.fill}
-        strokeWidth={2}
+        strokeWidth={2.5}
         strokeLinejoin="round"
         isAnimationActive={false}
+        label={({ x, y, index }: { x?: number | string; y?: number | string; index?: number }) =>
+          index === lastIndex && latest ? (
+            <text
+              key="latest"
+              x={Number(x)}
+              y={Number(y) - 12}
+              textAnchor="middle"
+              fill="var(--text)"
+              fontSize={12}
+              fontWeight={600}
+            >
+              {format(latest.remaining)}
+            </text>
+          ) : (
+            <g key={index} />
+          )
+        }
         activeDot={{ r: 5, stroke: 'var(--bg-surface)', strokeWidth: 2 }}
         dot={({ cx, cy, payload, index }) =>
           cx === undefined || cy === undefined || payload.remaining === null ? (
@@ -271,10 +355,8 @@ function BurndownChart({ data, today }: { data: Burndown; today: string }) {
             { key: 'ideal', paint: IDEAL, value: format(day.ideal), label: 'ideal' },
           ];
           const notes = [
-            day.completed !== null ? `${format(day.completed)} completed` : null,
-            day.scope_added
-              ? `${day.scope_added > 0 ? '+' : ''}${format(day.scope_added)} scope since the start`
-              : null,
+            day.completed !== null ? `${format(day.completed)} completed to date` : null,
+            day.scope_added ? `${day.scope_added > 0 ? '+' : ''}${format(day.scope_added)} scope change to date` : null,
             day.live ? 'Read live, not from a snapshot' : null,
             day.working_day ? null : 'Non-working day',
             day.remaining === null ? 'No figure recorded' : null,
@@ -292,9 +374,9 @@ function BurndownChart({ data, today }: { data: Burndown; today: string }) {
   );
 }
 
-function DailyFigures({ data }: { data: Burndown }) {
+function DailyFigures({ data, unit }: { data: Burndown; unit: DurationUnit }) {
   const [open, setOpen] = useState(false);
-  const format = formatter(data);
+  const format = formatter(data, unit);
   return (
     <div>
       <button
@@ -315,8 +397,8 @@ function DailyFigures({ data }: { data: Burndown }) {
                 <th className="font-medium">Remaining</th>
                 <th className="font-medium">Ideal</th>
                 <th className="font-medium">Scope</th>
-                <th className="font-medium">Scope added</th>
-                <th className="font-medium">Completed</th>
+                <th className="font-medium">Scope change to date</th>
+                <th className="font-medium">Completed to date</th>
               </tr>
             </thead>
             <tbody>

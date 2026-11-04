@@ -14,6 +14,8 @@ import { cn } from '@lib/utils';
 export interface PickerOption {
   name: string;
   mark?: ReactNode;
+  /** Muted text after the name that also matches the filter: a project's key. */
+  hint?: string;
 }
 
 interface ValueCommandProps {
@@ -76,9 +78,14 @@ export function ValueCommand({
           <CommandEmpty>No value matches.</CommandEmpty>
         )}
         {options.map(option => (
-          <CommandItem key={option.name} value={option.name} onSelect={() => onSelect(option.name)}>
+          <CommandItem
+            key={option.name}
+            value={option.hint ? `${option.name} ${option.hint}` : option.name}
+            onSelect={() => onSelect(option.name)}
+          >
             {option.mark}
             <span className="min-w-0 flex-1 truncate">{option.name}</span>
+            {option.hint ? <span className="font-mono text-2xs text-text-muted">{option.hint}</span> : null}
             <Check className={cn('size-icon-sm', option.name === selected ? 'opacity-100' : 'opacity-0')} />
           </CommandItem>
         ))}

@@ -12,6 +12,7 @@ import { ArticleRow, ArticleRowsSkeleton } from '@components/articles/article-ro
 import { useArticleSearch } from '@hooks/use-articles';
 import { useSession } from '@hooks/use-session';
 import { isApiError } from '@lib/api/errors';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
 
 export const ARTICLE_QUERY_PLACEHOLDER = 'Search articles · tag: rca status: draft updated: {minus 30d} .. Today';
 const RECENT_SORT = 'updated desc';
@@ -116,7 +117,8 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
           {groups.map(group => (
             <Fragment key={group.key}>
               {grouped ? (
-                <div className="mt-2 flex items-baseline gap-2">
+                <div className="mt-2 flex items-center gap-2">
+                  <ProjectMarkByKey projectKey={group.key} />
                   <Link
                     href={`/projects/${group.key}/articles` as Route}
                     className="font-semibold text-text hover:underline"

@@ -1,5 +1,6 @@
 'use client';
 
+import { ProjectMark } from '@components/projects/project-mark';
 import { ReportMultiPicker, ReportPicker } from '@components/reports/report-picker';
 import { useProjects } from '@hooks/use-projects';
 import { useSavedViews } from '@hooks/use-saved-views';
@@ -8,7 +9,11 @@ const splitList = (value: string) => (value ? value.split(',').filter(Boolean) :
 
 export function ProjectsPicker({ value, onChange }: { value: string; onChange: (value: string | null) => void }) {
   const projects = useProjects();
-  const options = (projects.data ?? []).map(p => ({ value: p.key, label: p.name }));
+  const options = (projects.data ?? []).map(p => ({
+    value: p.key,
+    label: p.name,
+    mark: <ProjectMark project={p} size="xs" />,
+  }));
   return (
     <ReportMultiPicker
       label="Projects"
@@ -31,7 +36,11 @@ export function ProjectPicker({ value, onChange }: { value: string; onChange: (v
       label="Project"
       value={value}
       fallback={value || 'Choose one'}
-      options={(projects.data ?? []).map(p => ({ value: p.key, label: p.name }))}
+      options={(projects.data ?? []).map(p => ({
+        value: p.key,
+        label: p.name,
+        mark: <ProjectMark project={p} size="xs" />,
+      }))}
       loading={projects.isPending}
       searchable={(projects.data?.length ?? 0) > 8}
       onChange={onChange}
@@ -59,7 +68,7 @@ export function ViewPicker({
   ];
   return (
     <ReportPicker
-      label="View"
+      label="Saved view"
       value={value}
       fallback={value || 'None'}
       options={options}

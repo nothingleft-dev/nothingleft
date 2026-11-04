@@ -24,7 +24,8 @@ import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } fr
 import { SidebarField } from '@components/issues/sidebar-field';
 import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
-import { draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
+import { draftSprint, draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
+import { ProjectMark } from '@components/projects/project-mark';
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { useSprints } from '@hooks/use-sprints';
@@ -69,7 +70,7 @@ function useFieldSpecs(
   const priority = priorities.data?.find(p => (fields.priority ? p.name === fields.priority : p.is_default));
   const status = statuses.data?.find(s => (fields.status ? s.name === fields.status : s.is_default));
   const assigned = (people.data ?? []).filter(p => fields.assignees.includes(p.username));
-  const sprint = fields.sprint ? sprints.data?.find(s => s.slug === fields.sprint) : undefined;
+  const sprint = draftSprint(fields, sprints.data);
   const set = (patch: Partial<DraftFields>) => setFields(f => ({ ...f, ...patch }));
 
   const specs: FieldSpec[] = [
@@ -205,8 +206,8 @@ function useFieldSpecs(
         <SprintCommand
           sprints={sprints.data ?? []}
           loading={sprints.isPending}
-          selected={fields.sprint ?? null}
-          onSelect={slug => (set({ sprint: slug ?? undefined }), close())}
+          selected={sprint?.slug ?? null}
+          onSelect={slug => (set({ sprint: slug }), close())}
         />
       ),
     },
@@ -404,8 +405,9 @@ export function DraftProjectPicker({ draft, className }: ProjectPickerProps) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="xs" className={cn('gap-1.5', className)} aria-label="Project">
-          <span className="font-mono text-2xs text-text-secondary">{project?.key ?? '--'}</span>
+          {project ? <ProjectMark project={project} size="xs" /> : null}
           <span className="max-w-48 truncate">{project?.name ?? 'Choose a project'}</span>
+          {project ? <span className="font-mono text-2xs text-text-muted">{project.key}</span> : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[280px] p-0">
@@ -414,7 +416,8 @@ export function DraftProjectPicker({ draft, className }: ProjectPickerProps) {
           selected={project?.name ?? null}
           options={writable.map(p => ({
             name: p.name,
-            mark: <span className="w-10 font-mono text-2xs text-text-muted">{p.key}</span>,
+            mark: <ProjectMark project={p} size="xs" />,
+            hint: p.key,
           }))}
           onSelect={name => {
             const next = writable.find(p => p.name === name);

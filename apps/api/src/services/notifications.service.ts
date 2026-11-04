@@ -27,6 +27,7 @@ import {
   type NotificationKind,
   type NotificationPreferences,
   type Pagination,
+  type PaletteHue,
   type Principal,
   type UnreadCount,
   type Unsubscribe,
@@ -281,7 +282,15 @@ export function notificationsService(deps: NotificationsDeps) {
         organizations: orgs.map(o => ({ slug: o.slug, name: o.name })),
         projects: (await notifications.projectsInInbox(scope)).map(p => {
           const o = byId.get(p.org_id)!;
-          return { key: p.key, name: p.name, organization: { slug: o.slug, name: o.name } };
+          const color = p.avatar_color as PaletteHue;
+          return {
+            key: p.key,
+            name: p.name,
+            avatar_color: color,
+            avatar_initials: p.avatar_initials,
+            avatar_url: access.marks.project(p.key, color),
+            organization: { slug: o.slug, name: o.name },
+          };
         }),
       };
     },

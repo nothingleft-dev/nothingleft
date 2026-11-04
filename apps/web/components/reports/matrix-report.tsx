@@ -9,11 +9,21 @@ import type { MatrixReport as Matrix, ReportGroup } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { FieldPicker } from '@components/reports/field-picker';
 import { ReportFrame } from '@components/reports/report-frame';
-import { DrillLink, plural, scopeText, ToggleGroup } from '@components/reports/report-bits';
+import {
+  DrillLink,
+  HueNote,
+  isPeopleField,
+  PersonMark,
+  personOf,
+  plural,
+  scopeText,
+  ToggleGroup,
+} from '@components/reports/report-bits';
 import { useReportState } from '@components/reports/report-state';
 import {
   AXIS_TICK,
   CategoryTick,
+  peopleByLabel,
   ChartLegend,
   ChartTooltipBody,
   HatchDefs,
@@ -26,6 +36,7 @@ import { groupFieldLabel } from '@lib/issue-list/groups';
 import { listHref } from '@lib/issue-list/links';
 import { markPaint } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
+import { ProjectMarkByKey } from '@components/projects/project-mark';
 
 const HEAT_STEPS = 5;
 const heatStep = (count: number, max: number) =>
@@ -96,14 +107,19 @@ export function MatrixReport() {
       }
       skeleton="grid"
       summary={d =>
-        `${plural(d.total_issues, 'issue')} ${scopeText(d.scope)}.${
+        `${plural(d.total_issues, 'issue')} ${scopeText(d.scope, Boolean(state.get('projects')))}.${
           d.multi_valued
             ? ' An issue with more than one value counts in each of its cells, so the cells can add up to more than the totals.'
             : ''
         }`
       }
     >
-      {d => (chart === 'stacked' ? <MatrixStacked data={d} /> : <MatrixTable data={d} cellStyle={cellStyle} />)}
+      {d => (
+        <>
+          {chart === 'stacked' ? <MatrixStacked data={d} /> : <MatrixTable data={d} cellStyle={cellStyle} />}
+          <HueNote groups={[...d.rows.groups, ...d.columns.groups]} />
+        </>
+      )}
     </ReportFrame>
   );
 }
@@ -112,10 +128,21 @@ function useCells(data: Matrix): CellMap {
   return useMemo(() => new Map(data.cells.map(c => [cellKey(c.row, c.column), c])), [data.cells]);
 }
 
-function AxisLabel({ group, palette }: { group: ReportGroup; palette: Matrix['rows']['palette'] }) {
+function AxisLabel({
+  group,
+  palette,
+  people,
+}: {
+  group: ReportGroup;
+  palette: Matrix['rows']['palette'];
+  people: boolean;
+}) {
+  const person = personOf(group, people);
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
       <Swatch paint={markPaint(group, palette)} />
+      {palette === 'project' && group.value ? <ProjectMarkByKey projectKey={group.value} /> : null}
+      {person ? <PersonMark name={group.label} {...person} small /> : null}
       <DrillLink query={group.query} className="truncate">
         {group.label}
       </DrillLink>
@@ -150,7 +177,11 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
                   className="h-9 max-w-40 min-w-22 border-b px-2 text-center text-xs font-medium whitespace-nowrap text-text-secondary"
                 >
                   <span className="inline-flex max-w-36 items-center">
-                    <AxisLabel group={g} palette={data.columns.palette} />
+                    <AxisLabel
+                      group={g}
+                      palette={data.columns.palette}
+                      people={isPeopleField(data.columns.field, data.columns.groups)}
+                    />
                   </span>
                 </th>
               ))}
@@ -161,7 +192,11 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
             {data.rows.groups.map((row, i) => (
               <tr key={i}>
                 <th className="sticky left-0 z-10 h-9 max-w-64 border-b border-border-subtle bg-surface px-3 text-left font-normal">
-                  <AxisLabel group={row} palette={data.rows.palette} />
+                  <AxisLabel
+                    group={row}
+                    palette={data.rows.palette}
+                    people={isPeopleField(data.rows.field, data.rows.groups)}
+                  />
                 </th>
                 {data.columns.groups.map((_, j) => {
                   const cell = cells.get(cellKey(i, j));
@@ -274,10 +309,20 @@ function MatrixStacked({ data }: { data: Matrix }) {
     ...Object.fromEntries(data.columns.groups.map((_, j) => [`c${j}`, cells.get(cellKey(i, j))?.count ?? 0])),
   }));
   const paints = data.columns.groups.map(g => markPaint(g, data.columns.palette));
+  const columnPeople = isPeopleField(data.columns.field, data.columns.groups);
+  const rowPeople = isPeopleField(data.rows.field, data.rows.groups);
+  const rowPerson = new Map(data.rows.groups.map(g => [g.label, personOf(g, rowPeople)]));
 
   return (
     <div className="flex flex-col gap-3">
-      <ChartLegend items={data.columns.groups.map((g, j) => ({ key: `c${j}`, label: g.label, paint: paints[j]! }))} />
+      <ChartLegend
+        items={data.columns.groups.map((g, j) => ({
+          key: `c${j}`,
+          label: g.label,
+          paint: paints[j]!,
+          person: personOf(g, columnPeople),
+        }))}
+      />
       <BarChart
         layout="vertical"
         data={rows}
@@ -294,7 +339,7 @@ function MatrixStacked({ data }: { data: Matrix }) {
           type="category"
           dataKey="label"
           width={176}
-          tick={<CategoryTick />}
+          tick={<CategoryTick people={peopleByLabel(data.rows.groups, rowPeople)} />}
           axisLine={{ stroke: 'var(--border)' }}
           tickLine={false}
           interval={0}
@@ -306,6 +351,7 @@ function MatrixStacked({ data }: { data: Matrix }) {
             active && payload?.length ? (
               <ChartTooltipBody
                 title={String(label)}
+                titlePerson={rowPerson.get(String(label))}
                 rows={payload
                   .filter(p => Number(p.value) > 0)
                   .map(p => {
@@ -315,6 +361,7 @@ function MatrixStacked({ data }: { data: Matrix }) {
                       paint: paints[j]!,
                       value: String(p.value),
                       label: data.columns.groups[j]!.label,
+                      person: personOf(data.columns.groups[j]!, columnPeople),
                     };
                   })}
               />

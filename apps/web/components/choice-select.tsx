@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Command, CommandItem, CommandList } from '@components/ui/command';
@@ -11,6 +11,8 @@ export interface ChoiceOption<T extends string> {
   value: T;
   label: string;
   hint: string;
+  /** Drawn before the label in the list and the trigger: a project's mark. */
+  mark?: ReactNode;
 }
 
 interface ChoiceSelectProps<T extends string> {
@@ -57,7 +59,10 @@ export function ChoiceSelect<T extends string>({
             disabled={disabled}
             className="justify-between"
           >
-            <span className="truncate">{selected?.label ?? 'Choose a role'}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              {selected?.mark}
+              <span className="truncate">{selected?.label ?? 'Choose a role'}</span>
+            </span>
             <ChevronsUpDown className="size-icon-sm shrink-0 text-text-muted" />
           </Button>
         </PopoverTrigger>
@@ -79,7 +84,10 @@ export function ChoiceSelect<T extends string>({
                 >
                   <Check className={cn('mt-0.5 size-icon-sm', option.value === value ? 'opacity-100' : 'opacity-0')} />
                   <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-medium">{option.label}</span>
+                    <span className="flex items-center gap-2 font-medium">
+                      {option.mark}
+                      {option.label}
+                    </span>
                     <span className="text-xs text-text-muted">{option.hint}</span>
                   </span>
                 </CommandItem>

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Download } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReportEmpty } from '@nothingleft/types';
@@ -87,12 +87,26 @@ export function ReportFrame<D extends FramedReport>({
         title={def.title}
         meta={
           data ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xs">as of {formatTime(data.generated_at)}</span>
-              </TooltipTrigger>
-              <TooltipContent>Figures as of {formatDateTimeWithZone(data.generated_at)}</TooltipContent>
-            </Tooltip>
+            <span className="inline-flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs">Updated {formatTime(data.generated_at)}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Figures as of {formatDateTimeWithZone(data.generated_at)}. Any change since is picked up on refresh.
+                </TooltipContent>
+              </Tooltip>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Refresh the figures"
+                title="Refresh the figures"
+                disabled={result.isFetching}
+                onClick={() => void result.refetch()}
+              >
+                <RefreshCw className={cn('size-3.5', result.isFetching && 'animate-spin')} />
+              </Button>
+            </span>
           ) : null
         }
         actions={

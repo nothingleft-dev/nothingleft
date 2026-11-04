@@ -10,6 +10,7 @@ import type {
   Issue,
   IssueLinkName,
   IssueRef,
+  Sprint,
   TagRef,
 } from '@nothingleft/types';
 import { fieldsForType } from '@components/custom-fields/field-types';
@@ -19,6 +20,7 @@ import { useDiscardDrafts, useUploader } from '@hooks/use-attachments';
 import { useApiError } from '@hooks/use-api-error';
 import { useCreateIssue } from '@hooks/use-issues';
 import { useProjects } from '@hooks/use-projects';
+import { useSprints } from '@hooks/use-sprints';
 
 const LAST_PROJECT_KEY = 'nl:create-issue:last-project';
 
@@ -46,14 +48,20 @@ export interface DraftFields {
   estimate?: string;
   start_date?: string;
   due_date?: string;
-  /** A sprint's slug. */
-  sprint?: string;
+  /** A sprint's slug; null leaves the issue unscheduled. Absent takes the running sprint. */
+  sprint?: string | null;
   story_points?: number;
   /** By slug. Absent takes the field's default; null clears it even so. */
   custom: Record<string, CustomFieldValueInput>;
 }
 
 export const EMPTY_FIELDS: DraftFields = { assignees: [], custom: {} };
+
+/** The sprint the new issue joins: the one chosen, else the project's running sprint. */
+export const draftSprint = (fields: DraftFields, sprints: readonly Sprint[] | undefined): Sprint | undefined =>
+  fields.sprint === null
+    ? undefined
+    : (sprints ?? []).find(s => (fields.sprint === undefined ? s.state === 'active' : s.slug === fields.sprint));
 
 const isEmptyInput = (value: CustomFieldValueInput) =>
   value === null || value === '' || value === false || (Array.isArray(value) && value.length === 0);
@@ -128,6 +136,7 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
   const [showRequired, setShowRequired] = useState(false);
   const customFields = useCustomFields(projectKey);
   const types = useSchemaValues(projectKey, 'types');
+  const sprint = draftSprint(fields, useSprints(projectKey).data);
   const typeName = fields.type ?? types.data?.find(t => t.is_default)?.name ?? null;
   const applicable = fieldsForType(customFields.data ?? [], typeName);
   // A checkbox is never required, so false never counts as missing for one.
@@ -161,7 +170,7 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
         ...(fields.estimate && project?.time_tracking_enabled !== false ? { estimate: fields.estimate } : {}),
         ...(fields.start_date ? { start_date: fields.start_date } : {}),
         ...(fields.due_date ? { due_date: fields.due_date } : {}),
-        ...(fields.sprint ? { sprint: fields.sprint } : {}),
+        ...(sprint ? { sprint: sprint.slug } : {}),
         ...(fields.story_points !== undefined ? { story_points: fields.story_points } : {}),
         ...(parent ? { parent } : {}),
         ...(Object.keys(custom).length ? { custom_fields: custom } : {}),
