@@ -38,8 +38,10 @@ Decided with the owner on 25 Sep 2026.
   `@nothingleft/db`, `@nothingleft/analytics`, the API's aliases (`@services/*`,
   `@lib/*`, …) or a database driver in both packages, and a test pins each package's
   dependency list.
-- **Releasing the shim:** bump `version` in `packages/mcp-stdio/package.json`; that field
-  is the only copy (the shim's user agent reads it). After CI passes on `main`, the
+- **Releasing the shim:** bump `version` in `packages/mcp-stdio/package.json` and in
+  `packages/mcp/package.json` together (the shim's user agent reads the first, the server's
+  `serverInfo.version` the second, and a test keeps them equal), and add a changelog entry to
+  `packages/mcp-stdio/README.md`. After CI passes on `main`, the
   [publish workflow](../.github/workflows/publish-mcp.yml) publishes any version npm does
   not have yet and tags it `mcp-v<version>`. Commits that leave the version alone publish
   nothing, so no manual tag is needed. It runs in the `npm` environment, which holds
@@ -52,6 +54,14 @@ Decided with the owner on 25 Sep 2026.
   `Mcp-Session-Id`, and `GET`/`DELETE` answer `405`. It serves 2025-era requests and the
   2026-07-28 revision; the route forwards `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name`
   to the SDK, which refuses a 2026-07-28 request without them (`-32020`).
+- **Event streams are streamed, never buffered (7 Nov 2026).** A `text/event-stream` answer
+  goes out as it is written: `subscriptions/listen` holds its stream open with the SDK's 15 s
+  keepalive comments, and its acknowledgement must arrive at once. Buffering it sent nothing
+  until Cloudflare gave up at 100 s (`524`), by which time Claude Code had dropped the request
+  and, on the late error for an id it had forgotten, the whole connection. The route aborts the
+  SDK request when the client's connection closes. The stdio shim relays each event as it
+  arrives, aborts a request the client sends `notifications/cancelled` for, and never answers
+  it afterwards.
 - **Only a PAT.** The existing auth middleware resolves `Authorization: Bearer nl_pat_…`;
   no credential, a bad token or a session cookie answers `401 auth.pat_required` in the
   ordinary error envelope. Every other `/mcp` answer is JSON-RPC, not the envelope —

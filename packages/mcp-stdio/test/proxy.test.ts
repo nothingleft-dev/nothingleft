@@ -9,7 +9,7 @@ const sse = (...messages: object[]) =>
 function harness(respond: (r: Request) => Response | Promise<Response>) {
   const out: object[] = [];
   const seen: Request[] = [];
-  const handle = createProxy({
+  const proxy = createProxy({
     url: 'http://127.0.0.1:4000/mcp',
     token: 'nl_pat_secret',
     version: '0.0.0',
@@ -19,7 +19,7 @@ function harness(respond: (r: Request) => Response | Promise<Response>) {
     },
     write: line => out.push(JSON.parse(line)),
   });
-  return { handle, out, seen };
+  return { handle: proxy.handle, close: proxy.close, out, seen };
 }
 
 describe('the stdio proxy', () => {
@@ -129,5 +129,107 @@ describe('the stdio proxy', () => {
     await h.handle(call(6));
     await h.handle(call(7, { inputResponses: { confirm: { action: 'accept', content: { proceed: true } } } }));
     expect(h.out).toEqual([asking, done]);
+  });
+
+  test('an open subscription stream is relayed as each event arrives, not when it ends', async () => {
+    let push!: (text: string) => void;
+    let end!: () => void;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const bytes = new TextEncoder();
+        push = text => controller.enqueue(bytes.encode(text));
+        end = () => controller.close();
+      },
+    });
+    const h = harness(() => new Response(body, { headers: { 'content-type': 'text/event-stream' } }));
+    const done = h.handle('{"jsonrpc":"2.0","id":"listen:0","method":"subscriptions/listen","params":{}}');
+    push(': keepalive\n\n');
+    push('data: {"jsonrpc":"2.0","method":"notifications/subscriptions/acknowledged","params":{}}\n\n');
+    await Bun.sleep(10);
+    expect(h.out).toEqual([{ jsonrpc: '2.0', method: 'notifications/subscriptions/acknowledged', params: {} }]);
+    push('data: {"jsonrpc":"2.0","method":"notifications/tools/list_changed"}\n\n');
+    end();
+    await done;
+    expect(h.out).toHaveLength(2);
+  });
+
+  test('a cancelled request is aborted and never answered', async () => {
+    const h = harness(async r => {
+      if ((await r.clone().text()).includes('notifications/cancelled')) return new Response(null, { status: 202 });
+      return new Promise<Response>((_resolve, reject) =>
+        r.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))),
+      );
+    });
+    const pending = h.handle('{"jsonrpc":"2.0","id":"listen:0","method":"subscriptions/listen","params":{}}');
+    await Bun.sleep(10);
+    await h.handle('{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":"listen:0"}}');
+    await pending;
+    expect(h.seen[0]!.signal.aborted).toBe(true);
+    expect(h.out).toEqual([]);
+  });
+
+  test('an edge timeout on a live request is still reported against it', async () => {
+    const h = harness(() => new Response('<html>524</html>', { status: 524 }));
+    await h.handle('{"jsonrpc":"2.0","id":9,"method":"tools/list"}');
+    expect(h.out).toEqual([
+      { jsonrpc: '2.0', id: 9, error: { code: -32000, message: 'HTTP 524 from http://127.0.0.1:4000/mcp' } },
+    ]);
+  });
+
+  test('a request cancelled while its JSON answer is still arriving ends quietly', async () => {
+    let started!: () => void;
+    const begun = new Promise<void>(resolve => (started = resolve));
+    const h = harness(async r => {
+      if ((await r.clone().text()).includes('notifications/cancelled')) return new Response(null, { status: 202 });
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"jsonrpc":"2.0",'));
+          r.signal.addEventListener('abort', () => controller.error(new DOMException('aborted', 'AbortError')));
+          started();
+        },
+      });
+      return new Response(body, { headers: { 'content-type': 'application/json' } });
+    });
+    const pending = h.handle('{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"x"}}');
+    await begun;
+    await h.handle('{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":3}}');
+    await pending;
+    expect(h.out).toEqual([]);
+  });
+
+  test('close ends every open stream, so the shim can exit when the client goes', async () => {
+    const h = harness(
+      r =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              r.signal.addEventListener('abort', () => controller.error(new DOMException('aborted', 'AbortError')));
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' } },
+        ),
+    );
+    const pending = h.handle('{"jsonrpc":"2.0","id":"listen:0","method":"subscriptions/listen","params":{}}');
+    await Bun.sleep(10);
+    h.close();
+    await pending;
+    expect(h.out).toEqual([]);
+  });
+
+  test('a stream that sends a broken event is reported once and closed', async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: not json\n\n'));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const h = harness(() => new Response(body, { headers: { 'content-type': 'text/event-stream' } }));
+    await h.handle('{"jsonrpc":"2.0","id":4,"method":"tools/list"}');
+    expect(cancelled).toBe(true);
+    expect(h.out).toHaveLength(1);
+    expect((h.out[0] as { id: number }).id).toBe(4);
   });
 });

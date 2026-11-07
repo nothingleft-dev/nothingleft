@@ -199,6 +199,48 @@ describe('the /mcp mount', () => {
   });
 });
 
+describe('subscription streams', () => {
+  test('subscriptions/listen is acknowledged at once and stays open, never buffered until the edge times out', async () => {
+    const base = await app.listen({ port: 0, host: '127.0.0.1' });
+    const gone = new AbortController();
+    const res = await fetch(`${base}/mcp`, {
+      method: 'POST',
+      signal: AbortSignal.any([gone.signal, AbortSignal.timeout(5_000)]),
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        'mcp-protocol-version': '2026-07-28',
+        'mcp-method': 'subscriptions/listen',
+        authorization: `Bearer ${w.full}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'listen:0',
+        method: 'subscriptions/listen',
+        params: {
+          notifications: { toolsListChanged: true },
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': { name: 'nothingleft-tests', version: '0.0.0' },
+          },
+        },
+      }),
+    });
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+    let seen = '';
+    const deadline = Date.now() + 3_000;
+    while (!seen.includes('notifications/subscriptions/acknowledged') && Date.now() < deadline) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      seen += value;
+    }
+    expect(seen).toContain('notifications/subscriptions/acknowledged');
+    gone.abort();
+  });
+});
+
 describe('tools/list', () => {
   test('registers every tool with annotations; destructive ones are the destructive definitions, and none takes confirm', async () => {
     const { result } = parse((await rpc(w.full, 'tools/list')).body);

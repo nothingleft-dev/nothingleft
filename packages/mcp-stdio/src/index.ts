@@ -13,7 +13,7 @@ if (!token || !token.startsWith('nl_pat_')) {
   process.exit(1);
 }
 
-const handle = createProxy({
+const proxy = createProxy({
   url: process.env['NOTHINGLEFT_MCP_URL'] ?? DEFAULT_URL,
   token,
   fetch: request => fetch(request),
@@ -25,10 +25,11 @@ const handle = createProxy({
 const pending = new Set<Promise<void>>();
 const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
 lines.on('line', line => {
-  const task = handle(line).finally(() => pending.delete(task));
+  const task = proxy.handle(line).finally(() => pending.delete(task));
   pending.add(task);
 });
 lines.on('close', async () => {
+  proxy.close();
   await Promise.all(pending);
   process.exit(0);
 });
