@@ -17,3 +17,9 @@ describe('the MCP packages depend on nothing past the REST API', () => {
     expect(Object.keys((shim as { dependencies?: object }).dependencies ?? {})).toEqual(ALLOWED.shim);
   });
 });
+
+describe('one version for the hosted server and the shim', () => {
+  test('the shim on npm names the server release it was published with', () => {
+    expect(shim.version).toBe(server.version);
+  });
+});

@@ -370,6 +370,88 @@ describe('issues', () => {
   });
 });
 
+describe('a repeated create replays instead of creating again', () => {
+  const createdKey = (text: string) => new RegExp(`Created \\*\\*(${KEY}-\\d+)\\*\\*`).exec(text)?.[1];
+  const notice = message('mcp.replayed', { tool: 'create_issue' });
+  // Own tokens: the suite's shared ones run close to the per-PAT rate limit.
+  const own = { contributor: '', admin: '' };
+  beforeAll(async () => {
+    [own.contributor, own.admin] = await Promise.all([pat(w.contributor, ALL), pat(w.admin, ALL)]);
+  });
+
+  test('the same arguments again return the first issue, with a notice, and create nothing', async () => {
+    const args = { project: KEY, title: 'Timed out on the client', type: 'Bug' };
+    const first = await ok(own.contributor, 'create_issue', args);
+    expect(first).not.toContain(notice);
+    const again = await ok(own.contributor, 'create_issue', args);
+    expect(again.startsWith(notice)).toBe(true);
+    expect(createdKey(again)).toBe(createdKey(first));
+  });
+
+  test('a retry that reorders tags or re-cases the project is still the same create', async () => {
+    const first = await ok(own.contributor, 'create_issue', { project: KEY, title: 'Reordered', tags: ['ui', 'bug'] });
+    const again = await ok(own.contributor, 'create_issue', {
+      project: KEY.toLowerCase(),
+      title: 'Reordered',
+      tags: ['bug', 'ui'],
+    });
+    expect(again.startsWith(notice)).toBe(true);
+    expect(createdKey(again)).toBe(createdKey(first));
+  });
+
+  test('a new client_ref creates a deliberate duplicate; the same one replays', async () => {
+    const args = { project: KEY, title: 'Follow up', client_ref: 'follow-up-1' };
+    const first = createdKey(await ok(own.contributor, 'create_issue', args));
+    const second = createdKey(await ok(own.contributor, 'create_issue', { ...args, client_ref: 'follow-up-2' }));
+    expect(second).not.toBe(first);
+    expect(createdKey(await ok(own.contributor, 'create_issue', args))).toBe(first);
+  });
+
+  test('one client_ref with other arguments is refused, not created', async () => {
+    await ok(own.contributor, 'create_issue', { project: KEY, title: 'First wording', client_ref: 'wording' });
+    recorded = [];
+    const r = await tool(own.contributor, 'create_issue', {
+      project: KEY,
+      title: 'Second wording',
+      client_ref: 'wording',
+    });
+    expect(r.code).toBe('mcp.repeat_differs');
+  });
+
+  test('the same arguments from another person are their own issue', async () => {
+    const args = { project: KEY, title: 'Both filed this' };
+    const mine = createdKey(await ok(own.contributor, 'create_issue', args));
+    const theirs = createdKey(await ok(own.admin, 'create_issue', args));
+    expect(theirs).not.toBe(mine);
+  });
+
+  test('a refused create is not pinned: the same arguments run again once the cause is fixed', async () => {
+    const args = { project: KEY, title: 'Needs the tag', tags: ['replay-pin'], type: 'Replay Kind' };
+    expect((await tool(own.contributor, 'create_issue', args)).isError).toBe(true);
+    const added = await w.call(w.admin, 'POST', `/v1/projects/${KEY}/types`, { name: 'Replay Kind' });
+    expect(added.statusCode).toBeLessThan(300);
+    const text = await ok(own.contributor, 'create_issue', args);
+    expect(text).not.toContain(notice);
+  });
+
+  test('client_ref never reaches the API, even from a tool that forwards its arguments', async () => {
+    const text = await ok(own.admin, 'create_board', { project: KEY, name: 'Replay board', client_ref: 'board-1' });
+    expect(text).toContain('Created board **Replay board**');
+    expect(
+      await ok(own.admin, 'create_board', { project: KEY, name: 'Replay board', client_ref: 'board-1' }),
+    ).toContain(message('mcp.replayed', { tool: 'create_board' }));
+  });
+
+  test('add_comment repeated with the same body leaves one comment', async () => {
+    const issue = await newIssue();
+    await ok(own.contributor, 'add_comment', { issue, body: 'Looks fixed on staging' });
+    const again = await ok(own.contributor, 'add_comment', { issue, body: 'Looks fixed on staging' });
+    expect(again.startsWith(message('mcp.replayed', { tool: 'add_comment' }))).toBe(true);
+    const comments = await w.call(w.admin, 'GET', `/v1/issues/${issue}/comments`);
+    expect(comments.json().data).toHaveLength(1);
+  });
+});
+
 describe('links', () => {
   test('link_issues and unlink_issues by the names people use', async () => {
     const [a, b] = [await newIssue(), await newIssue()];

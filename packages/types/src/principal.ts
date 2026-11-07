@@ -8,7 +8,7 @@ export type Principal =
       tokenId: number;
       scopes: readonly PatScope[];
       projectIds: readonly number[] | null;
-      // Set when the MCP server made the call, for the MCP-vs-UI figures only: never an access decision.
+      // Set when the MCP server made the call, for the MCP-vs-UI figures and the replay window: never an access decision.
       client?: 'mcp';
     };
 

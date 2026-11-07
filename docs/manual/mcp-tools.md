@@ -166,6 +166,7 @@ Creates an issue with everything in one call: title, markdown description, type,
 | `links` | list of object |  | e.g. [{ link: "depends on", issues: ["PP-4"] }]. |
 | `custom_fields` | object |  | Custom field values by field name or slug, e.g. {"Severity": "High", "platforms": ["Web", "iOS"], "Reviewer": "@casey", "Launch": "2026-10-01", "Budget": 12.5, "Blocking": true, "Review time": "1h 30m"}. Options by name, people as @username, me or a full name, dates YYYY-MM-DD, datetimes ISO, durations "1h 30m". null clears one. describe_project_schema and list_custom_fields list the fields. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_issue`
 
@@ -284,6 +285,7 @@ Adds a custom field to a project: name, type, options for a select, the issue ty
 | `decimals` | number |  | number: decimal places allowed. |
 | `position` | number |  | 0 is first. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_custom_field`
 
@@ -392,6 +394,7 @@ Adds a markdown comment to an issue, or to a knowledge base article (project and
 | `article` | string |  | Instead of issue: a knowledge base article by slug or title, with project. |
 | `body` | string | yes | The comment. @username mentions notify people exactly as in the app, in markdown. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_comment`
 
@@ -507,6 +510,7 @@ Logs spent time on an issue: a duration on one date (default today in your timez
 | `note` | string |  | What was done, in markdown. |
 | `author` | string |  | Log on behalf of this member (Project Admins). |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `list_work_items`
 
@@ -602,6 +606,7 @@ Attaches a file to an issue, a comment or a work item - or to a knowledge base a
 | `comment` | number |  | A comment number on the issue or article: the file belongs to it. |
 | `work_item` | number |  | A work item number on the issue. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `complete_upload`
 
@@ -682,6 +687,7 @@ Saves a query under a name, for you alone or shared with a project or the organi
 | `project` | string |  | Required for project visibility. |
 | `sort` | string |  | e.g. "priority, updated desc". |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_view`
 
@@ -751,6 +757,7 @@ Plans a sprint in a project. Dates are optional (Unscheduled until set); `add_un
 | `end_date` | string |  | A calendar date, YYYY-MM-DD. |
 | `add_unresolved_from` | string |  | Another sprint whose unresolved issues move into this one. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_sprint`
 
@@ -881,6 +888,7 @@ Creates a board: columns mapped to statuses, priorities or types (a value sits i
 | `swimlane_field` | `assignee` · `priority` · `type` |  |  |
 | `swimlane_types` | list of string |  | Types whose issues are lanes, e.g. ["Epic"]. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_board`
 
@@ -973,6 +981,7 @@ Writes a knowledge base article in one call: title, markdown body, parent (up to
 | `before` | string |  | Place it immediately before this sibling (slug or title). Without before or after it goes last. |
 | `after` | string |  | Place it immediately after this sibling (slug or title). Without before or after it goes last. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_article`
 
@@ -1126,6 +1135,7 @@ Creates a project with the default statuses, priorities, types and work types. T
 | `key` | string |  | 2–10 letters or digits, e.g. "PP". |
 | `description` | string |  | What the project is for, in markdown. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_project`
 
@@ -1179,6 +1189,7 @@ Creates an organisation with you as its Owner. The slug is derived from the name
 |---|---|---|---|
 | `name` | string | yes |  |
 | `slug` | string |  |  |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_org_settings`
 
@@ -1472,6 +1483,7 @@ Adds a rule that sets an issue's status when something happens in git (a branch,
 | `name` | string |  | Its name; left out, the rule as a sentence names it. |
 | `enabled` | boolean |  | Off creates it without running it. Default on. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `update_automation`
 
@@ -1549,6 +1561,7 @@ Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000
 | `mapping` | object |  | Issue field → the CSV column that fills it, e.g. {"title": "Summary", "status": "State", "custom:severity": "Severity"}. Fields: title (required), description, status, priority, type, assignees, estimate, story_points, start_date, due_date, tags, sprint, parent, custom:<slug>. Columns left out are ignored. |
 | `dry_run` | boolean |  | Check every row without creating anything. Default true. |
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `get_import_status`
 
@@ -1571,6 +1584,7 @@ Starts a full export of the organisation: one .zip with every project, issue, co
 | Argument | Type | Required | Description |
 |---|---|---|---|
 | `org` | string |  | Organisation slug, e.g. "acme". Only needed when you belong to more than one organisation; list_orgs shows the slugs. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `get_export_status`
 
@@ -1623,6 +1637,7 @@ Emails an invitation to join an organisation, or a project within it. Up to 50 a
 | `project` | string |  | Project key, e.g. "PP". Invites into that project as well as its organisation. |
 | `org_role` | `Member` · `Org Admin` |  | Role in the organisation. Default Member. |
 | `project_role` | `Observer` · `Contributor` · `Project Admin` |  | Role in `project`. Default Contributor. Needs `project`. |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `create_invite_link`
 
@@ -1639,6 +1654,7 @@ Creates a share link that lets anyone who opens it join the organisation, or a p
 | `max_uses` | number |  | How many people may join with it. Default unlimited. |
 | `expires_on` | string |  | Last day the link works, as YYYY-MM-DD in your timezone. Default: it never expires. |
 | `allowed_email_domain` | string |  | Only accounts with an email at this domain may join, e.g. "acme.com". |
+| `client_ref` | string |  | Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate. |
 
 ### `manage_roles`
 

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { REPORT_CACHE_TTL_SECONDS, REPORT_VERSION_TTL_SECONDS } from '@config/constants';
+import { canonicalJson } from '@lib/canonical-json';
 
 /** The slice of the Redis client the report cache needs; typed structurally so tests can stand one in. */
 export interface ReportCacheStore {
@@ -16,15 +17,6 @@ export interface ReportCacheTransaction {
 }
 
 const versionKey = (orgId: number) => `report:v:${orgId}`;
-
-/** JSON with object keys sorted, so equal parameters always hash alike. */
-export function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, (_key, v: unknown) =>
-    v && typeof v === 'object' && !Array.isArray(v)
-      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
-      : v,
-  );
-}
 
 /**
  * Report results by organisation data version: any write in the organisation bumps the version,

@@ -377,6 +377,7 @@ export const createArticle = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/projects/{key}/articles', 'GET /v1/projects/{key}/articles/{slug}'],
   async run(ctx, args) {
     const key = projectKey(args.project);

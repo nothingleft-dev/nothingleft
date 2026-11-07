@@ -324,6 +324,7 @@ export const createOrg = defineTool({
     slug: z.string().trim().min(1).max(100).optional(),
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/organizations'],
   async run(ctx, args) {
     const { data: o } = await ctx.api.send<Organization>('POST', '/v1/organizations', { body: args });
@@ -348,6 +349,7 @@ export const createProject = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['GET /v1/organizations', 'POST /v1/projects'],
   async run(ctx, args) {
     const org = await resolveOrganization(ctx, args.org);

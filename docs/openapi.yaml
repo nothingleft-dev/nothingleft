@@ -10826,7 +10826,8 @@ components:
         Any mutating request. The first response is stored for 24 hours per credential and
         replayed, with `Idempotent-Replayed: true`, for the same key and body. The same key with
         a different body answers `422`; while the first is still running, `409`. 5xx and 429
-        responses are not stored, so a retry runs again.
+        responses are not stored, so a retry runs again. Requests the MCP server makes are kept
+        for 10 minutes, and their 4xx responses are not stored either.
       schema: { type: string, minLength: 1, maxLength: 255 }
     OrganizationSlug:
       name: slug

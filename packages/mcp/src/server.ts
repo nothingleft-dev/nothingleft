@@ -14,6 +14,7 @@ import {
 import type { z } from 'zod';
 import { t } from '@nothingleft/i18n';
 import type { Me, Organization } from '@nothingleft/types';
+import { version } from '../package.json' with { type: 'json' };
 import { apiClient, type ApiClient, type Fetch } from './api.ts';
 import { ToolError, type ToolErrorBody } from './errors.ts';
 import { errorMarkdown, join } from './render.ts';
@@ -48,7 +49,6 @@ export interface McpServerOptions {
   appBaseUrl: string;
   fetch: Fetch;
   requestId?: string;
-  version?: string;
   onToolCall?: (event: ToolCallEvent) => void;
   /** Shared across requests by a long-lived handler; without one, each call looks the timezone up. */
   timeZones?: TimeZoneCache;
@@ -106,7 +106,30 @@ function canonical(value: unknown): string {
 }
 
 async function callDigest(tool: ToolDefinition, args: Record<string, unknown>): Promise<string> {
-  const bytes = new TextEncoder().encode(`${tool.name}\0${canonical(args)}`);
+  return sha256(`${tool.name}\0${canonical(args)}`);
+}
+
+const UNORDERED_LISTS = ['tags', 'assignees'] as const;
+
+// A retry that reorders a set or re-cases a project key is still the same create.
+function asRepeatable<T extends Record<string, unknown>>(args: T): T {
+  const out: Record<string, unknown> = { ...args };
+  if (typeof out['project'] === 'string') out['project'] = out['project'].toUpperCase();
+  for (const name of UNORDERED_LISTS) {
+    const list = out[name];
+    if (Array.isArray(list) && list.every(v => typeof v === 'string')) out[name] = [...list].sort();
+  }
+  return out as T;
+}
+
+// A client_ref replaces the arguments in the key: the same ref with other arguments is refused, never created twice.
+async function createSeed(tool: ToolDefinition, args: Record<string, unknown>): Promise<string> {
+  const ref = args['client_ref'];
+  return `mcp.${typeof ref === 'string' ? await sha256(`${tool.name}\0ref\0${ref}`) : await callDigest(tool, args)}`;
+}
+
+async function sha256(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
   return Array.from(digest, b => b.toString(16).padStart(2, '0')).join('');
 }
@@ -161,12 +184,13 @@ async function confirmation(
 }
 
 /** One API client and its per-call caches; everything a tool, resource or prompt reaches data through. */
-function contextFor(options: McpServerOptions): { ctx: ToolContext; api: ApiClient } {
+function contextFor(options: McpServerOptions, idempotencySeed?: string): { ctx: ToolContext; api: ApiClient } {
   const api = apiClient({
     baseUrl: options.apiBaseUrl,
     token: options.token,
     fetch: options.fetch,
     ...(options.requestId ? { requestId: options.requestId } : {}),
+    ...(idempotencySeed ? { idempotencySeed } : {}),
   });
   let orgs: Promise<Organization[]> | undefined;
   let zone: Promise<string> | undefined;
@@ -197,7 +221,7 @@ function contextFor(options: McpServerOptions): { ctx: ToolContext; api: ApiClie
 
 export function createMcpServer(options: McpServerOptions): McpServer {
   const server = new McpServer(
-    { name: 'nothingleft', title: 'Nothing Left', version: options.version ?? '0.0.0' },
+    { name: 'nothingleft', title: 'Nothing Left', version },
     { instructions: t('mcp.provenance.notice') },
   );
   const codec = createRequestStateCodec<AskedFor>({
@@ -226,7 +250,7 @@ function registerTool(
     },
     async (raw: unknown, request: ServerContext) => {
       const started = performance.now();
-      const { ctx, api } = contextFor(options);
+      let api: ApiClient | undefined;
       const argumentCount = raw && typeof raw === 'object' ? Object.keys(raw).length : 0;
       const report = (errorCode: string | null) =>
         options.onToolCall?.({
@@ -235,11 +259,18 @@ function registerTool(
           error_code: errorCode,
           duration_ms: Math.round(performance.now() - started),
           argument_count: argumentCount,
-          api_calls: api.calls,
+          api_calls: api?.calls ?? 0,
         });
 
       try {
-        const args = parseArguments(tool.name, tool.input, raw);
+        const given = parseArguments(tool.name, tool.input, raw);
+        const parsed = tool.creates ? asRepeatable(given) : given;
+        // client_ref only shapes the idempotency key; a tool that forwards its arguments must never send it.
+        const args = { ...parsed };
+        delete (args as { client_ref?: string }).client_ref;
+        const context = contextFor(options, tool.creates ? await createSeed(tool, parsed) : undefined);
+        api = context.api;
+        const { ctx } = context;
         if (tool.kind === 'destructive' && (tool.deletes?.(args) ?? true)) {
           const question = await confirmation(codec, tool, ctx, args, request);
           // The answer arrives as a retry of this call; that retry is the call reported.
@@ -247,7 +278,11 @@ function registerTool(
         }
         const result = await tool.run(ctx, args);
         report(null);
-        return { content: [{ type: 'text' as const, text: result.markdown }] };
+        const text =
+          tool.creates && api.replayed
+            ? join(t('mcp.replayed', { tool: tool.name }), result.markdown)
+            : result.markdown;
+        return { content: [{ type: 'text' as const, text }] };
       } catch (error) {
         if (!(error instanceof ToolError)) throw error;
         const body = inArgumentTerms(tool, error.body);

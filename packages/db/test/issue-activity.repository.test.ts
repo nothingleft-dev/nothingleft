@@ -27,6 +27,18 @@ describe('issueActivityRepository tenant isolation', () => {
     });
   });
 
+  test("recordMany writes every row in one organisation and refuses another organisation's issue", async () => {
+    await inRolledBackTx(async tx => {
+      const repo = issueActivityRepository(tx);
+      const { ctxA, ctxB, alice, issueA } = await seedIssueWorld(tx);
+      await repo.recordMany(ctxA, [row(issueA.id, alice), row(issueA.id, alice, 'commented')]);
+      expect(await repo.count(ctxA, issueA.id)).toBe(2);
+      expect(await repo.count(ctxB, issueA.id)).toBe(0);
+      await repo.recordMany(ctxA, []);
+      await expect(repo.recordMany(ctxB, [row(issueA.id, alice)])).rejects.toThrow();
+    });
+  });
+
   test('pages oldest first after a cursor id', async () => {
     await inRolledBackTx(async tx => {
       const repo = issueActivityRepository(tx);

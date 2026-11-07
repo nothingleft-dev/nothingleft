@@ -69,6 +69,7 @@ export const logTime = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/issues/{key}/work-items', 'GET /v1/issues/{key}', 'GET /v1/me'],
   async run(ctx, args) {
     const key = issueKey(args.issue);

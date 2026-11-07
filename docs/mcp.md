@@ -128,8 +128,29 @@ request_id `01937f2a-…`
   put the slug in the path, so the kernel resolves it by the same rule — named, else the
   sole membership, else `organization_ambiguous` with the candidate slugs — and an
   unknown slug answers `organization.not_found` listing the real ones.
-- Every write carries a fresh `Idempotency-Key`; a dropped connection is retried once
-  with the same key.
+- Every write carries an `Idempotency-Key`; a dropped connection is retried once with the
+  same key. Most writes get a fresh random key per call.
+- **A creating tool's keys come from the call itself (8a, 7 Nov 2026).** The tools marked
+  `creates` (every `create_*`, `add_comment`, `log_time`, `upload_attachment`, `invite_member`,
+  `start_csv_import`, `request_org_export`) derive the key from a SHA-256 of the tool name and the
+  canonical JSON of the parsed arguments, numbered per write within the call. Before hashing,
+  `project` is upper-cased and `tags` and `assignees` are sorted, and the tool runs with those
+  normalised arguments, so a retry that reorders a set or re-cases a key is the same create. A client that times
+  out and calls again with the same arguments therefore replays the first call's responses
+  instead of adding a second record, and the answer starts with `mcp.replayed`. The API already
+  scopes keys to the token and organisation, so two people, or two tokens, never share one.
+  - `client_ref` (optional, on those tools only, added by `defineTool`) replaces the arguments in
+    the key: the same ref replays, a new ref creates a deliberate duplicate, and one ref reused
+    with other arguments answers `mcp.repeat_differs` (the API's `idempotency.key_reused`).
+  - When the repeat arrives while the first call is still running (`409 idempotency.in_progress`),
+    the tool waits 0.5, 1, 2, 4 and 8 seconds, then answers `mcp.repeat_pending` (retry unchanged;
+    a new `client_ref` would create a second one). It never creates.
+  - Only creating tools derive keys. An update repeated with the same arguments after a change in
+    between (Done, then Open, then Done again) must run every time, which a derived key would
+    replay away.
+  - The replay window for keys the MCP server sends is 10 minutes, and a refused (4xx) MCP write
+    is not stored, so a create that failed runs again once its cause is fixed
+    ([api-conventions.md § Idempotency](./api-conventions.md#idempotency)).
 - Every tool carries MCP annotations: reads `readOnlyHint`, destructive tools
   `destructiveHint`.
 - Destructive tools ask the person before anything changes ([§ Design rules 7](#7-destructive-operations-ask-the-person)).

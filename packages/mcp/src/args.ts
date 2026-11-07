@@ -48,6 +48,16 @@ export const markdown = (what: string) => z.string().max(300_000).describe(`${wh
 
 export const cursor = z.string().max(200).optional().describe('From the previous page\'s "Pass cursor" line.');
 
+export const clientRef = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .optional()
+  .describe(
+    'Your own label for this create. A repeat with the same arguments or the same client_ref within 10 minutes returns the first result instead of creating again; pass a new client_ref to create a deliberate duplicate.',
+  );
+
 export const tagList = (what: string) =>
   z.array(z.string().trim().min(1).max(100)).max(50).describe(`${what}, by name or slug. A new name is created.`);
 

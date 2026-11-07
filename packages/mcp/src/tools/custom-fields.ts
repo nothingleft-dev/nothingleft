@@ -240,6 +240,7 @@ export const createCustomField = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/projects/{key}/custom-fields'],
   async run(ctx, args) {
     const key = args.project.toUpperCase();

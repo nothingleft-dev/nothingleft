@@ -54,6 +54,7 @@ export const IDEMPOTENCY_KEY_HEADER = 'idempotency-key';
 export const IDEMPOTENCY_REPLAYED_HEADER = 'idempotent-replayed';
 export const IDEMPOTENCY_KEY_MAX_LENGTH = 255;
 export const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
+export const MCP_IDEMPOTENCY_TTL_SECONDS = 10 * 60;
 
 export const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 export const OAUTH_STATE_COOKIE_NAME = 'oauth_state';

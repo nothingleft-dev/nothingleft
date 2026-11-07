@@ -2,7 +2,7 @@ import { LABEL_COLORS, type LabelColor, type TagInput } from '@nothingleft/types
 import type { TagRow, TenantContext } from '@nothingleft/db';
 import { slugify } from '@nothingleft/format';
 import { AppError } from '@lib/errors';
-import { recordIssueEvent } from '@services/issue-history';
+import { recordIssueEvents } from '@services/issue-history';
 import type { TenantRepos } from '@services/transaction';
 
 // Shared by the tags routes, issue creation and articles, so a tag applied any way obeys one set of rules.
@@ -75,11 +75,13 @@ export async function applyTags(
       rows.map(r => r.id),
     ),
   );
-  const changeGroupId = Bun.randomUUIDv7();
-  for (const row of rows.filter(r => applied.has(r.id)).sort((a, b) => a.slug.localeCompare(b.slug))) {
-    await recordIssueEvent(repos.issueActivity, { ctx, issueId, actorId, changeGroupId, at }, 'tagged', {
-      new_value: { name: row.name },
-    });
-  }
+  const change = { ctx, issueId, actorId, changeGroupId: Bun.randomUUIDv7(), at };
+  await recordIssueEvents(
+    repos.issueActivity,
+    rows
+      .filter(r => applied.has(r.id))
+      .sort((a, b) => a.slug.localeCompare(b.slug))
+      .map(row => ({ change, kind: 'tagged' as const, values: { new_value: { name: row.name } } })),
+  );
   return { applied: applied.size, created };
 }

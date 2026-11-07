@@ -48,6 +48,7 @@ export const addComment = defineTool({
     'Adds a markdown comment to an issue, or to a knowledge base article (project and article). @username mentions notify. Returns the comment.',
   input: z.strictObject({ ...on, body, org: arg.org }),
   kind: 'write',
+  creates: true,
   endpoints: [
     'POST /v1/issues/{key}/comments',
     'GET /v1/projects/{key}/articles',

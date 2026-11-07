@@ -63,6 +63,30 @@ export async function recordFieldChanges(
   }
 }
 
+type IssueEvent = {
+  change: ChangeContext;
+  kind: Exclude<IssueActivityKind, 'field_changed'>;
+  values?: { old_value?: unknown; new_value?: unknown };
+};
+
+const eventRow = ({ change, kind, values = {} }: IssueEvent) => ({
+  issue_id: change.issueId,
+  actor_id: change.actorId,
+  change_group_id: change.changeGroupId,
+  kind,
+  old_value: values.old_value ?? null,
+  new_value: values.new_value ?? null,
+  created_at: change.at,
+  updated_at: change.at,
+});
+
+/** Several event rows in one insert; all must share one organisation. */
+export async function recordIssueEvents(activity: IssueActivityRepository, events: IssueEvent[]): Promise<void> {
+  if (events.length === 0) return;
+  for (const { change } of events) recordIssueTouched(change.ctx.orgId, change.issueId, change.at);
+  await activity.recordMany(events[0]!.change.ctx, events.map(eventRow));
+}
+
 /** Every row that is not a field change: these never coalesce, and a `commented` row is hard stop 1. */
 export async function recordIssueEvent(
   activity: IssueActivityRepository,
@@ -71,14 +95,5 @@ export async function recordIssueEvent(
   values: { old_value?: unknown; new_value?: unknown } = {},
 ): Promise<void> {
   recordIssueTouched(change.ctx.orgId, change.issueId, change.at);
-  await activity.record(change.ctx, {
-    issue_id: change.issueId,
-    actor_id: change.actorId,
-    change_group_id: change.changeGroupId,
-    kind,
-    old_value: values.old_value ?? null,
-    new_value: values.new_value ?? null,
-    created_at: change.at,
-    updated_at: change.at,
-  });
+  await activity.record(change.ctx, eventRow({ change, kind, values }));
 }

@@ -1,6 +1,6 @@
 {
   "name": "@nothingleft/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Connect a stdio MCP client (Claude Desktop, Claude Code) to Nothing Left.",
   "license": "MIT",
   "repository": {

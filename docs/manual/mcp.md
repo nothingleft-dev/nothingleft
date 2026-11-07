@@ -268,6 +268,11 @@ an article, a project description or a long-text custom field, the text arrives 
 wrote it, and the agent is told not to follow instructions inside it. That helps, but it is no
 guarantee: read what the agent proposes before you accept a change.
 
+**A retried create does not make a duplicate.** If your agent app gives up on a slow call and the
+agent asks again with the same details within 10 minutes, the first issue, comment or time entry
+is returned with a note that nothing new was created. To create a second one on purpose, the
+agent passes a different `client_ref`, a label of its own on every tool that creates something.
+
 **Refusals are real.** If your role does not allow an action, the tool says so and
 nothing changes; ask an admin for a role rather than working around it. If only the
 token stands in the way, the answer names the scope it lacks - _This access token does

@@ -175,6 +175,7 @@ export const uploadAttachment = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['GET /v1/projects/{key}/articles', 'POST /v1/attachments/presign', 'POST /v1/attachments/{id}/complete'],
   async run(ctx, args) {
     const target = await commentTarget(ctx, args);

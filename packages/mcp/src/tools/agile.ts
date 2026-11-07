@@ -175,6 +175,7 @@ export const createSprint = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/projects/{key}/sprints'],
   async run(ctx, args) {
     const { data: s } = await ctx.api.send<Sprint>('POST', path`/v1/projects/${args.project.toUpperCase()}/sprints`, {
@@ -684,6 +685,7 @@ export const createBoard = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/projects/{key}/boards'],
   async run(ctx, args) {
     const { project, org, ...body } = args;

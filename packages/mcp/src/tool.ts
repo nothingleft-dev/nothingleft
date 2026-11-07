@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import type { Organization } from '@nothingleft/types';
 import type { ApiClient } from './api.ts';
+import { clientRef } from './args.ts';
 
 export interface ToolContext {
   api: ApiClient;
@@ -31,6 +32,11 @@ export interface ToolDefinition<S extends z.ZodObject = z.ZodObject> {
   input: S;
   kind: ToolKind;
   endpoints: readonly Endpoint[];
+  /**
+   * Adds a new record on every call. A retry with the same arguments, or the same `client_ref`,
+   * within the API's MCP replay window answers with the first call's result instead of adding another.
+   */
+  creates?: true;
   /** A destructive tool that deletes only on some calls: whether this one does. Absent, every call does. */
   deletes?: (args: z.output<S>) => boolean;
   /** Destructive tools: what the call would do, put to the person before it runs. */
@@ -38,7 +44,8 @@ export interface ToolDefinition<S extends z.ZodObject = z.ZodObject> {
   run: (ctx: ToolContext, args: z.output<S>) => Promise<ToolResult>;
 }
 
-export const defineTool = <S extends z.ZodObject>(tool: ToolDefinition<S>): ToolDefinition<S> => tool;
+export const defineTool = <S extends z.ZodObject>(tool: ToolDefinition<S>): ToolDefinition<S> =>
+  tool.creates ? { ...tool, input: tool.input.extend({ client_ref: clientRef }) as unknown as S } : tool;
 
 /** Why an operation has no tool; `x-mcp-exempt` in docs/openapi.yaml names one (mcp.md § Deliberately UI-only). */
 export const EXEMPT_CATEGORIES = [

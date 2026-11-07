@@ -10,7 +10,7 @@ import type { IssueLinkEnds, IssueRow, IssuesRepository, ProjectRow, TenantConte
 import { formatIssueKey, parseIssueKey } from '@nothingleft/format';
 import { AppError } from '@lib/errors';
 import { checkParent, recordParentChange } from '@services/issue-hierarchy';
-import { recordIssueEvent } from '@services/issue-history';
+import { recordIssueEvents } from '@services/issue-history';
 import type { TenantRepos } from '@services/transaction';
 
 // Shared by the links routes and issue creation, so a link made either way obeys one set of rules.
@@ -133,15 +133,13 @@ export async function recordBothSides(
   const changeGroupId = Bun.randomUUIDv7();
   const side = (issueId: number, name: LinkName, issue: IssueRow) => {
     const value: IssueLinkSnapshot = { link: name.name, issue: w.keyOf(issue) };
-    return recordIssueEvent(
-      repos.issueActivity,
-      { ctx: w.ctx, issueId, actorId: w.actorId, changeGroupId, at: w.at },
+    return {
+      change: { ctx: w.ctx, issueId, actorId: w.actorId, changeGroupId, at: w.at },
       kind,
-      kind === 'linked' ? { new_value: value } : { old_value: value },
-    );
+      values: kind === 'linked' ? { new_value: value } : { old_value: value },
+    };
   };
-  await side(self.id, link, other);
-  await side(other.id, inverseOf(link), self);
+  await recordIssueEvents(repos.issueActivity, [side(self.id, link, other), side(other.id, inverseOf(link), self)]);
 }
 
 /** Inside the caller's transaction, with `self` locked; the first refusal throws and undoes them all. */

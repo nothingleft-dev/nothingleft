@@ -307,6 +307,7 @@ export const createIssue = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/issues', 'GET /v1/projects/{key}/custom-fields'],
   async run(ctx, args) {
     const project = args.project.toUpperCase();

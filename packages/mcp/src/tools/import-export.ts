@@ -124,6 +124,7 @@ export const startCsvImport = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: [
     'POST /v1/projects/{key}/imports',
     'POST /v1/projects/{key}/imports/{id}/complete',
@@ -255,6 +256,7 @@ export const requestOrgExport = defineTool({
     'Starts a full export of the organisation: one .zip with every project, issue, comment, article, sprint and custom field as JSON, plus the files. It is built in the background and kept for 7 days; the person asking is emailed when it is ready, and get_export_status gives a download link. One runs at a time, so asking again while one is pending answers that one. Needs an Org Admin and a token with admin:org.',
   input: z.strictObject({ org: arg.org }),
   kind: 'write',
+  creates: true,
   endpoints: ['GET /v1/organizations', 'POST /v1/organizations/{slug}/exports'],
   async run(ctx, args) {
     const org = await resolveOrganization(ctx, args.org);

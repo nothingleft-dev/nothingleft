@@ -155,6 +155,7 @@ export const createAutomation = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['GET /v1/projects/{key}/automations/templates', 'POST /v1/projects/{key}/automations'],
   async run(ctx, args) {
     const key = args.project.toUpperCase();
