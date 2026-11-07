@@ -88,6 +88,12 @@ export function retagQuery(query: Query, from: readonly Pick<TagRow, 'name' | 's
       changed = true;
       return { ...clause, query: inner };
     }
+    if (clause.kind === 'or') {
+      const branches = clause.branches.map(branch => retagQuery(branch, from, to));
+      if (branches.every(b => b === null)) return clause;
+      changed = true;
+      return { ...clause, branches: branches.map((b, i) => b ?? clause.branches[i]!) };
+    }
     if (clause.kind !== 'attribute' || clause.attribute !== 'tag') return clause;
     const seen = new Set<string>();
     const values: Value[] = [];

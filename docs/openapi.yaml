@@ -11098,7 +11098,9 @@ components:
         saved view nor a value), `query.missing_value`, `query.invalid_range`,
         `query.not_sortable`, `query.unknown_link`, `query.expected_subquery`,
         `query.unbalanced_braces`, `query.unterminated_quote`, `query.unexpected_token`,
-        `query.unexpected_end`, `query.saved_view_cycle`; or `search.project_required`.
+        `query.unexpected_end`, `query.saved_view_cycle`, `query.unbalanced_parentheses`,
+        `query.dangling_operator` (`or` / `and` with nothing on one side), `query.empty_group`,
+        `query.sort_in_group`; or `search.project_required`.
       content:
         application/json:
           schema:

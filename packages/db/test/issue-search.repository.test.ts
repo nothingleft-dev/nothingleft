@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { issueRegistry, parse, sortKeysOf, type Query } from '@nothingleft/query';
 import { issueSearchRepository, type SearchScope } from '../src/repositories/issue-search.repository.ts';
 import { issuesRepository } from '../src/repositories/issues.repository.ts';
@@ -239,6 +240,115 @@ describe('issueSearchRepository.search', () => {
       expect(await find('aggregate Parent for: {status: {In Progress}}')).toEqual([2]);
       expect(await find('aggregate Depends on: {#Star}')).toEqual([3]);
       expect(await find('depends on: -AC-4')).toEqual([1, 2, 4]);
+    });
+  });
+
+  test('links: matches every link type both ways, and or / parentheses combine them in one query', async () => {
+    await inRolledBackTx(async tx => {
+      const { ctxA, projectA, alice } = await world(tx);
+      const issues = issuesRepository(tx);
+      const projects = projectsRepository(tx);
+      const ac = async (n: number) =>
+        (await tx.select().from(schema.issues)).find(r => r.project_id === projectA && r.key_number === n)!;
+      const one = await ac(1);
+      const lonely = await issues.insert(ctxA, {
+        project_id: projectA,
+        key_number: await projects.claimIssueNumber(ctxA, projectA),
+        title: 'Nothing links here',
+        status_id: one.status_id,
+        priority_id: one.priority_id,
+        type_id: one.type_id,
+        created_by: alice,
+        updated_by: alice,
+      });
+      expect(lonely.key_number).toBe(5);
+      await tx.insert(schema.issue_links).values({
+        org_id: ctxA.orgId,
+        from_issue_id: (await ac(1)).id,
+        to_issue_id: (await ac(4)).id,
+        type: 'relates',
+        created_by: alice,
+      });
+      const find = (text: string) => keys(tx, ctxA, [projectA], text, 'key');
+
+      expect(await find('links: AC-2')).toEqual([3]);
+      expect(await find('links: AC-3')).toEqual([2, 4]);
+      expect(await find('links: AC-4')).toEqual([1, 3]);
+      expect(await find('links: -AC-3')).toEqual([1, 3, 5]);
+      expect(await find('aggregate links: {#Star}')).toEqual([1, 3]);
+      expect(await find('has: links')).toEqual([1, 2, 3, 4]);
+      expect(await find('has: -links')).toEqual([5]);
+
+      expect(await find('links: AC-2 or links: AC-4')).toEqual([1, 3]);
+      expect(await find('(subtask of: AC-2 or relates to: AC-4) type: Feature')).toEqual([3]);
+      expect(await find('type: Feature or #Star')).toEqual([3, 4]);
+      expect(await find('(type: Feature or #Star) -{redirect}')).toEqual([3, 4]);
+
+      const repo = issueSearchRepository(tx);
+      const merged = await repo.search(ctxA, scopeOf([projectA]), q('links: AC-3 or links: AC-4'), {
+        sort: [],
+        groupBy: 'status',
+        limit: 50,
+        offset: 0,
+      });
+      expect(merged.total).toBe(4);
+      expect(merged.groups!.reduce((sum, g) => sum + g.count, 0)).toBe(4);
+
+      await tx
+        .update(schema.issues)
+        .set({ deleted_at: NOW })
+        .where(eq(schema.issues.id, (await ac(3)).id));
+      expect(await find('links: AC-3')).toEqual([]);
+    });
+  });
+
+  test('mentions: the description and live comments, never a deleted comment', async () => {
+    await inRolledBackTx(async tx => {
+      const { ctxA, projectA, alice, fixed, progress, open } = await world(tx);
+      const [comment, gone] = await tx
+        .insert(schema.comments)
+        .values([
+          { org_id: ctxA.orgId, issue_id: open.id, author_id: alice, body_md: 'ping', created_at: NOW },
+          {
+            org_id: ctxA.orgId,
+            issue_id: fixed.id,
+            author_id: alice,
+            body_md: 'ping',
+            created_at: NOW,
+            deleted_at: NOW,
+          },
+        ])
+        .returning();
+      await tx.insert(schema.mentions).values([
+        {
+          org_id: ctxA.orgId,
+          source_type: 'issue',
+          source_id: progress.id,
+          issue_id: progress.id,
+          mentioned_user_id: alice,
+        },
+        {
+          org_id: ctxA.orgId,
+          source_type: 'comment',
+          source_id: comment!.id,
+          issue_id: open.id,
+          mentioned_user_id: alice,
+        },
+        {
+          org_id: ctxA.orgId,
+          source_type: 'comment',
+          source_id: gone!.id,
+          issue_id: fixed.id,
+          mentioned_user_id: alice,
+        },
+      ]);
+      const find = (text: string) => keys(tx, ctxA, [projectA], text, 'key');
+      const username = (await tx.select().from(schema.org_members)).find(m => m.user_id === alice)!.username;
+      expect(await find('mentions: me')).toEqual([3, 4]);
+      expect(await find(`mentions: @${username}`)).toEqual([3, 4]);
+      expect(await find('mentions: -me')).toEqual([1, 2]);
+      expect(await find('has: mentions')).toEqual([3, 4]);
+      expect(await find('mentions: me or #Resolved')).toEqual([2, 3, 4]);
     });
   });
 

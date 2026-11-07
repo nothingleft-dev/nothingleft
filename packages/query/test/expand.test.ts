@@ -41,6 +41,10 @@ describe('expandSavedViews', () => {
   test('shorthandNames and sortKeysOf see through views', () => {
     expect(shorthandNames(q('#{Outer} aggregate Subtask of: {#Critical}')).sort()).toEqual(['Critical', 'Outer']);
     expect(sortKeysOf(expandSavedViews(q('#{Outer}'), lookup))).toEqual([{ attribute: 'updated', direction: 'desc' }]);
+    expect(sortKeysOf(expandSavedViews(q('#{Outer} or #Critical'), lookup))).toEqual([
+      { attribute: 'updated', direction: 'desc' },
+    ]);
+    expect(shorthandNames(q('(#Critical or #{Outer}) login'))).toEqual(['Critical', 'Outer']);
     expect(sortKeysOf(expandSavedViews(q('#{Outer} sort by: key'), lookup))).toEqual([
       { attribute: 'key', direction: 'asc' },
     ]);

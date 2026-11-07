@@ -29,6 +29,9 @@ const analytics: Analytics = {
 let recorded: string[] = [];
 const exercised = new Set<string>();
 
+// Responses to POST /v1/issues to lose after the API has committed them, as a dropped connection would.
+let lostIssueResponses = 0;
+
 async function injectFetch(request: Request): Promise<Response> {
   const url = new URL(request.url);
   if (url.hostname === 's3.test.local') {
@@ -50,6 +53,10 @@ async function injectFetch(request: Request): Promise<Response> {
     headers,
     ...(request.body ? { payload: await request.text() } : {}),
   });
+  if (lostIssueResponses > 0 && request.method === 'POST' && url.pathname === '/v1/issues') {
+    lostIssueResponses -= 1;
+    throw new TypeError('socket hang up');
+  }
   return new Response(res.statusCode >= 300 && res.statusCode < 400 ? null : res.body, {
     status: res.statusCode,
     headers: res.headers as Record<string, string>,
@@ -205,6 +212,34 @@ describe('search', () => {
     expect(r.isError).toBe(true);
     expect(r.code).toBe('query.invalid_value');
     expect(r.text).toContain('`Open`');
+  });
+
+  test('open bugs of a feature, linked as subtask or as related, counted in one call', async () => {
+    const feature = await newIssue({ type: 'Feature', title: 'Partner billing' });
+    const child = await newIssue({ type: 'Bug', parent: feature, title: 'Invoice total rounds down' });
+    const related = await newIssue({ type: 'Bug', title: 'Export misses the partner name' });
+    const both = await newIssue({ type: 'Bug', parent: feature, title: 'Totals drift after refund' });
+    await w.call(w.admin, 'POST', `/v1/issues/${related}/links`, { link: 'relates to', issues: [feature] });
+    await w.call(w.admin, 'POST', `/v1/issues/${both}/links`, { link: 'relates to', issues: [feature] });
+    await newIssue({ type: 'Bug', title: 'Unlinked bug' });
+
+    recorded = [];
+    const combined = await ok(t.contributor, 'search_issues', {
+      query: `type: Bug #Unresolved (subtask of: ${feature} or relates to: ${feature})`,
+      group_by: 'type',
+    });
+    expect(recorded.filter(c => c.startsWith('GET /v1/issues')).length).toBe(1);
+    expect(combined).toMatch(/^\*\*3 issues\*\*/);
+    for (const key of [child, related, both]) expect(combined).toContain(`| ${key} |`);
+    expect(combined).toContain('Groups: Bug 3');
+
+    const anyLink = await ok(t.contributor, 'search_issues', { query: `type: Bug links: ${feature}` });
+    expect(anyLink).toMatch(/^\*\*3 issues\*\*/);
+  });
+
+  test('a malformed or is an instructive error with its place in the query', async () => {
+    const r = await tool(t.contributor, 'search_issues', { query: 'type: Bug or' });
+    expect(r.code).toBe('query.dangling_operator');
   });
 
   test('suggest_query completes attributes and values', async () => {
@@ -440,6 +475,27 @@ describe('a repeated create replays instead of creating again', () => {
     expect(
       await ok(own.admin, 'create_board', { project: KEY, name: 'Replay board', client_ref: 'board-1' }),
     ).toContain(message('mcp.replayed', { tool: 'create_board' }));
+  });
+
+  const titled = async (title: string) =>
+    ((await w.call(w.admin, 'GET', `/v1/issues?q=${encodeURIComponent(`"${title}"`)}`)).json().data as unknown[])
+      .length;
+
+  test('a response lost after the API committed is recovered by the retry, and one issue exists', async () => {
+    lostIssueResponses = 1;
+    const text = await ok(own.contributor, 'create_issue', { project: KEY, title: 'Lost on the way back' });
+    expect(text).toContain('Created **');
+    expect(lostIssueResponses).toBe(0);
+    expect(await titled('Lost on the way back')).toBe(1);
+  });
+
+  test('when every attempt loses its response, the agent repeating the call gets the first issue', async () => {
+    lostIssueResponses = 2;
+    const failed = await tool(own.contributor, 'create_issue', { project: KEY, title: 'Lost twice' });
+    expect(failed.code).toBe('mcp.api_unreachable');
+    const again = await ok(own.contributor, 'create_issue', { project: KEY, title: 'Lost twice' });
+    expect(again.startsWith(notice)).toBe(true);
+    expect(await titled('Lost twice')).toBe(1);
   });
 
   test('add_comment repeated with the same body leaves one comment', async () => {

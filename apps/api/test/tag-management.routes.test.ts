@@ -85,6 +85,14 @@ describe('rename and recolour', () => {
     expect(found.json().data.map((i: { key: string }) => i.key)).toEqual([key]);
   });
 
+  test('a rename reaches a tag inside an or group', async () => {
+    await newIssue(['blocked-on-partner']);
+    await view('Blocked or urgent', '(tag: blocked-on-partner or #Critical) #Unresolved');
+    const res = await w.call(w.projectAdmin, 'PATCH', '/v1/tags/blocked-on-partner', { name: 'Waiting on partner' });
+    expect(res.statusCode).toBe(200);
+    expect(await viewQuery('Blocked or urgent')).toBe('(tag: {Waiting on partner} or #Critical) #Unresolved');
+  });
+
   test('a name another tag already has is refused, pointing at merge', async () => {
     await newIssue(['taken-a', 'taken-b']);
     const res = await w.call(w.admin, 'PATCH', '/v1/tags/taken-a', { name: 'Taken B' });

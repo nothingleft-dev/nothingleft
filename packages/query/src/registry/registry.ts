@@ -41,6 +41,8 @@ export interface LinkDefinition {
   name: string;
   type: string;
   direction: 'outward' | 'inward';
+  /** Overrides the generic "by {type} link" label in suggestions. */
+  description?: Label;
 }
 
 export interface Registry {
@@ -92,3 +94,11 @@ export function buildRegistry({
 }
 
 export const ISSUE_LINKS: readonly LinkDefinition[] = ISSUE_LINK_NAMES;
+
+/** `links:` matches every link type in both directions, parent and subtask included; search only, never a link to create. */
+export const ANY_LINK: LinkDefinition = {
+  name: 'links',
+  type: 'any',
+  direction: 'outward',
+  description: { key: 'query.attribute.links' },
+};

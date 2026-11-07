@@ -9,6 +9,7 @@ import {
   QueryError,
   shorthandNames,
   sortKeysOf,
+  subqueries,
   suggest,
   vocabularyNeeds,
   withoutGitAttributes,
@@ -156,7 +157,7 @@ function countCustom(query: Query, registry: Registry): number {
   let n = 0;
   for (const clause of query.clauses) {
     if (clause.kind === 'attribute' && registry.attribute(clause.attribute)?.custom) n += 1;
-    else if (clause.kind === 'aggregate' || clause.kind === 'view') n += countCustom(clause.query, registry);
+    else for (const nested of subqueries(clause)) n += countCustom(nested, registry);
   }
   return n;
 }

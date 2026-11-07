@@ -21,6 +21,7 @@ const rel = (sign: -1 | 1, amount: number, unit: string): Value =>
 const range = (from: Value | null, to: Value | null, negated = false): Value =>
   ({ kind: 'range', from: from && strip(from), to: to && strip(to), negated }) as Value;
 const strip = ({ negated: _n, ...rest }: Value) => rest;
+const or = (...branches: Clause[][]): Clause => ({ kind: 'or', branches: branches.map(clauses => ({ clauses })) });
 
 const examples: Array<[input: string, expected: Clause[]]> = [
   // Basic form
@@ -222,6 +223,63 @@ const examples: Array<[input: string, expected: Clause[]]> = [
     ],
   ],
   ['', []],
+  // Any link type, mentions
+  ['links: WEB-10', [{ kind: 'link', link: 'links', values: [{ kind: 'key', key: 'WEB-10', negated: false }] }]],
+  ['links: -WEB-10', [{ kind: 'link', link: 'links', values: [{ kind: 'key', key: 'WEB-10', negated: true }] }]],
+  [
+    'aggregate links: {type: Bug}',
+    [{ kind: 'aggregate', link: 'links', query: { clauses: [attr('type', lit('Bug'))] } }],
+  ],
+  ['mentions: me', [attr('mentions', { kind: 'me', negated: false })]],
+  ['has: links', [attr('has', { kind: 'attribute', attribute: 'links', negated: false })]],
+  // or, and, parentheses
+  ['type: Bug or type: Feature', [or([attr('type', lit('Bug'))], [attr('type', lit('Feature'))])]],
+  [
+    'type: Bug status: Open or #Critical',
+    [or([attr('type', lit('Bug')), attr('status', lit('Open'))], [{ kind: 'shorthand', value: 'Critical' }])],
+  ],
+  [
+    '(subtask of: WEB-10 or relates to: WEB-10) type: Bug #Unresolved',
+    [
+      or(
+        [{ kind: 'link', link: 'subtask of', values: [{ kind: 'key', key: 'WEB-10', negated: false }] }],
+        [{ kind: 'link', link: 'relates to', values: [{ kind: 'key', key: 'WEB-10', negated: false }] }],
+      ),
+      attr('type', lit('Bug')),
+      { kind: 'category', category: 'unresolved' },
+    ],
+  ],
+  ['type: Bug and status: Open', [attr('type', lit('Bug')), attr('status', lit('Open'))]],
+  [
+    'login (status: Open #Critical)',
+    [text('login'), attr('status', lit('Open')), { kind: 'shorthand', value: 'Critical' }],
+  ],
+  [
+    '(login or signup) (status: Open or #Critical)',
+    [
+      or([text('login')], [text('signup')]),
+      or([attr('status', lit('Open'))], [{ kind: 'shorthand', value: 'Critical' }]),
+    ],
+  ],
+  ['(a or (b c)) d', [or([text('a')], [text('b'), text('c')]), text('d')]],
+  ['cats OR dogs', [or([text('cats')], [text('dogs')])]],
+  [
+    '(login or signup) or #Unresolved',
+    [or([or([text('login')], [text('signup')])], [{ kind: 'category', category: 'unresolved' }])],
+  ],
+  [
+    'login or (signup or #Unresolved)',
+    [or([text('login')], [or([text('signup')], [{ kind: 'category', category: 'unresolved' }])])],
+  ],
+  [
+    'type: Bug or type: Feature sort by: created',
+    [
+      or([attr('type', lit('Bug'))], [attr('type', lit('Feature'))]),
+      { kind: 'sort', keys: [{ attribute: 'created', direction: 'asc' }] },
+    ],
+  ],
+  ['"or" "and"', [text('or', true), text('and', true)]],
+  ['code: {Fix (urgent)}', [attr('code', lit('Fix (urgent)'))]],
 ];
 
 describe('parse: every example in search-query-language.md', () => {
@@ -341,5 +399,54 @@ describe('parse: clause spans', () => {
       { start: 6, end: 33, valueStart: 13 },
       { start: 34, end: 43 },
     ]);
+  });
+});
+
+describe('parse: or, and and parentheses refuse what they cannot mean', () => {
+  const code = (input: string) => {
+    try {
+      q(input);
+    } catch (error) {
+      return { code: (error as QueryError).code, span: (error as QueryError).span };
+    }
+    return null;
+  };
+
+  test.each([
+    ['(type: Bug', 'query.unbalanced_parentheses', { start: 0, end: 1 }],
+    ['type: Bug)', 'query.unbalanced_parentheses', { start: 9, end: 10 }],
+    ['or type: Bug', 'query.dangling_operator', { start: 0, end: 2 }],
+    ['type: Bug or', 'query.dangling_operator', { start: 10, end: 12 }],
+    ['type: Bug or or status: Open', 'query.dangling_operator', { start: 10, end: 12 }],
+    ['and type: Bug', 'query.dangling_operator', { start: 0, end: 3 }],
+    ['type: Bug and', 'query.dangling_operator', { start: 10, end: 13 }],
+    ['login ()', 'query.empty_group', { start: 6, end: 8 }],
+    ['(type: Bug sort by: created)', 'query.sort_in_group', { start: 11, end: 27 }],
+    ['type: Bug or sort by: created', 'query.sort_in_group', { start: 13, end: 29 }],
+    ['aggregate links: WEB-1', 'query.expected_subquery', { start: 17, end: 22 }],
+    ['type: Bug and and status: Open', 'query.dangling_operator', { start: 10, end: 13 }],
+    ['aggregate links: {type: Bug sort by: created}', 'query.sort_in_group', { start: 28, end: 44 }],
+    ['aggregate links: {(type: Bug}', 'query.unbalanced_parentheses', { start: 18, end: 19 }],
+  ] as const)('%s → %s', (input, expected, span) => {
+    expect(code(input)).toEqual({ code: expected, span });
+  });
+
+  test('sort by: at the top level still applies to an or', () => {
+    expect(q('type: Bug or type: Feature sort by: created').clauses.at(-1)).toEqual({
+      kind: 'sort',
+      keys: [{ attribute: 'created', direction: 'asc' }],
+    });
+  });
+
+  test('an or is one clause with one span', () => {
+    expect(parse('login or status: Open', registry).spans).toEqual([{ start: 0, end: 21 }]);
+  });
+
+  test('renders the grouping it needs, and no more', () => {
+    expect(render(q('type: Bug status: Open or #Critical'), registry)).toBe('(type: Bug status: Open) or #Critical');
+    expect(render(q('(login or signup) type: Bug'), registry)).toBe('(login or signup) type: Bug');
+    expect(render({ clauses: [text('or')] }, registry)).toBe('"or"');
+    expect(render({ clauses: [text('-login(timeout)')] }, registry)).toBe('-login timeout');
+    expect(render({ clauses: [attr('code', lit('Fix (urgent)'))] }, registry)).toBe('code: {Fix (urgent)}');
   });
 });

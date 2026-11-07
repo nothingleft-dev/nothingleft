@@ -69,9 +69,88 @@ class Parser {
   ) {}
 
   parse(): ParseResult {
+    const { clauses, spans } = this.disjunction(false);
+    const stray = this.peek();
+    if (stray) throw new QueryError('query.unbalanced_parentheses', stray);
+    return { query: { clauses }, spans };
+  }
+
+  private keyword(token: Token | undefined, word: 'or' | 'and'): boolean {
+    return token?.type === 'word' && !token.colon && token.value.toLowerCase() === word;
+  }
+
+  /** Branches joined by `or`, which binds looser than the AND between clauses. */
+  private disjunction(grouped: boolean): { clauses: Clause[]; spans: ClauseSpan[] } {
+    const branches = [this.conjunction(grouped)];
+    while (this.keyword(this.peek(), 'or')) {
+      const operator = this.next();
+      if (branches.at(-1)!.clauses.length === 0)
+        throw new QueryError('query.dangling_operator', operator, { op: 'or' });
+      const branch = this.conjunction(grouped);
+      if (branch.clauses.length === 0) throw new QueryError('query.dangling_operator', operator, { op: 'or' });
+      branches.push(branch);
+    }
+    if (branches.length === 1) return branches[0]!;
+    // `a or b sort by: x` orders the whole result: a trailing sort leaves the last branch.
+    const trailing = { clauses: [] as Clause[], spans: [] as ClauseSpan[] };
+    const last = branches.at(-1)!;
+    while (!grouped && last.clauses.at(-1)?.kind === 'sort' && last.clauses.length > 1) {
+      trailing.clauses.unshift(last.clauses.pop()!);
+      trailing.spans.unshift(last.spans.pop()!);
+    }
+    this.refuseSort(
+      branches.flatMap(b => b.clauses),
+      branches.flatMap(b => b.spans),
+    );
+    const span = { start: branches[0]!.spans[0]!.start, end: last.spans.at(-1)!.end };
+    return {
+      clauses: [{ kind: 'or', branches: branches.map(b => ({ clauses: b.clauses })) }, ...trailing.clauses],
+      spans: [span, ...trailing.spans],
+    };
+  }
+
+  /** Clauses and parenthesised groups up to `or`, a closing parenthesis or the end. */
+  private conjunction(grouped: boolean): { clauses: Clause[]; spans: ClauseSpan[] } {
     const clauses: Clause[] = [];
     const spans: ClauseSpan[] = [];
-    while (this.index < this.tokens.length) {
+    for (let token = this.peek(); token; token = this.peek()) {
+      if (token.type === 'close') {
+        if (!grouped) throw new QueryError('query.unbalanced_parentheses', token);
+        break;
+      }
+      if (this.keyword(token, 'or')) break;
+      if (this.keyword(token, 'and')) {
+        this.index += 1;
+        const next = this.peek();
+        if (
+          clauses.length === 0 ||
+          !next ||
+          next.type === 'close' ||
+          this.keyword(next, 'or') ||
+          this.keyword(next, 'and')
+        ) {
+          throw new QueryError('query.dangling_operator', token, { op: 'and' });
+        }
+        continue;
+      }
+      if (token.type === 'open') {
+        this.index += 1;
+        const inner = this.disjunction(true);
+        const close = this.peek();
+        if (close?.type !== 'close') throw new QueryError('query.unbalanced_parentheses', token);
+        this.index += 1;
+        if (inner.clauses.length === 0)
+          throw new QueryError('query.empty_group', { start: token.start, end: close.end });
+        this.refuseSort(inner.clauses, inner.spans);
+        if (inner.clauses.length === 1) {
+          clauses.push(inner.clauses[0]!);
+          spans.push({ start: token.start, end: close.end });
+        } else {
+          clauses.push(...inner.clauses);
+          spans.push(...inner.spans);
+        }
+        continue;
+      }
       const start = this.index;
       const clause = this.clause();
       clauses.push(clause.clause);
@@ -81,7 +160,13 @@ class Parser {
         ...(clause.valueStart === undefined ? {} : { valueStart: clause.valueStart }),
       });
     }
-    return { query: { clauses }, spans };
+    return { clauses, spans };
+  }
+
+  // One order applies to the whole result, so `sort by:` belongs to the top level only.
+  private refuseSort(clauses: Clause[], spans: ClauseSpan[]): void {
+    const at = clauses.findIndex(c => c.kind === 'sort');
+    if (at !== -1) throw new QueryError('query.sort_in_group', spans[at] ?? { start: 0, end: 0 });
   }
 
   private peek(offset = 0): Token | undefined {
@@ -202,7 +287,20 @@ class Parser {
           );
         }
         this.index += 1;
-        const nested = parse(body.value, this.registry);
+        const offset = body.start + 1;
+        let nested: ParseResult;
+        try {
+          nested = parse(body.value, this.registry);
+        } catch (error) {
+          if (!(error instanceof QueryError)) throw error;
+          const span = { start: error.span.start + offset, end: error.span.end + offset };
+          throw new QueryError(error.code, span, error.params, error.validValues);
+        }
+        const sort = nested.query.clauses.findIndex(c => c.kind === 'sort');
+        if (sort !== -1) {
+          const at = nested.spans[sort]!;
+          throw new QueryError('query.sort_in_group', { start: at.start + offset, end: at.end + offset });
+        }
         return { clause: { kind: 'aggregate', link: aggregateLink.name, query: nested.query }, valueStart: body.start };
       };
     }
@@ -247,7 +345,9 @@ class Parser {
 
   private startsValue(token: Token | undefined): boolean {
     if (!token) return false;
-    if (token.type === 'word') return !token.colon && !this.startsAttribute();
+    if (token.type === 'word') {
+      return !token.colon && !this.keyword(token, 'or') && !this.keyword(token, 'and') && !this.startsAttribute();
+    }
     return token.type === 'brace' || token.type === 'quote' || token.type === 'minus' || token.type === 'range';
   }
 
@@ -324,9 +424,18 @@ class Parser {
 
   private bound(scalar: (raw: RawValue) => ScalarValue | Bound): Bound | null {
     const token = this.peek();
-    if (!token || token.type === 'comma' || token.type === 'range' || token.type === 'hash' || token.type === 'minus') {
+    if (
+      !token ||
+      token.type === 'comma' ||
+      token.type === 'range' ||
+      token.type === 'hash' ||
+      token.type === 'minus' ||
+      token.type === 'open' ||
+      token.type === 'close'
+    ) {
       return null;
     }
+    if (this.keyword(token, 'or') || this.keyword(token, 'and')) return null;
     if (token.type === 'word' && (token.colon || this.startsAttribute())) return null;
     this.index += 1;
     const raw = this.rawValue(token);

@@ -30,6 +30,19 @@ status: Open, Reopened
 type: Bug, Feature
 ```
 
+Put `or` between clauses to accept either, and use parentheses to group:
+
+```
+type: Bug or #Critical
+(subtask of: ACME-88 or relates to: ACME-88) #Unresolved
+(login or signup) status: Open
+```
+
+Clauses side by side bind tighter than `or`, so `type: Bug status: Open or
+#Critical` means "open bugs, or anything Critical". `and` may be written
+between clauses for readability; it means the same as a space. To search for
+the word "or" itself, put it in quotes: `"or"`.
+
 Nothing is case-sensitive. `Status: Open`, `status: open`, `type: bug`,
 `Type: Bug`, `#ui` and `#UI` all mean the same thing.
 
@@ -154,8 +167,18 @@ work author: me
 assignee: Unassigned
 ```
 
+Find issues that mention someone with `@` in their description or a comment:
+
+```
+mentions: me
+mentions: @jo.kim
+has: mentions
+```
+
+A mention in a comment that was later deleted no longer counts.
+
 People attributes: `assignee`, `created by`, `updated by`, `commenter`,
-`work author`. Someone who has left the organisation still matches -
+`mentions`, `work author`. Someone who has left the organisation still matches -
 `created by: @alex` finds what Alex Lee filed after they were removed - though
 autocomplete no longer offers them.
 
@@ -282,6 +305,15 @@ aggregate Duplicates: {project: ACME}
 aggregate Is duplicated by: {#Critical}
 ```
 
+To match a link of any kind in either direction, including parent and
+subtask, use `links:`:
+
+```
+links: ACME-88                    -- everything linked to ACME-88
+aggregate links: {type: Feature}  -- issues linked to some Feature
+has: -links                       -- issues with no links at all
+```
+
 To match issues by their own key: `key: ACME-1, ACME-2`.
 
 ## Other attributes
@@ -403,6 +435,8 @@ valid choices:
 - an unknown attribute lists every attribute you can use;
 - an unsortable attribute in `sort by:` lists the sortable ones;
 - a value that does not exist - `status: Donee`, `assignee: @nobody`,
-  `#Nonsense` - lists the values that do, in the projects you can see.
+  `#Nonsense` - lists the values that do, in the projects you can see;
+- a parenthesis that is never closed, an `or` with nothing on one side, or a
+  `sort by:` inside parentheses is pointed out where it happens.
 
 Nothing is silently ignored, and a typo never quietly returns an empty list.

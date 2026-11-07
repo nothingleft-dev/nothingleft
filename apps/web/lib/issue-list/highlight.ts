@@ -30,7 +30,13 @@ const MULTI_WORD = [
 ];
 
 const ATTRIBUTE = new RegExp(`(?:${MULTI_WORD.join('|')}|[a-z][\\w-]*):`, 'gi');
-const SHORTHAND = /#(?:\{[^}]*\}?|[^\s,]+)/g;
+const SHORTHAND = /#(?:\{[^}]*\}?|[^\s,()]+)/g;
+const OPERATOR = /(?<=^|[\s()])(?:or|and)(?=[\s()]|$)|[()]/gi;
+// Where a value stops: the next attribute, shorthand, operator or closing parenthesis.
+const VALUE_END = new RegExp(
+  `(?:^|[\\s(])(?:${MULTI_WORD.join('|')}|[a-z][\\w-]*):|(?:^|[\\s(])#|\\)|\\s(?:or|and)(?=[\\s(]|$)`,
+  'gi',
+);
 
 interface Span {
   start: number;
@@ -42,21 +48,32 @@ function markKinds(text: string): SegmentKind[] {
   const paint = (start: number, end: number, kind: SegmentKind) => {
     for (let i = start; i < end && i < kinds.length; i++) kinds[i] = kind;
   };
+  const braced = Array.from(text, () => false);
+  for (let i = 0, depth = 0; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    braced[i] = depth > 0;
+    if (text[i] === '}' && depth > 0) depth--;
+  }
   for (const match of text.matchAll(ATTRIBUTE)) {
     const start = match.index;
-    if (start > 0 && !/\s/.test(text[start - 1]!)) continue;
+    if (braced[start] || (start > 0 && !/[\s(]/.test(text[start - 1]!))) continue;
     paint(start, start + match[0].length, 'attribute');
-    // Everything up to the next attribute or shorthand is that attribute's value.
+    const from = start + match[0].length;
     let end = text.length;
-    const rest = text.slice(start + match[0].length);
-    const next = rest.search(new RegExp(`(?:^|\\s)(?:${MULTI_WORD.join('|')}|[a-z][\\w-]*):|(?:^|\\s)#`, 'i'));
-    if (next >= 0) end = start + match[0].length + next;
-    paint(start + match[0].length, end, 'value');
+    for (const stop of text.slice(from).matchAll(VALUE_END)) {
+      if (braced[from + stop.index]) continue;
+      end = from + stop.index;
+      break;
+    }
+    paint(from, end, 'value');
   }
   for (const match of text.matchAll(SHORTHAND)) {
     const start = match.index;
-    if (start > 0 && !/\s/.test(text[start - 1]!)) continue;
+    if (braced[start] || (start > 0 && !/[\s(]/.test(text[start - 1]!))) continue;
     paint(start, start + match[0].length, 'attribute');
+  }
+  for (const match of text.matchAll(OPERATOR)) {
+    if (!braced[match.index]) paint(match.index, match.index + match[0].length, 'attribute');
   }
   return kinds;
 }

@@ -188,6 +188,8 @@ export function articleSearch(scope: ArticleSearchScope) {
         return textMatch(t, c.text, c.phrase);
       case 'view':
         return and(...c.query.clauses.map(inner => clause(t, inner))) ?? TRUE;
+      case 'or':
+        return or(...c.branches.map(branch => and(...branch.clauses.map(inner => clause(t, inner))) ?? TRUE)) ?? FALSE;
       case 'sort':
         return TRUE;
       default:
@@ -196,10 +198,16 @@ export function articleSearch(scope: ArticleSearchScope) {
   }
 
   function rankQuery(query: Query): SQL | null {
-    const terms = query.clauses
-      .filter((c): c is Extract<Clause, { kind: 'text' }> => c.kind === 'text' && !(c.phrase && c.text.startsWith('-')))
-      .map(c => (c.phrase ? sql`phraseto_tsquery('english', ${c.text})` : sql`plainto_tsquery('english', ${c.text})`));
-    return terms.length === 0 ? null : sql.join(terms, sql` && `);
+    const terms: SQL[] = [];
+    for (const c of query.clauses) {
+      if (c.kind === 'text' && !(c.phrase && c.text.startsWith('-'))) {
+        terms.push(c.phrase ? sql`phraseto_tsquery('english', ${c.text})` : sql`plainto_tsquery('english', ${c.text})`);
+      } else if (c.kind === 'or') {
+        const branches = c.branches.map(rankQuery).filter((b): b is SQL => b !== null);
+        if (branches.length > 0) terms.push(sql`(${sql.join(branches, sql` || `)})`);
+      }
+    }
+    return terms.length === 0 ? null : sql`(${sql.join(terms, sql` && `)})`;
   }
 
   const sortExpression = (t: ArticleTable, name: string): SQL | null =>

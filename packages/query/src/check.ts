@@ -1,4 +1,4 @@
-import type { Query } from './ast.ts';
+import { subqueries, type Query } from './ast.ts';
 import type { Registry } from './registry/registry.ts';
 import { QueryError, type Span } from './tokenizer.ts';
 
@@ -37,8 +37,8 @@ export function vocabularyNeeds(query: Query, registry: Registry): Set<string> {
         if (clause.values.some(v => v.kind === 'literal')) out.add(type === 'user' ? PEOPLE : clause.attribute);
       } else if (clause.kind === 'shorthand') {
         for (const a of registry.attributes) if (a.shorthand) out.add(a.name);
-      } else if (clause.kind === 'aggregate' || clause.kind === 'view') {
-        walk(clause.query);
+      } else {
+        subqueries(clause).forEach(walk);
       }
     }
   };
@@ -86,11 +86,8 @@ export function checkValues(query: Query, registry: Registry, vocabulary: Vocabu
           }
           return;
         }
-        case 'aggregate':
-        case 'view':
-          walk(clause.query, span);
-          return;
         default:
+          for (const nested of subqueries(clause)) walk(nested, span);
           return;
       }
     });

@@ -35,7 +35,7 @@ export interface SuggestOptions extends DateContext {
   maxValues?: number;
 }
 
-const NEEDS_BRACES = /[\s,:{}"#]|^-|^\*$|\.\./;
+const NEEDS_BRACES = /[\s,:{}"#()]|^-|^\*$|\.\.|^(or|and)$/i;
 const braced = (text: string) => (NEEDS_BRACES.test(text) ? `{${text}}` : text);
 
 function wordPrefixMatch(candidate: string, prefix: string): boolean {
@@ -47,7 +47,7 @@ function wordPrefixMatch(candidate: string, prefix: string): boolean {
 }
 
 type Context =
-  | { kind: 'clause'; prefix: string; hash: boolean; replace: Span }
+  | { kind: 'clause'; prefix: string; hash: boolean; replace: Span; afterClause: boolean }
   | { kind: 'value'; attribute: AttributeDefinition; prefix: string; negated: boolean; replace: Span }
   | { kind: 'sort_direction'; replace: Span; prefix: string };
 
@@ -99,8 +99,9 @@ function contextAt(query: string, caret: number, registry: Registry): Context {
     }
   }
 
+  const afterClause = before.length > 0 && before.at(-1)!.type !== 'open';
   if (current?.type === 'word' && current.colon)
-    return { kind: 'clause', prefix: '', hash: false, replace: { start: caret, end: caret } };
+    return { kind: 'clause', prefix: '', hash: false, replace: { start: caret, end: caret }, afterClause };
 
   const typed = current ? query.slice(current.start, caret) : '';
   if (expecting === 'link') {
@@ -125,7 +126,7 @@ function contextAt(query: string, caret: number, registry: Registry): Context {
   const hash = current?.type === 'hash' || (previous?.type === 'hash' && previous.end === (current?.start ?? caret));
   if (hash && previous?.type === 'hash') replace.start = previous.start;
   const prefix = typed.replace(/^#/, '').replace(/^\{/, '');
-  return { kind: 'clause', prefix, hash, replace };
+  return { kind: 'clause', prefix, hash, replace, afterClause };
 }
 
 const DATE_KEYWORDS: readonly DateKeyword[] = [
@@ -254,6 +255,10 @@ async function clauseSuggestions(
   const { prefix, hash, replace } = context;
   const out: Suggestion[] = [];
 
+  if (!hash && context.afterClause && prefix && 'or'.startsWith(prefix.toLowerCase())) {
+    out.push({ kind: 'operator', label: 'or', insert: 'or ', replace, description: { key: 'query.suggest.or' } });
+  }
+
   if (!hash) {
     for (const attribute of registry.attributes) {
       if (!wordPrefixMatch(attribute.name, prefix)) continue;
@@ -266,7 +271,7 @@ async function clauseSuggestions(
       });
     }
     for (const link of registry.links) {
-      const description: Label = { key: 'query.attribute.link', params: { link: link.type } };
+      const description: Label = link.description ?? { key: 'query.attribute.link', params: { link: link.type } };
       if (wordPrefixMatch(link.name, prefix)) {
         out.push({ kind: 'attribute', label: `${link.name}:`, insert: `${link.name}: `, replace, description });
       }
