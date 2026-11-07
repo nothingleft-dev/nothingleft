@@ -347,6 +347,7 @@ export function searchService(deps: SearchDeps) {
         groupBy?: IssueGroupBy | undefined;
         groupLimit?: number | undefined;
         container?: IssueContainer | undefined;
+        countOnly?: boolean | undefined;
         limit: number;
         offset: number;
         // The grouped search box passes false: its keystrokes are not searches worth recalling.
@@ -360,6 +361,7 @@ export function searchService(deps: SearchDeps) {
         groupBy: input.groupBy,
         groupLimit: input.groupLimit,
         container: input.container,
+        countOnly: input.countOnly,
         limit: input.limit,
         offset: input.offset,
       });

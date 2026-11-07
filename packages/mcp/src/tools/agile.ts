@@ -164,7 +164,7 @@ export const createSprint = defineTool({
   name: 'create_sprint',
   title: 'Plan a sprint',
   description:
-    "Plans a sprint in a project. Dates are optional (Unscheduled until set); `add_unresolved_from` brings in another sprint's unresolved issues. Needs Project Admin and admin:project. Put issues in with move_to_sprint.",
+    "Plans a sprint; dates are optional. `add_unresolved_from` brings in another sprint's unresolved issues. Add issues with move_to_sprint. Project Admin, admin:project.",
   input: z.strictObject({
     project: arg.project,
     name: z.string().trim().min(1).max(100).describe('e.g. "September 2026".'),
@@ -175,6 +175,7 @@ export const createSprint = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   creates: true,
   endpoints: ['POST /v1/projects/{key}/sprints'],
   async run(ctx, args) {
@@ -218,6 +219,7 @@ export const updateSprint = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['PATCH /v1/projects/{key}/sprints/{sprint}'],
   async run(ctx, args) {
     const body: Record<string, unknown> = {};
@@ -248,6 +250,7 @@ export const startSprint = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['POST /v1/projects/{key}/sprints/{sprint}/start'],
   async run(ctx, args) {
     const { data: s } = await ctx.api.send<Sprint>(
@@ -269,7 +272,7 @@ export const finishSprint = defineTool({
   name: 'finish_sprint',
   title: 'Finish a sprint',
   description:
-    'Finishes the active sprint. Every unresolved issue moves to `move_unfinished_to` - "backlog" or a planned sprint - and the answer lists them. Resolved issues stay with the finished sprint. Needs Project Admin and admin:project.',
+    'Finishes the active sprint; its unresolved issues move to `move_unfinished_to` ("backlog" or a planned sprint). Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     sprint: arg.sprint,
@@ -282,6 +285,7 @@ export const finishSprint = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['POST /v1/projects/{key}/sprints/{sprint}/finish'],
   async run(ctx, args) {
     const { data } = await ctx.api.send<SprintFinishResult>(
@@ -309,6 +313,7 @@ export const deleteSprint = defineTool({
     'Deletes a planned sprint; its issues go back to the backlog. A sprint that has started cannot be deleted. Asks you to confirm before acting.',
   input: z.strictObject({ project: arg.project, sprint: arg.sprint, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['GET /v1/projects/{key}/sprints/{sprint}', 'DELETE /v1/projects/{key}/sprints/{sprint}'],
   async describeAction(ctx, args) {
     const { data: s } = await ctx.api.get<Sprint>(
@@ -426,7 +431,7 @@ export const getBacklog = defineTool({
   name: 'get_backlog',
   title: 'Get the backlog',
   description:
-    "The planning view: the project's planned and active sprints with their progress, then one list in drag order - the backlog (issues in no sprint) by default, or a sprint's issues with `sprint`. `query` filters the list; the backlog defaults to #Unresolved.",
+    "Planned and active sprints with progress, then the backlog (or `sprint`'s issues) in drag order. `query` filters; the backlog defaults to #Unresolved.",
   input: z.strictObject({
     project: arg.project,
     sprint: arg.sprint.optional().describe('List this sprint instead of the backlog.'),
@@ -593,13 +598,11 @@ export const getBoard = defineTool({
   name: 'get_board',
   title: 'Get a board',
   description:
-    "A board on a sprint (default the active one), or on every unresolved issue in the project with sprint \"open\": each column's statuses (or priorities or types, by what the board's columns are), card count (filter-aware when `query` is given) and WIP limits, the status breakdown, then the cards by swimlane and column in drag order. Without `board`, the project's first board.",
+    'A board (default the project\'s first) on a sprint (default the active one) or "open": columns with counts and WIP limits, then the cards by swimlane and column in drag order.',
   input: z.strictObject({
     project: arg.project.optional(),
     board: arg.board.optional(),
-    sprint: arg.sprint
-      .optional()
-      .describe('Default "current", the active sprint. "open" is every unresolved issue, in a sprint or not.'),
+    sprint: arg.sprint.optional().describe('"current" (default), a sprint, or "open" for every unresolved issue.'),
     query: z.string().max(2000).optional().describe('Filter the cards, as in search_issues.'),
     swimlane_by: z.enum(BOARD_SWIMLANES).optional().describe("Override the board's swimlanes for this read."),
     swimlane_field: z.enum(BOARD_SWIMLANE_FIELDS).optional(),
@@ -628,9 +631,7 @@ const boardFields = {
   column_field: z
     .enum(BOARD_COLUMN_FIELDS)
     .optional()
-    .describe(
-      'What the columns are: status (default), priority or type. Moving a card sets that field. Changed without columns, one column per value is made.',
-    ),
+    .describe('status (default), priority or type; moving a card sets it.'),
   columns: z
     .array(columnInput)
     .min(1)
@@ -640,9 +641,7 @@ const boardFields = {
   swimlane_by: z
     .enum(BOARD_SWIMLANES)
     .optional()
-    .describe(
-      'none; values (one lane per swimlane_field value); issues (issues of swimlane_types, e.g. epics, as lanes).',
-    ),
+    .describe('none, values (per swimlane_field value) or issues (swimlane_types as lanes).'),
   swimlane_field: z.enum(BOARD_SWIMLANE_FIELDS).optional(),
   swimlane_types: z
     .array(z.string().trim().min(1).max(100))
@@ -677,7 +676,7 @@ export const createBoard = defineTool({
   name: 'create_board',
   title: 'Create a board',
   description:
-    'Creates a board: columns mapped to statuses, priorities or types (a value sits in one column), optional WIP limits, and swimlanes. Without columns: To do · In progress · Done by status category, or one column per priority or type. Needs Project Admin and admin:project.',
+    'Creates a board: columns mapped to statuses, priorities or types, WIP limits and swimlanes; without columns, one per status category or value. Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     name: z.string().trim().min(1).max(100),
@@ -685,6 +684,7 @@ export const createBoard = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   creates: true,
   endpoints: ['POST /v1/projects/{key}/boards'],
   async run(ctx, args) {
@@ -701,7 +701,7 @@ export const updateBoard = defineTool({
   name: 'update_board',
   title: 'Change a board',
   description:
-    'Renames a board, changes what its columns are (status, priority or type), replaces its columns (the whole list, in order: value mapping, WIP limits, collapsed) or changes its swimlanes. Needs Project Admin and admin:project.',
+    'Renames a board or changes what its columns are, the columns themselves (the whole list) or its swimlanes. Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     board: arg.board,
@@ -710,6 +710,7 @@ export const updateBoard = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['PATCH /v1/projects/{key}/boards/{board}'],
   async run(ctx, args) {
     const { project, board, org, ...body } = args;
@@ -729,6 +730,7 @@ export const deleteBoard = defineTool({
   description: 'Deletes a board. Issues and sprints are untouched. Asks you to confirm before acting.',
   input: z.strictObject({ project: arg.project, board: arg.board, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['GET /v1/projects/{key}/boards/{board}', 'DELETE /v1/projects/{key}/boards/{board}'],
   async describeAction(ctx, args) {
     const { data: b } = await ctx.api.get<Board>(

@@ -12,12 +12,7 @@ const scope = (org: string | undefined) => (org ? { org } : {});
 const INLINE_CONTENT_MAX = 1024 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const file = z
-  .string()
-  .trim()
-  .min(1)
-  .max(255)
-  .describe('The file name, e.g. "login-bug.png", or the id list_attachments shows when two share a name.');
+const file = z.string().trim().min(1).max(255).describe('File name, or its id when two share one.');
 const onto = {
   comment: z
     .number()
@@ -82,7 +77,7 @@ export const listAttachments = defineTool({
   name: 'list_attachments',
   title: 'List files',
   description:
-    "Files on an issue, its comments and its work items - or on a knowledge base article and its comments (project and article) - or only one comment's or work item's. `Inline` means the text shows it as an image.",
+    'Files on an issue with its comments and work items, or on an article (project and article), or on one comment or work item.',
   input: z.strictObject({ ...on, ...onto, org: arg.org }),
   kind: 'read',
   endpoints: [
@@ -156,7 +151,7 @@ export const uploadAttachment = defineTool({
   name: 'upload_attachment',
   title: 'Upload a file',
   description:
-    'Attaches a file to an issue, a comment or a work item - or to a knowledge base article or a comment on it (project and article). Text you have in hand (a log excerpt, a markdown note) goes in `content` and is attached at once. A file on disk never passes through the conversation: give its `size_bytes` and `sha256` (base64: `openssl dgst -sha256 -binary FILE | base64`), run the curl command the answer gives, then call complete_upload.',
+    'Attaches a file to an issue, comment, work item or article. Text in hand goes in `content`. For a file on disk give `size_bytes` and `sha256` (base64), run the curl command returned, then call complete_upload.',
   input: z.strictObject({
     ...on,
     filename: z.string().trim().min(1).max(255),

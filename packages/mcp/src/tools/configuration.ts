@@ -21,7 +21,7 @@ import {
 import * as arg from '../args.ts';
 import { path } from '../api.ts';
 import { ToolError } from '../errors.ts';
-import { defineTool, type ToolContext } from '../tool.ts';
+import { ANY_SCOPE, defineTool, type ToolContext } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
 import { calendarOf, resolveUsername, usernameIn } from '../resolve.ts';
 import { code, day, facts, instant, join, moreByCursor, person, roleLabel, table, untrusted } from '../render.ts';
@@ -77,7 +77,7 @@ export const getProject = defineTool({
   name: 'get_project',
   title: 'Get project',
   description:
-    "One project: lead, your role, time tracking, archived state, the active sprint with days left and progress, today's issue figures (open, unassigned, overdue, due today, created and resolved in 7 days, open per assignee) and its description.",
+    "One project: lead, your role, time tracking, archived, the active sprint's progress, today's issue figures and its description.",
   input: z.strictObject({ project: arg.project, org: arg.org }),
   kind: 'read',
   endpoints: ['GET /v1/projects/{key}', 'GET /v1/issues/figures', 'GET /v1/projects/{key}/sprints'],
@@ -154,7 +154,7 @@ export const describeProjectSchema = defineTool({
   name: 'describe_project_schema',
   title: 'Describe a project',
   description:
-    'The map of one project, in one call: statuses with their category (and which resolve an issue), priorities, types, work types and work item attributes, the custom fields (slug, type, required, options, which types they apply to), the planned and active sprints, the boards and their columns, link names, who can be assigned, who may log time, and the tags in use. Call it once before writing issues or queries.',
+    "One project's map: statuses (and which resolve), priorities, types, work types and attributes, custom fields, sprints, boards, link names, assignable people and tags in use. Call it before writing issues or queries.",
   input: z.strictObject({ project: arg.project, org: arg.org }),
   kind: 'read',
   endpoints: [
@@ -206,6 +206,7 @@ export const getOrg = defineTool({
     'One organisation: plan, owner, your role and username, seats, storage used, and the working day and week durations are read with.',
   input: z.strictObject({ org: arg.org }),
   kind: 'read',
+  scopes: ANY_SCOPE,
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}'],
   async run(ctx, args) {
     const org = await resolveOrganization(ctx, args.org);
@@ -228,6 +229,7 @@ export const updateOrgSettings = defineTool({
     week_starts_on: z.enum(WEEKDAYS as [string, ...string[]]).optional(),
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: ['GET /v1/organizations', 'PATCH /v1/organizations/{slug}'],
   async run(ctx, args) {
     const org = await resolveOrganization(ctx, args.org);
@@ -272,6 +274,7 @@ export const getOrgActivity = defineTool({
     cursor: arg.cursor,
   }),
   kind: 'read',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}/activity'],
   async run(ctx, args) {
     const zone = await ctx.timeZone();
@@ -324,6 +327,7 @@ export const createOrg = defineTool({
     slug: z.string().trim().min(1).max(100).optional(),
   }),
   kind: 'write',
+  scopes: ANY_SCOPE,
   creates: true,
   endpoints: ['POST /v1/organizations'],
   async run(ctx, args) {
@@ -341,7 +345,7 @@ export const createProject = defineTool({
   name: 'create_project',
   title: 'Create project',
   description:
-    'Creates a project with the default statuses, priorities, types and work types. The key (the PP in PP-12) is derived from the name unless given, and freezes once the first issue exists. Needs an Org Admin.',
+    'Creates a project with default statuses, priorities, types and work types. The key comes from the name unless given, and freezes at the first issue. Org Admin.',
   input: z.strictObject({
     name: z.string().trim().min(1).max(100),
     key: z.string().trim().min(1).max(20).optional().describe('2–10 letters or digits, e.g. "PP".'),
@@ -349,6 +353,7 @@ export const createProject = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:org'],
   creates: true,
   endpoints: ['GET /v1/organizations', 'POST /v1/projects'],
   async run(ctx, args) {
@@ -374,7 +379,7 @@ export const updateProject = defineTool({
   name: 'update_project',
   title: 'Update project',
   description:
-    'Changes a project: name, key (only before its first issue), description, lead, time tracking on or off, which duration custom field is its Estimation or its Spent time, archived (read-only) or not. Needs a Project Admin and admin:project.',
+    'Changes a project: name, key (before its first issue), description, lead, time tracking, its Estimation and Spent time fields, archived. Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     name: z.string().trim().min(1).max(100).optional(),
@@ -392,7 +397,7 @@ export const updateProject = defineTool({
       .max(100)
       .nullable()
       .optional()
-      .describe('A duration custom field by name or slug that becomes the Estimation; null for the built-in.'),
+      .describe('A duration custom field as Estimation; null for the built-in.'),
     spent_time_field: z
       .string()
       .trim()
@@ -405,6 +410,7 @@ export const updateProject = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: [
     'PATCH /v1/projects/{key}',
     'POST /v1/projects/{key}/archive',
@@ -463,7 +469,7 @@ const schemaInput = z.strictObject({
   category: z
     .enum(STATUS_CATEGORIES)
     .optional()
-    .describe('Statuses: backlog, unstarted, started, done or cancelled. done and cancelled resolve an issue.'),
+    .describe('backlog, unstarted, started, done or cancelled (the last two resolve).'),
   color: z.enum(LABEL_COLORS).optional().describe('Statuses, priorities, types: a label colour such as "blue-2".'),
   short_label: z.string().trim().length(1).optional().describe('The one-letter badge.'),
   position: z.number().int().min(0).max(999).optional().describe('0 is first.'),
@@ -483,9 +489,10 @@ export const updateProjectSchema = defineTool({
   name: 'update_project_schema',
   title: 'Change a project value list',
   description:
-    'Adds, changes or deletes one status, priority, type or work type in a project - or one of its own work item attributes (select attributes on logged time beside Work type, e.g. Billable) or one of their values (with `attribute`): rename, recolour, reorder, set the default, archive. Deleting a value in use needs `move_to`; deleting an attribute removes it from every work item. Every issue in the project sees the change. A delete asks you to confirm first. Needs a Project Admin and admin:project.',
+    'Adds, changes or deletes one status, priority, type, work type, or work item attribute or value (`attribute`): rename, recolour, reorder, default, archive. Deleting a value in use needs `move_to`. A delete asks you first. Project Admin, admin:project.',
   input: schemaInput,
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: [
     'GET /v1/projects/{key}/statuses',
     'GET /v1/projects/{key}/priorities',

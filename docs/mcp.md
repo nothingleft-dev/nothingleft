@@ -130,6 +130,34 @@ request_id `01937f2a-…`
 
 ### Conventions every tool follows
 
+- **Definitions cost context, so they are kept small (8c, 8 Nov 2026).** About 25k tokens
+  for all 118 tools (from ~45k), enforced by a test in `apps/api/test/mcp.routes.test.ts`:
+  105,000 characters in total and 3,200 per tool. With every description removed the tools
+  would still cost ~15k tokens, so a smaller total means fewer tools, not fewer words.
+  - Help shared by every tool (`org`, people, dates, durations, `limit`/`offset`,
+    `client_ref`) is in the server **instructions** (`mcp.conventions`), sent once per
+    session, not repeated on each argument.
+  - The advertised JSON Schema (`advertised()` → `lean()` in `server.ts`) leaves out what only
+    validation needs: `$schema`, length and count limits, the safe-integer bounds and the date
+    regex Zod adds, an enum of more than 20 values when the field's description says its shape
+    (the 40 label colours), a nullable branch repeating its parent's description, and
+    `additionalProperties: false`. `parseArguments` still enforces all of it, and its error
+    names the rule broken.
+  - Annotations send only what differs from the spec's defaults, without a repeated `title`.
+- **`tools/list` offers only what the token can use.** Each tool declares `scopes` (every entry
+  needed; a list entry is any one of them), defaulting to `issues:read` for a read and
+  `issues:read` + `issues:write` otherwise, since writes resolve names through reads. A
+  read-only token sees about 40 tools (~8k tokens). A test replays each tool's first
+  successful call in the suite holding only its declared scopes and fails on
+  `token.scope_missing`, so a declaration cannot hide a tool from a token that could use it.
+- **`get_issue` is brief by default (owner, 8 Nov 2026):** key fields on one line, custom fields,
+  the development line, link counts by type, the first 600 characters of the description and a
+  line counting what `detail: "full"` adds. Two REST calls (the issue and its links) instead of
+  up to seven. `detail: "full"`, `comments` or `include` give the whole issue. The `issue://`
+  resource and the prompts keep the full form.
+- **`search_issues`** takes `count_only` (the total and group counts; the API loads no row) and
+  `fields` (the columns after Key). A column empty on every row is left out of any issue table.
+
 - A person argument takes `@casey`, `casey`, `me`, or a full name only one member has
   (`Casey Kim`, added in 2b). A name two members share answers `mcp.person_ambiguous`
   with their usernames.

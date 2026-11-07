@@ -33,6 +33,8 @@ import {
   descriptionPage,
   issueFacts,
   issueHeading,
+  ISSUE_FIELDS,
+  issueBrief,
   issueTable,
   linkLines,
 } from '../render-issue.ts';
@@ -45,7 +47,7 @@ const priority = () => value('Priority', 'Major');
 const type = () => value('Type', 'Bug');
 const title = () => z.string().trim().min(1).max(500).describe('One line, what is wrong or wanted.');
 const scope = (org: string | undefined): Scope => (org ? { org } : {});
-const sprintArg = () => arg.sprint.describe('Sprint by name or slug, e.g. "September 2026"; "backlog" for none.');
+const sprintArg = () => arg.sprint.describe('Sprint by name or slug; "backlog" for none.');
 const storyPoints = () => z.number().int().min(0).max(999).describe('Story points, a whole number 0–999.');
 /** "backlog" is the agent's word for no sprint. */
 const sprintValue = (v: string | null) => (v === null || v.trim().toLowerCase() === 'backlog' ? null : v);
@@ -83,12 +85,9 @@ export const searchIssues = defineTool({
   name: 'search_issues',
   title: 'Search issues',
   description:
-    'Finds issues with the query language the search bar uses, e.g. `project: PP #Unresolved assignee: me priority: Critical, Major sort by: updated desc`. Attributes include project, status, priority, type, assignee, created by, updated by, tag, sprint (`sprint: {September 2026}`, `{No sprint}`), story points (`3 .. 8`), created, updated, resolved date, due date, estimation, spent time, has, mentions (`mentions: me`), links such as `subtask of: PP-12` or any type at once (`links: PP-12`, `aggregate links: {type: Bug}`), any custom field by its slug (`severity: High`, `launch: {This month}`) - whose values then show as extra columns - and free text. `#Unresolved`, `#me` are shortcuts. `or` and parentheses combine clauses (`(type: Bug or #Critical) assignee: me`) in one call; the total and group_by count the combined set once. An unknown attribute or value is an error listing the valid ones; call suggest_query to explore. Returns a table.',
+    "Finds issues with the search bar's query language, e.g. `project: PP #Unresolved assignee: me sort by: updated desc`. Attributes: project, status, priority, type, assignee, created by, tag, sprint, dates, estimation, has, mentions, links (`subtask of: PP-12`; any type: `links: PP-12`, `aggregate links: {type: Bug}`), custom fields by slug, and free text. `or` and parentheses combine clauses in one call; the total and group_by count the combined set once. suggest_query shows what exists. Returns a table.",
   input: z.strictObject({
-    query: z
-      .string()
-      .max(2000)
-      .describe('The query, e.g. `project: PP #Unresolved assignee: me`. Empty lists everything you can read.'),
+    query: z.string().max(2000).describe('e.g. `project: PP #Unresolved`. Empty lists everything you can read.'),
     project: arg.project.optional().describe('Limit to one project key, e.g. "PP".'),
     sort: z.string().max(200).optional().describe('Overrides `sort by:` in the query, e.g. "priority, updated desc".'),
     group_by: z
@@ -97,17 +96,17 @@ export const searchIssues = defineTool({
       .min(1)
       .max(60)
       .optional()
-      .describe(
-        `Adds per-group counts over the whole result: ${ISSUE_GROUP_FIELDS.join(', ')}, or ${CUSTOM_GROUP_PREFIX}<slug> for a select, multi-select, user, multi-user or checkbox field.`,
-      ),
+      .describe(`Per-group counts: ${ISSUE_GROUP_FIELDS.join(', ')}, or ${CUSTOM_GROUP_PREFIX}<slug>.`),
     group_limit: z
       .number()
       .int()
       .min(1)
       .max(200)
       .optional()
-      .describe('With group_by: at most this many issues from each group, e.g. 5 for a preview of every group.'),
+      .describe('With group_by: at most this many issues per group.'),
     deleted: z.boolean().optional().describe('true lists soft-deleted issues still restorable (Project Admins).'),
+    count_only: z.boolean().optional().describe('Only the total, and group counts with group_by; no rows.'),
+    fields: z.array(z.enum(ISSUE_FIELDS)).optional().describe('Columns after Key. Default: every non-empty one.'),
     org: arg.org,
     limit: arg.limit,
     offset: arg.offset,
@@ -124,6 +123,7 @@ export const searchIssues = defineTool({
         group_by: args.group_by?.toLowerCase(),
         group_limit: args.group_limit,
         deleted: args.deleted,
+        count_only: args.count_only,
         limit: args.limit ?? arg.DEFAULT_LIMIT,
         offset: args.offset ?? 0,
       },
@@ -137,8 +137,10 @@ export const searchIssues = defineTool({
       markdown: join(
         `**${total} ${total === 1 ? 'issue' : 'issues'}**${args.query.trim() ? ` for ${code(args.query.trim())}` : ''}`,
         groupSummary(res.meta?.['groups'] as IssueGroup[] | undefined),
-        res.data.length ? issueTable(res.data, await ctx.timeZone(), slugs) : null,
-        more(res.pagination, res.data.length),
+        !args.count_only && res.data.length
+          ? issueTable(res.data, await ctx.timeZone(), slugs, undefined, args.fields)
+          : null,
+        args.count_only ? null : more(res.pagination, res.data.length),
       ),
     };
   },
@@ -149,16 +151,11 @@ const COMMENT_FETCH = 200;
 export const getIssue = defineTool({
   name: 'get_issue',
   title: 'Get issue',
-  description: `One issue by key: every field, tags, links and subtasks, the knowledge base articles that reference it, the latest comments and the description (cut at ${DESCRIPTION_PAGE / 1024} KB with a marker; get_issue_description reads on). \`include\` adds watchers, voters or files.`,
+  description: `One issue by key, brief by default: key fields on one line, link counts, the start of the description and what more exists. \`detail: "full"\` adds every field, linked issue titles, referencing articles, the latest comments and ${DESCRIPTION_PAGE / 1024} KB of description; \`include\` adds watchers, voters or files.`,
   input: z.strictObject({
     issue: arg.issue,
-    comments: z
-      .number()
-      .int()
-      .min(0)
-      .max(20)
-      .optional()
-      .describe('How many of the latest comments to show, 0–20. Default 5.'),
+    detail: z.enum(['brief', 'full']).optional().describe('Default brief; comments or include imply full.'),
+    comments: z.number().int().min(0).max(20).optional().describe('Latest comments to show, 0–20. Default 5.'),
     include: z
       .array(z.enum(['watchers', 'voters', 'attachments']))
       .max(3)
@@ -177,7 +174,22 @@ export const getIssue = defineTool({
     'GET /v1/issues/{key}/attachments',
   ],
   async run(ctx, args) {
-    const markdown = await renderIssue(ctx, issueKey(args.issue), {
+    const key = issueKey(args.issue);
+    const full = args.detail === 'full' || args.comments !== undefined || args.include !== undefined;
+    if (!full) {
+      const [issue, links, zone] = await Promise.all([
+        fetchIssue(ctx, key, args.org),
+        ctx.api.get<IssueLinkGroup[]>(path`/v1/issues/${key}/links`, scope(args.org)).then(r => r.data),
+        ctx.timeZone(),
+      ]);
+      const timed =
+        issue.estimate_minutes !== null ||
+        issue.spent_minutes > 0 ||
+        issue.custom_fields.some(f => f.type === 'duration');
+      const calendar = timed ? await calendarFor(ctx, key, args.org).catch(() => undefined) : undefined;
+      return { markdown: issueBrief(issue, links, zone, ctx.appBaseUrl, developmentLine(issue), calendar) };
+    }
+    const markdown = await renderIssue(ctx, key, {
       comments: args.comments ?? 5,
       include: args.include ?? [],
       org: args.org,
@@ -286,7 +298,7 @@ export const createIssue = defineTool({
   name: 'create_issue',
   title: 'Create issue',
   description:
-    'Creates an issue with everything in one call: title, markdown description, type, priority, status, assignees, tags (created on first use), estimate, story points, sprint, dates, parent, links and custom fields. Unset fields take the project defaults, and a custom field its default; describe_project_schema lists the valid values and which custom fields are required. Returns the new issue.',
+    'Creates an issue in one call: title, description, type, priority, status, assignees, tags, estimate, story points, sprint, dates, parent, links and custom fields. Unset fields take the project defaults; describe_project_schema lists valid values and required fields.',
   input: z.strictObject({
     project: arg.project,
     title: title(),
@@ -345,7 +357,7 @@ export const updateIssue = defineTool({
   name: 'update_issue',
   title: 'Update issue',
   description:
-    'Changes one issue: only the arguments you pass change, and null clears a field. Covers fields, custom fields, story points, sprint, parent, tags (add_tags / remove_tags, new names are created), watchers, and your own star, watch and vote - so a triage is one call. Returns the issue as it now is.',
+    'Changes one issue: only what you pass, and null clears. Fields, custom fields, sprint, parent, tags (add_tags / remove_tags), watchers, and your own star, watch and vote, so a triage is one call.',
   input: z.strictObject({
     issue: arg.issue,
     title: title().optional(),
@@ -480,7 +492,7 @@ const bulkChanges = z.strictObject({
 export const bulkUpdateIssues = defineTool({
   name: 'bulk_update_issues',
   title: 'Update many issues',
-  description: `Applies the same field changes to a list of issue keys, or to every issue a query matches (at most ${BULK_UPDATE_MAX_ISSUES}). Each issue is checked on its own; the answer lists what changed, what was already so, and each failure with its reason.`,
+  description: `Applies the same changes to a list of keys or to every issue a query matches (at most ${BULK_UPDATE_MAX_ISSUES}). Each issue is checked alone; the answer lists what changed, what was already so and each failure with its reason.`,
   input: z.strictObject({
     issues: z
       .array(arg.issue)

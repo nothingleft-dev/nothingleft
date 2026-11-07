@@ -48,6 +48,7 @@ export const addComment = defineTool({
     'Adds a markdown comment to an issue, or to a knowledge base article (project and article). @username mentions notify. Returns the comment.',
   input: z.strictObject({ ...on, body, org: arg.org }),
   kind: 'write',
+  scopes: ['issues:read', 'comments:write'],
   creates: true,
   endpoints: [
     'POST /v1/issues/{key}/comments',
@@ -72,6 +73,7 @@ export const updateComment = defineTool({
   description: 'Replaces the text of a comment on an issue or an article. Contributors may edit only their own.',
   input: z.strictObject({ ...on, comment, body, org: arg.org }),
   kind: 'write',
+  scopes: ['issues:read', 'comments:write'],
   endpoints: [
     'PATCH /v1/issues/{key}/comments/{id}',
     'GET /v1/projects/{key}/articles',
@@ -99,6 +101,7 @@ export const deleteComment = defineTool({
     'Deletes a comment on an issue or an article, and the files attached to it. Contributors may delete only their own. Asks you to confirm before acting.',
   input: z.strictObject({ ...on, comment, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'comments:write'],
   endpoints: [
     'DELETE /v1/issues/{key}/comments/{id}',
     'GET /v1/issues/{key}/comments/{id}',

@@ -455,6 +455,24 @@ describe('issueSearchRepository.search', () => {
       expect(status.total).toBe(3);
       expect(status.entries.map(e => e.group)).toEqual(['Submitted']);
 
+      const counted = await repo.search(ctxA, scopeOf([projectA]), q('#Unresolved'), {
+        sort: [],
+        groupBy: 'status',
+        countOnly: true,
+        limit: 1,
+        offset: 0,
+      });
+      expect(counted.entries).toEqual([]);
+      expect(counted.total).toBe(3);
+      expect(counted.groups).toEqual(status.groups);
+      const total = await repo.search(ctxA, scopeOf([projectA]), q('#Unresolved'), {
+        sort: [],
+        countOnly: true,
+        limit: 1,
+        offset: 0,
+      });
+      expect([total.entries, total.total]).toEqual([[], 3]);
+
       const due = await repo.search(ctxA, scopeOf([projectA]), q(''), {
         sort: [],
         groupBy: 'due',

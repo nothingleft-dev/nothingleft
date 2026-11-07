@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { Organization } from '@nothingleft/types';
+import type { Organization, PatScope } from '@nothingleft/types';
 import type { ApiClient } from './api.ts';
 import { clientRef } from './args.ts';
 
@@ -33,6 +33,12 @@ export interface ToolDefinition<S extends z.ZodObject = z.ZodObject> {
   kind: ToolKind;
   endpoints: readonly Endpoint[];
   /**
+   * What a token needs before the tool is offered: every entry, where a list entry is any one of
+   * its scopes. Default: issues:read for a read, plus issues:write otherwise, since writes resolve
+   * names through reads first. A test replays each call holding only these.
+   */
+  scopes?: readonly ScopeNeed[];
+  /**
    * Adds a new record on every call. A retry with the same arguments, or the same `client_ref`,
    * within the API's MCP replay window answers with the first call's result instead of adding another.
    */
@@ -61,3 +67,23 @@ export const EXEMPT_CATEGORIES = [
   'byo_storage',
   'integration_inbound',
 ] as const;
+
+export type ScopeNeed = PatScope | readonly PatScope[];
+
+/** Tools any token may call: they act on the caller alone or only read who they are. */
+export const ANY_SCOPE: readonly ScopeNeed[] = [];
+
+export const scopesOf = (tool: Pick<ToolDefinition, 'kind' | 'scopes'>): readonly ScopeNeed[] =>
+  tool.scopes ?? (tool.kind === 'read' ? ['issues:read'] : ['issues:read', 'issues:write']);
+
+export const offeredTo = (tool: Pick<ToolDefinition, 'kind' | 'scopes'>, held: readonly PatScope[]): boolean =>
+  scopesOf(tool).every(need => (typeof need === 'string' ? held.includes(need) : need.some(s => held.includes(s))));
+
+/** Every smallest scope set that satisfies a tool: one per alternative of each choice. */
+export function leastScopes(tool: Pick<ToolDefinition, 'kind' | 'scopes'>): PatScope[][] {
+  return scopesOf(tool).reduce<PatScope[][]>(
+    (sets, need) =>
+      (typeof need === 'string' ? [need] : need).flatMap(scope => sets.map(set => [...new Set([...set, scope])])),
+    [[]],
+  );
+}

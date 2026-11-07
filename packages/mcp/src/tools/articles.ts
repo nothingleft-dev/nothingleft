@@ -32,19 +32,12 @@ type Scope = { org?: string };
 const scope = (org: string | undefined): Scope => (org ? { org } : {});
 const projectKey = (key: string) => key.trim().toUpperCase();
 
-export const article = z
-  .string()
-  .trim()
-  .min(1)
-  .max(500)
-  .describe(
-    'An article of the project by slug or exact title, e.g. "restoring-a-failed-sync"; list_articles shows them.',
-  );
+export const article = z.string().trim().min(1).max(500).describe('Article slug or exact title.');
 const status = z
   .enum(ARTICLE_STATUSES)
   .describe('"draft" (only you and Project Admins see it) or "published" (every project member).');
 const anchor = (side: string) =>
-  article.describe(`Place it immediately ${side} this sibling (slug or title). Without before or after it goes last.`);
+  article.describe(`${side === 'before' ? 'Before' : 'After'} this sibling (slug or title); default last.`);
 
 export const articleUrl = (appBaseUrl: string, project: string, slug: string) =>
   `${appBaseUrl}/projects/${project}/articles/${slug}`;
@@ -235,7 +228,7 @@ export const listArticles = defineTool({
 export const getArticle = defineTool({
   name: 'get_article',
   title: 'Get article',
-  description: `One knowledge base article as markdown: status, path, tags, the latest comments and the body (cut at ${DESCRIPTION_PAGE / 1024} KB with a marker; call again with offset to read on). Issue keys in it are references you can open with get_issue.`,
+  description: `One article as markdown: status, path, tags, latest comments and the body (${DESCRIPTION_PAGE / 1024} KB; \`offset\` reads on). Issue keys in it open with get_issue.`,
   input: z.strictObject({
     project: arg.project,
     article,
@@ -280,7 +273,7 @@ export const searchArticles = defineTool({
   name: 'search_articles',
   title: 'Search articles',
   description:
-    'Full-text search over knowledge base titles and bodies, with filters: `tag: rca, incident`, `status: draft`, `created by: me`, `updated by: @casey`, `updated: {minus 30d} .. Today`, `parent: {Runbooks}` (everything beneath it; `{No parent}` is the top level), `has: tag`, `sort by: updated desc`, and free words. Tags are shared with issues. Returns a table with an excerpt of each.',
+    'Searches knowledge base titles and bodies with `tag:`, `status: draft`, `created by:`, `updated:`, `parent: {Runbooks}`, `has:`, `sort by:` and free words. Returns a table with excerpts.',
   input: z.strictObject({
     query: z.string().max(2000).describe('The article query, e.g. `tag: rca payment timeout`. Empty lists everything.'),
     project: arg.project.optional().describe('Only this project, e.g. "PP". Default: every project you can read.'),
@@ -317,7 +310,7 @@ export const search = defineTool({
   name: 'search',
   title: 'Search everything',
   description:
-    "Issues and knowledge base articles in two groups for one query - the app's search box. One tag reaches both: `tag: payment-outage` finds the outage issues and the RCA written afterwards. Each group reads the query in its own language; one that cannot (e.g. `priority:` for articles) says why and shows nothing.",
+    "The app's search box: issues and knowledge base articles for one query, in two groups. Each reads the query in its own language and says when it cannot.",
   input: z.strictObject({
     query: z.string().max(2000).describe('Words, a tag, or either query language.'),
     project: arg.project.optional().describe('Only this project. Default: every project you can read.'),
@@ -364,7 +357,7 @@ export const createArticle = defineTool({
   name: 'create_article',
   title: 'Create article',
   description:
-    'Writes a knowledge base article in one call: title, markdown body, parent (up to three levels deep), place among its siblings, status and tags (new names are created). A draft by default. Mention issues by key (PP-12) and they list it under Referenced by; @username mentions notify. Returns the article.',
+    'Writes an article in one call: title, body, parent (up to three levels), position, status (draft by default) and tags. Issue keys it mentions list it under Referenced by; @mentions notify.',
   input: z.strictObject({
     project: arg.project,
     title: z.string().trim().min(1).max(500),
@@ -401,7 +394,7 @@ export const updateArticle = defineTool({
   name: 'update_article',
   title: 'Update article',
   description:
-    'Changes one article: only what you pass changes. Title, body (replaced whole), slug, publish or return to draft, move under another parent (null: top level) or before / after a sibling, add or remove tags, and your own star and watch. Renaming keeps the slug. Returns the article.',
+    'Changes one article; only what you pass: title, body (replaced whole), slug, publish or draft, parent (null: top level), position, tags, and your star and watch.',
   input: z.strictObject({
     project: arg.project,
     article,
@@ -499,7 +492,7 @@ export const deleteArticle = defineTool({
   name: 'delete_article',
   title: 'Delete article',
   description:
-    'Deletes an article, restorable for 14 days (restore_article). One with sub-articles needs `children`: "move_up" puts them in its place, "delete" deletes them with it. Contributors may delete only their own. Asks you to confirm before acting.',
+    'Deletes an article, restorable for 14 days. One with sub-articles needs `children`: "move_up" or "delete". Asks you first.',
   input: z.strictObject({
     project: arg.project,
     article,

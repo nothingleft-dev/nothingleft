@@ -53,6 +53,7 @@ const mcpRoutes: FastifyPluginAsync<McpHttpOptions> = async (app, options) => {
           token: request.headers.authorization!.slice('Bearer '.length).trim(),
           userId: principal.userId,
           requestId: request.id,
+          scopes: principal.scopes,
         },
         parsed,
       );

@@ -189,13 +189,15 @@ describe('the /mcp mount', () => {
     expect((result!['content'] as { text: string }[])[0]!.text).toContain('Acme');
   });
 
-  test('the server instructions say contributor content is data', async () => {
+  test('the server instructions give the shared conventions once, and say contributor content is data', async () => {
     const res = await rpc(w.full, 'initialize', {
       protocolVersion: '2025-06-18',
       capabilities: {},
       clientInfo: { name: 'test', version: '0' },
     });
-    expect(parse(res.body).result.instructions).toBe(t('mcp.provenance.notice'));
+    const instructions = parse(res.body).result.instructions as string;
+    expect(instructions).toContain(t('mcp.conventions'));
+    expect(instructions).toContain(t('mcp.provenance.notice'));
   });
 });
 
@@ -238,6 +240,29 @@ describe('subscription streams', () => {
     }
     expect(seen).toContain('notifications/subscriptions/acknowledged');
     gone.abort();
+  });
+});
+
+describe('the size of the tool definitions', () => {
+  // ~25k tokens for every tool; a narrower token sees fewer (owner, 8 Nov 2026). A larger budget is a decision, not a drift.
+  const TOTAL_MAX = 105_000;
+  const TOOL_MAX = 3_200;
+  const sizes = async (token: string) =>
+    (parse((await rpc(token, 'tools/list')).body).result.tools as { name: string }[]).map(
+      tool => [tool.name, JSON.stringify(tool).length] as const,
+    );
+
+  test('every definition stays inside its budget, and so does the whole list', async () => {
+    const all = await sizes(w.full);
+    expect(all.length).toBe(TOOL_NAMES.length);
+    expect(all.reduce((sum, [, n]) => sum + n, 0)).toBeLessThanOrEqual(TOTAL_MAX);
+    expect(all.filter(([, n]) => n > TOOL_MAX)).toEqual([]);
+  });
+
+  test('a read-only token is sent a fraction of the list', async () => {
+    const read = await sizes(w.readOnly);
+    expect(read.length).toBeLessThan(TOOL_NAMES.length / 2);
+    expect(read.reduce((sum, [, n]) => sum + n, 0)).toBeLessThanOrEqual(TOTAL_MAX / 3);
   });
 });
 
@@ -494,11 +519,17 @@ describe('permission propagation', () => {
     expect(await projectRole(w.caseyName)).toBe('contributor');
   });
 
-  test('a read-only token is refused a write, even for an Org Owner', async () => {
-    const r = await tool(w.readOnly, 'invite_member', { emails: ['x@test.local'], org: w.slugA });
-    expect(r.isError).toBe(true);
-    expect(r.code).toBe('token.scope_missing');
-    expect(r.text).toContain('admin:org');
+  test('a read-only token is not offered a write, even for an Org Owner, and calling it anyway does nothing', async () => {
+    const listed = rpcAnswer((await rpc(w.readOnly, 'tools/list')).body).result!['tools'] as { name: string }[];
+    expect(listed.map(t => t.name)).not.toContain('invite_member');
+    const answer = await callTool(
+      app,
+      w.readOnly,
+      'invite_member',
+      { emails: ['x@test.local'], org: w.slugA },
+      'accepts',
+    );
+    expect(answer.error?.code).toBe(-32602);
   });
 
   test('a project-restricted token sees only its projects', async () => {

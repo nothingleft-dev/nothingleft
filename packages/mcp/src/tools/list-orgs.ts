@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineTool } from '../tool.ts';
+import { ANY_SCOPE, defineTool } from '../tool.ts';
 import { orgRoleOf } from '../organizations.ts';
 import { code, handle, roleLabel, table } from '../render.ts';
 
@@ -10,6 +10,7 @@ export const listOrgs = defineTool({
     'Organisations you belong to, with the slug to pass as `org`, your username and role in each, the plan and the seat count.',
   input: z.strictObject({}),
   kind: 'read',
+  scopes: ANY_SCOPE,
   endpoints: ['GET /v1/organizations'],
   async run(ctx) {
     const orgs = await ctx.organizations();

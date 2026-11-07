@@ -43,7 +43,7 @@ export const fieldValue = z
 export const customFieldsArg = z
   .record(z.string().trim().min(1).max(100), fieldValue)
   .describe(
-    'Custom field values by field name or slug, e.g. {"Severity": "High", "platforms": ["Web", "iOS"], "Reviewer": "@casey", "Launch": "2026-10-01", "Budget": 12.5, "Blocking": true, "Review time": "1h 30m"}. Options by name, people as @username, me or a full name, dates YYYY-MM-DD, datetimes ISO, durations "1h 30m". null clears one. describe_project_schema and list_custom_fields list the fields.',
+    'By field name or slug, e.g. {"Severity": "High", "Platforms": ["Web"], "Reviewer": "@casey"}; null clears one. Values follow the field\'s type.',
   );
 
 const fieldArg = z
@@ -161,7 +161,7 @@ function fieldDetails(f: CustomField): string {
 const typeArg = z
   .enum(CUSTOM_FIELD_TYPES)
   .describe(
-    'text (one line), markdown, number, integer, date, datetime, checkbox, select, multi_select, user, multi_user, url or duration.',
+    'text, markdown, number, integer, date, datetime, checkbox, select, multi_select, user, multi_user, url or duration.',
   );
 const optionArg = z.union([
   z.string().trim().min(1).max(60),
@@ -208,7 +208,7 @@ export const createCustomField = defineTool({
   name: 'create_custom_field',
   title: 'Create custom field',
   description:
-    'Adds a custom field to a project: name, type, options for a select, the issue types it applies to (all by default), required, a default, an empty label, and min / max / decimals for numbers. The slug - the search attribute - comes from the name unless given, and never changes. At most 50 live fields per project. Needs a Project Admin and admin:project.',
+    'Adds a custom field: name, type, options, issue types (default all), required, default, empty label, number range. The slug, its search attribute, comes from the name and never changes. At most 50 per project. Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     name: z.string().trim().min(1).max(60),
@@ -240,6 +240,7 @@ export const createCustomField = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   creates: true,
   endpoints: ['POST /v1/projects/{key}/custom-fields'],
   async run(ctx, args) {
@@ -291,7 +292,7 @@ const updateCustomFieldInput = z.strictObject({
       z.strictObject({
         option: z.string().trim().min(1).max(60).describe('The option as it is named now.'),
         name: z.string().trim().min(1).max(60).optional().describe('Rename it; every issue follows.'),
-        color: z.enum(LABEL_COLORS).optional(),
+        color: z.enum(LABEL_COLORS).optional().describe('A label colour such as "red-3".'),
         position: z.number().int().min(0).max(999).optional(),
         archived: z.boolean().optional().describe('Kept where set, no longer offered.'),
       }),
@@ -366,9 +367,10 @@ export const updateCustomField = defineTool({
   name: 'update_custom_field',
   title: 'Update custom field',
   description:
-    'Changes a custom field: rename it (the slug stays), required, default, empty label, the issue types it applies to, range, position, archive or unarchive; and its options - add, rename (every issue follows), recolour, reorder, archive, or remove (an option in use needs move_to). Archiving keeps every value; delete_custom_field destroys them. Needs a Project Admin and admin:project. A call that removes options asks you to confirm first.',
+    'Changes a custom field (the slug stays): name, required, default, empty label, issue types, range, position, archive; and its options: add, rename, recolour, reorder, archive or remove (one in use needs move_to). Removing options asks you first. Project Admin, admin:project.',
   input: updateCustomFieldInput,
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:project'],
   deletes: args => Boolean(args.remove_options?.length),
   endpoints: [
     'GET /v1/projects/{key}/custom-fields/{slug}',
@@ -464,9 +466,10 @@ export const deleteCustomField = defineTool({
   name: 'delete_custom_field',
   title: 'Delete custom field',
   description:
-    'Deletes a custom field and every value it holds; history keeps what was recorded. A project using it as its Estimation or Spent time goes back to the built-in. To keep the values, archive it with update_custom_field instead. Asks you to confirm before acting. Needs a Project Admin and admin:project.',
+    'Deletes a custom field and every value it holds; history keeps them. To keep the values, archive it with update_custom_field. Asks you first. Project Admin, admin:project.',
   input: z.strictObject({ project: arg.project, field: fieldArg, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['GET /v1/projects/{key}/custom-fields/{slug}', 'DELETE /v1/projects/{key}/custom-fields/{slug}'],
   async describeAction(ctx, args) {
     const key = args.project.toUpperCase();
@@ -493,7 +496,7 @@ export const setFieldValues = defineTool({
   name: 'set_field_values',
   title: 'Set custom field values',
   description:
-    'Sets custom field values on one issue or on many at once (the same values on each, each issue checked on its own). Only the fields you name change; null clears one. For other fields in the same call, use update_issue or bulk_update_issues with `custom_fields`.',
+    'Sets custom field values on one issue or many (each checked alone). Only the fields you name change; null clears one.',
   input: z.strictObject({
     issues: z
       .union([arg.issue, z.array(arg.issue).min(1).max(500)])

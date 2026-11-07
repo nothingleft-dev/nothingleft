@@ -4091,6 +4091,7 @@ paths:
         - { name: project, in: query, schema: { type: string, example: PMS }, description: 'Only this project. Required with `deleted=true`.' }
         - { name: group_by, in: query, schema: { type: string, example: 'custom:severity' }, description: 'project, status, priority, type, assignee, tag, sprint, due, or `custom:<slug>` for a select, multi-select, user, multi-user or checkbox field in scope (otherwise `400 search.not_groupable` with the groupable ones in `valid_values`). A custom group''s empty label is the field''s; a checkbox groups as Yes and No.' }
         - { name: group_limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, example: 10 }, description: 'Only with `group_by`: at most this many rows from each group. Ignored without `group_by`.' }
+        - { name: count_only, in: query, schema: { type: boolean, default: false }, description: 'Only the count: `data` is empty, `pagination.total` is the number of matches and, with `group_by`, `meta.groups` carries every group''s count. No row is loaded.' }
         - $ref: '#/components/parameters/SearchSort'
         - { name: deleted, in: query, schema: { type: string, enum: ['true', 'false'], default: 'false' } }
         - $ref: '#/components/parameters/Limit'

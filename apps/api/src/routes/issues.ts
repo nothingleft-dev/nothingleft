@@ -37,6 +37,10 @@ const ListQuery = IssueListQuerySchema.extend({
     .transform(v => v === 'true')
     .default(false),
   group_limit: z.coerce.number().int().min(1).max(PAGINATION_MAX_LIMIT).optional(),
+  count_only: z
+    .enum(['true', 'false'])
+    .transform(v => v === 'true')
+    .default(false),
   limit: z.coerce.number().int().min(1).max(PAGINATION_MAX_LIMIT).default(PAGINATION_DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(0),
 });

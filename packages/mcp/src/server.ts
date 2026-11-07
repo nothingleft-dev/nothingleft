@@ -13,7 +13,7 @@ import {
 } from '@modelcontextprotocol/server';
 import type { z } from 'zod';
 import { t } from '@nothingleft/i18n';
-import type { Me, Organization } from '@nothingleft/types';
+import type { Me, Organization, PatScope } from '@nothingleft/types';
 import { version } from '../package.json' with { type: 'json' };
 import { apiClient, type ApiClient, type Fetch } from './api.ts';
 import { ToolError, type ToolErrorBody } from './errors.ts';
@@ -24,7 +24,7 @@ import { RESOURCES } from './resources/index.ts';
 import { PROMPTS } from './prompts/index.ts';
 import type { PromptDefinition, ResourceDefinition } from './surface.ts';
 import type { TimeZoneCache } from './time-zones.ts';
-import type { ToolContext, ToolDefinition } from './tool.ts';
+import { offeredTo, type ToolContext, type ToolDefinition } from './tool.ts';
 
 export type ToolName = (typeof TOOLS)[number]['name'];
 export const TOOL_NAMES = TOOLS.map(t => t.name) as ToolName[];
@@ -49,6 +49,8 @@ export interface McpServerOptions {
   appBaseUrl: string;
   fetch: Fetch;
   requestId?: string;
+  /** The token's scopes: a tool none of them can use is not listed. Absent, every tool is. */
+  scopes?: readonly PatScope[];
   onToolCall?: (event: ToolCallEvent) => void;
   /** Shared across requests by a long-lived handler; without one, each call looks the timezone up. */
   timeZones?: TimeZoneCache;
@@ -60,7 +62,51 @@ export interface McpServerOptions {
  */
 function advertised(schema: z.ZodObject): StandardSchemaWithJSON {
   const standard = (schema as unknown as StandardSchemaWithJSON)['~standard'];
-  return { '~standard': { ...standard, validate: value => ({ value }) } };
+  return {
+    '~standard': {
+      ...standard,
+      validate: value => ({ value }),
+      jsonSchema: { ...standard.jsonSchema, input: options => lean(standard.jsonSchema.input(options)) },
+    },
+  };
+}
+
+// Limits the model never needs to see: parseArguments enforces them and answers with the rule broken.
+const UNADVERTISED = new Set(['$schema', 'minLength', 'maxLength', 'minItems', 'maxItems']);
+
+/**
+ * A JSON Schema without what only validation needs: length limits, the safe-integer bounds Zod
+ * adds, a date regex beside its `format`, and a branch description its parent's already contains.
+ * Property names are never touched.
+ */
+function lean(node: Record<string, unknown>, inherited?: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const description = node['description'] ?? inherited;
+  for (const [key, value] of Object.entries(node)) {
+    if (UNADVERTISED.has(key) || (key === 'additionalProperties' && value === false)) continue;
+    if (key === 'pattern' && 'format' in node) continue;
+    // A long enum with a description saying its shape (the 40 label colours) costs more than it guides.
+    if (key === 'enum' && Array.isArray(value) && value.length > 20 && typeof node['description'] === 'string')
+      continue;
+    if ((key === 'maximum' || key === 'minimum') && Math.abs(value as number) === Number.MAX_SAFE_INTEGER) continue;
+    if (key === 'description' && typeof inherited === 'string' && inherited.includes(value as string)) continue;
+    if (key === 'properties' && value && typeof value === 'object') {
+      out[key] = Object.fromEntries(
+        Object.entries(value as Record<string, Record<string, unknown>>).map(([name, child]) => [name, lean(child)]),
+      );
+    } else if ((key === 'anyOf' || key === 'oneOf' || key === 'allOf') && Array.isArray(value)) {
+      out[key] = value.map(child => lean(child as Record<string, unknown>, description));
+    } else if (
+      (key === 'items' || key === 'additionalProperties' || key === 'propertyNames') &&
+      value &&
+      typeof value === 'object'
+    ) {
+      out[key] = lean(value as Record<string, unknown>);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
 }
 
 // The API names a field by its REST parameter; the agent knows it by the tool's argument.
@@ -71,10 +117,12 @@ function inArgumentTerms(tool: ToolDefinition, body: ToolErrorBody): ToolErrorBo
   return argument && argument in tool.input.shape ? { ...body, field: argument } : body;
 }
 
+// The spec's defaults are readOnly false, destructive true, idempotent false, openWorld true, and the
+// destructive and idempotent hints mean nothing on a read-only tool: only what differs is sent.
 const ANNOTATIONS = {
-  read: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-  write: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-  destructive: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  read: { readOnlyHint: true, openWorldHint: false },
+  write: { destructiveHint: false, openWorldHint: false },
+  destructive: { destructiveHint: true, idempotentHint: true, openWorldHint: false },
 } as const;
 
 const CONFIRMATION = 'confirm';
@@ -222,13 +270,16 @@ function contextFor(options: McpServerOptions, idempotencySeed?: string): { ctx:
 export function createMcpServer(options: McpServerOptions): McpServer {
   const server = new McpServer(
     { name: 'nothingleft', title: 'Nothing Left', version },
-    { instructions: t('mcp.provenance.notice') },
+    { instructions: join(t('mcp.conventions'), t('mcp.provenance.notice')) },
   );
   const codec = createRequestStateCodec<AskedFor>({
     key: options.confirmationKey,
     bind: () => String(options.userId),
   });
-  for (const tool of TOOLS) registerTool(server, tool as unknown as ToolDefinition, options, codec);
+  for (const tool of TOOLS) {
+    const definition = tool as unknown as ToolDefinition;
+    if (!options.scopes || offeredTo(definition, options.scopes)) registerTool(server, definition, options, codec);
+  }
   for (const resource of RESOURCES) registerResource(server, resource, options);
   for (const prompt of PROMPTS) registerPrompt(server, prompt as unknown as PromptDefinition, options);
   return server;
@@ -246,7 +297,7 @@ function registerTool(
       title: tool.title,
       description: tool.description,
       inputSchema: advertised(tool.input),
-      annotations: { title: tool.title, ...ANNOTATIONS[tool.kind] },
+      annotations: ANNOTATIONS[tool.kind],
     },
     async (raw: unknown, request: ServerContext) => {
       const started = performance.now();

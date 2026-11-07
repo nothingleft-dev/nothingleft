@@ -18,7 +18,7 @@ const input = z.strictObject({
   project_role: z
     .enum([...arg.projectRole.options, NONE])
     .optional()
-    .describe('New role in `project`. "None" removes them from the project; a role for a non-member adds them.'),
+    .describe('Role in `project`; "None" removes them.'),
 });
 type Args = z.output<typeof input>;
 
@@ -69,6 +69,7 @@ export const manageRoles = defineTool({
     "Changes one member's organisation role, or their role in one project - adding them to the project or removing them from it. Removing someone asks you to confirm first.",
   input,
   kind: 'destructive',
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   deletes: args => args.project_role === NONE,
   endpoints: [
     'GET /v1/organizations',

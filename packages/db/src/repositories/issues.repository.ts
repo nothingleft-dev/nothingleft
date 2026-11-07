@@ -66,6 +66,8 @@ export type IssuePatch = Partial<
 export interface IssueListOptions {
   projectId: number;
   deleted: boolean;
+  /** The total alone; no row is loaded. */
+  countOnly?: boolean | undefined;
   limit: number;
   offset: number;
 }
@@ -170,6 +172,10 @@ export function issuesRepository(db: Queryable) {
         eq(issues.project_id, options.projectId),
         options.deleted ? isNotNull(issues.deleted_at) : live,
       );
+      if (options.countOnly) {
+        const [totals] = await db.select({ n: count() }).from(issues).where(where);
+        return { rows: [], total: totals?.n ?? 0 };
+      }
       const [rows, [totals]] = await Promise.all([
         db
           .select(issueColumns)

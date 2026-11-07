@@ -53,36 +53,20 @@ const TITLES: Record<ReportName, string> = {
   timesheet: 'Timesheet',
 };
 
-const fieldArg = (what: string) =>
-  z
-    .string()
-    .trim()
-    .min(1)
-    .max(60)
-    .describe(
-      `${what}: project, status, priority, type, assignee, tag, sprint, due, or custom:<slug> for a select, multi-select, user, multi-user or checkbox field.`,
-    );
+const fieldArg = (what: string) => z.string().trim().min(1).max(60).describe(what);
 
 const input = z.strictObject({
-  report: z
-    .enum(REPORT_NAMES)
-    .describe(
-      'issues-per-assignee, issues-per-project, issues-per-field (`field`), matrix (`row_field`, `column_field`), burndown (`project`, `sprint`, `measure`), average-age (`group_by`), time (`group_by`, period), gantt (`project`, `group_by`), timesheet (`users`, period; `user` with a one-day period lists that cell’s work items).',
-    ),
-  query: z
-    .string()
-    .max(2000)
-    .optional()
-    .describe(
-      'Scope, in the search query language, e.g. `type: Bug #Unresolved`; `sprint: {Sprint 14}` scopes to a sprint.',
-    ),
+  report: z.enum(REPORT_NAMES).describe('Each argument below names the reports it applies to.'),
+  query: z.string().max(2000).optional().describe('Scope in the query language, e.g. `type: Bug #Unresolved`.'),
   view: z.string().trim().min(1).max(100).optional().describe('A saved view by name, ANDed with `query`.'),
   projects: z.array(arg.project).max(100).optional().describe('Narrow to these project keys.'),
   project: arg.project.optional().describe('burndown and gantt: the project.'),
-  field: fieldArg('issues-per-field groups by').optional(),
+  field: fieldArg(
+    'issues-per-field: project, status, priority, type, assignee, tag, sprint, due or custom:<slug>.',
+  ).optional(),
   by_category: z.boolean().optional().describe('issues-per-field on status: the five status categories instead.'),
-  row_field: fieldArg('matrix rows').optional(),
-  column_field: fieldArg('matrix columns').optional(),
+  row_field: fieldArg('matrix rows, as for field.').optional(),
+  column_field: fieldArg('matrix columns, as for field.').optional(),
   include_unassigned: z.boolean().optional().describe('issues-per-assignee: false leaves Unassigned out.'),
   unresolved_only: z.boolean().optional().describe('average-age: default true; false also measures resolved issues.'),
   group_by: z
@@ -92,24 +76,21 @@ const input = z.strictObject({
     .max(110)
     .optional()
     .describe(
-      'average-age: a field as for `field`, or none. time: work_type (default), user, issue, project, or attribute:<Name>. gantt: epic, assignee or none.',
+      'average-age: a field or none. time: work_type (default), user, issue, project or attribute:<Name>. gantt: epic, assignee or none.',
     ),
   sprint: arg.sprint.optional().describe('burndown: sprint by name or slug; default the active one.'),
-  measure: z
-    .enum(BURNDOWN_MEASURES)
-    .optional()
-    .describe('burndown: story_points (default), issue_count, remaining_estimate.'),
+  measure: z.enum(BURNDOWN_MEASURES).optional().describe('burndown; default story_points.'),
   period: z
     .string()
     .trim()
     .min(1)
     .max(100)
     .optional()
-    .describe('time, timesheet: `Last week`, `This month`, `2026-09`, `2026-09-01 .. 2026-09-14`. Default This week.'),
+    .describe('`Last week`, `This month`, `2026-09` or `2026-09-01 .. 2026-09-14`. Default This week.'),
   from: arg.calendarDate.optional().describe('time, timesheet: first day, with `to`, instead of `period`.'),
   to: arg.calendarDate.optional(),
   users: arg.people('timesheet: whose rows').optional(),
-  user: arg.person.optional().describe('timesheet: list this person’s work items in the period instead of the grid.'),
+  user: arg.person.optional().describe('timesheet: this person’s work items instead of the grid.'),
   org: arg.org,
   limit: arg.limit,
   offset: arg.offset,
@@ -412,7 +393,7 @@ export const runReport = defineTool({
   name: 'run_report',
   title: 'Run a report',
   description:
-    'Runs one of the nine reports and returns its table with the series the chart is drawn from - the same numbers as the web chart and its CSV. Every issue report is scoped by `query` (the search language) and/or a saved `view`, within the projects you can read. Issues per field and Matrix group by any groupable field, custom fields by `custom:<slug>`. Burndown reads the sprint’s daily snapshots, with scope added as its own series. Time sums logged time by work type, user, issue, project or a work item attribute, against the estimate. Timesheet is people × days; with `user` it lists that person’s work items. An empty report says which filter produced nothing.',
+    "Runs one of nine reports and returns its table with the chart's series, the same numbers as the web chart. Issue reports are scoped by `query` and/or a saved `view`. An empty report says which filter produced nothing.",
   input,
   kind: 'read',
   endpoints: [

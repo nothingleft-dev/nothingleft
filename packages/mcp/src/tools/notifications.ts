@@ -32,7 +32,7 @@ export const listNotifications = defineTool({
   name: 'list_notifications',
   title: 'List notifications',
   description:
-    'Your inbox across every organisation you belong to: one row per issue or article (twelve changes to one issue are one entry), newest first, with what happened and how much is unread. Name an issue, or a project and article, to see all of its notifications. Filter by kind, project, organisation or unread. A change arrives ten minutes after it was made, as it settled: a correction inside that window is one notification, and a change undone is none. Reading marks nothing read. Needs issues:read.',
+    'Your inbox across organisations: one row per issue or article, newest first, with what happened and how much is unread. Name an issue or article for all of its notifications; filter by kind, project, org or unread. Reading marks nothing read.',
   input: z.strictObject({
     unread_only: z.boolean().optional().describe('Only entries with something unread.'),
     kind: kinds('Only these kinds, e.g. ["mentioned", "assigned"].').optional(),
@@ -117,7 +117,7 @@ export const markNotificationsRead = defineTool({
   name: 'mark_notifications_read',
   title: 'Mark notifications read',
   description:
-    'Marks notifications read: every one on the issues or articles named, or with all: true everything matching kind, project and org (the inbox\'s "Mark all read"). Returns how many changed and what is still unread. Needs a token with issues:write.',
+    'Marks notifications read: on the issues or articles named, or with all: true everything matching kind, project and org. Returns what is still unread.',
   input: z.strictObject({
     issues: z.array(arg.issue).min(1).max(100).optional().describe('Issue keys, e.g. ["PP-12"].'),
     project: arg.project.optional().describe("With article, the article's project; with all, only this project."),
@@ -191,7 +191,7 @@ export const setNotificationPreferences = defineTool({
   name: 'set_notification_preferences',
   title: 'Set notification preferences',
   description:
-    'Chooses how each kind reaches you by email, by listing kinds under the option they get, e.g. instant: ["mentioned"], everything_else: "daily digest". all_off turns every email off first. Kinds not named keep their choice; reaction is in-app only. Needs a token with issues:write.',
+    'Sets email delivery per kind by listing kinds under an option, e.g. instant: ["mentioned"]. all_off turns all email off first; kinds not named keep their choice.',
   input: z.strictObject({
     instant: kinds('Kinds to email at once.').optional(),
     daily_digest: kinds('Kinds for the daily digest, 9am your time.').optional(),

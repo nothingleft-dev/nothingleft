@@ -278,6 +278,14 @@ nothing changes; ask an admin for a role rather than working around it. If only 
 token stands in the way, the answer names the scope it lacks - _This access token does
 not have the time:write scope_ - so create a token that includes it.
 
+**Your token decides which tools the agent sees.** A token with only `issues:read` is offered
+the reading tools alone, about forty of them, which keeps the agent's context small. Create a
+token with more scopes when the agent should change things.
+
+**Short answers first.** Opening an issue gives a brief summary; the agent asks for the full
+issue, with comments and linked issue titles, when it needs them. A search can return only the
+count, or only the columns the agent asks for.
+
 **Rate limits.** A token may make 600 requests a minute; one tool call uses two to
 four of them.
 

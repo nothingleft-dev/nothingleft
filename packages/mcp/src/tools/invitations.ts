@@ -59,6 +59,7 @@ export const inviteMember = defineTool({
     ...scopeInput,
   }),
   kind: 'write',
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   creates: true,
   endpoints: [
     'GET /v1/organizations',
@@ -117,6 +118,7 @@ export const createInviteLink = defineTool({
       .describe('Only accounts with an email at this domain may join, e.g. "acme.com".'),
   }),
   kind: 'write',
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   creates: true,
   endpoints: [
     'GET /v1/organizations',

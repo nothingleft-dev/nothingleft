@@ -36,9 +36,7 @@ const workItemTable = (items: WorkItem[], calendar: Parameters<typeof duration>[
   untrusted({ author: authorsOf(items.map(w => w.author)), place }, table(HEADERS, rows(items, calendar)));
 const attributesArg = z
   .record(z.string().trim().min(1).max(100), z.string().trim().min(1).max(100).nullable())
-  .describe(
-    'The project\'s work item attributes by name, e.g. {"Billable": "Yes"}; null clears one. describe_project_schema lists them.',
-  );
+  .describe('Work item attributes by name, e.g. {"Billable": "Yes"}; null clears one.');
 
 async function spentLine(
   ctx: ToolContext,
@@ -55,7 +53,7 @@ export const logTime = defineTool({
   name: 'log_time',
   title: 'Log time',
   description:
-    "Logs spent time on an issue: a duration on one date (default today in your timezone), or the same duration on every working day from `from` to `to`. Work type defaults to the project's; the project's other work item attributes are set by name. Project Admins may log for another `author`. Returns the work items and the issue's new spent time.",
+    "Logs time on an issue: a duration on one date (default today) or on every working day from `from` to `to`. Work type defaults to the project's; other attributes by name. Project Admins may log for another `author`.",
   input: z.strictObject({
     issue: arg.issue,
     duration: arg.duration,
@@ -69,6 +67,7 @@ export const logTime = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'time:write'],
   creates: true,
   endpoints: ['POST /v1/issues/{key}/work-items', 'GET /v1/issues/{key}', 'GET /v1/me'],
   async run(ctx, args) {
@@ -155,6 +154,7 @@ export const updateWorkItem = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'time:write'],
   endpoints: ['PATCH /v1/issues/{key}/work-items/{id}', 'GET /v1/issues/{key}'],
   async run(ctx, args) {
     const key = issueKey(args.issue);
@@ -192,6 +192,7 @@ export const deleteWorkItem = defineTool({
     "Deletes one work item; the issue's spent time drops by it. Contributors may delete only their own. Asks you to confirm before acting.",
   input: z.strictObject({ issue: arg.issue, work_item: workItem, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'time:write'],
   endpoints: [
     'DELETE /v1/issues/{key}/work-items/{id}',
     'GET /v1/issues/{key}/work-items/{id}',
