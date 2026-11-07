@@ -143,7 +143,11 @@ request_id `01937f2a-…`
     (the 40 label colours), a nullable branch repeating its parent's description, and
     `additionalProperties: false`. `parseArguments` still enforces all of it, and its error
     names the rule broken.
-  - Annotations send only what differs from the spec's defaults, without a repeated `title`.
+  - Annotations send only what differs from the spec's defaults, without a repeated `title`. A
+    destructive tool whose repeat changes something again (`rotate_invite_link`, marked
+    `repeatable`) does not claim `idempotentHint`.
+- **An edge gateway error (502, 503, 504, 524) is retried once** with the same idempotency key,
+  like a dropped connection: the edge giving up says nothing about whether the write landed.
 - **`tools/list` offers only what the token can use.** Each tool declares `scopes` (every entry
   needed; a list entry is any one of them), defaulting to `issues:read` for a read and
   `issues:read` + `issues:write` otherwise, since writes resolve names through reads. A

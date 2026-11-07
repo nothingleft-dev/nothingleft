@@ -43,6 +43,8 @@ export interface ToolDefinition<S extends z.ZodObject = z.ZodObject> {
    * within the API's MCP replay window answers with the first call's result instead of adding another.
    */
   creates?: true;
+  /** A destructive tool whose repeat changes something again (a new invite link each time). */
+  repeatable?: true;
   /** A destructive tool that deletes only on some calls: whether this one does. Absent, every call does. */
   deletes?: (args: z.output<S>) => boolean;
   /** Destructive tools: what the call would do, put to the person before it runs. */

@@ -255,6 +255,7 @@ export const rotateInviteLink = defineTool({
     'Replaces a share link with a new URL carrying the same role and limits; the old URL stops working. Asks you to confirm before acting.',
   input: z.strictObject({ link: invitationArg.describe('The share link to replace.'), ...where }),
   kind: 'destructive',
+  repeatable: true,
   scopes: ['issues:read', ['admin:project', 'admin:org']],
   endpoints: [
     'GET /v1/organizations',

@@ -279,8 +279,9 @@ token stands in the way, the answer names the scope it lacks - _This access toke
 not have the time:write scope_ - so create a token that includes it.
 
 **Your token decides which tools the agent sees.** A token with only `issues:read` is offered
-the reading tools alone, about forty of them, which keeps the agent's context small. Create a
-token with more scopes when the agent should change things.
+the reading tools, about forty of them, which keeps the agent's context small. A few tools about
+you alone come with any token: creating a new organisation of your own and claiming your git
+logins. Create a token with more scopes when the agent should change things in your projects.
 
 **Short answers first.** Opening an issue gives a brief summary; the agent asks for the full
 issue, with comments and linked issue titles, when it needs them. A search can return only the

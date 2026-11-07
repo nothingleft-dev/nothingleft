@@ -156,4 +156,17 @@ describe('apiClient', () => {
     });
     expect((await api.send('POST', '/v1/a', { body: {} }).catch(e => e)).body.code).toBe('mcp.repeat_differs');
   });
+
+  test('an edge timeout is retried once with the same key, and a second one is reported', async () => {
+    const rec = recorder((_r, n) =>
+      n === 1 ? new Response('<html>524</html>', { status: 524 }) : ok({ key: 'PP-1' }),
+    );
+    const api = apiClient({ baseUrl: 'http://x', token: 't', fetch: rec.fetch });
+    expect((await api.send('POST', '/v1/issues', { body: {} })).data).toEqual({ key: 'PP-1' });
+    expect(rec.seen[0]!.headers.get('idempotency-key')).toBe(rec.seen[1]!.headers.get('idempotency-key'));
+
+    const twice = apiClient({ baseUrl: 'http://x', token: 't', fetch: async () => new Response('', { status: 502 }) });
+    expect((await twice.send('POST', '/v1/a', { body: {} }).catch(e => e)).body.code).toBe('mcp.unexpected_response');
+    expect(twice.calls).toBe(2);
+  });
 });

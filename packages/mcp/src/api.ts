@@ -50,6 +50,7 @@ export interface ApiClientOptions {
 }
 
 const IN_PROGRESS_WAITS_MS = [500, 1_000, 2_000, 4_000, 8_000];
+const EDGE_FAILURES = new Set([502, 503, 504, 524]);
 
 const segment = (value: string) => encodeURIComponent(value);
 export const path = (strings: TemplateStringsArray, ...values: string[]) =>
@@ -87,6 +88,10 @@ export function apiClient({
 
   async function exchange(url: string, init: RequestInit): Promise<Response> {
     try {
+      calls++;
+      const response = await fetch(new Request(url, init));
+      // An edge that gave up says nothing about the write; the same key makes the retry safe.
+      if (!EDGE_FAILURES.has(response.status)) return response;
       calls++;
       return await fetch(new Request(url, init));
     } catch {

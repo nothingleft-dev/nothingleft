@@ -297,7 +297,10 @@ function registerTool(
       title: tool.title,
       description: tool.description,
       inputSchema: advertised(tool.input),
-      annotations: ANNOTATIONS[tool.kind],
+      annotations:
+        tool.kind === 'destructive' && tool.repeatable
+          ? { destructiveHint: true, openWorldHint: false }
+          : ANNOTATIONS[tool.kind],
     },
     async (raw: unknown, request: ServerContext) => {
       const started = performance.now();
