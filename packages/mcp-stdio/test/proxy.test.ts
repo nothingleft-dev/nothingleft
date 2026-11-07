@@ -216,6 +216,17 @@ describe('the stdio proxy', () => {
     expect(h.out).toEqual([]);
   });
 
+  test('close leaves an ordinary request to finish and answer', async () => {
+    let answer!: (r: Response) => void;
+    const h = harness(() => new Promise<Response>(resolve => (answer = resolve)));
+    const pending = h.handle('{"jsonrpc":"2.0","id":5,"method":"tools/list"}');
+    await Bun.sleep(10);
+    h.close();
+    answer(new Response(JSON.stringify({ jsonrpc: '2.0', id: 5, result: { tools: [] } })));
+    await pending;
+    expect(h.out).toEqual([{ jsonrpc: '2.0', id: 5, result: { tools: [] } }]);
+  });
+
   test('a stream that sends a broken event is reported once and closed', async () => {
     let cancelled = false;
     const body = new ReadableStream<Uint8Array>({

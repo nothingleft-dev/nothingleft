@@ -59,7 +59,8 @@ function dataOf(event: string): string {
 export function createProxy({ url, token, fetch, write, version }: ProxyOptions) {
   let protocolVersion: string | undefined;
   const inFlight = new Map<string | number, AbortController>();
-  const open = new Set<AbortController>();
+  // Subscription streams never end on their own; everything else is left to finish.
+  const subscriptions = new Set<AbortController>();
 
   async function handle(line: string): Promise<void> {
     if (!line.trim()) return;
@@ -75,7 +76,7 @@ export function createProxy({ url, token, fetch, write, version }: ProxyOptions)
       inFlight.get(message.params.requestId)?.abort();
     }
     const controller = new AbortController();
-    open.add(controller);
+    if (message.method === 'subscriptions/listen') subscriptions.add(controller);
     const id = message.id ?? undefined;
     if (id !== undefined && id !== null) inFlight.set(id, controller);
 
@@ -161,16 +162,16 @@ export function createProxy({ url, token, fetch, write, version }: ProxyOptions)
         fail(`HTTP ${response.status} from ${url}`);
       }
     } finally {
-      open.delete(controller);
+      subscriptions.delete(controller);
       if (id !== undefined && id !== null && inFlight.get(id) === controller) inFlight.delete(id);
     }
   }
 
   return {
     handle,
-    /** Aborts every request still open, subscription streams included, so the process can exit. */
+    /** Ends the open subscription streams so the process can exit once the other requests have answered. */
     close: () => {
-      for (const controller of open) controller.abort();
+      for (const controller of subscriptions) controller.abort();
     },
   };
 }

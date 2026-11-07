@@ -31,5 +31,6 @@ lines.on('line', line => {
 lines.on('close', async () => {
   proxy.close();
   await Promise.all(pending);
-  process.exit(0);
+  // A pipe's writes can still be buffered; exiting before they flush would lose the last answers.
+  process.stdout.write('', () => process.exit(0));
 });
