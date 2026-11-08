@@ -52,6 +52,11 @@ export function issueActivityRepository(db: Queryable) {
       return row;
     },
 
+    async recordMany(ctx: TenantContext, inputs: Omit<NewIssueActivityRow, 'org_id'>[]): Promise<void> {
+      if (inputs.length === 0) return;
+      await db.insert(issue_activity).values(inputs.map(input => ({ ...input, org_id: ctx.orgId })));
+    },
+
     /** The newest system `git_pr_changed` row about that pull request since `since`: the one a new change coalesces into. */
     async latestPullRequestChange(
       ctx: TenantContext,

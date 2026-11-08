@@ -1,11 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { REPORT_CACHE_TTL_SECONDS, REPORT_VERSION_TTL_SECONDS } from '@config/constants';
-import {
-  canonicalJson,
-  reportCache,
-  type ReportCacheStore,
-  type ReportCacheTransaction,
-} from '../src/services/report-cache.ts';
+import { canonicalJson } from '@lib/canonical-json';
+import { reportCache, type ReportCacheStore, type ReportCacheTransaction } from '../src/services/report-cache.ts';
 import { resolveProjectHues, seriesSlots } from '../src/services/reports.service.ts';
 
 function memoryStore() {

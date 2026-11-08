@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Me, Project } from '@nothingleft/types';
-import { defineTool } from '../tool.ts';
+import { ANY_SCOPE, defineTool } from '../tool.ts';
 import { orgRoleOf } from '../organizations.ts';
 import { code, day, handle, join, list, roleLabel, table } from '../render.ts';
 
@@ -15,9 +15,10 @@ export const whoami = defineTool({
   name: 'whoami',
   title: 'Who am I',
   description:
-    'You, the token you are using (its scopes, project restriction and expiry), every organisation you belong to with your role and username there, and the projects you can reach. Call it first in a session.',
+    'You, your token (scopes, project restriction, expiry), your organisations with your role and username, and the projects you can reach. Call it first.',
   input: z.strictObject({}),
   kind: 'read',
+  scopes: ANY_SCOPE,
   endpoints: ['GET /v1/me', 'GET /v1/organizations', 'GET /v1/projects'],
   async run(ctx) {
     const zone = await ctx.timeZone();

@@ -54,6 +54,8 @@ export interface IssueSearchOptions {
   /** With `groupBy`: at most this many rows from each group, so a large group cannot crowd out the rest. */
   groupLimit?: number | undefined;
   container?: IssueContainer | undefined;
+  /** The total, and the group counts with `groupBy`, without loading a single row. */
+  countOnly?: boolean | undefined;
   limit: number;
   offset: number;
 }
@@ -149,6 +151,14 @@ export function issueSearchRepository(db: Queryable) {
         : compiled.where(query);
       const order = options.container ? RANK_ORDER : sql.join(compiled.orderBy(query, options.sort), sql`, `);
 
+      if (!options.groupBy && options.countOnly) {
+        const totals = (await db.execute(sql`select count(*)::int as n from ${issues} where ${where}`)) as Rows<{
+          n: number;
+        }>;
+        const total = Number(totals.rows[0]?.n ?? 0);
+        return { entries: [], total, reachable: total, groups: null };
+      }
+
       if (!options.groupBy) {
         const [page, totals] = await Promise.all([
           db.execute(
@@ -187,6 +197,9 @@ export function issueSearchRepository(db: Queryable) {
         category: options.groupBy === 'status' ? statusCategoryOf(g.o) : null,
         count: Number(g.n),
       }));
+      const total = groups.reduce((sum, g) => sum + g.count, 0);
+      const reachable = groups.reduce((sum, g) => sum + Math.min(g.count, options.groupLimit ?? g.count), 0);
+      if (options.countOnly) return { entries: [], total, reachable, groups };
       const keys = sql.join(
         groups.map(g => sql`${g.key}`),
         sql`, `,

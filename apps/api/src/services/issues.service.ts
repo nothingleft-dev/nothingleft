@@ -131,6 +131,7 @@ export interface IssueListQuery {
   group_limit?: number | undefined;
   sort?: string | undefined;
   deleted: boolean;
+  count_only?: boolean | undefined;
   limit: number;
   offset: number;
 }
@@ -142,12 +143,17 @@ export interface IssueExportQuery {
   columns?: IssueCsvColumnInput[] | undefined;
 }
 
-const page = (query: { limit: number; offset: number }, count: number, total: number): Pagination => ({
+const page = (
+  query: { limit: number; offset: number; count_only?: boolean | undefined },
+  count: number,
+  total: number,
+): Pagination => ({
   total,
   limit: query.limit,
   offset: query.offset,
   next_cursor: null,
-  has_more: query.offset + count < total,
+  // A count answers once: there is no next page of rows it never loaded.
+  has_more: !query.count_only && query.offset + count < total,
 });
 
 export interface ActivityPageQuery {
@@ -1021,6 +1027,7 @@ export function issuesService(deps: IssuesDeps) {
         const { rows, total } = await issues.list(project.ctx, {
           projectId: project.project.id,
           deleted: true,
+          countOnly: query.count_only,
           limit: query.limit,
           offset: query.offset,
         });
@@ -1033,6 +1040,7 @@ export function issuesService(deps: IssuesDeps) {
         sort: query.sort,
         groupBy: query.group_by,
         groupLimit: query.group_limit,
+        countOnly: query.count_only,
         limit: query.limit,
         offset: query.offset,
       });
@@ -1058,7 +1066,7 @@ export function issuesService(deps: IssuesDeps) {
         data: dtos.map((dto, i) => (query.group_by ? { ...dto, group: result.entries[i]!.group } : dto)),
         pagination: {
           ...page(query, dtos.length, result.total),
-          has_more: query.offset + dtos.length < result.reachable,
+          has_more: !query.count_only && query.offset + dtos.length < result.reachable,
         },
         groups: result.groupsDto,
       };

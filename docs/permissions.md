@@ -199,9 +199,10 @@ types, and sit at org level. Creating one is deliberately open — an agent
 tagging freely is a feature, and the slug rule prevents near-duplicates.
 
 How the management rows apply (decided 10 Oct 2026, 6d): *Rename or recolour a tag* is held by
-a Project Admin of **any** project, since the tag is not in one; it also opens the management
-list (`GET /v1/tags/manage`, counts across the whole organisation). A token needs
-`admin:project`. *Merge or delete a tag* needs `admin:org`, and the MCP tools ask first.
+a Project Admin of **any** project, since the tag is not in one, and a token needs
+`admin:project`. *Merge or delete a tag* needs `admin:org`, and the MCP tools ask first. Either
+one opens the management list (`GET /v1/tags/manage`, counts across the whole organisation),
+since a merge or delete is confirmed with those counts (8 Nov 2026).
 
 ### Knowledge base
 

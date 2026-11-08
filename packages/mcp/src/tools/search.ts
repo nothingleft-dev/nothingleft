@@ -8,7 +8,7 @@ export const suggestQuery = defineTool({
   name: 'suggest_query',
   title: 'Suggest query',
   description:
-    'Autocomplete for the search query language, as the search bar offers it: the attributes, values, operators and saved views valid at the caret. `for: "articles"` completes the knowledge base\'s language (search_articles) instead. Use it to learn what exists rather than guessing.',
+    'Autocomplete for the query language at the caret: attributes, values, operators and saved views. `for: "articles"` completes search_articles\' language. Use it instead of guessing.',
   input: z.strictObject({
     query: z.string().max(2000).describe('The query typed so far. Empty lists the attributes.'),
     caret: z.number().int().min(0).optional().describe('Character position to complete at. Default: the end.'),

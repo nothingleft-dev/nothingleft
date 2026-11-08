@@ -120,7 +120,13 @@ const tagRef = (row: TagRow): TagRef => ({ name: row.name, slug: row.slug, color
 const refOf = (row: Pick<ArticleRow, 'slug' | 'title'>): ArticleRef => ({ slug: row.slug, title: row.title });
 
 function freeTextTerms(query: Query): string[] {
-  return query.clauses.flatMap(c => (c.kind === 'text' && !c.text.startsWith('-') ? c.text.split(/\s+/) : []));
+  return query.clauses.flatMap(c =>
+    c.kind === 'text' && !c.text.startsWith('-')
+      ? c.text.split(/\s+/)
+      : c.kind === 'or'
+        ? c.branches.flatMap(freeTextTerms)
+        : [],
+  );
 }
 
 export function articlesService(deps: ArticlesDeps) {

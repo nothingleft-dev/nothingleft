@@ -1,4 +1,4 @@
-import type { Clause, Query, SortKey } from './ast.ts';
+import { subqueries, type Clause, type Query, type SortKey } from './ast.ts';
 import { QueryError } from './tokenizer.ts';
 
 export const SAVED_VIEW_MAX_DEPTH = 5;
@@ -12,7 +12,7 @@ export function shorthandNames(query: Query): string[] {
   const walk = (q: Query) => {
     for (const clause of q.clauses) {
       if (clause.kind === 'shorthand') out.add(clause.value);
-      else if (clause.kind === 'aggregate' || clause.kind === 'view') walk(clause.query);
+      else subqueries(clause).forEach(walk);
     }
   };
   walk(query);
@@ -28,6 +28,7 @@ export function expandSavedViews(query: Query, lookup: SavedViewLookup, self?: s
   const expand = (q: Query, trail: string[]): Query => ({
     clauses: q.clauses.map((clause): Clause => {
       if (clause.kind === 'aggregate') return { ...clause, query: expand(clause.query, trail) };
+      if (clause.kind === 'or') return { ...clause, branches: clause.branches.map(b => expand(b, trail)) };
       if (clause.kind !== 'shorthand') return clause;
       const view = lookup(clause.value);
       if (!view) return clause;
@@ -41,14 +42,15 @@ export function expandSavedViews(query: Query, lookup: SavedViewLookup, self?: s
   return expand(query, self ? [self.toLowerCase()] : []);
 }
 
-/** The effective order: the query's own `sort by:` first, else the first one found inside a referenced view. */
+/** The effective order: the query's own `sort by:` first, else the first one inside a referenced view, `or` branches included. */
 export function sortKeysOf(query: Query): SortKey[] {
   const own = query.clauses.filter(c => c.kind === 'sort').flatMap(c => c.keys);
   if (own.length > 0) return own;
   for (const clause of query.clauses) {
-    if (clause.kind === 'view') {
-      const nested = sortKeysOf(clause.query);
-      if (nested.length > 0) return nested;
+    const inherited = clause.kind === 'view' ? [clause.query] : clause.kind === 'or' ? clause.branches : [];
+    for (const nested of inherited) {
+      const keys = sortKeysOf(nested);
+      if (keys.length > 0) return keys;
     }
   }
   return [];

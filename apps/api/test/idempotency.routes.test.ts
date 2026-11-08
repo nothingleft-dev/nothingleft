@@ -197,3 +197,56 @@ describe('10: a replay re-checks project access', () => {
     expect(again.json().data.key).toBe(first.json().data.key);
   });
 });
+
+describe('MCP keys: a ten-minute window, and no stored refusals', () => {
+  const mcp = { 'x-nothingleft-client': 'mcp' };
+  const storeKey = (headers: Record<string, string>) =>
+    `idem:t:${adminPat.tokenId}:${w.slug}:${headers['idempotency-key']}`;
+
+  test('a key the MCP server sends lapses after ten minutes; any other PAT key keeps 24 hours', async () => {
+    const viaMcp = { ...idempotencyKey(), ...mcp, 'x-organization': w.slug };
+    const plain = { ...idempotencyKey(), 'x-organization': w.slug };
+    expect((await w.call(adminPat, 'POST', '/v1/issues', { project: KEY, title: 'Via MCP' }, viaMcp)).statusCode).toBe(
+      201,
+    );
+    expect((await w.call(adminPat, 'POST', '/v1/issues', { project: KEY, title: 'Via REST' }, plain)).statusCode).toBe(
+      201,
+    );
+    const mcpTtl = await w.app.redis.ttl(storeKey(viaMcp));
+    expect(mcpTtl).toBeGreaterThan(0);
+    expect(mcpTtl).toBeLessThanOrEqual(600);
+    expect(await w.app.redis.ttl(storeKey(plain))).toBeGreaterThan(600);
+  });
+
+  test('an MCP request refused with a 4xx is not stored, so its repeat runs again', async () => {
+    const headers = { ...idempotencyKey(), ...mcp, 'x-organization': w.slug };
+    const body = { project: KEY, title: 'Refused', priority: 'Not a priority' };
+    const first = await w.call(adminPat, 'POST', '/v1/issues', body, headers);
+    expect(first.statusCode).toBeGreaterThanOrEqual(400);
+    expect(first.statusCode).toBeLessThan(500);
+    expect(await w.app.redis.get(storeKey(headers))).toBeNull();
+    const again = await w.call(adminPat, 'POST', '/v1/issues', body, headers);
+    expect(again.statusCode).toBe(first.statusCode);
+    expect(again.headers['idempotent-replayed']).toBeUndefined();
+  });
+
+  test('a REST request refused with a 4xx is still stored and replayed', async () => {
+    const headers = { ...idempotencyKey(), 'x-organization': w.slug };
+    const body = { project: KEY, title: 'Refused', priority: 'Not a priority' };
+    const first = await w.call(adminPat, 'POST', '/v1/issues', body, headers);
+    expect(first.statusCode).toBeGreaterThanOrEqual(400);
+    const again = await w.call(adminPat, 'POST', '/v1/issues', body, headers);
+    expect(again.headers['idempotent-replayed']).toBe('true');
+  });
+});
+
+describe('the fingerprint ignores key order', () => {
+  test('the same body with its keys in another order replays instead of answering 422', async () => {
+    const headers = { ...idempotencyKey(), 'x-organization': w.slug };
+    const first = await w.call(adminPat, 'POST', '/v1/issues', { project: KEY, title: 'Ordered' }, headers);
+    expect(first.statusCode).toBe(201);
+    const again = await w.call(adminPat, 'POST', '/v1/issues', { title: 'Ordered', project: KEY }, headers);
+    expect(again.statusCode).toBe(201);
+    expect(again.headers['idempotent-replayed']).toBe('true');
+  });
+});

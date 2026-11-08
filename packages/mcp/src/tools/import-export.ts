@@ -25,7 +25,7 @@ const size = (bytes: number) =>
 const mapping = z
   .record(z.string(), z.string())
   .describe(
-    'Issue field → the CSV column that fills it, e.g. {"title": "Summary", "status": "State", "custom:severity": "Severity"}. Fields: title (required), description, status, priority, type, assignees, estimate, story_points, start_date, due_date, tags, sprint, parent, custom:<slug>. Columns left out are ignored.',
+    'Field → CSV column, e.g. {"title": "Summary", "custom:severity": "Severity"}. Fields: title (required), description, status, priority, type, assignees, estimate, story_points, start_date, due_date, tags, sprint, parent, custom:<slug>.',
   );
 
 function errorRows(errors: readonly ImportRowError[], total: number): string | null {
@@ -101,7 +101,7 @@ export const startCsvImport = defineTool({
   name: 'start_csv_import',
   title: 'Import issues from CSV',
   description:
-    'Creates issues in one project from a CSV file (UTF-8, a header row, up to 10,000 rows and 50 MB). First call: give the CSV as `content` (text up to 1 MB), or `size_bytes` and `sha256` of a file on disk and run the curl command the answer gives. That answers the columns, a sample and a suggested mapping. Then call again with `import` and a `mapping`: a dry run (the default) lists each row that would fail and why; `dry_run: false` creates the issues in the background. Rows that fail are skipped and listed. Needs a Project Admin and a token with admin:project.',
+    'Creates issues from a CSV (UTF-8, header row, up to 10,000 rows and 50 MB). First call: `content` (up to 1 MB), or `size_bytes` and `sha256` and run the curl command returned; it answers the columns, a sample and a suggested mapping. Then call with `import` and `mapping`: a dry run lists failing rows; `dry_run: false` imports in the background. Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     import: z.number().int().positive().optional().describe('The import id an earlier call gave, to map and run it.'),
@@ -124,6 +124,8 @@ export const startCsvImport = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
+  creates: true,
   endpoints: [
     'POST /v1/projects/{key}/imports',
     'POST /v1/projects/{key}/imports/{id}/complete',
@@ -195,6 +197,7 @@ export const getImportStatus = defineTool({
     org: arg.org,
   }),
   kind: 'read',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['GET /v1/projects/{key}/imports', 'GET /v1/projects/{key}/imports/{id}'],
   async run(ctx, args) {
     const zone = await ctx.timeZone();
@@ -252,9 +255,11 @@ export const requestOrgExport = defineTool({
   name: 'request_org_export',
   title: 'Export the organisation',
   description:
-    'Starts a full export of the organisation: one .zip with every project, issue, comment, article, sprint and custom field as JSON, plus the files. It is built in the background and kept for 7 days; the person asking is emailed when it is ready, and get_export_status gives a download link. One runs at a time, so asking again while one is pending answers that one. Needs an Org Admin and a token with admin:org.',
+    'Starts a full export of the organisation (JSON and files in one .zip), built in the background and kept 7 days; get_export_status gives the link. Asking again while one is pending answers that one. Org Admin, admin:org.',
   input: z.strictObject({ org: arg.org }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:org'],
+  creates: true,
   endpoints: ['GET /v1/organizations', 'POST /v1/organizations/{slug}/exports'],
   async run(ctx, args) {
     const org = await resolveOrganization(ctx, args.org);
@@ -278,6 +283,7 @@ export const getExportStatus = defineTool({
     org: arg.org,
   }),
   kind: 'read',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/exports',

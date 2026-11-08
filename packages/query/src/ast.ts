@@ -58,8 +58,24 @@ export type Clause =
   | { kind: 'sort'; keys: SortKey[] }
   | { kind: 'text'; text: string; phrase: boolean }
   /** A `#{Name}` reference replaced by the saved view's query; never produced by the parser. */
-  | { kind: 'view'; name: string; query: Query };
+  | { kind: 'view'; name: string; query: Query }
+  /** `a or b`: matches when any branch does. Each branch is an AND of its own clauses. */
+  | { kind: 'or'; branches: Query[] };
 
+/** Clauses joined by AND. */
 export interface Query {
   clauses: Clause[];
+}
+
+/** The queries nested inside a clause, for walkers that must reach every clause. */
+export function subqueries(clause: Clause): Query[] {
+  switch (clause.kind) {
+    case 'aggregate':
+    case 'view':
+      return [clause.query];
+    case 'or':
+      return clause.branches;
+    default:
+      return [];
+  }
 }

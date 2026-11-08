@@ -1,10 +1,11 @@
 import { createMcpHandler } from '@modelcontextprotocol/server';
+import type { PatScope } from '@nothingleft/types';
 import { createMcpServer, type McpServerOptions } from './server.ts';
 import { timeZoneCache } from './time-zones.ts';
 
 export interface McpHttpOptions extends Omit<
   McpServerOptions,
-  'token' | 'userId' | 'requestId' | 'onToolCall' | 'timeZones'
+  'token' | 'userId' | 'requestId' | 'scopes' | 'onToolCall' | 'timeZones'
 > {
   onToolCall?: (event: Parameters<NonNullable<McpServerOptions['onToolCall']>>[0], caller: Caller) => void;
 }
@@ -13,6 +14,7 @@ export interface Caller {
   token: string;
   userId: number;
   requestId: string;
+  scopes: readonly PatScope[];
 }
 
 /**
@@ -28,6 +30,7 @@ export function mcpHttpHandler({ onToolCall, ...options }: McpHttpOptions) {
       token: caller.token,
       userId: caller.userId,
       requestId: caller.requestId,
+      scopes: caller.scopes,
       timeZones,
       ...(onToolCall ? { onToolCall: event => onToolCall(event, caller) } : {}),
     });

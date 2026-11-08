@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { Member, ProjectMember } from '@nothingleft/types';
 import * as arg from '../args.ts';
 import { path } from '../api.ts';
-import { defineTool } from '../tool.ts';
+import { ANY_SCOPE, defineTool } from '../tool.ts';
 import { resolveOrganization } from '../organizations.ts';
 import { resolveUsername } from '../resolve.ts';
 import { code, day, facts, handle, join, more, roleLabel, table } from '../render.ts';
@@ -23,6 +23,7 @@ export const listMembers = defineTool({
     offset: arg.offset,
   }),
   kind: 'read',
+  scopes: ANY_SCOPE,
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}/members', 'GET /v1/projects/{key}/members'],
   async run(ctx, args) {
     const zone = await ctx.timeZone();
@@ -94,6 +95,7 @@ export const getMember = defineTool({
     'One organisation member: name, email (visible to org admins and to the member), org role, when they joined and who invited them.',
   input: z.strictObject({ user: arg.person, org: arg.org }),
   kind: 'read',
+  scopes: ANY_SCOPE,
   endpoints: ['GET /v1/organizations', 'GET /v1/organizations/{slug}/members/{username}'],
   async run(ctx, args) {
     const zone = await ctx.timeZone();

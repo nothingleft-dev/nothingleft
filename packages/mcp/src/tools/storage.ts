@@ -26,7 +26,7 @@ export const listFiles = defineTool({
   name: 'list_files',
   title: 'List files by size',
   description:
-    "The organisation's files, largest first, with what each is attached to and where it is stored - the storage screen's data. Delete one with delete_attachment. Needs an Org Admin and a token with admin:org.",
+    "The organisation's files, largest first, with what each is attached to and where it is stored. Org Admin, admin:org.",
   input: z.strictObject({
     org: arg.org,
     project: arg.project.optional().describe('Only files in this project, by key.'),
@@ -36,6 +36,7 @@ export const listFiles = defineTool({
     offset: arg.offset,
   }),
   kind: 'read',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/storage',

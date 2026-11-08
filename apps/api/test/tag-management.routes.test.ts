@@ -69,6 +69,32 @@ describe('the management list', () => {
   });
 });
 
+describe('who may open the management list', () => {
+  const token = async (scopes: string[]): Promise<Person> => {
+    const res = await w.call(w.admin, 'POST', '/v1/me/tokens', { name: `tags-${scopes.join('-')}`, scopes });
+    if (res.statusCode !== 201) throw new Error(res.body);
+    return {
+      ...w.admin,
+      sid: '',
+      headers: { authorization: `Bearer ${res.json().data.token}`, 'x-organization': w.slug },
+    };
+  };
+
+  test('a token with admin:org alone opens it, since a merge or delete is confirmed with its counts', async () => {
+    await newIssue(['org-only']);
+    const res = await managed(await token(['admin:org']), 'org-only');
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.map((t: { slug: string }) => t.slug)).toEqual(['org-only']);
+  });
+
+  test('a token with neither admin scope is told which one to add', async () => {
+    const res = await managed(await token(['issues:read']));
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatchObject({ code: 'token.scope_missing' });
+    expect(res.json().error.message).toContain('admin:project');
+  });
+});
+
 describe('rename and recolour', () => {
   test('a rename moves the slug, rewrites saved views and is recorded', async () => {
     const key = await newIssue(['Needs Review']);
@@ -83,6 +109,14 @@ describe('rename and recolour', () => {
     ]);
     const found = await w.call(w.admin, 'GET', `/v1/issues?q=${encodeURIComponent('tag: awaiting-qa')}`);
     expect(found.json().data.map((i: { key: string }) => i.key)).toEqual([key]);
+  });
+
+  test('a rename reaches a tag inside an or group', async () => {
+    await newIssue(['blocked-on-partner']);
+    await view('Blocked or urgent', '(tag: blocked-on-partner or #Critical) #Unresolved');
+    const res = await w.call(w.projectAdmin, 'PATCH', '/v1/tags/blocked-on-partner', { name: 'Waiting on partner' });
+    expect(res.statusCode).toBe(200);
+    expect(await viewQuery('Blocked or urgent')).toBe('(tag: {Waiting on partner} or #Critical) #Unresolved');
   });
 
   test('a name another tag already has is refused, pointing at merge', async () => {

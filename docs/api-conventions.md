@@ -166,7 +166,7 @@ Agents retry. `create_issue` fired twice on a flaky connection must not
 produce two issues.
 
 Mutating requests accept an `Idempotency-Key` header. The first response is
-stored and replayed for 24 hours. The MCP server sets the header
+stored and replayed for 24 hours (10 minutes for the MCP server's requests). The MCP server sets the header
 automatically; the web client sets it on create operations.
 
 The store is **Redis**, keyed by principal, organisation and key, with a 24-hour TTL
@@ -182,7 +182,8 @@ How it behaves (decided 24 Sep 2026, built in 1b as `@plugins/idempotency`):
   PAT's `X-Organization` (none when the header is absent). Two callers can never
   collide, and a retry under another organisation is a new request rather than a
   replay or a `422`. The key is 1–255 characters.
-- A fingerprint of method, URL and body is stored with the response. The
+- A fingerprint of method, URL and body (as canonical JSON, keys sorted, so key order never
+  matters) is stored with the response. The
   same key with a **different request** answers `422 idempotency.key_reused`.
 - While the first request is still running, a second one with its key
   answers `409 idempotency.in_progress`.
@@ -197,6 +198,12 @@ How it behaves (decided 24 Sep 2026, built in 1b as `@plugins/idempotency`):
   the response that request already returned.
 - The 24 hours run from the first request; storing the response keeps that
   expiry.
+- **Requests from the MCP server** (a PAT with `X-Nothingleft-Client: mcp`) differ in two ways
+  (7 Nov 2026). Their keys lapse after **10 minutes**, because creating tools derive the key
+  from their arguments ([mcp.md § Conventions](./mcp.md#conventions-every-tool-follows)) and an
+  identical create an hour later is a new intent, not a retry. And a **4xx is not stored**: a
+  refusal wrote nothing, and keeping it would replay a stale error to the same arguments after
+  the cause is fixed. The header only shortens protection, so trusting it is safe.
 
 ## CORS and exposed headers
 

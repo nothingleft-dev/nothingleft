@@ -45,6 +45,7 @@ describe('suggest: clause position', () => {
       'aggregate duplicates:',
       'aggregate parent for:',
       'aggregate subtask of:',
+      'aggregate links:',
     ]);
     expect(labels(ofKind(items, 'value'))).toEqual([
       '#{April 2026}',
@@ -234,5 +235,17 @@ describe('suggest: value position', () => {
     const items = await run('status: Open type: Bug', 10);
     expect(labels(items)).toEqual(['Open']);
     expect(items[0]?.replace).toEqual({ start: 8, end: 12 });
+  });
+});
+
+describe('suggest: or', () => {
+  test('after a clause, `o` offers or; at the start it does not', async () => {
+    expect(labels(ofKind(await run('status: Open o'), 'operator'))).toEqual(['or']);
+    expect(labels(ofKind(await run('o'), 'operator'))).toEqual([]);
+  });
+
+  test('links: offers its own description and takes issue keys', async () => {
+    const items = await run('lin');
+    expect(items.find(i => i.label === 'links:')?.description).toEqual({ key: 'query.attribute.links' });
   });
 });

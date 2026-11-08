@@ -2,6 +2,7 @@ import { and, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { parseDuration, parseIssueKey, slugify, type WorkCalendar } from '@nothingleft/format';
 import {
+  ANY_LINK,
   dateInZone,
   ISSUE_LINKS,
   resolveDatePeriod,
@@ -176,6 +177,9 @@ export function issueSearch(scope: IssueSearchScope) {
     sql`exists (select 1 from issue_assignees a where a.issue_id = ${t.id} and a.org_id = ${orgId} and a.user_id = ${user})`;
   const liveComments = (t: IssueTable, extra: SQL) =>
     sql`exists (select 1 from comments c where c.issue_id = ${t.id} and c.org_id = ${orgId} and c.deleted_at is null and ${extra})`;
+  // Uncorrelated, so it runs once per query: `mentions` has no index on issue_id (UNIQUE-only policy).
+  const mentioning = (t: IssueTable, extra: SQL) =>
+    sql`${t.id} in (select mn.issue_id from mentions mn where mn.org_id = ${orgId} and mn.issue_id is not null and ${extra} and (mn.source_type = 'issue' or (mn.source_type = 'comment' and exists (select 1 from comments mc where mc.id = mn.source_id and mc.org_id = mn.org_id and mc.deleted_at is null))))`;
   const workItems = (t: IssueTable, extra: SQL) =>
     sql`exists (select 1 from work_items w where w.issue_id = ${t.id} and w.org_id = ${orgId} and ${extra})`;
   const tagged = (t: IssueTable, extra: SQL) =>
@@ -281,6 +285,10 @@ export function issueSearch(scope: IssueSearchScope) {
         return liveComments(t, TRUE);
       case 'assignee':
         return hasAssignee(t);
+      case 'mentions':
+        return mentioning(t, TRUE);
+      case 'links':
+        return linkedToAny(t, 'lk', () => TRUE);
       case 'estimation':
         return sql`${estimate(t)} is not null`;
       case 'spent time':
@@ -423,6 +431,8 @@ export function issueSearch(scope: IssueSearchScope) {
         return valueList(values, v => byName('issue_types', sql`${t.type_id}`, literal(v)));
       case 'assignee':
         return valueList(values, v => (v.kind === 'empty' ? sql`not ${hasAssignee(t)}` : assigneeIs(t, personOf(v))));
+      case 'mentions':
+        return valueList(values, v => mentioning(t, sql`mn.mentioned_user_id = ${personOf(v)}`));
       case 'created by':
         return valueList(values, v => sql`${t.created_by} = ${personOf(v)}`);
       case 'updated by':
@@ -509,8 +519,27 @@ export function issueSearch(scope: IssueSearchScope) {
     }
   }
 
-  /** `t` relates to some issue satisfying `target` by the named link, e.g. `subtask of`. */
+  /**
+   * `t` is linked to some readable issue satisfying `target` by any link type, either way, parent and
+   * subtask included. The targets do not depend on `t`, so each subquery runs once, not once per row.
+   */
+  function linkedToAny(t: IssueTable, name: string, target: (other: IssueTable) => SQL): SQL {
+    const other = alias(issues, name) as unknown as IssueTable;
+    const from = sql`issues ${sql.identifier(name)}`;
+    const candidate = and(inScope(other), target(other))!;
+    const targets = sql`(select ${other.id} from ${from} where ${candidate})`;
+    return sql`(${t.parent_id} in ${targets}
+      or ${t.id} in (select ${other.parent_id} from ${from} where ${candidate} and ${other.parent_id} is not null)
+      or ${t.id} in (select l.to_issue_id from issue_links l where l.org_id = ${orgId} and l.from_issue_id in ${targets})
+      or ${t.id} in (select l.from_issue_id from issue_links l where l.org_id = ${orgId} and l.to_issue_id in ${targets}))`;
+  }
+
+  /**
+   * `t` relates to some readable issue satisfying `target` by the named link, e.g. `subtask of`.
+   * Uncorrelated like `linkedToAny`: the targets are found once, then `t` is tested against them.
+   */
   function linked(t: IssueTable, linkName: string, depth: number, target: (other: IssueTable) => SQL): SQL {
+    if (linkName === ANY_LINK.name) return linkedToAny(t, `t${depth + 1}`, target);
     const link = ISSUE_LINKS.find(l => l.name === linkName);
     if (!link) return FALSE;
     // An alias has the same columns under another name; Drizzle types the name, hence the cast.
@@ -518,15 +547,16 @@ export function issueSearch(scope: IssueSearchScope) {
     const other = alias(issues, name) as unknown as IssueTable;
     const from = sql`issues ${sql.identifier(name)}`;
     const candidate = and(inScope(other), target(other))!;
+    const targets = sql`(select ${other.id} from ${from} where ${candidate})`;
     if (link.type === 'subtask') {
-      const join = link.direction === 'inward' ? sql`${other.id} = ${t.parent_id}` : sql`${other.parent_id} = ${t.id}`;
-      return sql`exists (select 1 from ${from} where ${join} and ${candidate})`;
+      return link.direction === 'inward'
+        ? sql`${t.parent_id} in ${targets}`
+        : sql`${t.id} in (select ${other.parent_id} from ${from} where ${candidate} and ${other.parent_id} is not null)`;
     }
-    const outward = sql`(l.from_issue_id = ${t.id} and l.to_issue_id = ${other.id})`;
-    const inward = sql`(l.to_issue_id = ${t.id} and l.from_issue_id = ${other.id})`;
-    const direction =
-      link.type === 'relates' ? sql`(${outward} or ${inward})` : link.direction === 'outward' ? outward : inward;
-    return sql`exists (select 1 from issue_links l, ${from} where l.org_id = ${orgId} and l.type = ${link.type} and ${direction} and ${candidate})`;
+    const asFrom = sql`${t.id} in (select l.from_issue_id from issue_links l where l.org_id = ${orgId} and l.type = ${link.type} and l.to_issue_id in ${targets})`;
+    const asTo = sql`${t.id} in (select l.to_issue_id from issue_links l where l.org_id = ${orgId} and l.type = ${link.type} and l.from_issue_id in ${targets})`;
+    if (link.type === 'relates') return sql`(${asFrom} or ${asTo})`;
+    return link.direction === 'outward' ? asFrom : asTo;
   }
 
   function textMatch(t: IssueTable, text: string, phrase: boolean): SQL {
@@ -569,6 +599,8 @@ export function issueSearch(scope: IssueSearchScope) {
         return textMatch(t, c.text, c.phrase);
       case 'sort':
         return TRUE;
+      case 'or':
+        return or(...c.branches.map(branch => where(t, branch, depth))) ?? FALSE;
     }
   }
 
@@ -576,20 +608,26 @@ export function issueSearch(scope: IssueSearchScope) {
     return and(...query.clauses.map(c => clause(t, c, depth))) ?? TRUE;
   }
 
-  /** Positive free text across the query, views included, as one tsquery for ranking. */
+  /** Positive free text across the query, views included, as one tsquery for ranking; `or` keeps its meaning. */
   function rankQuery(query: Query): SQL | null {
-    const terms: SQL[] = [];
-    const walk = (q: Query) => {
+    const all = (q: Query): SQL | null => {
+      const terms: SQL[] = [];
       for (const c of q.clauses) {
         if (c.kind === 'text' && !(c.phrase && c.text.startsWith('-'))) {
           terms.push(
             c.phrase ? sql`phraseto_tsquery('english', ${c.text})` : sql`plainto_tsquery('english', ${c.text})`,
           );
-        } else if (c.kind === 'view') walk(c.query);
+        } else if (c.kind === 'view') {
+          const nested = all(c.query);
+          if (nested) terms.push(nested);
+        } else if (c.kind === 'or') {
+          const branches = c.branches.map(all).filter((b): b is SQL => b !== null);
+          if (branches.length > 0) terms.push(sql`(${sql.join(branches, sql` || `)})`);
+        }
       }
+      return terms.length === 0 ? null : sql`(${sql.join(terms, sql` && `)})`;
     };
-    walk(query);
-    return terms.length === 0 ? null : sql.join(terms, sql` && `);
+    return all(query);
   }
 
   function sortExpression(t: IssueTable, attributeName: string): SQL[] {

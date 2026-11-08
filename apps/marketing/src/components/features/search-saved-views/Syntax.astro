@@ -11,7 +11,10 @@ const lines = [
   { code: 'has: -estimation', note: 'not estimated yet' },
   { code: '"login redirect loop"', note: 'a phrase in the title or description' },
   { code: 'severity: High', note: 'a custom field, by its slug' },
+  { code: '(type: Bug or #Critical) assignee: me', note: 'either side, grouped' },
+  { code: 'links: ACME-88', note: 'linked to ACME-88 in any way' },
   { code: 'aggregate Parent for: {status: -Resolved}', note: 'issues with an unresolved subtask' },
+  { code: 'mentions: me', note: 'issues that @mention you' },
   { code: '#{My open bugs} priority: Critical', note: 'a saved view, narrowed' },
   { code: 'sort by: priority asc, updated desc', note: 'the order' },
 ];
@@ -24,8 +27,9 @@ const lines = [
         The whole grammar fits on one page.
       </h2>
       <p class="prose mt-5 max-w-[40ch]">
-        <code>attribute: value</code>, side by side for AND, commas for OR, a minus to exclude, braces around spaces.
-        Attributes cover people, dates, numbers, durations, links, custom fields and the sort order.
+        <code>attribute: value</code>, side by side for AND, commas or <code>or</code> for OR, parentheses to group, a
+        minus to exclude, braces around spaces. Attributes cover people, dates, numbers, durations, links, custom fields
+        and the sort order.
       </p>
       <p class="mt-6 text-sm">
         <a class="link" href={SEARCH_MANUAL_PATH}>

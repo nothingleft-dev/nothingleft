@@ -38,8 +38,10 @@ Decided with the owner on 25 Sep 2026.
   `@nothingleft/db`, `@nothingleft/analytics`, the API's aliases (`@services/*`,
   `@lib/*`, …) or a database driver in both packages, and a test pins each package's
   dependency list.
-- **Releasing the shim:** bump `version` in `packages/mcp-stdio/package.json`; that field
-  is the only copy (the shim's user agent reads it). After CI passes on `main`, the
+- **Releasing the shim:** bump `version` in `packages/mcp-stdio/package.json` and in
+  `packages/mcp/package.json` together (the shim's user agent reads the first, the server's
+  `serverInfo.version` the second, and a test keeps them equal), and add a changelog entry to
+  `packages/mcp-stdio/README.md`. After CI passes on `main`, the
   [publish workflow](../.github/workflows/publish-mcp.yml) publishes any version npm does
   not have yet and tags it `mcp-v<version>`. Commits that leave the version alone publish
   nothing, so no manual tag is needed. It runs in the `npm` environment, which holds
@@ -52,6 +54,14 @@ Decided with the owner on 25 Sep 2026.
   `Mcp-Session-Id`, and `GET`/`DELETE` answer `405`. It serves 2025-era requests and the
   2026-07-28 revision; the route forwards `MCP-Protocol-Version`, `Mcp-Method` and `Mcp-Name`
   to the SDK, which refuses a 2026-07-28 request without them (`-32020`).
+- **Event streams are streamed, never buffered (7 Nov 2026).** A `text/event-stream` answer
+  goes out as it is written: `subscriptions/listen` holds its stream open with the SDK's 15 s
+  keepalive comments, and its acknowledgement must arrive at once. Buffering it sent nothing
+  until Cloudflare gave up at 100 s (`524`), by which time Claude Code had dropped the request
+  and, on the late error for an id it had forgotten, the whole connection. The route aborts the
+  SDK request when the client's connection closes. The stdio shim relays each event as it
+  arrives, aborts a request the client sends `notifications/cancelled` for, and never answers
+  it afterwards.
 - **Only a PAT.** The existing auth middleware resolves `Authorization: Bearer nl_pat_…`;
   no credential, a bad token or a session cookie answers `401 auth.pat_required` in the
   ordinary error envelope. Every other `/mcp` answer is JSON-RPC, not the envelope —
@@ -120,6 +130,38 @@ request_id `01937f2a-…`
 
 ### Conventions every tool follows
 
+- **Definitions cost context, so they are kept small (8c, 8 Nov 2026).** About 25k tokens
+  for all 118 tools (from ~45k), enforced by a test in `apps/api/test/mcp.routes.test.ts`:
+  105,000 characters in total and 3,200 per tool. With every description removed the tools
+  would still cost ~15k tokens, so a smaller total means fewer tools, not fewer words.
+  - Help shared by every tool (`org`, people, dates, durations, `limit`/`offset`,
+    `client_ref`) is in the server **instructions** (`mcp.conventions`), sent once per
+    session, not repeated on each argument.
+  - The advertised JSON Schema (`advertised()` → `lean()` in `server.ts`) leaves out what only
+    validation needs: `$schema`, length and count limits, the safe-integer bounds and the date
+    regex Zod adds, an enum of more than 20 values when the field's description says its shape
+    (the 40 label colours), a nullable branch repeating its parent's description, and
+    `additionalProperties: false`. `parseArguments` still enforces all of it, and its error
+    names the rule broken.
+  - Annotations send only what differs from the spec's defaults, without a repeated `title`. A
+    destructive tool whose repeat changes something again (`rotate_invite_link`, marked
+    `repeatable`) does not claim `idempotentHint`.
+- **An edge gateway error (502, 503, 504, 524) is retried once** with the same idempotency key,
+  like a dropped connection: the edge giving up says nothing about whether the write landed.
+- **`tools/list` offers only what the token can use.** Each tool declares `scopes` (every entry
+  needed; a list entry is any one of them), defaulting to `issues:read` for a read and
+  `issues:read` + `issues:write` otherwise, since writes resolve names through reads. A
+  read-only token sees about 40 tools (~8k tokens). A test replays each tool's first
+  successful call in the suite holding only its declared scopes and fails on
+  `token.scope_missing`, so a declaration cannot hide a tool from a token that could use it.
+- **`get_issue` is brief by default (owner, 8 Nov 2026):** key fields on one line, custom fields,
+  the development line, link counts by type, the first 600 characters of the description and a
+  line counting what `detail: "full"` adds. Two REST calls (the issue and its links) instead of
+  up to seven. `detail: "full"`, `comments` or `include` give the whole issue. The `issue://`
+  resource and the prompts keep the full form.
+- **`search_issues`** takes `count_only` (the total and group counts; the API loads no row) and
+  `fields` (the columns after Key). A column empty on every row is left out of any issue table.
+
 - A person argument takes `@casey`, `casey`, `me`, or a full name only one member has
   (`Casey Kim`, added in 2b). A name two members share answers `mcp.person_ambiguous`
   with their usernames.
@@ -128,8 +170,29 @@ request_id `01937f2a-…`
   put the slug in the path, so the kernel resolves it by the same rule — named, else the
   sole membership, else `organization_ambiguous` with the candidate slugs — and an
   unknown slug answers `organization.not_found` listing the real ones.
-- Every write carries a fresh `Idempotency-Key`; a dropped connection is retried once
-  with the same key.
+- Every write carries an `Idempotency-Key`; a dropped connection is retried once with the
+  same key. Most writes get a fresh random key per call.
+- **A creating tool's keys come from the call itself (8a, 7 Nov 2026).** The tools marked
+  `creates` (every `create_*`, `add_comment`, `log_time`, `upload_attachment`, `invite_member`,
+  `start_csv_import`, `request_org_export`) derive the key from a SHA-256 of the tool name and the
+  canonical JSON of the parsed arguments, numbered per write within the call. Before hashing,
+  `project` is upper-cased and `tags` and `assignees` are sorted, and the tool runs with those
+  normalised arguments, so a retry that reorders a set or re-cases a key is the same create. A client that times
+  out and calls again with the same arguments therefore replays the first call's responses
+  instead of adding a second record, and the answer starts with `mcp.replayed`. The API already
+  scopes keys to the token and organisation, so two people, or two tokens, never share one.
+  - `client_ref` (optional, on those tools only, added by `defineTool`) replaces the arguments in
+    the key: the same ref replays, a new ref creates a deliberate duplicate, and one ref reused
+    with other arguments answers `mcp.repeat_differs` (the API's `idempotency.key_reused`).
+  - When the repeat arrives while the first call is still running (`409 idempotency.in_progress`),
+    the tool waits 0.5, 1, 2, 4 and 8 seconds, then answers `mcp.repeat_pending` (retry unchanged;
+    a new `client_ref` would create a second one). It never creates.
+  - Only creating tools derive keys. An update repeated with the same arguments after a change in
+    between (Done, then Open, then Done again) must run every time, which a derived key would
+    replay away.
+  - The replay window for keys the MCP server sends is 10 minutes, and a refused (4xx) MCP write
+    is not stored, so a create that failed runs again once its cause is fixed
+    ([api-conventions.md § Idempotency](./api-conventions.md#idempotency)).
 - Every tool carries MCP annotations: reads `readOnlyHint`, destructive tools
   `destructiveHint`.
 - Destructive tools ask the person before anything changes ([§ Design rules 7](#7-destructive-operations-ask-the-person)).

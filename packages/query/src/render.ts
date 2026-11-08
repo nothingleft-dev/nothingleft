@@ -1,7 +1,7 @@
 import type { Bound, Clause, DateValue, Query, ScalarValue, Value } from './ast.ts';
 import type { Registry } from './registry/registry.ts';
 
-const NEEDS_BRACES = /[\s,:{}"#]|^-|^\*$|\.\./;
+const NEEDS_BRACES = /[\s,:{}"#()]|^-|^\*$|\.\.|^(or|and)$/i;
 
 function word(text: string): string {
   return NEEDS_BRACES.test(text) ? `{${text}}` : text;
@@ -87,13 +87,25 @@ export function renderClause(clause: Clause, registry: Registry): string {
         .map(key => `${word(key.attribute)}${key.direction === 'desc' ? ' desc' : ''}`)
         .join(', ')}`;
     case 'text':
-      return clause.phrase ? `"${clause.text}"` : clause.text;
+      if (clause.phrase) return `"${clause.text}"`;
+      // An older AST may hold bare text with a parenthesis, now a separator: as spaces it matches the same words.
+      return /^(or|and)$/i.test(clause.text) ? `"${clause.text}"` : clause.text.replace(/[()]+/g, ' ').trim();
     case 'view':
       return `#${word(clause.name)}`;
+    case 'or':
+      return `(${clause.branches.map(branch => grouped(branch, registry)).join(' or ')})`;
   }
+}
+
+function grouped(query: Query, registry: Registry): string {
+  const text = render(query, registry);
+  return query.clauses.length > 1 || query.clauses[0]?.kind === 'or' ? `(${text})` : text;
 }
 
 /** AST → canonical query text. `parse(render(ast))` yields the same AST. */
 export function render(query: Query, registry: Registry): string {
+  if (query.clauses.length === 1 && query.clauses[0]!.kind === 'or') {
+    return query.clauses[0]!.branches.map(branch => grouped(branch, registry)).join(' or ');
+  }
   return query.clauses.map(clause => renderClause(clause, registry)).join(' ');
 }

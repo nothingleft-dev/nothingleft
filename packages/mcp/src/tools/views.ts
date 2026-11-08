@@ -100,6 +100,7 @@ export const createView = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  creates: true,
   endpoints: ['POST /v1/saved-views'],
   async run(ctx, args) {
     const { data: v } = await ctx.api.send<SavedView>('POST', '/v1/saved-views', {

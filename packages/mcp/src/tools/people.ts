@@ -31,9 +31,10 @@ export const removeMember = defineTool({
   name: 'remove_member',
   title: 'Remove a member',
   description:
-    'Removes someone from the organisation: their open issues go to `reassign_to` or become unassigned, their saved views go to `transfer_views_to` or are deleted, their sessions and organisation-only tokens end. Their history stays, marked as a former member. Asks you to confirm before acting, with the real counts. Needs an Org Admin and admin:org.',
+    'Removes someone from the organisation: open issues go to `reassign_to` or unassigned, saved views to `transfer_views_to` or deleted, sessions and organisation tokens end; history stays. Asks you first, with the real counts. Org Admin, admin:org.',
   input: removalInput,
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/members',
@@ -155,6 +156,7 @@ export const listInvitations = defineTool({
     "The organisation's invitations - or one project's - with status, the role each grants, and uses for share links.",
   input: z.strictObject(where),
   kind: 'read',
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/invitations',
@@ -190,6 +192,7 @@ export const getInvitation = defineTool({
   description: 'One invitation by email or link, with everyone who joined through it.',
   input: z.strictObject({ invitation: invitationArg, ...where }),
   kind: 'read',
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/invitations',
@@ -224,6 +227,7 @@ export const revokeInvitation = defineTool({
     'Stops an invitation or share link from working. People who already joined stay. Asks you to confirm before acting.',
   input: z.strictObject({ invitation: invitationArg, ...where }),
   kind: 'destructive',
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/invitations',
@@ -251,6 +255,8 @@ export const rotateInviteLink = defineTool({
     'Replaces a share link with a new URL carrying the same role and limits; the old URL stops working. Asks you to confirm before acting.',
   input: z.strictObject({ link: invitationArg.describe('The share link to replace.'), ...where }),
   kind: 'destructive',
+  repeatable: true,
+  scopes: ['issues:read', ['admin:project', 'admin:org']],
   endpoints: [
     'GET /v1/organizations',
     'GET /v1/organizations/{slug}/invitations',

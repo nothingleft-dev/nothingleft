@@ -14,6 +14,8 @@ export type Token = Span &
     | { type: 'range' }
     | { type: 'hash' }
     | { type: 'minus' }
+    | { type: 'open' }
+    | { type: 'close' }
   );
 
 export class QueryError extends Error {
@@ -30,7 +32,7 @@ export class QueryError extends Error {
   }
 }
 
-const WORD_BREAK = new Set([' ', '\t', '\n', '\r', ',', '{', '}', '"', ':']);
+const WORD_BREAK = new Set([' ', '\t', '\n', '\r', ',', '{', '}', '"', ':', '(', ')']);
 
 export interface TokenizeOptions {
   /** Keep going past an unterminated brace or quote; the suggestion engine needs a half-typed query. */
@@ -90,6 +92,9 @@ export function tokenize(input: string, options: TokenizeOptions = {}): Token[] 
       i += 1;
     } else if (ch === '-' && input[i + 1] === '{') {
       tokens.push({ type: 'minus', start: i, end: i + 1 });
+      i += 1;
+    } else if (ch === '(' || ch === ')') {
+      tokens.push({ type: ch === '(' ? 'open' : 'close', start: i, end: i + 1 });
       i += 1;
     } else if (ch === ':') {
       // A stray colon (not glued to a word) is free text.

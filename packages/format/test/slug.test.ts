@@ -78,7 +78,7 @@ describe('customFieldSlug', () => {
 
 describe('urlSlug', () => {
   test.each([
-    ['BE: Patient portal: reactivate cancelled treatment', 'be-patient-portal-reactivate-cancelled-treatment'],
+    ['BE: Partner Portal: restore an archived invoice', 'be-partner-portal-restore-an-archived-invoice'],
     ['Upgrade to v1.2_beta', 'upgrade-to-v1-2-beta'],
     ['Café crème', 'cafe-creme'],
     ['  -- Needs Review -- ', 'needs-review'],

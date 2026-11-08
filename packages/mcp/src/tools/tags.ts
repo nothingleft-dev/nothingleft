@@ -26,7 +26,7 @@ export const listTags = defineTool({
   name: 'list_tags',
   title: 'List tags',
   description:
-    'The organisation\'s tags, shared by every project and by issues and knowledge base articles alike, with how many issues and articles you can see carry each. `for` ranks the ones used on that kind of thing first; `in_use` keeps only those in use (a project\'s knowledge base tag list: for: "articles", project, in_use: true). You need not list them before tagging: new names are created on first use.',
+    "The organisation's tags, shared by issues and articles, with how many of each you can see. `for` ranks one kind first; `in_use` keeps those in use. New names are created on first use, so you need not list them first.",
   input: z.strictObject({
     query: z.string().trim().max(100).optional().describe('Filter by name.'),
     for: z.enum(['issues', 'articles']).optional().describe('Rank tags used on issues, or on articles, first.'),
@@ -69,13 +69,14 @@ export const renameTag = defineTool({
   name: 'rename_tag',
   title: 'Rename a tag',
   description:
-    'Renames a tag everywhere it is used - every project, issues and articles alike. Its slug follows the new name, and saved views that name it in `tag:` are rewritten. A name another tag already has is refused: merge_tags joins the two. Needs a Project Admin of any project and a token with admin:project.',
+    'Renames a tag everywhere; its slug follows and saved views are rewritten. A name another tag has is refused: use merge_tags. Project Admin, admin:project.',
   input: z.strictObject({
     tag: tagName,
     name: z.string().trim().min(1).max(100).describe('The new name.'),
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['PATCH /v1/tags/{tag}'],
   async run(ctx, args) {
     const { data } = await ctx.api.send<Tag>('PATCH', path`/v1/tags/${args.tag}`, {
@@ -97,6 +98,7 @@ export const recolorTag = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['PATCH /v1/tags/{tag}'],
   async run(ctx, args) {
     const { data } = await ctx.api.send<Tag>('PATCH', path`/v1/tags/${args.tag}`, {
@@ -111,13 +113,14 @@ export const mergeTags = defineTool({
   name: 'merge_tags',
   title: 'Merge tags',
   description:
-    'Moves every issue and article tagged with any of `tags` onto `into`, then deletes `tags`; saved views follow. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.',
+    'Moves everything tagged with `tags` onto `into`, then deletes `tags`; saved views follow. Cannot be undone; asks you first. Org Admin, admin:org.',
   input: z.strictObject({
     tags: z.array(tagName).min(1).max(50).describe('The tags to fold in and delete.'),
     into: tagName.describe('The tag they become.'),
     org: arg.org,
   }),
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: ['GET /v1/tags/manage', 'POST /v1/tags/merge'],
   async describeAction(ctx, args) {
     const sources = await Promise.all(args.tags.map(name => managed(ctx, name, args.org)));
@@ -145,6 +148,7 @@ export const deleteTag = defineTool({
     'Removes a tag from every issue and article in the organisation and deletes it. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.',
   input: z.strictObject({ tag: tagName, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:org'],
   endpoints: ['GET /v1/tags/manage', 'DELETE /v1/tags/{tag}'],
   async describeAction(ctx, args) {
     const tag = await managed(ctx, args.tag, args.org);

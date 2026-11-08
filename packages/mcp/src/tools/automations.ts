@@ -18,9 +18,7 @@ const automationArg = z.string().trim().min(1).max(100).describe('The automation
 const statusArg = z.string().trim().min(1).max(100).describe('The status it sets, by name, e.g. "Fixed".');
 const conditionsArg = z
   .record(z.string(), z.unknown())
-  .describe(
-    'Conditions for the trigger, e.g. {"issue_status_category": ["backlog", "unstarted"]} or {"base_branch": ["main"]}. list_automations with include: "catalogue" shows which each trigger takes and their defaults.',
-  );
+  .describe('Trigger conditions, e.g. {"base_branch": ["main"]}; list_automations include: "catalogue" lists them.');
 
 const scope = (org: string | undefined) => (org ? { org } : {});
 const SKIPPED: Record<string, string> = {
@@ -47,7 +45,7 @@ export const listAutomations = defineTool({
   name: 'list_automations',
   title: 'List automations',
   description:
-    'The rules that change issues by themselves in a project, in the order they run: each as one sentence, whether it is on, and how often it ran. With `automation`, that one rule and its exact conditions. `include: "templates"` adds the ready-made rules with this project\'s statuses filled in; `include: "catalogue"` adds every trigger and the conditions it takes. Any member can read them; a token needs issues:read.',
+    'A project\'s automation rules in run order, one sentence each, with state and run counts. `automation` shows one with its conditions; `include` adds "templates" or the trigger "catalogue".',
   input: z.strictObject({
     project: arg.project,
     automation: automationArg.optional(),
@@ -140,7 +138,7 @@ export const createAutomation = defineTool({
   name: 'create_automation',
   title: 'Create an automation',
   description:
-    "Adds a rule that sets an issue's status when something happens in git (a branch, a commit, a pull request opened, ready, merged or closed, a revert merged) or when the last open subtask is resolved. Start from a `template` or give `trigger` and `status`. A change an automation makes never fires another. Needs a Project Admin and a token with admin:project; the free plan allows 10 per project.",
+    "Adds a rule that sets an issue's status on a git event or when its last open subtask resolves. Use a `template`, or `trigger` and `status`. Automations never trigger each other. Project Admin, admin:project; 10 per project on the free plan.",
   input: z.strictObject({
     project: arg.project,
     template: z
@@ -155,6 +153,8 @@ export const createAutomation = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
+  creates: true,
   endpoints: ['GET /v1/projects/{key}/automations/templates', 'POST /v1/projects/{key}/automations'],
   async run(ctx, args) {
     const key = args.project.toUpperCase();
@@ -196,7 +196,7 @@ export const updateAutomation = defineTool({
   name: 'update_automation',
   title: 'Update an automation',
   description:
-    'Renames a rule, turns it on or off, changes its conditions, the status it sets, or where it runs in the order (the first rule that changes an issue ends the evaluation). Needs a Project Admin and a token with admin:project.',
+    'Renames a rule, turns it on or off, or changes its conditions, status or position (the first rule that changes an issue wins). Project Admin, admin:project.',
   input: z.strictObject({
     project: arg.project,
     automation: automationArg,
@@ -208,6 +208,7 @@ export const updateAutomation = defineTool({
     org: arg.org,
   }),
   kind: 'write',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['PATCH /v1/projects/{key}/automations/{name}'],
   async run(ctx, args) {
     const key = args.project.toUpperCase();
@@ -232,6 +233,7 @@ export const deleteAutomation = defineTool({
     "Deletes a rule and its run log. What it already changed stays in the issues' history. Needs a Project Admin and a token with admin:project. Asks you to confirm before acting.",
   input: z.strictObject({ project: arg.project, automation: automationArg, org: arg.org }),
   kind: 'destructive',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['DELETE /v1/projects/{key}/automations/{name}'],
   async describeAction(_ctx, args) {
     return t('mcp.action.automation_delete', { name: args.automation, project: args.project.toUpperCase() });
@@ -256,6 +258,7 @@ export const testAutomation = defineTool({
     'A dry run: what the rule would do to an issue now, were its trigger to fire. Changes nothing. Needs a Project Admin and a token with admin:project.',
   input: z.strictObject({ project: arg.project, automation: automationArg, issue: arg.issue, org: arg.org }),
   kind: 'read',
+  scopes: ['issues:read', 'admin:project'],
   endpoints: ['POST /v1/projects/{key}/automations/{name}/test'],
   async run(ctx, args) {
     const key = args.project.toUpperCase();
@@ -281,7 +284,7 @@ export const listAutomationRuns = defineTool({
   name: 'list_automation_runs',
   title: 'List automation runs',
   description:
-    'The run log, newest first: each time a rule looked at an issue, what fired it, and whether it changed the issue or why not. Narrow it to one `automation`, one `issue`, or both. Kept 90 days. Any member can read it; a token needs issues:read.',
+    'The run log, newest first: what fired each rule and whether it changed the issue. Narrow by `automation` or `issue`. Kept 90 days.',
   input: z.strictObject({
     project: arg.project,
     automation: automationArg.optional(),

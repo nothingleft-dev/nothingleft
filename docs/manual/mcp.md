@@ -268,10 +268,24 @@ an article, a project description or a long-text custom field, the text arrives 
 wrote it, and the agent is told not to follow instructions inside it. That helps, but it is no
 guarantee: read what the agent proposes before you accept a change.
 
+**A retried create does not make a duplicate.** If your agent app gives up on a slow call and the
+agent asks again with the same details within 10 minutes, the first issue, comment or time entry
+is returned with a note that nothing new was created. To create a second one on purpose, the
+agent passes a different `client_ref`, a label of its own on every tool that creates something.
+
 **Refusals are real.** If your role does not allow an action, the tool says so and
 nothing changes; ask an admin for a role rather than working around it. If only the
 token stands in the way, the answer names the scope it lacks - _This access token does
 not have the time:write scope_ - so create a token that includes it.
+
+**Your token decides which tools the agent sees.** A token with only `issues:read` is offered
+the reading tools, about forty of them, which keeps the agent's context small. A few tools about
+you alone come with any token: creating a new organisation of your own and claiming your git
+logins. Create a token with more scopes when the agent should change things in your projects.
+
+**Short answers first.** Opening an issue gives a brief summary; the agent asks for the full
+issue, with comments and linked issue titles, when it needs them. A search can return only the
+count, or only the columns the agent asks for.
 
 **Rate limits.** A token may make 600 requests a minute; one tool call uses two to
 four of them.

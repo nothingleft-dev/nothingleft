@@ -4091,6 +4091,7 @@ paths:
         - { name: project, in: query, schema: { type: string, example: PMS }, description: 'Only this project. Required with `deleted=true`.' }
         - { name: group_by, in: query, schema: { type: string, example: 'custom:severity' }, description: 'project, status, priority, type, assignee, tag, sprint, due, or `custom:<slug>` for a select, multi-select, user, multi-user or checkbox field in scope (otherwise `400 search.not_groupable` with the groupable ones in `valid_values`). A custom group''s empty label is the field''s; a checkbox groups as Yes and No.' }
         - { name: group_limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, example: 10 }, description: 'Only with `group_by`: at most this many rows from each group. Ignored without `group_by`.' }
+        - { name: count_only, in: query, schema: { type: boolean, default: false }, description: 'Only the count: `data` is empty, `pagination.total` is the number of matches and, with `group_by`, `meta.groups` carries every group''s count. No row is loaded.' }
         - $ref: '#/components/parameters/SearchSort'
         - { name: deleted, in: query, schema: { type: string, enum: ['true', 'false'], default: 'false' } }
         - $ref: '#/components/parameters/Limit'
@@ -5546,7 +5547,8 @@ paths:
       description: |
         Unlike `GET /v1/tags`, counts every live issue and article in the organisation, whoever
         can read them, and lists unused tags too, ordered by slug. Project Admins of any project,
-        Org Admins and the Owner; a token needs `admin:project`.
+        Org Admins and the Owner; a token needs `admin:project` (rename, recolour) or `admin:org`
+        (merge, delete).
       tags: [tags]
       parameters:
         - $ref: '#/components/parameters/XOrganization'
@@ -10826,7 +10828,8 @@ components:
         Any mutating request. The first response is stored for 24 hours per credential and
         replayed, with `Idempotent-Replayed: true`, for the same key and body. The same key with
         a different body answers `422`; while the first is still running, `409`. 5xx and 429
-        responses are not stored, so a retry runs again.
+        responses are not stored, so a retry runs again. Requests the MCP server makes are kept
+        for 10 minutes, and their 4xx responses are not stored either.
       schema: { type: string, minLength: 1, maxLength: 255 }
     OrganizationSlug:
       name: slug
@@ -11097,7 +11100,9 @@ components:
         saved view nor a value), `query.missing_value`, `query.invalid_range`,
         `query.not_sortable`, `query.unknown_link`, `query.expected_subquery`,
         `query.unbalanced_braces`, `query.unterminated_quote`, `query.unexpected_token`,
-        `query.unexpected_end`, `query.saved_view_cycle`; or `search.project_required`.
+        `query.unexpected_end`, `query.saved_view_cycle`, `query.unbalanced_parentheses`,
+        `query.dangling_operator` (`or` / `and` with nothing on one side), `query.empty_group`,
+        `query.sort_in_group`; or `search.project_required`.
       content:
         application/json:
           schema:

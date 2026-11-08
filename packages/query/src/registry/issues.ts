@@ -1,4 +1,11 @@
-import { type AttributeDefinition, type AttributeType, type Registry, buildRegistry, ISSUE_LINKS } from './registry.ts';
+import {
+  ANY_LINK,
+  type AttributeDefinition,
+  type AttributeType,
+  type Registry,
+  buildRegistry,
+  ISSUE_LINKS,
+} from './registry.ts';
 
 export type CustomAttributeType = Exclude<AttributeType, 'has' | 'sort' | 'key' | 'project'>;
 
@@ -51,6 +58,12 @@ const ISSUE_ATTRIBUTES: readonly AttributeDefinition[] = [
     description: { key: 'query.attribute.assignee' },
     group: { key: 'query.group.user' },
     empty: 'Unassigned',
+  },
+  {
+    name: 'mentions',
+    type: 'user',
+    description: { key: 'query.attribute.mentions' },
+    group: { key: 'query.group.user' },
   },
   {
     name: 'created by',
@@ -218,7 +231,9 @@ export const RESERVED_ISSUE_ATTRIBUTES: ReadonlySet<string> = new Set([
   ...RESERVED,
   'aggregate',
   'description',
-  ...ISSUE_LINKS.map(link => link.name),
+  'or',
+  'and',
+  ...[...ISSUE_LINKS, ANY_LINK].map(link => link.name),
 ]);
 
 export const ISSUE_CATEGORIES = ['resolved', 'unresolved', 'star'] as const;
@@ -230,8 +245,8 @@ export function issueRegistry(options: IssueRegistryOptions = {}): Registry {
     .map(customFieldAttribute);
   return buildRegistry({
     attributes: [...ISSUE_ATTRIBUTES, ...custom],
-    links: ISSUE_LINKS,
+    links: [...ISSUE_LINKS, ANY_LINK],
     categories: ISSUE_CATEGORIES,
-    presenceOnly: ['description', 'commits'],
+    presenceOnly: ['description', 'commits', 'links'],
   });
 }

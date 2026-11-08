@@ -14,9 +14,7 @@ async function linksNow(ctx: ToolContext, key: string, org: string | undefined, 
   return { markdown: join(lead, linkLines(data) ?? `${key} has no links now.`) };
 }
 
-const link = z
-  .enum(ISSUE_LINK_NAME_VALUES)
-  .describe('Read from `issue`: "PP-5 depends on PP-4" is issue PP-5, link "depends on", targets ["PP-4"].');
+const link = z.enum(ISSUE_LINK_NAME_VALUES).describe('Read from `issue`: PP-5 "depends on" PP-4.');
 
 export const linkIssues = defineTool({
   name: 'link_issues',

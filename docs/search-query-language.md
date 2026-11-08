@@ -37,6 +37,26 @@ status: Rejected, Duplicate
 type: Bug, Feature
 ```
 
+### Combining clauses: `or`, `and`, parentheses
+
+`or` between clauses matches either side; parentheses group. Spaces (and an
+optional `and`) bind tighter than `or`, so `a b or c` is `(a b) or c`:
+
+```
+type: Bug or #Critical
+(subtask of: WEB-10 or relates to: WEB-10) type: Bug #Unresolved
+(login or signup) status: Open
+type: Bug and assignee: me              -- `and` is the same as a space
+```
+
+`or` and `and` are keywords wherever a clause can start, in any case (`OR`).
+To search for the word itself, quote it: `"or"`. Parentheses are separators,
+so a value containing one needs braces: `{Fix (urgent)}`. `sort by:` orders
+the whole result, so it stays outside any group; a trailing `sort by:` after
+an `or` applies to all of it (`type: Bug or #Critical sort by: updated`).
+Totals and `group_by` count the combined set once, so an issue matching both
+sides is counted once.
+
 ### Values with spaces
 
 Braces:
@@ -210,6 +230,18 @@ Link names come from `issue_links` in data-model.md: `relates to`,
 `subtask of`, `parent for`. `key: PMS-1, PMS-2` matches issues by their own
 key.
 
+`links:` matches **any** link type in either direction, parent and subtask
+included, and `aggregate links: {…}` does the same for a subquery. `has: links`
+is any link at all:
+
+```
+links: PMS-88                     -- linked to PMS-88 in any way
+aggregate links: {type: Feature}  -- linked to some Feature
+has: -links                       -- no links
+```
+
+`links` is a search word only; it is not a link type you can create.
+
 ### Sorting
 
 ```
@@ -248,6 +280,7 @@ attributes, never silent free text. Quote it to search for it literally.
 | `type` | Issue type |
 | `priority` | Priority |
 | `assignee` | Any assignee; `Unassigned` for none |
+| `mentions` | A person `@mentioned` in the description or a live comment (`me` allowed); `has: mentions` for anyone |
 | `created by` | Issue creator |
 | `updated by` | Last editor |
 | `commenter` | Anyone who commented |
@@ -362,7 +395,9 @@ Errors are `QueryError` with a catalogue code (`query.unknown_attribute`,
 `query.missing_value`, `query.invalid_value`, `query.not_sortable`,
 `query.unknown_link`, `query.expected_subquery`, `query.invalid_range`,
 `query.unbalanced_braces`, `query.unterminated_quote`,
-`query.unexpected_token`), the offending character span and, where it helps,
+`query.unexpected_token`, `query.unbalanced_parentheses`,
+`query.dangling_operator`, `query.empty_group`, `query.sort_in_group`), the
+offending character span and, where it helps,
 the list of valid values. The API wraps them in `AppError` (1c).
 
 ### Decisions
@@ -391,6 +426,9 @@ the list of valid values. The API wraps them in `AppError` (1c).
 | 27 Sep 2026 | Phase 5: reports run the same pipeline and aggregate over the compiled predicate; their grouping is the list's own (`packages/db/src/search/issue-groups.ts`, moved out of the search repository), plus a `status_category` grouping for reports' *group by category*. Every report group carries the query for its issues, built from the AST and rendered with `render.ts`; a report's `period` is read with the date vocabulary above. |
 | 24 Sep 2026 | Recent searches: recorded for session callers only, newest 20 per user and organisation. |
 | 13 Oct 2026 | Recent searches: a repeat within five minutes writes nothing, only a new query prunes, and page 2 onward is not recorded. |
+| 7 Nov 2026 | 8b: `or`, `and` and parentheses. The AST keeps `Query.clauses` as the AND list and adds one clause kind, `{ kind: 'or', branches: Query[] }`; a parenthesised AND inside an AND list is flattened. `subqueries(clause)` in `ast.ts` is the one place that knows which clauses nest (aggregate, view, or), and every walker uses it. Before this, a bare `or` was free text and, as a stop word, filtered nothing; it is now an operator. A stored query whose text term is literally `or`/`and`, or contains a parenthesis, renders quoted. Relevance ranking keeps the shape: branch terms join with `||`. |
+| 7 Nov 2026 | 8b: `links:` (pseudo-link `ANY_LINK` in the registry, never in `ISSUE_LINK_NAMES`), `aggregate links:`, `has: links`, and `mentions:` over the `mentions` rows (description and live comments; a soft-deleted comment's row is ignored). `links`, `mentions`, `or` and `and` are reserved custom field slugs. |
+| 7 Nov 2026 | 8b: every link clause (typed or `links:`) and `mentions:` compiles to subqueries that do not reference the outer row: the target set is found once, then each issue is tested against it. The earlier correlated `EXISTS` ran once per issue (50,104 loops for `relates to:` on 50k issues; 243 ms → 6 ms for `(subtask of: X or relates to: X) #Unresolved`). No index added: `issue_links (from_issue_id, to_issue_id, type)` is UNIQUE and serves the outward side; the inward side reads `issue_links` once per query. |
 
 ### Git attributes (7)
 

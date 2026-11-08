@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import type { FastifyRedis } from '@fastify/redis';
-import type { Principal } from '@nothingleft/types';
+import { viaOf, type Principal } from '@nothingleft/types';
+import { canonicalJson } from '@lib/canonical-json';
 import { AppError } from '@lib/errors';
 import { orgHints } from '@lib/request';
 import {
@@ -11,12 +12,13 @@ import {
   IDEMPOTENCY_KEY_MAX_LENGTH,
   IDEMPOTENCY_REPLAYED_HEADER,
   IDEMPOTENCY_TTL_SECONDS,
+  MCP_IDEMPOTENCY_TTL_SECONDS,
   REQUEST_ID_HEADER,
 } from '@config/constants';
 
 declare module 'fastify' {
   interface FastifyRequest {
-    idempotency: { storeKey: string; fingerprint: string } | null;
+    idempotency: { storeKey: string; fingerprint: string; keepsFailures: boolean } | null;
     touchedProjects: Map<number, number> | null;
   }
 }
@@ -103,14 +105,16 @@ const idempotencyPlugin: FastifyPluginAsync<IdempotencyOptions> = async (app, { 
     }
     const storeKey = `idem:${credential(request.principal)}:${organisation(request, request.principal)}:${raw}`;
     const fingerprint = createHash('sha256')
-      .update(`${request.method} ${request.url} ${JSON.stringify(request.body ?? null)}`)
+      .update(`${request.method} ${request.url} ${canonicalJson(request.body ?? null)}`)
       .digest('base64url');
 
     let stored: Pending | Done | null;
     try {
       const pending: Pending = { state: 'pending', fingerprint };
-      if (await store.claim(storeKey, JSON.stringify(pending), IDEMPOTENCY_TTL_SECONDS)) {
-        request.idempotency = { storeKey, fingerprint };
+      const mcp = viaOf(request.principal) === 'mcp';
+      const ttl = mcp ? MCP_IDEMPOTENCY_TTL_SECONDS : IDEMPOTENCY_TTL_SECONDS;
+      if (await store.claim(storeKey, JSON.stringify(pending), ttl)) {
+        request.idempotency = { storeKey, fingerprint, keepsFailures: !mcp };
         return;
       }
       const value = await store.get(storeKey);
@@ -139,7 +143,10 @@ const idempotencyPlugin: FastifyPluginAsync<IdempotencyOptions> = async (app, { 
     if (!claim) return payload;
     try {
       // A server failure or a throttle says nothing about the request, so the key is released for a retry.
-      if (reply.statusCode >= 500 || reply.statusCode === 429 || typeof payload !== 'string') {
+      // MCP keys are derived from the arguments, so a stored 4xx would pin a stale refusal on the repeat.
+      const released =
+        reply.statusCode >= 500 || reply.statusCode === 429 || (!claim.keepsFailures && reply.statusCode >= 400);
+      if (released || typeof payload !== 'string') {
         await store.release(claim.storeKey);
       } else {
         const done: Done = {

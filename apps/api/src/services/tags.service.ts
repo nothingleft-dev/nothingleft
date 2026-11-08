@@ -88,6 +88,12 @@ export function retagQuery(query: Query, from: readonly Pick<TagRow, 'name' | 's
       changed = true;
       return { ...clause, query: inner };
     }
+    if (clause.kind === 'or') {
+      const branches = clause.branches.map(branch => retagQuery(branch, from, to));
+      if (branches.every(b => b === null)) return clause;
+      changed = true;
+      return { ...clause, branches: branches.map((b, i) => b ?? clause.branches[i]!) };
+    }
     if (clause.kind !== 'attribute' || clause.attribute !== 'tag') return clause;
     const seen = new Set<string>();
     const values: Value[] = [];
@@ -118,19 +124,25 @@ export function tagsService(deps: TagsDeps) {
    * Renaming and recolouring is any Project Admin's, of any project; merging and deleting an Org
    * Admin's. Tags belong to the organisation, so the check is made where the caller holds the most.
    */
-  async function managerOf(principal: Principal, hints: OrgHints, capability: Capability): Promise<OrgAccess> {
+  /** The organisation, when the caller holds any one of `capabilities` there or as a Project Admin anywhere in it. */
+  async function managerOf(
+    principal: Principal,
+    hints: OrgHints,
+    ...capabilities: [Capability, ...Capability[]]
+  ): Promise<OrgAccess> {
+    const allowed = (scope: Scope) => capabilities.some(capability => can(principal, capability, scope));
     const org = await access.current(principal, hints);
-    if (can(principal, capability, org.scope)) return org;
+    if (allowed(org.scope)) return org;
     let closest: Scope = org.scope;
     for (const { project, role } of await deps.projects.listReadable(org.ctx, principal.userId, {
       everyProject: false,
     })) {
       if (role !== 'project_admin') continue;
       const scope: Scope = { ...org.scope, projectRole: 'project_admin', projectId: project.id };
-      if (can(principal, capability, scope)) return org;
+      if (allowed(scope)) return org;
       closest = scope;
     }
-    throw denial(principal, capability, closest, AppError.forbidden);
+    throw denial(principal, capabilities[0], closest, AppError.forbidden);
   }
 
   async function findTag(ctx: TenantContext, name: string, field: string): Promise<TagRow> {
@@ -260,7 +272,8 @@ export function tagsService(deps: TagsDeps) {
       query: ManageTagsQuery,
       hints: OrgHints = {},
     ): Promise<{ data: Tag[]; pagination: Pagination }> {
-      const org = await managerOf(principal, hints, 'tag.update');
+      // Whoever may merge or delete a tag needs its real counts first, as much as whoever may rename it.
+      const org = await managerOf(principal, hints, 'tag.update', 'tag.delete');
       const { rows, total } = await tags.listWithUsage(org.ctx, query);
       return {
         data: rows.map(tagDto),

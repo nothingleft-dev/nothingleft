@@ -1,4 +1,5 @@
 import { formatDuration, type WorkCalendar } from '@nothingleft/format';
+import { t } from '@nothingleft/i18n';
 import type {
   Comment,
   CustomFieldOptionRef,
@@ -26,6 +27,10 @@ const resolvedMark = (issue: Pick<Issue, 'resolved_at'>) => (issue.resolved_at ?
 
 export const ISSUE_ROW_HEADERS = ['Key', 'Title', 'Status', 'Priority', 'Type', 'Assignees', 'Due'];
 
+/** The columns a caller may choose; Key is always first. */
+export const ISSUE_FIELDS = ['title', 'status', 'priority', 'type', 'assignees', 'due'] as const;
+export type IssueField = (typeof ISSUE_FIELDS)[number];
+
 export function issueRow(issue: Issue): string[] {
   return [
     issue.key,
@@ -44,21 +49,29 @@ export function issueTable(
   zone: string,
   slugs: readonly string[] = [],
   calendar?: WorkCalendar,
+  fields?: readonly IssueField[],
 ): string {
   const extra = slugs.flatMap(slug => {
     const entry = issues.flatMap(i => i.custom_fields).find(f => f.slug === slug);
     return entry ? [{ slug, name: entry.name }] : [];
   });
-  return table(
-    [...ISSUE_ROW_HEADERS, ...extra.map(e => e.name)],
-    issues.map(issue => [
-      ...issueRow(issue),
-      ...extra.map(e => {
-        const entry = issue.custom_fields.find(f => f.slug === e.slug);
-        return entry ? customFieldText(entry, issue.key, zone, calendar) : '—';
-      }),
-    ]),
-  );
+  const headers = [...ISSUE_ROW_HEADERS, ...extra.map(e => e.name)];
+  const rows = issues.map(issue => [
+    ...issueRow(issue),
+    ...extra.map(e => {
+      const entry = issue.custom_fields.find(f => f.slug === e.slug);
+      return entry ? customFieldText(entry, issue.key, zone, calendar) : '—';
+    }),
+  ]);
+  // Key always; a chosen built-in column always; any other column only when some row fills it.
+  const keep = headers.map((_, i) => {
+    if (i === 0) return true;
+    const builtIn = i < ISSUE_ROW_HEADERS.length ? ISSUE_FIELDS[i - 1]! : null;
+    if (fields && builtIn) return fields.includes(builtIn);
+    return rows.some(row => row[i] !== '—');
+  });
+  const pick = <T>(cells: T[]) => cells.filter((_, i) => keep[i]);
+  return table(pick(headers), rows.map(pick));
 }
 
 export const refLine = (ref: IssueRef) => `${ref.key} ${ref.title}${ref.resolved ? ' (resolved)' : ''}`;
@@ -270,4 +283,54 @@ export function activityLine(a: IssueActivity, zone: string, calendar?: WorkCale
   })();
   if (a.automation) return `- ${at} · ${who} · ${a.automation.name} · ${what}, because ${a.automation.cause}`;
   return `- ${at} · ${who} · ${what}`;
+}
+
+const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+/** How much of the description the brief form shows. */
+export const BRIEF_DESCRIPTION = 600;
+
+/**
+ * The default answer of get_issue: key fields on one line, link counts by type, the start of the
+ * description and a line counting what `detail: "full"` would add.
+ */
+export function issueBrief(
+  issue: Issue,
+  links: readonly IssueLinkGroup[],
+  zone: string,
+  appBaseUrl: string,
+  development: string | null,
+  calendar?: WorkCalendar,
+): string {
+  const line = [
+    issue.type.name,
+    issue.priority.name,
+    issue.status.name + resolvedMark(issue),
+    people(issue.assignees),
+    issue.due_date ? `due ${date(issue.due_date)}` : null,
+    issue.sprint ? issue.sprint.name : null,
+    issue.parent ? `parent ${issue.parent}` : null,
+    issue.tags.length ? issue.tags.map(t => t.name).join(', ') : null,
+  ].filter(Boolean);
+  const fields = issue.custom_fields.map(f => `${f.name}: ${customFieldText(f, issue.key, zone, calendar)}`);
+  const linked = links.filter(g => g.count > 0).map(g => `${g.link} ${g.count}`);
+  const time = [
+    issue.spent_minutes > 0 ? `${duration(issue.spent_minutes, calendar)} spent` : null,
+    issue.estimate_minutes !== null ? `estimate ${duration(issue.estimate_minutes, calendar)}` : null,
+  ].filter(Boolean);
+  const counts = [
+    issue.comment_count > 0 ? plural(issue.comment_count, 'comment') : null,
+    issue.subtasks.total ? `${issue.subtasks.resolved}/${issue.subtasks.total} subtasks resolved` : null,
+    time.length ? time.join(', ') : null,
+    issue.attachment_count > 0 ? plural(issue.attachment_count, 'file') : null,
+  ].filter(Boolean);
+  return join(
+    issueHeading(issue, appBaseUrl),
+    line.join(' · '),
+    fields.length ? `**Fields:** ${fields.join('; ')}` : null,
+    development,
+    linked.length ? `**Links:** ${linked.join(' · ')}` : null,
+    issue.description_md ? descriptionPage(issue, zone, 0, BRIEF_DESCRIPTION) : '_No description._',
+    t('mcp.hint.brief', { counts: counts.length ? `${counts.join(' · ')}. ` : '' }),
+  );
 }
