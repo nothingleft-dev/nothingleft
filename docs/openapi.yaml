@@ -5547,7 +5547,8 @@ paths:
       description: |
         Unlike `GET /v1/tags`, counts every live issue and article in the organisation, whoever
         can read them, and lists unused tags too, ordered by slug. Project Admins of any project,
-        Org Admins and the Owner; a token needs `admin:project`.
+        Org Admins and the Owner; a token needs `admin:project` (rename, recolour) or `admin:org`
+        (merge, delete).
       tags: [tags]
       parameters:
         - $ref: '#/components/parameters/XOrganization'

@@ -120,8 +120,7 @@ export const mergeTags = defineTool({
     org: arg.org,
   }),
   kind: 'destructive',
-  // The confirmation reads GET /v1/tags/manage, which needs admin:project.
-  scopes: ['issues:read', 'admin:project', 'admin:org'],
+  scopes: ['issues:read', 'admin:org'],
   endpoints: ['GET /v1/tags/manage', 'POST /v1/tags/merge'],
   async describeAction(ctx, args) {
     const sources = await Promise.all(args.tags.map(name => managed(ctx, name, args.org)));
@@ -149,8 +148,7 @@ export const deleteTag = defineTool({
     'Removes a tag from every issue and article in the organisation and deletes it. It cannot be undone. Needs an Org Admin and a token with admin:org. Asks you to confirm before acting.',
   input: z.strictObject({ tag: tagName, org: arg.org }),
   kind: 'destructive',
-  // The confirmation reads GET /v1/tags/manage, which needs admin:project.
-  scopes: ['issues:read', 'admin:project', 'admin:org'],
+  scopes: ['issues:read', 'admin:org'],
   endpoints: ['GET /v1/tags/manage', 'DELETE /v1/tags/{tag}'],
   async describeAction(ctx, args) {
     const tag = await managed(ctx, args.tag, args.org);
