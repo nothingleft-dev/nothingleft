@@ -219,7 +219,7 @@
     },
     "packages/mcp": {
       "name": "@nothingleft/mcp-server",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "dependencies": {
         "@modelcontextprotocol/server": "^2.1.0",
         "@nothingleft/format": "workspace:*",
@@ -233,7 +233,7 @@
     },
     "packages/mcp-stdio": {
       "name": "@nothingleft/mcp",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "bin": {
         "nothingleft-mcp": "dist/index.js",
       },
