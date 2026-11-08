@@ -243,4 +243,30 @@ describe('the stdio proxy', () => {
     expect(h.out).toHaveLength(1);
     expect((h.out[0] as { id: number }).id).toBe(4);
   });
+
+  test('close ends an open stream even when its body never reacts to the abort', async () => {
+    let cancelled = false;
+    // As Node's fetch did in production: the abort reached the signal but never the piped body.
+    const h = harness(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode(': keepalive\n\n'));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { headers: { 'content-type': 'text/event-stream' } },
+        ),
+    );
+    const pending = h.handle('{"jsonrpc":"2.0","id":"listen:1","method":"subscriptions/listen","params":{}}');
+    await Bun.sleep(10);
+    h.close();
+    const settled = await Promise.race([pending.then(() => 'ended'), Bun.sleep(1000).then(() => 'still open')]);
+    expect(settled).toBe('ended');
+    expect(cancelled).toBe(true);
+    expect(h.out).toEqual([]);
+  });
 });

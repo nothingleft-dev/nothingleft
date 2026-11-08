@@ -50,6 +50,12 @@ Clients that speak MCP over HTTP can skip this package and connect to
 
 The package and the hosted server share one version number; the server reports it in `serverInfo`.
 
+### 0.2.1
+
+- When the client closes the connection with a notification stream still open, the shim now
+  ends that stream and exits. Before, Node's fetch could miss the abort and leave the process
+  running in the background, holding the stream open.
+
 ### 0.2.0
 
 - A create that is repeated with the same arguments within 10 minutes, typically a retry after a

@@ -122,6 +122,10 @@ export function createProxy({ url, token, fetch, write, version }: ProxyOptions)
       // Relayed event by event: a subscription stream stays open, and its acknowledgement cannot wait for the end.
       if ((response.headers.get('content-type') ?? '').includes('text/event-stream') && response.body) {
         const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+        // Node's fetch does not always carry an abort through the pipe to a pending read; cancelling
+        // the reader always ends it, and closes the connection under it.
+        const stop = () => void reader.cancel().catch(() => {});
+        controller.signal.addEventListener('abort', stop, { once: true });
         try {
           let buffer = '';
           for (;;) {
@@ -134,12 +138,13 @@ export function createProxy({ url, token, fetch, write, version }: ProxyOptions)
               if (data) emit(data);
             }
           }
-          const rest = dataOf(buffer);
+          const rest = live() ? dataOf(buffer) : '';
           if (rest) emit(rest);
         } catch (error) {
           if (!answered) fail(`The stream from ${url} broke: ${(error as Error).message}`);
         } finally {
           // Leaving early must close the connection too, or an open subscription outlives its handler.
+          controller.signal.removeEventListener('abort', stop);
           await reader.cancel().catch(() => {});
         }
         return;
