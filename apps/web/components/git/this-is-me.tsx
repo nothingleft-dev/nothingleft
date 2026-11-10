@@ -8,6 +8,7 @@ import { useClaimGitIdentity } from '@hooks/use-git';
 import { useOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { providerLabel } from '@lib/git/words';
+import { toastError } from '@components/toast-error';
 
 const DISMISSED_KEY = 'nothingleft:git-this-is-me-dismissed';
 
@@ -85,7 +86,7 @@ export function ThisIsMe({
                 toast.success(`@${login} on ${providerLabel(provider)} is now yours. Its work shows under your name.`);
                 setHidden(true);
               },
-              onError: error => toast.error(error.message),
+              onError: error => toastError(error),
             },
           )
         }

@@ -11,6 +11,7 @@ import { Skeleton } from '@components/ui/skeleton';
 import { StatusPicker } from '@components/projects/automations/status-picker';
 import { useAutomationTemplates, useCreateAutomation } from '@hooks/use-automations';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const isGit = (t: AutomationTemplate) => t.automation.trigger.startsWith('git.');
 
@@ -69,7 +70,7 @@ function TemplateCard({ projectKey, template }: { projectKey: string; template: 
               { ...template.automation, name: template.name, action_params: { status: status! } },
               {
                 onSuccess: rule => toast.success(`${rule.name} is on.`),
-                onError: error => toast.error(error.message),
+                onError: error => toastError(error),
               },
             )
           }

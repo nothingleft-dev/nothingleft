@@ -9,6 +9,7 @@ import type {
   Project,
   ProjectMember,
   ProjectRole,
+  StatusCategory,
   UpdateProject,
 } from '@nothingleft/types';
 import type {
@@ -33,6 +34,7 @@ import { can, projectRolesWith } from '@services/permissions';
 import type { OrgHints } from '@services/tenancy.service';
 import type { InTenantTransaction } from '@services/transaction';
 import { findField } from '@services/custom-field-values';
+import { defaultRules } from '@services/automation-catalogue';
 
 export interface ProjectsDeps {
   organizations: OrganizationsRepository;
@@ -319,6 +321,23 @@ export function projectsService(deps: ProjectsDeps) {
         await repos.schema.seed(org.ctx, row.id);
         const boardSlug = uniqueSlug(row.key, await repos.boards.slugsInOrg(org.ctx));
         await repos.boards.seed(org.ctx, row, principal.userId, boardSlug);
+        const statuses = await repos.schema.list(org.ctx, 'statuses', row.id);
+        for (const [position, { automation }] of defaultRules(
+          statuses.map(s => ({ name: s.name, category: s.category as StatusCategory })),
+        ).entries()) {
+          await repos.automations.insert(org.ctx, {
+            project_id: row.id,
+            name: automation.name!,
+            trigger: automation.trigger,
+            conditions: automation.conditions,
+            action: automation.action,
+            action_params: automation.action_params,
+            is_enabled: true,
+            position,
+            created_by: principal.userId,
+            updated_by: principal.userId,
+          });
+        }
         // The creator is listed among the project's people even though an org admin needs no row.
         await repos.projects.addMember(org.ctx, {
           project_id: row.id,

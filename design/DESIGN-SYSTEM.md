@@ -765,6 +765,13 @@ undone. State every consequence with real counts. The
 destructive button is the single red fill in the product (`.btn.danger`). A reversible
 action that touches only the actor gets a success toast with Undo instead of a dialog.
 
+**Rate limit**: a `429` is never shown as the server being down. While it lasts, one
+warning banner tops every page with a countdown from `Retry-After`; reads wait for
+it and finish by themselves, so a page keeps what it shows instead of an error. A refused save
+shares one error toast whose Retry unlocks at zero; it is never resent without a click.
+If the shell itself could not load, a full-page version of the same counts down and
+reloads.
+
 **Empty / loading / error**: an empty result names the query that produced it and
 offers to widen or clear; loading keeps the layout with skeleton bars; error pages say
 what happened, whether data is safe, one way forward. Denied and missing both render

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { toastError } from '@components/toast-error';
 import { formatDuration, type WorkCalendar } from '@nothingleft/format';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type UpdateIssue } from '@nothingleft/types';
 import { Plus } from 'lucide-react';
@@ -82,9 +82,8 @@ export function IssueSidebar({
   const save = (input: IssueUpdate, onError?: (message: string) => void) => {
     update.mutate(input, {
       onError: error => {
-        const message = error.message;
-        if (onError) onError(message);
-        else toast.error(message);
+        if (onError) onError(error.message);
+        else toastError(error);
       },
     });
   };

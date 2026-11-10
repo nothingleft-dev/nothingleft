@@ -28,6 +28,7 @@ import { useProjectAssigneesMany } from '@hooks/use-projects';
 import { useSchemaValuesMany } from '@hooks/use-project-schema';
 import { useShortcut } from '@hooks/use-shortcut';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface BulkBarProps {
   selected: readonly IssueListItem[];
@@ -79,7 +80,7 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
           setFailures(failed);
           onKeepFailed(failed.map(f => f.key));
         },
-        onError: error => toast.error(error.message),
+        onError: error => toastError(error),
       },
     );
   };

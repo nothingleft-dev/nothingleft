@@ -28,6 +28,7 @@ import { columnDefs, csvColumnsFor, shownColumns } from '@lib/issue-list/columns
 import { isGroupable } from '@components/custom-fields/field-types';
 import { useCustomColumns } from '@hooks/use-custom-columns';
 import { todayCalendarDate } from '@lib/datetime';
+import { toastError } from '@components/toast-error';
 
 interface IssueListProps {
   /** Scope every request to one project. */
@@ -114,7 +115,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
         { name: view.name, body: { query: state.q, sort: state.sort || null, columns: [...columns] } },
         {
           onSuccess: v => toast.success(`Saved the current query to ${v.name}.`),
-          onError: e => toast.error(e.message),
+          onError: e => toastError(e),
         },
       );
     }
@@ -124,12 +125,12 @@ export function IssueList({ project, base = '', title, views: withViews = true }
     key: string,
     body: Parameters<typeof update.mutate>[0]['body'],
     optimistic: (i: IssueListItem) => IssueListItem,
-  ) => update.mutate({ key, body, optimistic }, { onError: error => toast.error(error.message) });
+  ) => update.mutate({ key, body, optimistic }, { onError: error => toastError(error) });
 
   const exportCsv = () =>
     exporter.mutate(
       { q: fullQuery, project, sort: state.sort, columns: csvColumnsFor(columns, defs) },
-      { onError: error => toast.error(error.message) },
+      { onError: error => toastError(error) },
     );
 
   const projectEmpty = project !== undefined && projectQuery.data && total === 0 && fullQuery === '';
@@ -260,7 +261,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
               setDeleting(null);
               navigate({ view: null }, 'replace');
             },
-            onError: e => toast.error(e.message),
+            onError: e => toastError(e),
           });
         }}
       >

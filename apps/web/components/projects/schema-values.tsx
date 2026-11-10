@@ -42,6 +42,7 @@ import {
 import { isApiError } from '@lib/api/errors';
 import type { SchemaTable, SchemaTables } from '@lib/api/project-schema';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const CATEGORY_LABELS: Record<StatusCategory, string> = {
   backlog: 'Backlog',
@@ -123,7 +124,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
   const rows = ((values.data ?? []) as AnyValue[]).toSorted((a, b) => a.position - b.position);
 
   const patch = (name: string, body: AnyUpdate) =>
-    update.mutate({ name, body } as never, { onError: error => toast.error(error.message) });
+    update.mutate({ name, body } as never, { onError: error => toastError(error) });
 
   const move = (name: string, to: number) => {
     const from = rows.findIndex(r => r.name === name);
@@ -142,7 +143,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
         onError: error => {
           if (isApiError(error) && error.code === 'config.in_use') {
             setDeleting({ name, message: error.message, targets: error.validValues ?? [] });
-          } else toast.error(error.message);
+          } else toastError(error);
         },
       },
     );

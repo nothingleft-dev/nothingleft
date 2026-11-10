@@ -282,6 +282,7 @@ function TriggerPicker({
   const groups = [
     { heading: 'Git', triggers: catalogue.triggers.filter(t => t.group === 'git') },
     { heading: 'Subtasks', triggers: catalogue.triggers.filter(t => t.group === 'hierarchy') },
+    { heading: 'Links', triggers: catalogue.triggers.filter(t => t.group === 'links') },
   ];
 
   return (

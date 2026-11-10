@@ -14,6 +14,7 @@ import { PriorityBadge, TypeBadge } from '@components/issues/value-marks';
 import { DELETED_PAGE_SIZE, useDeletedIssues, useRestoreIssue } from '@hooks/use-issues';
 import { formatDateTime } from '@lib/datetime';
 import { issuePath } from '@lib/issue-path';
+import { toastError } from '@components/toast-error';
 
 const EMPTY = '--';
 
@@ -76,7 +77,7 @@ export function DeletedIssues({ projectKey, canRestore }: { projectKey: string; 
                               toast.success(`Restored ${back.key}.`, {
                                 action: { label: 'Open', onClick: () => router.push(issuePath(back)) },
                               }),
-                            onError: error => toast.error(error.message),
+                            onError: error => toastError(error),
                           })
                         }
                       >

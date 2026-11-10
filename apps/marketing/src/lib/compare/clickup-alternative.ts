@@ -164,7 +164,7 @@ export const CLICKUP_COMPARISON: Comparison = {
       capability: 'Automation',
       ours: {
         support: 'limited',
-        note: 'Status rules fired by git events and resolved subtasks, such as Close on merge; not a general rules engine, and no transition rules. Bulk updates handle other repeated edits.',
+        note: 'Status rules fired by git events, resolved subtasks and duplicate links, such as Close on merge; not a general rules engine, and no transition rules. Bulk updates handle other repeated edits.',
         source: ours('Automations manual', AUTOMATIONS_MANUAL_PATH),
       },
       theirs: {
@@ -277,7 +277,7 @@ export const CLICKUP_STRENGTHS: Strength[] = [
   {
     name: 'Automation',
     theirs: 'Prebuilt trigger-and-action automations, and a builder that drafts new ones from plain language.',
-    ours: 'Status rules only, fired by git events and resolved subtasks. Any status may follow any status, and bulk updates cover other repetitive edits.',
+    ours: 'Status rules only, fired by git events, resolved subtasks and duplicate links. Any status may follow any status, and bulk updates cover other repetitive edits.',
     source: { label: 'Automations', href: CLICKUP.automations },
   },
   {

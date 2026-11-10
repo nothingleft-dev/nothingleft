@@ -138,7 +138,7 @@ export const createAutomation = defineTool({
   name: 'create_automation',
   title: 'Create an automation',
   description:
-    "Adds a rule that sets an issue's status on a git event or when its last open subtask resolves. Use a `template`, or `trigger` and `status`. Automations never trigger each other. Project Admin, admin:project; 10 per project on the free plan.",
+    "Adds a rule that sets an issue's status on a git event, when its last open subtask resolves, or when it is marked as a duplicate (every project starts with *Close duplicates* on). Use a `template`, or `trigger` and `status`. Automations never trigger each other. Project Admin, admin:project; 10 per project on the free plan.",
   input: z.strictObject({
     project: arg.project,
     template: z

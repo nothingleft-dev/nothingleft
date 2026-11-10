@@ -1,10 +1,12 @@
 import { ErrorEnvelopeSchema, type SuccessEnvelope } from '@nothingleft/types';
 import { isAnonymousRoute } from '@lib/auth-routes';
 import { env } from '@lib/env';
-import { ApiError, ApiNetworkError } from '@lib/api/errors';
+import { ApiError, ApiNetworkError, RATE_LIMITED_MESSAGE } from '@lib/api/errors';
+import { isRateLimitedNow, noteRateLimited, untilLifted } from '@lib/api/rate-limit';
 
 export const REQUEST_TIMEOUT_MS = 10_000;
 const GET_RETRIES = 2;
+const RATE_LIMIT_WAITS = 2;
 const RETRYABLE_STATUSES = new Set([502, 503, 504]);
 const REQUEST_ID_HEADER = 'x-request-id';
 const SIGN_IN_PATH = '/sign-in';
@@ -65,7 +67,22 @@ function combineSignals(signals: (AbortSignal | undefined)[]) {
   return present.length === 1 ? present[0] : AbortSignal.any(present);
 }
 
-async function send<T>(method: string, path: string, opts: RequestOptions, attempt = 0): Promise<SuccessEnvelope<T>> {
+const inBrowser = typeof window !== 'undefined';
+
+async function send<T>(
+  method: string,
+  path: string,
+  opts: RequestOptions,
+  attempt = 0,
+  waits = 0,
+): Promise<SuccessEnvelope<T>> {
+  // Held back while limited: a request sent now would fail and, counted, push the wait further. A read
+  // waits it out, so pages keep what they show; a write is refused, and never resent without a click.
+  if (inBrowser && isRateLimitedNow()) {
+    if (method !== 'GET') throw new ApiError(429, 'rate_limited', RATE_LIMITED_MESSAGE, null);
+    await untilLifted(opts.signal);
+  }
+
   const headers = new Headers({ accept: 'application/json', ...opts.headers });
   if (opts.body !== undefined) headers.set('content-type', 'application/json');
   if (method === 'POST' && opts.idempotencyKey !== false) {
@@ -84,14 +101,21 @@ async function send<T>(method: string, path: string, opts: RequestOptions, attem
     });
   } catch (cause) {
     if (opts.signal?.aborted) throw cause;
-    if (method === 'GET' && attempt < GET_RETRIES) return send(method, path, opts, attempt + 1);
+    if (method === 'GET' && attempt < GET_RETRIES) return send(method, path, opts, attempt + 1, waits);
     throw new ApiNetworkError(timeout.aborted ? 'timeout' : 'offline');
   }
 
   const requestId = response.headers.get(REQUEST_ID_HEADER);
 
   if (method === 'GET' && RETRYABLE_STATUSES.has(response.status) && attempt < GET_RETRIES) {
-    return send(method, path, opts, attempt + 1);
+    return send(method, path, opts, attempt + 1, waits);
+  }
+
+  // Before parsing: a proxy in front of the API answers its own 429 with a page, not the envelope.
+  if (response.status === 429) {
+    if (inBrowser) noteRateLimited(response.headers);
+    if (inBrowser && method === 'GET' && waits < RATE_LIMIT_WAITS) return send(method, path, opts, attempt, waits + 1);
+    throw new ApiError(429, 'rate_limited', RATE_LIMITED_MESSAGE, requestId);
   }
 
   let payload: unknown;

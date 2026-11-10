@@ -857,6 +857,7 @@ export async function buildApp(env: Env, opts: BuildOptions = {}) {
       issueLinks: repos.issueLinks,
       inTransaction: inTenantTransaction,
       analytics,
+      automations: () => automations,
     }),
     tags: tagsService({
       access,

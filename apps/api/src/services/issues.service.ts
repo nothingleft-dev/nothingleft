@@ -67,6 +67,7 @@ import { denial, type AccessService, type OrgAccess, type ProjectAccess } from '
 import { commentDto } from '@services/comment-dto';
 import { checkParent, recordParentChange, refreshSpentRollup } from '@services/issue-hierarchy';
 import {
+  duplicatesMarked,
   keyer,
   linkNamed,
   readableProjects,
@@ -119,7 +120,7 @@ export interface IssuesDeps {
   customFields: CustomFieldsRepository;
   development: DevelopmentReader;
   /** Lazy: the automations service is built after this one. */
-  automations?: () => Pick<AutomationsService, 'childResolved'>;
+  automations?: () => Pick<AutomationsService, 'childResolved' | 'markedDuplicate'>;
   /** Injected so coalescing can be tested across its window without waiting. */
   now?: () => Date;
 }
@@ -1238,7 +1239,18 @@ export function issuesService(deps: IssuesDeps) {
     async create(principal: Principal, input: CreateIssue, hints: OrgHints = {}): Promise<Issue> {
       const project = await access.project(principal, input.project, hints);
       const planned = await planCreate(principal, project, input);
-      const row = await insertPlanned(principal, project, planned, { watch: true });
+      const inserted = await insertPlanned(principal, project, planned, { watch: true });
+      const marked = (planned.links?.plan ?? []).flatMap(({ link, targets }) =>
+        duplicatesMarked(link, inserted, targets, planned.links!.keyOf),
+      );
+      if (marked.length > 0 && deps.automations) {
+        await deps
+          .automations()
+          .markedDuplicate(project.ctx, marked, principal.userId)
+          .catch(error => analytics.captureException(error, { org_id: project.ctx.orgId }));
+      }
+      // A rule may have closed the new issue as a duplicate; answer with what is stored now.
+      const row = marked.length > 0 ? ((await issues.findById(project.ctx, inserted.id)) ?? inserted) : inserted;
       const valuedFields = [...planned.custom.plan.values()].filter(p => p.rows.length > 0).length;
       if (valuedFields > 0) {
         analytics.capture(

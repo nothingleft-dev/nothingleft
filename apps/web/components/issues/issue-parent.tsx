@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Pencil, X } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Issue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
@@ -17,6 +16,7 @@ import { TypeBadge } from '@components/issues/value-marks';
 import { useDebounced } from '@hooks/use-debounced';
 import { useIssueRefs, useIssueRefSearch, useUpdateIssue } from '@hooks/use-issues';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface IssueParentProps {
   issue: Issue;
@@ -34,10 +34,7 @@ export function IssueParent({ issue, canEdit, picking, onPickingChange }: IssueP
   if (!issue.parent && !picking) return null;
 
   const setParent = (parent: string | null) =>
-    update.mutate(
-      { body: { parent }, optimistic: i => ({ ...i, parent }) },
-      { onError: error => toast.error(error.message) },
-    );
+    update.mutate({ body: { parent }, optimistic: i => ({ ...i, parent }) }, { onError: error => toastError(error) });
 
   return (
     <Popover open={picking} onOpenChange={onPickingChange}>

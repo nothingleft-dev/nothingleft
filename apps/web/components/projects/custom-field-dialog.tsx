@@ -54,6 +54,7 @@ import { useSchemaValues } from '@hooks/use-project-schema';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const OPTION_COLORS: readonly LabelColor[] = [
   'blue-2',
@@ -423,7 +424,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 setConfirmingDelete(false);
                 onClose();
               },
-              onError: e => toast.error(e.message),
+              onError: e => toastError(e),
             })
           }
         >
@@ -507,7 +508,7 @@ function ArchiveButton({ projectKey, field, onDone }: { projectKey: string; fiel
               );
               onDone();
             },
-            onError: e => toast.error(e.message),
+            onError: e => toastError(e),
           },
         )
       }

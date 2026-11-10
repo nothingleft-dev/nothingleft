@@ -53,6 +53,7 @@ import {
   providerLabel,
 } from '@lib/git/words';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const FAILED = ['failure', 'timed_out', 'cancelled', 'action_required'];
 
@@ -571,7 +572,7 @@ function CardMenu({
               .mutateAsync(link.link_id)
               .then(
                 () => toast.success(`Unlinked from ${issueKey}.`),
-                (error: Error) => toast.error(error.message),
+                (error: Error) => toastError(error),
               )
               .finally(() => setConfirming(false))
           }

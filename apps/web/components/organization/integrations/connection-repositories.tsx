@@ -31,6 +31,7 @@ import { useProjects } from '@hooks/use-projects';
 import { WEBHOOK_STATUS } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export function ConnectionRepositories({
   slug,
@@ -242,7 +243,7 @@ function RepositoryRow({
                   { repository: repository.full_name, connection: repository.connection },
                   {
                     onSuccess: () => toast.success(`${repository.full_name} is being re-read from the provider.`),
-                    onError: error => toast.error(error.message),
+                    onError: error => toastError(error),
                   },
                 )
               }
@@ -257,7 +258,7 @@ function RepositoryRow({
                     { repository: repository.full_name, connection: repository.connection },
                     {
                       onSuccess: () => toast.success(`The webhook on ${repository.full_name} was registered again.`),
-                      onError: error => toast.error(error.message),
+                      onError: error => toastError(error),
                     },
                   )
                 }
@@ -303,7 +304,7 @@ function LinkToProject({ repository }: { repository: GitRepository }) {
                     { project: project.key, repository: repository.full_name, connection: repository.connection },
                     {
                       onSuccess: () => toast.success(`${repository.full_name} is linked to ${project.name}.`),
-                      onError: error => toast.error(error.message),
+                      onError: error => toastError(error),
                     },
                   );
                 }}

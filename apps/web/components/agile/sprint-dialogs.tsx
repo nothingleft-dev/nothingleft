@@ -27,6 +27,7 @@ import { useCreateSprint, useDeleteSprint, useFinishSprint, useStartSprint, useU
 import { todayCalendarDate } from '@lib/datetime';
 import { listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const unresolvedOf = (s: Sprint) => s.progress.issues - s.progress.resolved_issues;
 const sprintQuery = (s: Sprint) => `sprint: {${s.name}} #Unresolved`;
@@ -433,7 +434,7 @@ export function DeleteSprintDialog({ projectKey, sprint, onOpenChange }: SprintA
             toast.success(`${sprint.name} deleted.`);
             onOpenChange(false);
           },
-          onError: e => toast.error(e.message),
+          onError: e => toastError(e),
         })
       }
     >

@@ -322,7 +322,7 @@ export const SCHEMA_PAGES: Record<string, PageSchema> = {
     title: 'Automations | Nothing Left Docs',
     headline: 'Automations',
     description:
-      'Status rules fired by git events and resolved subtasks: triggers, conditions, the five templates, run order, the run log and dry runs.',
+      'Status rules fired by git events, resolved subtasks and duplicate links: triggers, conditions, the six templates, run order, the run log and dry runs.',
     nodes: ['Organization', 'WebSite', 'WebPage', 'TechArticle', 'BreadcrumbList'],
     breadcrumb: [HOME_CRUMB, { name: 'Docs', path: '/docs' }, { name: 'Automations', path: '/docs/automations' }],
   },

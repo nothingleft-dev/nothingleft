@@ -18,6 +18,7 @@ import { GIT_PAGE, useGitEvent, useGitEvents, useReplayGitEvent } from '@hooks/u
 import { EVENT_STATUS, eventReason, providerLabel } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const TONE: Record<GitEventStatus, JobTone> = { pending: 'waiting', done: 'done', ignored: 'idle', failed: 'failed' };
 
@@ -239,7 +240,7 @@ function EventDetail({ slug, event }: { slug: string; event: GitWebhookEvent }) 
               { id: event.id, runAutomations },
               {
                 onSuccess: () => toast.success('Redelivered. It is processed again in a few seconds.'),
-                onError: error => toast.error(error.message),
+                onError: error => toastError(error),
               },
             )
           }

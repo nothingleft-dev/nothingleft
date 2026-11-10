@@ -24,6 +24,7 @@ export const CONDITION_DEFAULTS: Record<AutomationTrigger, Record<string, unknow
   'git.pull_request_closed': { no_other_open_prs: true },
   'git.revert_merged': {},
   'issue.children_resolved': { child_count_min: 1 },
+  'issue.marked_duplicate': {},
 };
 
 const CONDITION_KEYS = [
@@ -115,7 +116,11 @@ export function catalogue(): AutomationCatalogue {
   return {
     triggers: AUTOMATION_TRIGGERS.map(key => ({
       key,
-      group: key.startsWith('git.') ? ('git' as const) : ('hierarchy' as const),
+      group: key.startsWith('git.')
+        ? ('git' as const)
+        : key === 'issue.marked_duplicate'
+          ? ('links' as const)
+          : ('hierarchy' as const),
       label: t(`automation.label.${key}`),
       conditions: z.toJSONSchema(AUTOMATION_CONDITIONS[key], { io: 'input' }) as Record<string, unknown>,
       defaults: CONDITION_DEFAULTS[key],
@@ -136,16 +141,21 @@ interface StatusChoice {
   category: StatusCategory;
 }
 
-/** The starting rules, with this project's first fitting status filled in. Offered, never created unasked. */
-export function templates(statuses: readonly StatusChoice[]): AutomationTemplate[] {
-  const first = (category: StatusCategory) => statuses.find(s => s.category === category)?.name ?? null;
-  const named = (name: string) => statuses.find(s => s.name.toLowerCase() === name.toLowerCase())?.name ?? null;
-  const make = (
-    key: 'start_work' | 'review' | 'close_on_merge' | 'reopen_on_revert' | 'resolve_parent',
-    trigger: AutomationTrigger,
-    conditions: Record<string, unknown>,
-    status: string | null,
-  ): AutomationTemplate => ({
+type AutomationTemplateKey =
+  'start_work' | 'review' | 'close_on_merge' | 'reopen_on_revert' | 'resolve_parent' | 'close_duplicates';
+
+const firstIn = (statuses: readonly StatusChoice[], category: StatusCategory) =>
+  statuses.find(s => s.category === category)?.name ?? null;
+const namedIn = (statuses: readonly StatusChoice[], name: string) =>
+  statuses.find(s => s.name.toLowerCase() === name.toLowerCase())?.name ?? null;
+
+function template(
+  key: AutomationTemplateKey,
+  trigger: AutomationTrigger,
+  conditions: Record<string, unknown>,
+  status: string | null,
+): AutomationTemplate {
+  return {
     key,
     name: t(`automation.template.${key}.name`),
     description: t(`automation.template.${key}.description`),
@@ -158,7 +168,30 @@ export function templates(statuses: readonly StatusChoice[]): AutomationTemplate
       is_enabled: true,
     },
     needs_status: status === null,
-  });
+  };
+}
+
+/** Only an issue still open is closed: one already resolved keeps the resolution it has. */
+const closeDuplicates = (statuses: readonly StatusChoice[]) =>
+  template(
+    'close_duplicates',
+    'issue.marked_duplicate',
+    { issue_status_category: ['backlog', 'unstarted', 'started'] },
+    namedIn(statuses, AUTOMATION_TEMPLATE_STATUSES.close_duplicates) ??
+      firstIn(statuses, 'cancelled') ??
+      firstIn(statuses, 'done'),
+  );
+
+/** The rules a new project starts with, switched on; every other template is offered, never created unasked. */
+export function defaultRules(statuses: readonly StatusChoice[]): AutomationTemplate[] {
+  return [closeDuplicates(statuses)].filter(rule => !rule.needs_status);
+}
+
+/** The starting rules, with this project's first fitting status filled in. */
+export function templates(statuses: readonly StatusChoice[]): AutomationTemplate[] {
+  const first = (category: StatusCategory) => firstIn(statuses, category);
+  const named = (name: string) => namedIn(statuses, name);
+  const make = template;
   return [
     make('start_work', 'git.branch_created', { issue_status_category: ['backlog', 'unstarted'] }, first('started')),
     make(
@@ -175,5 +208,6 @@ export function templates(statuses: readonly StatusChoice[]): AutomationTemplate
       named(AUTOMATION_TEMPLATE_STATUSES.reopen_on_revert),
     ),
     make('resolve_parent', 'issue.children_resolved', {}, first('done')),
+    closeDuplicates(statuses),
   ];
 }

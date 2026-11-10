@@ -35,6 +35,7 @@ import { WEBHOOK_STATUS, count } from '@lib/git/words';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface RepositoriesSettingsProps {
   projectKey: string;
@@ -176,7 +177,7 @@ function RepositoryRow({
   const patch = (body: Parameters<typeof update.mutate>[0]['body']) =>
     update.mutate(
       { repository: repository.full_name, body: { ...body, connection: repository.connection } },
-      { onError: error => toast.error(error.message) },
+      { onError: error => toastError(error) },
     );
 
   return (
@@ -259,7 +260,7 @@ function RepositoryRow({
             .mutateAsync({ repository: repository.full_name, connection: repository.connection })
             .then(
               () => toast.success(`${repository.full_name} is no longer linked to ${projectKey}.`),
-              (error: Error) => toast.error(error.message),
+              (error: Error) => toastError(error),
             )
             .finally(() => setConfirming(false))
         }
@@ -348,7 +349,7 @@ function LinkRepositoryPicker({
                             toast.success(`${repository.full_name} is linked. Its recent history is being read.`);
                             onLinked(linked.length === 0);
                           },
-                          onError: error => toast.error(error.message),
+                          onError: error => toastError(error),
                         },
                       );
                     }}

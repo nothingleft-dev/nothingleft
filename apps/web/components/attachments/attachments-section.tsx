@@ -2,7 +2,6 @@
 
 import { useState, type MouseEvent } from 'react';
 import { CloudOff, Paperclip, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import type { Attachment, ByoStatus } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -21,6 +20,7 @@ import { useStorageOverview } from '@hooks/use-organization-storage';
 import { formatDateTime } from '@lib/datetime';
 import { isInlineImage } from '@lib/files';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface AttachmentsSectionProps {
   issueKey: string;
@@ -234,7 +234,7 @@ export function AttachmentsSection({
             onSuccess: () => setDeleting(null),
             onError: error => {
               setDeleting(null);
-              toast.error(error.message);
+              toastError(error);
             },
           });
         }}

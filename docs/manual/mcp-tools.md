@@ -1472,7 +1472,7 @@ A project's automation rules in run order, one sentence each, with state and run
 
 ### `create_automation`
 
-Adds a rule that sets an issue's status on a git event or when its last open subtask resolves. Use a `template`, or `trigger` and `status`. Automations never trigger each other. Project Admin, admin:project; 10 per project on the free plan.
+Adds a rule that sets an issue's status on a git event, when its last open subtask resolves, or when it is marked as a duplicate (every project starts with *Close duplicates* on). Use a `template`, or `trigger` and `status`. Automations never trigger each other. Project Admin, admin:project; 10 per project on the free plan.
 
 *Changes data.*
 
@@ -1480,7 +1480,7 @@ Adds a rule that sets an issue's status on a git event or when its last open sub
 |---|---|---|---|
 | `project` | string | yes | Project key. |
 | `template` | `start_work` · `review` · `close_on_merge` · `reopen_on_revert` · `resolve_parent` |  | A ready-made rule; anything else you pass overrides it. |
-| `trigger` | `git.branch_created` · `git.commit_pushed` · `git.pull_request_opened` · `git.pull_request_ready` · `git.pull_request_merged` · `git.pull_request_closed` · `git.revert_merged` · `issue.children_resolved` |  | What fires it; needed without a template. |
+| `trigger` | `git.branch_created` · `git.commit_pushed` · `git.pull_request_opened` · `git.pull_request_ready` · `git.pull_request_merged` · `git.pull_request_closed` · `git.revert_merged` · `issue.children_resolved` · `issue.marked_duplicate` |  | What fires it; needed without a template. |
 | `conditions` | object |  | Trigger conditions, e.g. {"base_branch": ["main"]}; list_automations include: "catalogue" lists them. |
 | `status` | string |  | The status it sets, by name, e.g. "Fixed". |
 | `name` | string |  | Its name; left out, the rule as a sentence names it. |

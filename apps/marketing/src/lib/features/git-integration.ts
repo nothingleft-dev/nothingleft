@@ -149,6 +149,7 @@ export const TRIGGERS = [
   'Pull request closed',
   'Revert merged',
   'All subtasks resolved',
+  'Marked as a duplicate',
 ];
 
 export const TEMPLATES = [
@@ -171,6 +172,10 @@ export const TEMPLATES = [
   {
     name: 'Resolve parent when subtasks are done',
     does: 'Resolving the last open subtask moves the parent to your first done status. No repository needed.',
+  },
+  {
+    name: 'Close duplicates',
+    does: 'An open issue marked as duplicating another moves to Duplicate, and the original stays open. On in every project from the start; switch it off if you prefer.',
   },
 ];
 

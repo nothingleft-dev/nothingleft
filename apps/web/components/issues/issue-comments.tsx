@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { MoreHorizontal, Pencil, Timer, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { checkMarkdownSize } from '@nothingleft/markdown';
 import { Button } from '@components/ui/button';
 import {
@@ -33,6 +32,7 @@ import {
 import { useSession } from '@hooks/use-session';
 import { isApiError } from '@lib/api/errors';
 import { formatDateTimeWithZone } from '@lib/datetime';
+import { toastError } from '@components/toast-error';
 
 const SUBMIT_KBD = 'h-4 border-transparent bg-ink-fg/15 text-ink-fg/80';
 
@@ -90,7 +90,7 @@ export function CommentBody({ scope, projectKey, comment, editing, onEditingChan
       onToggleTask={
         comment.me.can_edit
           ? (index, checked) =>
-              toggle.mutate({ id: comment.id, index, checked }, { onError: error => toast.error(error.message) })
+              toggle.mutate({ id: comment.id, index, checked }, { onError: error => toastError(error) })
           : undefined
       }
     />
@@ -148,7 +148,7 @@ export function CommentMenu({ scope, subject, comment, onEdit }: CommentMenuProp
             onSuccess: () => setConfirming(false),
             onError: error => {
               setConfirming(false);
-              toast.error(error.message);
+              toastError(error);
             },
           })
         }
@@ -182,7 +182,7 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
     if (blocked) return;
     if (text !== comment.body_md) {
       // Shown saved at once; a refusal puts the old text back and says why.
-      update.mutate({ id: comment.id, body_md: text }, { onError: e => toast.error(e.message) });
+      update.mutate({ id: comment.id, body_md: text }, { onError: e => toastError(e) });
     }
     onDone();
   };

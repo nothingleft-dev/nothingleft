@@ -197,7 +197,7 @@ export const JIRA_COMPARISON: Comparison = {
       capability: 'Automation',
       ours: {
         support: 'limited',
-        note: 'Status rules fired by git events and resolved subtasks, such as Close on merge, from a fixed list of triggers; not a general rules engine. No transition rules: any status can follow any status.',
+        note: 'Status rules fired by git events, resolved subtasks and duplicate links, such as Close on merge, from a fixed list of triggers; not a general rules engine. No transition rules: any status can follow any status.',
         source: doc('Automations manual', PATHS.automations),
       },
       theirs: {
@@ -396,7 +396,7 @@ export const EVALUATE_FIRST = [
   },
   {
     title: 'Add-ons and automation',
-    body: 'Write down what each Marketplace app and automation rule does for you. Automations here only set a status, on git events and resolved subtasks, and there is no app directory, so decide which jobs you can drop and which would keep you on Jira.',
+    body: 'Write down what each Marketplace app and automation rule does for you. Automations here only set a status, on git events, resolved subtasks and duplicate links, and there is no app directory, so decide which jobs you can drop and which would keep you on Jira.',
     source: { label: 'Jira automation overview', href: JIRA.automation },
   },
   {

@@ -28,6 +28,7 @@ import { BoardColumnsEditor } from '@components/agile/board-settings-columns';
 import { BoardSwimlanes } from '@components/agile/board-settings-swimlanes';
 import { useBoard, useBoards, useCreateBoard, useDeleteBoard, useUpdateBoard } from '@hooks/use-boards';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface BoardSettingsProps {
   projectKey: string;
@@ -158,7 +159,7 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
               setDeleting(null);
               if (gone.slug === selected?.slug) select(null);
             },
-            onError: error => toast.error(error.message),
+            onError: error => toastError(error),
           });
         }}
       >

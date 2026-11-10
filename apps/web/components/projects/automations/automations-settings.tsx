@@ -39,6 +39,7 @@ import {
 import { useUpdateRepositoryLink } from '@hooks/use-git';
 import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 // The git matrix's rows (owner, 25 Oct 2026); a commit pushed rule lives under Other automations.
 const MATRIX: readonly AutomationTrigger[] = [
@@ -259,7 +260,7 @@ function GitMatrix({
   const update = useUpdateAutomation(projectKey);
 
   const pick = (trigger: AutomationTrigger, rule: Automation | undefined, status: string | null) => {
-    const fail = { onError: (error: Error) => toast.error(error.message) };
+    const fail = { onError: (error: Error) => toastError(error) };
     if (rule) {
       if (status === null) update.mutate({ name: rule.name, body: { is_enabled: false } }, fail);
       else update.mutate({ name: rule.name, body: { action_params: { status }, is_enabled: true } }, fail);
@@ -382,7 +383,7 @@ function MergedInto({
                     repository: repository.full_name,
                     body: { connection: repository.connection, merge_base_branches: branches },
                   },
-                  { onError: error => toast.error(error.message) },
+                  { onError: error => toastError(error) },
                 )
               }
             />
@@ -420,7 +421,7 @@ function RuleRow({
         aria-label={`${rule.name}: ${rule.is_enabled ? 'on' : 'off'}`}
         className="mt-0.5"
         onCheckedChange={value =>
-          update.mutate({ name: rule.name, body: { is_enabled: value } }, { onError: e => toast.error(e.message) })
+          update.mutate({ name: rule.name, body: { is_enabled: value } }, { onError: e => toastError(e) })
         }
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -479,7 +480,7 @@ function RuleRow({
             .mutateAsync(rule.name)
             .then(
               () => toast.success(`${rule.name} is deleted.`),
-              (error: Error) => toast.error(error.message),
+              (error: Error) => toastError(error),
             )
             .finally(() => setConfirming(false))
         }

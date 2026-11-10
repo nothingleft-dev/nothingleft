@@ -11,7 +11,7 @@ import { MarkdownSizeNote } from '@components/issues/markdown-size-note';
 import { useUploader } from '@hooks/use-attachments';
 import { useToggleIssueTask, useUpdateIssue } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
-import { toast } from 'sonner';
+import { toastError } from '@components/toast-error';
 
 interface IssueDescriptionProps {
   issue: Issue;
@@ -46,7 +46,7 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
       className="mt-4 max-w-none"
       onToggleTask={
         canEdit
-          ? (index, checked) => toggle.mutate({ index, checked }, { onError: error => toast.error(error.message) })
+          ? (index, checked) => toggle.mutate({ index, checked }, { onError: error => toastError(error) })
           : undefined
       }
     />

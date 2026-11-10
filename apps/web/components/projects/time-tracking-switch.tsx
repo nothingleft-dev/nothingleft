@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { Project } from '@nothingleft/types';
 import { Switch } from '@components/ui/switch';
 import { useUpdateProject } from '@hooks/use-projects';
+import { toastError } from '@components/toast-error';
 
 export function TimeTrackingSwitch({ project, canEdit }: { project: Project; canEdit: boolean }) {
   const id = useId();
@@ -27,7 +28,7 @@ export function TimeTrackingSwitch({ project, canEdit }: { project: Project; can
               { time_tracking_enabled: checked },
               {
                 onSuccess: () => toast.success(checked ? 'Time tracking turned on' : 'Time tracking turned off'),
-                onError: error => toast.error(error.message),
+                onError: error => toastError(error),
               },
             )
           }

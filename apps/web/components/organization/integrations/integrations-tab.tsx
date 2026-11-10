@@ -47,6 +47,7 @@ import {
 import { CONNECTION_REASON, HEALTH, count, providerLabel } from '@lib/git/words';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const AUTH_KIND = { app_installation: 'App installation', token: 'Access token', manual: 'Webhook by hand' } as const;
 
@@ -345,7 +346,7 @@ function ConnectionMenu({
             onSelect={() =>
               refresh.mutate(connection.name, {
                 onSuccess: () => toast.success(`${connection.account.login} was checked again with ${provider}.`),
-                onError: error => toast.error(error.message),
+                onError: error => toastError(error),
               })
             }
           >
@@ -377,7 +378,7 @@ function ConnectionMenu({
             .mutateAsync(connection.name)
             .then(
               () => toast.success(`${connection.account.login} on ${provider} is disconnected.`),
-              (error: Error) => toast.error(error.message),
+              (error: Error) => toastError(error),
             )
             .finally(() => setConfirm(null))
         }
@@ -413,7 +414,7 @@ function ConnectionMenu({
             },
             onError: error => {
               setConfirm(null);
-              toast.error(error.message);
+              toastError(error);
             },
           })
         }
@@ -660,7 +661,7 @@ function MemberIdentities({ slug }: { slug: string }) {
             onSuccess: () => setRemoving(null),
             onError: error => {
               setRemoving(null);
-              toast.error(error.message);
+              toastError(error);
             },
           })
         }

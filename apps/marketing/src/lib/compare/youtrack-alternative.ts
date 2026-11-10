@@ -160,7 +160,7 @@ export const YOUTRACK_COMPARISON: Comparison = {
       capability: 'Workflow scripting',
       ours: {
         support: 'no',
-        note: 'Deliberately left out: there are no transition rules and any status can follow any status. Automations are status rules fired by git events and resolved subtasks, not scripts.',
+        note: 'Deliberately left out: there are no transition rules and any status can follow any status. Automations are status rules fired by git events, resolved subtasks and duplicate links, not scripts.',
         source: nl('Automations manual', DOCS.automations),
       },
       theirs: {

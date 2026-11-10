@@ -187,7 +187,7 @@ export const ASANA_COMPARISON: Comparison = {
       capability: 'Workflow automation',
       ours: {
         support: 'limited',
-        note: 'Status rules fired by git events and resolved subtasks, not a general rules engine, and no transition rules: any status can follow any status. An agent can make bulk changes you ask for.',
+        note: 'Status rules fired by git events, resolved subtasks and duplicate links, not a general rules engine, and no transition rules: any status can follow any status. An agent can make bulk changes you ask for.',
         source: { label: 'Automations manual', href: PATHS.automationsManual },
       },
       theirs: {

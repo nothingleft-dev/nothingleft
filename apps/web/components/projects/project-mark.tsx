@@ -44,7 +44,7 @@ export function ProjectMarkByKey({
   size?: ProjectMarkProps['size'];
   className?: string;
 }) {
-  const project = useProjects().data?.find(p => p.key === projectKey);
+  const project = useProjects({ archived: 'false' }).data?.find(p => p.key === projectKey);
   if (project) return <ProjectMark project={project} size={size} className={className} />;
   return (
     <span

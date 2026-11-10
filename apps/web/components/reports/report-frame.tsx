@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReportEmpty } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -25,6 +24,7 @@ import { isApiError } from '@lib/api/errors';
 import { formatDateTimeWithZone, formatTime } from '@lib/datetime';
 import { reportDef } from '@lib/reports/registry';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface FramedReport {
   empty: ReportEmpty | null;
@@ -75,8 +75,7 @@ export function ReportFrame<D extends FramedReport>({
 
   const pick = (field: string, value: string) => (pickValue ? pickValue(field, value) : state.set({ [field]: value }));
 
-  const exportCsv = () =>
-    exporter.mutate({ name: state.name, query: state.query }, { onError: e => toast.error(e.message) });
+  const exportCsv = () => exporter.mutate({ name: state.name, query: state.query }, { onError: e => toastError(e) });
 
   // The Gantt's CSV still lists the issues missing dates when there is nothing to draw.
   const canExport = Boolean(data && (!data.empty || ownEmpty)) && !result.isError;

@@ -8,6 +8,7 @@ import { Toaster } from '@components/ui/sonner';
 import { usePopoverScrollInDialogs } from '@hooks/use-popover-scroll';
 import { isAuthRoute } from '@lib/auth-routes';
 import { QueryProvider } from '@lib/query/provider';
+import { toastRateLimited } from '@components/toast-error';
 
 export function Providers({ children }: { children: ReactNode }) {
   usePopoverScrollInDialogs();
@@ -20,7 +21,7 @@ export function Providers({ children }: { children: ReactNode }) {
       disableTransitionOnChange
       forcedTheme={isAuthRoute(pathname) ? 'light' : undefined}
     >
-      <QueryProvider>
+      <QueryProvider onRateLimited={toastRateLimited}>
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         <Toaster position="bottom-right" visibleToasts={3} />
       </QueryProvider>

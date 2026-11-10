@@ -59,6 +59,7 @@ import { useShortcut } from '@hooks/use-shortcut';
 import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; variant?: 'page' | 'modal' }) {
   const modal = variant === 'modal';
@@ -423,12 +424,12 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
             onClick: () =>
               restore.mutateAsync(deleted.key).then(
                 back => router.push(issuePath(back)),
-                (error: Error) => toast.error(error.message),
+                (error: Error) => toastError(error),
               ),
           },
         });
       },
-      onError: error => toast.error(error.message),
+      onError: error => toastError(error),
     });
 
   return (

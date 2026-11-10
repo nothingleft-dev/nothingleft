@@ -43,6 +43,7 @@ import {
 } from '@hooks/use-work-item-attributes';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const WORK_TYPE = '\u0000work-type';
 
@@ -75,7 +76,7 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
 
   const move = (name: string, to: number) => {
     if (to < 0 || to >= rows.length) return;
-    update.mutate({ name, body: { position: to } }, { onError: e => toast.error(e.message) });
+    update.mutate({ name, body: { position: to } }, { onError: e => toastError(e) });
   };
 
   const onRowKey = (event: KeyboardEvent, name: string, index: number) => {
@@ -530,7 +531,7 @@ function AttributePanel({
               setConfirming(false);
               onDeleted();
             },
-            onError: e => toast.error(e.message),
+            onError: e => toastError(e),
           })
         }
       >

@@ -21,6 +21,7 @@ import { articlePath } from '@components/articles/article-row';
 import { useDeleteArticle, useRestoreArticle, useUpdateArticle } from '@hooks/use-articles';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface DeleteArticleDialogProps {
   article: Article;
@@ -67,7 +68,7 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
               onClick: () =>
                 restore.mutateAsync(deleted.slug).then(
                   back => router.push(articlePath(back)),
-                  (e: Error) => toast.error(e.message),
+                  (e: Error) => toastError(e),
                 ),
             },
           });

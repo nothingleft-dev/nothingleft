@@ -25,6 +25,7 @@ import { CustomFieldDialog, DeleteConsequences } from '@components/projects/cust
 import { FIELD_TYPE_META, hasOptions } from '@components/custom-fields/field-types';
 import { useCustomFields, useDeleteCustomField, useUpdateCustomField } from '@hooks/use-custom-fields';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface CustomFieldsSettingsProps {
   projectKey: string;
@@ -49,7 +50,7 @@ export function CustomFieldsSettings({ projectKey, canEdit, readOnlyReason }: Cu
   const patch = (field: CustomField, body: Parameters<typeof update.mutate>[0]['body'], done?: string) =>
     update.mutate(
       { slug: field.slug, body },
-      { onSuccess: () => done && toast.success(done), onError: e => toast.error(e.message) },
+      { onSuccess: () => done && toast.success(done), onError: e => toastError(e) },
     );
 
   // Positions are across every field, archived included, so a move names the target's own position.
@@ -286,7 +287,7 @@ export function CustomFieldsSettings({ projectKey, canEdit, readOnlyReason }: Cu
               toast.success(`Deleted ${f.name}.`);
               setDeleting(null);
             },
-            onError: e => toast.error(e.message),
+            onError: e => toastError(e),
           });
         }}
       >
