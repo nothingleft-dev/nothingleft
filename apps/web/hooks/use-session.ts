@@ -21,7 +21,8 @@ export function useSession(): SessionState {
   });
 
   if (query.isPending) return { status: 'loading' };
-  if (query.isSuccess) return { status: 'signed-in', user: query.data };
   if (isApiError(query.error) && query.error.isUnauthorized) return { status: 'signed-out' };
+  // A failed background refetch keeps the user it already had: one refused request must not blank the app.
+  if (query.data) return { status: 'signed-in', user: query.data };
   return { status: 'error', error: query.error, retry: () => void query.refetch() };
 }

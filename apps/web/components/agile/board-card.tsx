@@ -30,6 +30,7 @@ import { formatCalendarDate } from '@lib/datetime';
 import { DevelopmentIcon } from '@components/git/git-marks';
 import { cn } from '@lib/utils';
 import { personTitle } from '@components/former-member-chip';
+import { toastError } from '@components/toast-error';
 
 export function SubtaskProgress({ resolved, total }: { resolved: number; total: number }) {
   if (total === 0) return null;
@@ -212,7 +213,7 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
         body: { assignees: usernames },
         apply: c => ({ ...c, assignees: usernames.map(u => known.find(p => p.username === u)!).filter(Boolean) }),
       },
-      { onError: e => toast.error(e.message) },
+      { onError: e => toastError(e) },
     );
   };
 
@@ -297,7 +298,7 @@ function CardDueDate({ card, today, canEdit }: { card: Card; today: string; canE
     if (value === card.due_date) return;
     patch.mutate(
       { key: card.key, body: { due_date: value }, apply: c => ({ ...c, due_date: value }) },
-      { onError: e => toast.error(e.message) },
+      { onError: e => toastError(e) },
     );
   };
 
@@ -388,7 +389,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
           setTitle('');
           toast.success(`Created ${issue.key}.`);
         },
-        onError: error => toast.error(error.message),
+        onError: error => toastError(error),
       },
     );
   };

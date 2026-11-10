@@ -123,7 +123,12 @@ archived project.
 Every change is kept in the issue's history - `Status: Open → In Progress` -
 with who made it and when.
 
-- Changes saved together appear as **one entry**.
+- Changes saved together appear as **one entry**. So do your field, tag,
+  link, sprint, attachment and spent-time changes made **within five
+  minutes** of the first one, even when you saved them one at a time: change
+  the status, then the assignee, then the due date, and the history shows one
+  entry with three lines. A comment, someone else's change or an automation
+  starts a new entry.
 - If you change the same field again **within five minutes** of your first
   change, the entry is updated rather than a second one added. Assign the
   wrong person and fix it twenty seconds later, and the history shows only
@@ -234,6 +239,10 @@ one reads differently from each end:
 | subtask of | parent for           |
 
 A _subtask of_ or _parent for_ link is the same thing as setting the parent.
+Marking an issue as a duplicate closes it: link ACME-14 as _duplicates_ ACME-9 and
+ACME-14 moves to Duplicate, while ACME-9 stays open. That is the project's
+_Close duplicates_ automation, on from the start; switch it off in the project's
+settings to keep duplicate links informational ([Automations](./automations.md)).
 A _depends on_ chain can never loop back on itself: if ACME-3 depends on
 ACME-2, and ACME-2 on ACME-1, then ACME-1 cannot depend on ACME-3. Linking
 the same two issues twice is refused, whichever end you start from.

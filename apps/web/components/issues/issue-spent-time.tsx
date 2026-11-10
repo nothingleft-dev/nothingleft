@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { formatDuration } from '@nothingleft/format';
 import type { Issue, MemberRef, WorkItem } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -28,6 +27,7 @@ import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { useDeleteWorkItem, useWorkItems } from '@hooks/use-work-items';
 import { formatCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface IssueSpentTimeProps {
   issue: Issue;
@@ -231,7 +231,7 @@ function RecordMenu({ item, durationText, onEdit }: { item: WorkItem; durationTe
         pending={remove.isPending}
         onConfirm={() => {
           setConfirming(false);
-          remove.mutate(item, { onError: error => toast.error(error.message) });
+          remove.mutate(item, { onError: error => toastError(error) });
         }}
       >
         <p>

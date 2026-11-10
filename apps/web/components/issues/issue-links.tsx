@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { ListTree, Plus, Star, X } from 'lucide-react';
-import { toast } from 'sonner';
 import type { IssueLinkGroup, IssueRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -15,6 +14,7 @@ import { StatusPill } from '@components/issues/status-pill';
 import { TypeBadge } from '@components/issues/value-marks';
 import { useIssueLinks, useRemoveIssueLink, useStarLinkedIssue } from '@hooks/use-issue-links';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 interface IssueLinksProps {
   issueKey: string;
@@ -96,16 +96,10 @@ function LinkRows({ issueKey, group, canEdit }: { issueKey: string; group: Issue
         <LinkRow
           key={issue.key}
           issue={issue}
-          onStar={() =>
-            star.mutate({ target: issue.key, on: !issue.starred }, { onError: error => toast.error(error.message) })
-          }
+          onStar={() => star.mutate({ target: issue.key, on: !issue.starred }, { onError: error => toastError(error) })}
           onRemove={
             canEdit
-              ? () =>
-                  remove.mutate(
-                    { link: group.link, target: issue.key },
-                    { onError: error => toast.error(error.message) },
-                  )
+              ? () => remove.mutate({ link: group.link, target: issue.key }, { onError: error => toastError(error) })
               : undefined
           }
           removeLabel={`Remove “${group.link} ${issue.key}”`}

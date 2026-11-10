@@ -12,6 +12,7 @@ export const AUTOMATION_TRIGGERS = [
   'git.pull_request_closed',
   'git.revert_merged',
   'issue.children_resolved',
+  'issue.marked_duplicate',
 ] as const;
 export type AutomationTrigger = (typeof AUTOMATION_TRIGGERS)[number];
 export const AUTOMATION_ACTIONS = ['issue.set_status'] as const;
@@ -56,6 +57,7 @@ export const AUTOMATION_CONDITIONS = {
     ...common,
     child_count_min: z.number().int().min(1).max(500).optional(),
   }),
+  'issue.marked_duplicate': z.strictObject({ ...common }),
 } as const satisfies Record<AutomationTrigger, z.ZodObject>;
 
 export const AUTOMATION_ACTION_PARAMS = {
@@ -65,7 +67,11 @@ export const AUTOMATION_ACTION_PARAMS = {
 export type AutomationConditions = { [K in AutomationTrigger]: z.infer<(typeof AUTOMATION_CONDITIONS)[K]> };
 export const AUTOMATIONS_PER_PROJECT_MAX = 100;
 // Templates that want a status by name rather than by category; the seeded set has no In Review.
-export const AUTOMATION_TEMPLATE_STATUSES = { review: 'In Review', reopen_on_revert: 'Reopened' } as const;
+export const AUTOMATION_TEMPLATE_STATUSES = {
+  review: 'In Review',
+  reopen_on_revert: 'Reopened',
+  close_duplicates: 'Duplicate',
+} as const;
 export const AUTOMATION_RUNS_RETENTION_DAYS = 90;
 
 export const AutomationSchema = z.object({
@@ -153,7 +159,7 @@ export const AutomationCatalogueSchema = z.object({
   triggers: z.array(
     z.object({
       key: z.enum(AUTOMATION_TRIGGERS),
-      group: z.enum(['git', 'hierarchy']),
+      group: z.enum(['git', 'hierarchy', 'links']),
       label: z.string(),
       // JSON Schema of its conditions, from which the editor draws its rows.
       conditions: z.record(z.string(), z.unknown()),

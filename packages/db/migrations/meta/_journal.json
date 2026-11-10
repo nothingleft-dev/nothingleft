@@ -43,6 +43,13 @@
       "when": 1792912720198,
       "tag": "0005_shared_installations",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794310690603,
+      "tag": "0006_close_duplicates_rule",
+      "breakpoints": true
     }
   ]
 }

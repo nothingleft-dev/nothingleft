@@ -45,6 +45,7 @@ import { useSession } from '@hooks/use-session';
 import { useShortcut } from '@hooks/use-shortcut';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export function ArticlePage({ project, slug }: { project: string; slug: string }) {
   const article = useArticle(project, slug);
@@ -119,9 +120,7 @@ function Provenance({ article, timeZone }: { article: Article; timeZone?: string
         <IconAction
           label={article.me.starred ? 'Starred — you watch this article' : 'Star (also watches)'}
           pressed={article.me.starred}
-          onClick={() =>
-            signal.mutate({ signal: 'star', on: !article.me.starred }, { onError: e => toast.error(e.message) })
-          }
+          onClick={() => signal.mutate({ signal: 'star', on: !article.me.starred }, { onError: e => toastError(e) })}
         >
           <Star className={cn(article.me.starred && 'fill-current')} />
         </IconAction>
@@ -142,15 +141,12 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
       { body: { status: 'published' }, optimistic: a => ({ ...a, status: 'published' }) },
       {
         onSuccess: a => toast.success(`Published ${a.title}.`),
-        onError: e => toast.error(e.message),
+        onError: e => toastError(e),
       },
     );
 
   const change = (t: TagRef, on: boolean, isNew = false) =>
-    tag.mutate(
-      { tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined },
-      { onError: e => toast.error(e.message) },
-    );
+    tag.mutate({ tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined }, { onError: e => toastError(e) });
 
   return (
     <>
@@ -302,7 +298,7 @@ function ArticleBody({ article, onEdit, onHeadings }: ArticleBodyProps) {
       onHeadings={onHeadings}
       onToggleTask={
         article.me.can_edit
-          ? (index, checked) => toggle.mutate({ index, checked }, { onError: e => toast.error(e.message) })
+          ? (index, checked) => toggle.mutate({ index, checked }, { onError: e => toastError(e) })
           : undefined
       }
     />
@@ -379,7 +375,7 @@ function ArticleMenu({ article }: { article: Article }) {
       { body: { status: 'draft' }, optimistic: a => ({ ...a, status: 'draft' }) },
       {
         onSuccess: a => toast.success(`${a.title} is a draft again.`),
-        onError: e => toast.error(e.message),
+        onError: e => toastError(e),
       },
     );
 
@@ -434,7 +430,7 @@ function ArticleMenu({ article }: { article: Article }) {
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() =>
-              signal.mutate({ signal: 'watch', on: !article.me.watching }, { onError: e => toast.error(e.message) })
+              signal.mutate({ signal: 'watch', on: !article.me.watching }, { onError: e => toastError(e) })
             }
           >
             {article.me.watching ? <EyeOff /> : <Eye />}

@@ -28,6 +28,10 @@ export class ApiError extends Error {
     return this.status === 401;
   }
 
+  get isRateLimited() {
+    return this.status === 429;
+  }
+
   // A 401 can also be a wrong password or code typed by someone already signed in; only
   // `unauthorized` means the session itself is gone.
   get isSignedOut() {
@@ -53,3 +57,8 @@ export class ApiNetworkError extends Error {
 }
 
 export const isApiError = (e: unknown): e is ApiError => e instanceof ApiError;
+
+export const isRateLimited = (e: unknown): e is ApiError => isApiError(e) && e.isRateLimited;
+
+export const RATE_LIMITED_MESSAGE =
+  'Too many requests in the last minute; nothing was changed. Try again once the limit lifts.';

@@ -86,6 +86,12 @@ agent](./mcp.md)). Every API response carries `X-RateLimit-Limit`,
 Past the limit, requests answer `429` with a `Retry-After` header saying how
 many seconds to wait.
 
+In the app, reaching the limit shows a banner with a countdown instead of an
+error. Pages keep what they show; anything still loading waits for the
+countdown and then finishes by itself. A change it could not save is not sent again
+on its own: the toast that says so has a **Retry** button that unlocks when the
+countdown ends.
+
 ## Self-hosting
 
 Nothing Left is licensed under AGPL-3.0, and the hosted service runs the same

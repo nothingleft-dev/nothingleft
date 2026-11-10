@@ -14,6 +14,8 @@ export interface ProjectNav extends Pick<Project, 'key' | 'name' | 'avatar_url' 
 
 export interface ShellData {
   organizations: Organization[];
+  /** The organisation list actually arrived: an empty one after a failed request means nothing. */
+  organizationsKnown: boolean;
   org: Organization | null;
   projects: ProjectNav[];
   canCreateProject: boolean;
@@ -40,6 +42,7 @@ export function useShellData(user: Me | null): ShellData {
 
   return {
     organizations: list,
+    organizationsKnown: organizations.data !== undefined,
     org,
     projects: (projects.data ?? []).map(p => ({
       key: p.key,

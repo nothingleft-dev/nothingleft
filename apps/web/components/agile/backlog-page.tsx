@@ -24,7 +24,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { toast } from 'sonner';
 import { ChevronRight, GripVertical, Kanban, MoreHorizontal, Plus } from 'lucide-react';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type Sprint } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -63,6 +62,7 @@ import { useSprints } from '@hooks/use-sprints';
 import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export const BACKLOG_DEFAULT_QUERY = '#Unresolved';
 const BACKLOG = 'backlog';
@@ -154,7 +154,7 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
     if (drop.container === from && drop.key === null) return;
     const body: BacklogDrop = { issues: [key], sprint: drop.container === BACKLOG ? null : drop.container };
     if (drop.key) body[drop.side] = drop.key;
-    move.mutate(body, { onError: error => toast.error(error.message) });
+    move.mutate(body, { onError: error => toastError(error) });
   };
 
   if (project.isError) return <FormAlert title="This project could not be loaded." />;

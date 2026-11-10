@@ -142,6 +142,21 @@ export async function recordBothSides(
   await recordIssueEvents(repos.issueActivity, [side(self.id, link, other), side(other.id, inverseOf(link), self)]);
 }
 
+/** For each new `duplicate` link: the issue that duplicates, and the key of the one it duplicates. */
+export function duplicatesMarked(
+  link: LinkName,
+  self: IssueRow,
+  targets: IssueRow[],
+  keyOf: (row: IssueRow) => string,
+): { issueId: number; original: string }[] {
+  if (link.type !== 'duplicate') return [];
+  return targets.map(other => {
+    const ends = canonicalEnds(link, self, other);
+    const original = ends.from_issue_id === self.id ? self : other;
+    return { issueId: ends.to_issue_id, original: keyOf(original) };
+  });
+}
+
 /** Inside the caller's transaction, with `self` locked; the first refusal throws and undoes them all. */
 export async function writeLinks(
   repos: TenantRepos,

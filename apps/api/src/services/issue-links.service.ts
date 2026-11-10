@@ -10,6 +10,7 @@ import type { Analytics } from '@nothingleft/analytics';
 import { AppError } from '@lib/errors';
 import {
   canonicalEnds,
+  duplicatesMarked,
   findTarget,
   keyer,
   linkNamed,
@@ -21,6 +22,7 @@ import {
   type LinkName,
   type LinkWrite,
 } from '@services/issue-link-writer';
+import type { AutomationsService } from '@services/automations.service';
 import type { IssuesService, Located } from '@services/issues.service';
 import type { OrgHints } from '@services/tenancy.service';
 import type { InTenantTransaction } from '@services/transaction';
@@ -31,6 +33,7 @@ export interface IssueLinksDeps {
   issueLinks: IssueLinksRepository;
   inTransaction: InTenantTransaction;
   analytics: Analytics;
+  automations?: () => Pick<AutomationsService, 'markedDuplicate'>;
   now?: () => Date;
 }
 
@@ -131,6 +134,14 @@ export function issueLinksService(deps: IssueLinksDeps) {
         { via: principal.via, type: link.type, count: targets.length },
         { userId: principal.userId, orgId: located.project.organization.id },
       );
+      if (link.type === 'duplicate' && deps.automations) {
+        const marked = duplicatesMarked(link, located.issue, targets, keyOf);
+        // The links are saved; a rule that fails must not turn them into an error.
+        await deps
+          .automations()
+          .markedDuplicate(ctx, marked, principal.userId)
+          .catch(error => analytics.captureException(error, { org_id: ctx.orgId }));
+      }
       return groups(principal, await issues.locate(principal, key, hints));
     },
 

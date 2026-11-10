@@ -469,6 +469,23 @@ export function automationsService(deps: AutomationsDeps) {
       });
     },
 
+    /** After a person marks issues as duplicating another: each duplicate's own project's rules run. */
+    async markedDuplicate(
+      ctx: TenantContext,
+      marked: { issueId: number; original: string }[],
+      causedBy: number,
+    ): Promise<void> {
+      for (const { issueId, original } of marked) {
+        await this.fire(ctx, {
+          trigger: 'issue.marked_duplicate',
+          issues: [{ issueId, facts: {} }],
+          ref: { issue: original },
+          cause: t('automation.cause.duplicate', { issue: original }),
+          causedBy,
+        });
+      }
+    },
+
     catalogue,
 
     async list(principal: Principal, key: string, hints: OrgHints = {}): Promise<Automation[]> {

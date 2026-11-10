@@ -2110,7 +2110,9 @@ paths:
         Org Admin or Owner. `key` is optional: omitted, it is generated from the name
         (`Partner Portal` → `PP`, a digit appended on collision). A supplied key is 2–10
         letters and digits, uppercased; a taken one answers `409` with a suggestion in
-        `valid_values`. The creator is added as `project_admin`. Writes `project_created`.
+        `valid_values`. The creator is added as `project_admin`. The project starts with
+        the seeded statuses, a board and one automation, *Close duplicates*, switched on.
+        Writes `project_created`.
       tags: [projects]
       parameters:
         - $ref: '#/components/parameters/XOrganization'
@@ -5398,7 +5400,9 @@ paths:
         one link. `parent for` / `subtask of` set `parent_id` (the set-parent capability, same
         project, depth ≤ 3) and never write a link row. `depends` refuses a cycle, direct or
         transitive. Every target in one transaction: one refusal links none. Writes `linked`
-        on both ends, each in its own reading.
+        on both ends, each in its own reading. A `duplicates` / `is duplicated by` link then
+        fires `issue.marked_duplicate` for the issue that duplicates, so its project's
+        *Close duplicates* rule (on by default) moves it to Duplicate while it is still open.
       tags: [issues]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -7750,7 +7754,8 @@ paths:
     get:
       summary: Ready-made automations for this project
       description: |
-        Anyone who reads the project; a token needs `issues:read`. Offered, never created unasked.
+        Anyone who reads the project; a token needs `issues:read`. Offered, never created unasked,
+        except `close_duplicates`: every project starts with it switched on.
         Each `automation` is ready to POST, with the project's first fitting status filled in;
         `needs_status` when the project has none that fits.
       tags: [automations]
@@ -10455,7 +10460,7 @@ components:
             data: { $ref: '#/components/schemas/Automation' }
     AutomationTrigger:
       type: string
-      enum: [git.branch_created, git.commit_pushed, git.pull_request_opened, git.pull_request_ready, git.pull_request_merged, git.pull_request_closed, git.revert_merged, issue.children_resolved]
+      enum: [git.branch_created, git.commit_pushed, git.pull_request_opened, git.pull_request_ready, git.pull_request_merged, git.pull_request_closed, git.revert_merged, issue.children_resolved, issue.marked_duplicate]
     CreateAutomation:
       type: object
       required: [trigger, action, action_params]
@@ -10509,7 +10514,7 @@ components:
             required: [key, group, label, conditions, defaults]
             properties:
               key: { $ref: '#/components/schemas/AutomationTrigger' }
-              group: { type: string, enum: [git, hierarchy] }
+              group: { type: string, enum: [git, hierarchy, links] }
               label: { type: string }
               conditions: { type: object, description: JSON Schema of the conditions it takes. }
               defaults: { type: object, description: What a condition left out means. }
@@ -10527,7 +10532,7 @@ components:
       type: object
       required: [key, name, description, automation, needs_status]
       properties:
-        key: { type: string, enum: [start_work, review, close_on_merge, reopen_on_revert, resolve_parent] }
+        key: { type: string, enum: [start_work, review, close_on_merge, reopen_on_revert, resolve_parent, close_duplicates] }
         name: { type: string }
         description: { type: string }
         automation: { $ref: '#/components/schemas/CreateAutomation' }

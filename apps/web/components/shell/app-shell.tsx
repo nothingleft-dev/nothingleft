@@ -8,18 +8,22 @@ import { Sidebar } from '@components/shell/sidebar';
 import { MobileNavigation } from '@components/shell/mobile-navigation';
 import { Topbar } from '@components/shell/topbar';
 import { DeletionBanner } from '@components/shell/deletion-banner';
+import { RateLimitBanner, RateLimitScreen } from '@components/rate-limit';
 import { CreateIssueProvider } from '@components/issues/create-issue-provider';
 import { ShellShortcuts } from '@components/shortcuts/shell-shortcuts';
 import { useAccountTheme } from '@hooks/use-account-theme';
+import { useRateLimit } from '@hooks/use-rate-limit';
 import { useSession } from '@hooks/use-session';
 import { useShellData } from '@hooks/use-shell-data';
 import { useSidebarCollapsed } from '@hooks/use-sidebar-collapsed';
+import { isRateLimited } from '@lib/api/errors';
 import { setProfileTimeZone } from '@lib/datetime';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { collapsed, toggle } = useSidebarCollapsed();
   const session = useSession();
+  const rateLimited = useRateLimit().secondsLeft > 0;
   const user = session.status === 'signed-in' ? session.user : null;
   const data = useShellData(user);
   useAccountTheme(user?.preferences.theme);
@@ -30,17 +34,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   // welcome flow - except on the landing page, which states the situation and offers the
   // two ways out (onboarding.md § Returning-user landing).
   const pathname = usePathname();
-  const homeless = user !== null && !data.isPending && data.organizations.length === 0 && pathname !== '/';
+  const homeless = user !== null && data.organizationsKnown && data.organizations.length === 0 && pathname !== '/';
   useEffect(() => {
     if (homeless) router.replace('/welcome');
   }, [homeless, router]);
 
-  if (session.status === 'loading') return <FullPageLoader label="Checking your session" />;
+  if (session.status === 'loading') {
+    return rateLimited ? <RateLimitScreen /> : <FullPageLoader label="Checking your session" />;
+  }
 
   // The API client already navigated to /sign-in on the 401; this covers the moment in between.
   if (session.status === 'signed-out') return <FullPageLoader label="Taking you to sign-in" />;
 
   if (homeless) return <FullPageLoader label="Setting things up" />;
+
+  if (session.status === 'error' && isRateLimited(session.error)) return <RateLimitScreen onRetry={session.retry} />;
 
   if (session.status === 'error') {
     return (
@@ -65,6 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Topbar navigation={<MobileNavigation user={user} data={data} />} />
           <main data-scroll-root className="min-h-0 flex-1 overflow-y-auto">
             <div className="px-page-x py-5 max-md:px-page-x-mobile">
+              <RateLimitBanner />
               {data.org ? <DeletionBanner organization={data.org} /> : null}
               {children}
             </div>

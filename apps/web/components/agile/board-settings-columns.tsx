@@ -41,6 +41,7 @@ import { SettingsSection } from '@components/settings/section';
 import { StatusDot } from '@components/issues/value-marks';
 import { useUpdateBoard } from '@hooks/use-boards';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export const COLUMN_FIELD_LABELS: Record<BoardColumnField, string> = {
   status: 'Status',
@@ -107,7 +108,7 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
         body: { columns: columnsNext.map(toInput) },
         optimistic: b => ({ ...b, columns: columnsNext, unmapped_values: all.filter(v => !mapped.has(v.name)) }),
       },
-      { onError: error => (onError ? onError(error.message) : toast.error(error.message)) },
+      { onError: error => (onError ? onError(error.message) : toastError(error)) },
     );
   };
 
@@ -157,7 +158,7 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
           toast.success(`Columns are now one per ${COLUMN_FIELD_LABELS[next].toLowerCase()}.`);
           setSwitchTo(null);
         },
-        onError: error => toast.error(error.message),
+        onError: error => toastError(error),
       },
     );
 

@@ -1,12 +1,18 @@
 # Automations
 
-An automation moves an issue's status for you when something happens in git, or when the last
-open subtask of an issue is resolved. *Close on merge* is the common one: merge the pull request
+An automation moves an issue's status for you when something happens in git, when the last
+open subtask of an issue is resolved, or when an issue is marked as a duplicate of another. *Close on merge* is the common one: merge the pull request
 that fixes ACME-12 and ACME-12 is Fixed, with a line in its history that says why.
 
 Automations belong to a project. Project Admins create and change them; everyone who can read
 the project sees them and what they did. They need a GitHub or GitLab repository linked to the
-project for the git triggers; *Resolve parent* works without one.
+project for the git triggers; *Resolve parent* and *Close duplicates* work without one.
+
+Every project starts with one rule already on: **Close duplicates**. Mark ACME-14 as
+*duplicates* ACME-9 (or ACME-9 as *is duplicated by* ACME-14) and ACME-14 moves to Duplicate,
+while ACME-9 stays open as the one people keep working on. It only closes an issue that is still
+open, and it does nothing to the issue being duplicated. Switch it off, change its status or
+delete it under **Project settings → Automations** like any other rule.
 
 ## What can fire a rule
 
@@ -20,6 +26,7 @@ project for the git triggers; *Resolve parent* works without one.
 | Pull request closed | A pull request linked to the issue is closed without merging |
 | Revert merged | A revert of the issue's work is merged |
 | Subtasks resolved | Someone resolves the last open subtask of the issue |
+| Marked as a duplicate | Someone links the issue as *duplicates* another, from either end, or creates it with that link |
 
 Each rule does one thing: it sets the issue's status.
 
@@ -43,8 +50,8 @@ it was when the event was sent.
 
 ## Templates
 
-Five ready-made rules, offered and never switched on for you. Each fills in the first fitting
-status of your project:
+Six ready-made rules. Each fills in the first fitting status of your project. *Close duplicates*
+is already on in every project; the other five are offered and never switched on for you:
 
 | Template | Does |
 | --- | --- |
@@ -53,6 +60,7 @@ status of your project:
 | Close on merge | Merging the pull request that closes the issue, once none of its other pull requests is still open, moves it to your first *done* status (Fixed) |
 | Reopen on revert | A merged revert moves a done issue to *Reopened* |
 | Resolve parent when subtasks are done | Resolving the last open subtask moves the parent to your first *done* status |
+| Close duplicates | An open issue marked as duplicating another moves to *Duplicate*, or your first *cancelled* status if there is no Duplicate |
 
 ## The order rules run in
 

@@ -20,6 +20,7 @@ import { CreateProjectDialog } from '@components/projects/project-dialog';
 import { useArchiveProject, useProjects } from '@hooks/use-projects';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useSession } from '@hooks/use-session';
+import { toastError } from '@components/toast-error';
 
 const FILTERS = [
   { value: 'active', label: 'Active' },
@@ -153,7 +154,7 @@ export function ProjectList() {
                 toast.success(`${p.name} archived.`);
                 setArchiving(null);
               },
-              onError: e => toast.error(e.message),
+              onError: e => toastError(e),
             },
           );
         }}

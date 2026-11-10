@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@components/confirm-dialog';
 import { useDeleteAttachment } from '@hooks/use-attachments';
 import { isInlineImage } from '@lib/files';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export interface LightboxImage {
   src: string;
@@ -103,6 +104,7 @@ interface ViewerProps {
 function Viewer({ ref, image, images, position, onPick, onStep, onClose }: ViewerProps) {
   const file = image.attachment;
   const stage = useRef<HTMLDivElement>(null);
+  const frame = useRef<HTMLDivElement>(null);
   const storedSize = file?.width && file.height ? { width: file.width, height: file.height } : null;
   const [natural, setNatural] = useState(storedSize);
   const [box, setBox] = useState<{ width: number; height: number } | null>(null);
@@ -117,13 +119,20 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
     setZoom(1);
   }
 
+  // The frame never scrolls: measuring the stage let its own scrollbar shrink the fit, drop away and loop.
   useLayoutEffect(() => {
     const el = stage.current;
-    if (!el) return;
-    const measure = () => setBox({ width: el.clientWidth, height: el.clientHeight });
+    const outer = frame.current;
+    if (!el || !outer) return;
+    const measure = () => {
+      const pad = getComputedStyle(el);
+      const width = outer.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
+      const height = outer.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
+      setBox(b => (b?.width === width && b.height === height ? b : { width, height }));
+    };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(outer);
     return () => observer.disconnect();
   }, []);
 
@@ -194,7 +203,7 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
         </div>
       </header>
 
-      <div className="relative flex min-h-0 flex-1">
+      <div ref={frame} className="relative flex min-h-0 flex-1">
         <div ref={stage} className="flex min-h-0 flex-1 overflow-auto px-20 py-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- a private file behind a redirect; next/image cannot fetch it */}
           <img
@@ -207,7 +216,11 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
                 ? undefined
                 : setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })
             }
-            style={natural ? { width: natural.width * scale, height: natural.height * scale } : undefined}
+            style={
+              natural
+                ? { width: Math.floor(natural.width * scale), height: Math.floor(natural.height * scale) }
+                : undefined
+            }
             className={cn('m-auto max-w-none flex-none rounded-sm', !natural && 'max-h-full max-w-full')}
           />
         </div>
@@ -291,7 +304,7 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
               },
               onError: error => {
                 setDeleting(false);
-                toast.error(error.message);
+                toastError(error);
               },
             })
           }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import type { WorkCalendar } from '@nothingleft/format';
 import {
+  ACTIVITY_COALESCE_WINDOW_MS,
   ISSUE_ACTIVITY_KINDS,
   type CustomField,
   type GitLinkSource,
@@ -146,6 +147,35 @@ function groupBySave(rows: IssueActivity[]): Entry[] {
   return entries;
 }
 
+const BURST_KINDS: readonly IssueActivityKind[] = ['field_changed', 'time_logged'];
+const inBurst = (row: IssueActivity) =>
+  !row.automation && !row.actor.system && (BURST_KINDS.includes(row.kind) || RELATION_KINDS.includes(row.kind));
+
+// Display-only, so stored rows stay one per save; the window is fixed from the burst's first save, as coalescing is.
+function groupByBurst(entries: Entry[]): Entry[] {
+  const merged: Entry[] = [];
+  let start = 0;
+  for (const entry of entries) {
+    const last = merged.at(-1);
+    const startedAt = Date.parse(entry.rows[0]!.created_at);
+    if (
+      last &&
+      entry.rows.every(inBurst) &&
+      last.rows.every(inBurst) &&
+      entry.rows[0]!.actor.username !== null &&
+      last.rows[0]!.actor.username === entry.rows[0]!.actor.username &&
+      startedAt - start < ACTIVITY_COALESCE_WINDOW_MS
+    ) {
+      last.rows.push(...entry.rows);
+      if (entry.at > last.at) last.at = entry.at;
+    } else {
+      merged.push({ ...entry, rows: [...entry.rows] });
+      start = startedAt;
+    }
+  }
+  return merged;
+}
+
 export interface TimeTracking {
   /** The project tracks time: the tab, the button and the sidebar fields show at all. */
   enabled: boolean;
@@ -271,7 +301,7 @@ function ActivityTab({ issueKey, projectKey, timeZone, history }: TabContext & {
   const entries = useMemo(() => {
     // An edit is the edited marker on the comment itself; its own line would repeat it.
     const rows = (activity.data?.pages ?? []).flatMap(p => p.data).filter(r => r.kind !== 'comment_edited');
-    return groupBySave(rows);
+    return groupByBurst(groupBySave(rows));
   }, [activity.data]);
 
   if (activity.isPending) return <ActivitySkeleton />;

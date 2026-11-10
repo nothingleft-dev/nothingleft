@@ -136,7 +136,7 @@ describe('managing rules', () => {
     expect((await create(w.projectAdmin, body)).json().error.code).toBe('automation.name_taken');
 
     const list = (await w.call(w.observer, 'GET', `/v1/projects/${KEY}/automations`)).json().data;
-    expect(list.map((a: { name: string }) => a.name)).toEqual(['Start on branch']);
+    expect(list.map((a: { name: string }) => a.name)).toEqual(['Close duplicates', 'Start on branch']);
 
     const patched = await w.call(w.projectAdmin, 'PATCH', `/v1/projects/${KEY}/automations/start%20on%20branch`, {
       name: 'Start work',
@@ -147,7 +147,7 @@ describe('managing rules', () => {
       403,
     );
     const removed = await w.call(w.projectAdmin, 'DELETE', `/v1/projects/${KEY}/automations/Start%20work`);
-    expect(removed.json().data).toEqual([]);
+    expect(removed.json().data.map((a: { name: string }) => a.name)).toEqual(['Close duplicates']);
     expect((await w.call(w.admin, 'GET', `/v1/projects/${KEY}/automations/Start%20work`)).statusCode).toBe(404);
   });
 
@@ -197,9 +197,9 @@ describe('managing rules', () => {
     await w.call(w.admin, 'DELETE', `/v1/projects/${KEY}/automations/Reopen`);
   });
 
-  test('the free plan allows ten rules per project', async () => {
+  test('the free plan allows ten rules per project, the default one among them', async () => {
     await w.call(w.admin, 'POST', '/v1/projects', { name: 'Limits', key: 'LIM' });
-    for (let i = 0; i < 10; i++) {
+    for (let i = 1; i < 10; i++) {
       const res = await w.call(w.admin, 'POST', '/v1/projects/LIM/automations', {
         name: `Rule ${i}`,
         trigger: 'git.branch_created',

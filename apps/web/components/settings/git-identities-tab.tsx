@@ -24,6 +24,7 @@ import { useClaimGitIdentity, useMyGitIdentities, useRemoveMyGitIdentity } from 
 import { isApiError } from '@lib/api/errors';
 import { providerLabel } from '@lib/git/words';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const PUBLIC_HOSTS: Record<GitProviderKind, string> = { github: 'https://github.com', gitlab: 'https://gitlab.com' };
 
@@ -107,7 +108,7 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
                       toast.success(
                         `A link is on its way to ${identity.email}. If we sent one a few minutes ago, that one still works.`,
                       ),
-                    onError: error => toast.error(error.message),
+                    onError: error => toastError(error),
                   },
                 )
               }
@@ -129,7 +130,7 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
           onClick={() =>
             remove.mutateAsync(identity.id).then(
               () => toast.success(`${identity.login ? `@${identity.login}` : identity.email} is no longer yours.`),
-              (error: Error) => toast.error(error.message),
+              (error: Error) => toastError(error),
             )
           }
         >

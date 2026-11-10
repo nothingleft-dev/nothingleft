@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { slugify } from '@nothingleft/format';
 import { DEFAULT_LABEL_COLOR, type Issue, type LabelColor, type TagContext, type TagRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -14,6 +13,7 @@ import { useDebounced } from '@hooks/use-debounced';
 import { useIssueTag } from '@hooks/use-issues';
 import { useTags } from '@hooks/use-tags';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 const NEW_TAG_COLOR: LabelColor = DEFAULT_LABEL_COLOR;
 
@@ -33,7 +33,7 @@ export function IssueTags({ issue, canEdit, pickerOpen, onPickerOpenChange }: Is
   const change = (t: TagRef, on: boolean, isNew = false) =>
     tag.mutate(
       { tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined },
-      { onError: error => toast.error(error.message) },
+      { onError: error => toastError(error) },
     );
 
   return (

@@ -19,7 +19,6 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { toast } from 'sonner';
 import { Check, ChevronDown, ChevronRight, ChevronsLeftRight, ListOrdered, Settings } from 'lucide-react';
 import {
   BOARD_CURRENT_SPRINT,
@@ -59,6 +58,7 @@ import { isApiError } from '@lib/api/errors';
 import { todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { deactivatedInk } from '@components/former-member-chip';
+import { toastError } from '@components/toast-error';
 
 // A column never narrows past a readable card, and stops widening where cards would sprawl;
 // past the minimum the board scrolls sideways instead of squeezing.
@@ -521,7 +521,7 @@ function BoardGrid({ projectKey, view, sprint, canPlan, today, filtered, onOpen 
     if (!value) return;
     move.mutate(
       { card: from.card, from: from.column, to: to.column, lane: from.lane, field: view.board.column_field, value },
-      { onError: error => toast.error(error.message) },
+      { onError: error => toastError(error) },
     );
   };
 

@@ -2,7 +2,6 @@
 
 import { useId, useState, type ReactNode } from 'react';
 import { Plus, X } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   SEED_BOARD_SWIMLANE_TYPE,
   type Board,
@@ -20,6 +19,7 @@ import { TypeBadge } from '@components/issues/value-marks';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { useUpdateBoard } from '@hooks/use-boards';
 import { useSchemaValues } from '@hooks/use-project-schema';
+import { toastError } from '@components/toast-error';
 
 const MODES: { value: BoardSwimlane; label: string; hint: string }[] = [
   { value: 'none', label: 'No swimlanes', hint: 'One row of columns.' },
@@ -56,7 +56,7 @@ export function BoardSwimlanes({ projectKey, board, canEdit }: BoardSwimlanesPro
           ...(body.swimlane_types !== undefined ? { swimlane_types: body.swimlane_types } : {}),
         }),
       },
-      { onError: error => toast.error(error.message) },
+      { onError: error => toastError(error) },
     );
 
   const choose = (mode: BoardSwimlane) => {

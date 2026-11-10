@@ -1665,8 +1665,9 @@ describe('git identities', () => {
 describe('automations', () => {
   test('templates and the catalogue are read; a rule is made, tested, run, logged and explained', async () => {
     const listed = await ok(t.observer, 'list_automations', { project: KEY, include: 'templates' });
-    expect(listed).toContain('has no automations');
+    expect(listed).toContain('| `Close duplicates` |');
     expect(listed).toContain('`close_on_merge`');
+    expect(listed).toContain('`close_duplicates`');
     expect(await ok(t.observer, 'list_automations', { project: KEY, include: 'catalogue' })).toContain(
       '`git.pull_request_merged`',
     );
@@ -1712,7 +1713,7 @@ describe('automations', () => {
       'list_automation_runs',
     );
     expect(await ok(t.projectAdmin, 'delete_automation', { project: KEY, automation: 'Resolve parent' })).toContain(
-      'It has no automations now',
+      '1 automation left',
     );
   });
 });
