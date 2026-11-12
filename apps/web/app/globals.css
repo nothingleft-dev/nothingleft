@@ -1368,8 +1368,9 @@
   opacity: 1;
 }
 
+/* Secondary ink: the grey fill already says disabled, and muted ink drops under 4.5:1 on it in dialogs. */
 [data-slot='button']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 [data-slot='button']:disabled {
