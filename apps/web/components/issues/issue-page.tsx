@@ -134,7 +134,8 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
       </LoadError>
     );
   }
-  if (issue.isPending) return <IssueSkeleton />;
+  // The role decides the title's action strip and so its wrap: drawn without it, the page jumps when it lands.
+  if (issue.isPending || project.isPending) return <IssueSkeleton />;
 
   const data = issue.data;
   const createSubtask = () => openCreateIssue({ project: data.project.key, parent: data.key });
