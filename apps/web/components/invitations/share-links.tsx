@@ -6,11 +6,13 @@ import { toast } from 'sonner';
 import { PROJECT_ROLES, type Invitation, type OrgRole, type ProjectRole } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
 import { RelativeTime } from '@components/relative-time';
 import { formatDate } from '@lib/datetime';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
+import { cn } from '@lib/utils';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { useApiError } from '@hooks/use-api-error';
 import {
@@ -22,6 +24,7 @@ import {
 } from '@hooks/use-invitations';
 import type { InviteScope } from '@lib/api/invitations';
 import { PROJECT_ROLE_HINTS, PROJECT_ROLE_LABELS, grantedRoleLabel } from '@lib/roles';
+import { PendingButton } from '@components/pending-button';
 
 const PROJECT_OPTIONS: ChoiceOption<ProjectRole>[] = PROJECT_ROLES.map(value => ({
   value,
@@ -40,7 +43,7 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
   const invitations = useInvitations(scope);
   const [projectRole, setProjectRole] = useState<ProjectRole>('contributor');
   const create = useCreateInvitationLink(scope);
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, []);
 
   const links = (invitations.data ?? []).filter(i => i.kind === 'link' && i.status !== 'revoked');
 
@@ -53,6 +56,10 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
           <Skeleton className="h-row w-full rounded-md" />
           <Skeleton className="h-row w-3/4 rounded-md" />
         </div>
+      ) : !invitations.data ? (
+        <LoadError onRetry={() => void invitations.refetch()} detail={errorDetail(invitations.error)}>
+          The share links could not be loaded.
+        </LoadError>
       ) : links.length === 0 ? (
         <EmptyState
           title="No share link yet."
@@ -66,7 +73,7 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
         </ul>
       )}
 
-      <div className="flex flex-wrap items-end gap-3">
+      <div className={cn('flex flex-wrap items-end gap-3', invitations.isError && !invitations.data && 'hidden')}>
         {scope.kind === 'project' ? (
           <div className="w-[240px]">
             <ChoiceSelect
@@ -78,10 +85,11 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
             />
           </div>
         ) : null}
-        <Button
+        <PendingButton
           type="button"
           variant="outline"
-          disabled={create.isPending}
+          pending={create.isPending}
+          pendingLabel="Creating…"
           onClick={() =>
             create.mutate(
               {
@@ -93,8 +101,8 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
           }
         >
           <Link2 className="size-icon-sm" />
-          {create.isPending ? 'Creating…' : links.length === 0 ? 'Create a share link' : 'Create another link'}
-        </Button>
+          {links.length === 0 ? 'Create a share link' : 'Create another link'}
+        </PendingButton>
       </div>
     </div>
   );

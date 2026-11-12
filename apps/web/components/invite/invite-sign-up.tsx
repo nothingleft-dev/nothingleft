@@ -4,7 +4,6 @@ import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { SignUpSchema, type InvitationPreview, type Me } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PasswordStrength } from '@components/auth/password-strength';
@@ -18,6 +17,7 @@ import { trackAuthConversion } from '@lib/analytics/google-analytics';
 import { signUp } from '@lib/api/auth';
 import { viewerTimeZone } from '@lib/datetime';
 import { queryKeys } from '@lib/query/keys';
+import { PendingButton } from '@components/pending-button';
 
 interface InviteSignUpProps {
   token: string;
@@ -40,6 +40,7 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
       email: 'Enter a valid email address — this is where your verification link goes.',
       password: 'Passwords need at least 8 characters.',
     },
+    hidden: ['invitation_token'],
     submit: values => signUp({ ...values, timezone: viewerTimeZone() }).then(r => r.data),
     onSuccess: (me: Me) => {
       trackAuthConversion('sign_up', 'email');
@@ -132,9 +133,9 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
           onChange={e => form.set('password', e.target.value)}
         />
 
-        <Button type="submit" disabled={form.isPending} className="mt-1">
-          {form.isPending ? 'Creating your account…' : `Join ${preview.organization.name}`}
-        </Button>
+        <PendingButton type="submit" className="mt-1" pending={form.isPending} pendingLabel="Creating your account…">
+          {`Join ${preview.organization.name}`}
+        </PendingButton>
       </form>
     </StepPanel>
   );

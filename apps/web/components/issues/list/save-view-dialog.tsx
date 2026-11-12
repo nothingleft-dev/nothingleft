@@ -20,6 +20,7 @@ import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useCreateSavedView, useUpdateSavedView } from '@hooks/use-saved-views';
 import type { ColumnId } from '@lib/issue-list/columns';
+import { PendingButton } from '@components/pending-button';
 
 interface SaveViewDialogProps {
   open: boolean;
@@ -69,7 +70,7 @@ function SaveViewForm({
   const create = useCreateSavedView();
   const update = useUpdateSavedView();
   const pending = create.isPending || update.isPending;
-  const error = useApiError(create.error ?? update.error);
+  const error = useApiError(create.error ?? update.error, ['name', 'query', 'project']);
 
   const [name, setName] = useState(existing?.name ?? '');
   const [visibility, setVisibility] = useState<SavedViewVisibility>(existing?.visibility ?? 'private');
@@ -172,13 +173,15 @@ function SaveViewForm({
         <Button variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button
+        <PendingButton
           type="submit"
           form="save-view"
-          disabled={pending || name.trim() === '' || (visibility === 'project' && !chosenProject)}
+          disabled={name.trim() === '' || (visibility === 'project' && !chosenProject)}
+          pending={pending}
+          pendingLabel="Saving…"
         >
-          {pending ? 'Saving…' : existing ? 'Save changes' : 'Save view'}
-        </Button>
+          {existing ? 'Save changes' : 'Save view'}
+        </PendingButton>
       </DialogFooter>
     </>
   );

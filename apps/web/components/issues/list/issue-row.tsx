@@ -7,7 +7,7 @@ import { MessageSquare } from 'lucide-react';
 import { formatDuration } from '@nothingleft/format';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type IssueListItem, type UpdateIssue } from '@nothingleft/types';
 import { Checkbox } from '@components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { IssueKey } from '@components/issue-key';
 import { RelativeTime } from '@components/relative-time';
 import { AssigneeStack } from '@components/issues/assignee-stack';
@@ -215,7 +215,7 @@ export function IssueRow({
           onClick={event => onSelect(issue.key, !selected, event.shiftKey)}
           className={cn(
             'bg-surface transition-opacity duration-(--dur-fast)',
-            !selected && !selecting && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
+            !selected && !selecting && 'reveal group-hover:opacity-100',
           )}
         />
       </span>

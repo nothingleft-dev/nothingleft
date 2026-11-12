@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/core';
 import { ChevronRight, GripVertical, Plus } from 'lucide-react';
 import { ARTICLE_HIERARCHY_MAX_DEPTH, type ArticleNode } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { DraftMark } from '@components/articles/draft-mark';
 import { useCollapsedArticles, useMoveArticle } from '@hooks/use-articles';
 import { isApiError } from '@lib/api/errors';
@@ -293,7 +293,7 @@ function TreeRow({
                 type="button"
                 aria-label={`New article under ${node.title}`}
                 onClick={onCreateChild}
-                className="grid size-5 flex-none place-items-center rounded-xs text-text-muted opacity-0 group-hover/row:opacity-100 hover:bg-active hover:text-text focus-visible:opacity-100"
+                className="grid size-5 flex-none place-items-center rounded-xs text-text-muted reveal group-hover/row:opacity-100 hover:bg-active hover:text-text"
               >
                 <Plus className="size-3.5" />
               </button>
@@ -310,7 +310,7 @@ function TreeRow({
                 {...listeners}
                 {...attributes}
                 aria-label={`Move ${node.title}`}
-                className="grid size-5 flex-none cursor-grab place-items-center rounded-xs text-text-muted opacity-0 group-hover/row:opacity-100 hover:bg-active hover:text-text focus-visible:opacity-100 active:cursor-grabbing"
+                className="grid size-5 flex-none cursor-grab place-items-center rounded-xs text-text-muted reveal group-hover/row:opacity-100 hover:bg-active hover:text-text active:cursor-grabbing"
               >
                 <GripVertical className="size-3.5" />
               </button>

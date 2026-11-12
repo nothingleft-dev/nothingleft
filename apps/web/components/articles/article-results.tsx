@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import type { ArticleSummary } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { EmptyState } from '@components/empty-state';
 import { QueryBar, type QueryProblem } from '@components/issues/list/query-bar';
 import { ArticleRow, ArticleRowsSkeleton } from '@components/articles/article-row';
@@ -13,6 +13,7 @@ import { useArticleSearch } from '@hooks/use-articles';
 import { useSession } from '@hooks/use-session';
 import { isApiError } from '@lib/api/errors';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
+import { LoadMore } from '@components/text-button';
 
 export const ARTICLE_QUERY_PLACEHOLDER = 'Search articles · tag: rca status: draft updated: {minus 30d} .. Today';
 const RECENT_SORT = 'updated desc';
@@ -71,12 +72,9 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
       {search.isPending && !search.data ? (
         <ArticleRowsSkeleton />
       ) : search.isError && !problem ? (
-        <FormAlert title="The articles could not be loaded.">
-          {search.error instanceof Error ? search.error.message : null}
-          <Button size="sm" variant="outline" className="mt-2 block" onClick={() => void search.refetch()}>
-            Retry
-          </Button>
-        </FormAlert>
+        <LoadError onRetry={() => void search.refetch()} detail={errorDetail(search.error)}>
+          The articles could not be loaded.
+        </LoadError>
       ) : problem && !search.data ? (
         <EmptyState
           title="Fix the query to see results."
@@ -137,15 +135,11 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
             </Fragment>
           ))}
           {search.hasNextPage ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              disabled={search.isFetchingNextPage}
+            <LoadMore
+              pending={search.isFetchingNextPage}
+              pendingLabel="Loading more…"
               onClick={() => void search.fetchNextPage()}
-            >
-              {search.isFetchingNextPage ? 'Loading more…' : 'Load more'}
-            </Button>
+            />
           ) : null}
         </div>
       )}

@@ -11,6 +11,8 @@ interface FieldProps extends Omit<ComponentProps<'input'>, 'id' | 'required' | '
   error?: string | undefined;
   trailing?: ReactNode;
   below?: ReactNode;
+  /** The one-click fix for the error, such as a free key the API suggested. */
+  errorAction?: ReactNode;
 }
 
 // The focus ring is the one in globals.css, not a second one declared here: two
@@ -26,7 +28,7 @@ const inputClass =
  * `pattern`, so the browser never puts its own tooltip on top of ours. Every message
  * below comes from the shared Zod schema or from the API (CLAUDE.md rule 10).
  */
-export function Field({ label, hint, error, trailing, below, className, type, ...props }: FieldProps) {
+export function Field({ label, hint, error, trailing, below, errorAction, className, type, ...props }: FieldProps) {
   const id = useId();
   const [revealed, setRevealed] = useState(false);
   const isPassword = type === 'password';
@@ -80,6 +82,7 @@ export function Field({ label, hint, error, trailing, below, className, type, ..
       {error ? (
         <p id={noteId} role="alert" className="text-sm text-danger-fg">
           {error}
+          {errorAction ? <> {errorAction}</> : null}
         </p>
       ) : hint ? (
         <p id={noteId} className="text-sm text-text-secondary">

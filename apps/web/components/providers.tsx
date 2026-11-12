@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { ThemeProvider } from 'next-themes';
-import { TooltipProvider } from '@components/ui/tooltip';
+import { TooltipProvider } from '@components/tooltip';
 import { Toaster } from '@components/ui/sonner';
 import { usePopoverScrollInDialogs } from '@hooks/use-popover-scroll';
 import { isAuthRoute } from '@lib/auth-routes';
@@ -22,7 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
       forcedTheme={isAuthRoute(pathname) ? 'light' : undefined}
     >
       <QueryProvider onRateLimited={toastRateLimited}>
-        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        <TooltipProvider>{children}</TooltipProvider>
         <Toaster position="bottom-right" visibleToasts={3} />
       </QueryProvider>
     </ThemeProvider>

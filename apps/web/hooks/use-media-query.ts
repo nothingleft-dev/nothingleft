@@ -14,5 +14,5 @@ export function useMediaQuery(query: string) {
   );
 }
 
-/** Below Tailwind's `md`, where the shell swaps the sidebar for a sheet. */
+/** Below Tailwind's `md`: phone layouts. */
 export const usePhone = () => useMediaQuery('(max-width: 767px)');

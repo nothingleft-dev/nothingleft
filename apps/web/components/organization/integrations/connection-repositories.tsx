@@ -9,12 +9,12 @@ import type { GitConnection, GitRepository } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { HueDot } from '@components/git/git-marks';
 import { ProviderGlyph } from '@components/git/provider-glyph';
@@ -72,11 +72,9 @@ export function ConnectionRepositories({
       {repositories.isPending ? (
         <RepositoriesSkeleton />
       ) : repositories.isError && !repositories.data ? (
-        <FormAlert title="The repositories could not be loaded.">
-          <button type="button" onClick={() => void repositories.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void repositories.refetch()} detail={errorDetail(repositories.error)}>
+          The repositories could not be loaded.
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState
           title={query ? `No repository matches “${query}”.` : 'This connection sees no repositories yet.'}
@@ -243,7 +241,7 @@ function RepositoryRow({
                   { repository: repository.full_name, connection: repository.connection },
                   {
                     onSuccess: () => toast.success(`${repository.full_name} is being re-read from the provider.`),
-                    onError: error => toastError(error),
+                    onError: error => toastError(`Could not re-read ${repository.full_name}`, error),
                   },
                 )
               }
@@ -258,7 +256,7 @@ function RepositoryRow({
                     { repository: repository.full_name, connection: repository.connection },
                     {
                       onSuccess: () => toast.success(`The webhook on ${repository.full_name} was registered again.`),
-                      onError: error => toastError(error),
+                      onError: error => toastError(`Could not register the webhook on ${repository.full_name}`, error),
                     },
                   )
                 }
@@ -304,7 +302,7 @@ function LinkToProject({ repository }: { repository: GitRepository }) {
                     { project: project.key, repository: repository.full_name, connection: repository.connection },
                     {
                       onSuccess: () => toast.success(`${repository.full_name} is linked to ${project.name}.`),
-                      onError: error => toastError(error),
+                      onError: error => toastError(`Could not link ${repository.full_name} to ${project.name}`, error),
                     },
                   );
                 }}

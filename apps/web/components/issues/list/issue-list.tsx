@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { IssueListItem, SavedView } from '@nothingleft/types';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
 import { PageTitle } from '@components/page-title';
 import { BulkBar } from '@components/issues/list/bulk-bar';
 import { IssueTable, IssueTableSkeleton } from '@components/issues/list/issue-table';
@@ -50,6 +50,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
   const roles = useProjectRoles();
   const projectQuery = useProject(project ?? null);
   useRecordProjectVisit(project ?? null);
+  notFoundOn404(projectQuery.error);
 
   const savedViews = useSavedViews(withViews);
   const views = useMemo(
@@ -115,7 +116,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
         { name: view.name, body: { query: state.q, sort: state.sort || null, columns: [...columns] } },
         {
           onSuccess: v => toast.success(`Saved the current query to ${v.name}.`),
-          onError: e => toastError(e),
+          onError: e => toastError(`Could not save ${view.name}`, e),
         },
       );
     }
@@ -125,12 +126,12 @@ export function IssueList({ project, base = '', title, views: withViews = true }
     key: string,
     body: Parameters<typeof update.mutate>[0]['body'],
     optimistic: (i: IssueListItem) => IssueListItem,
-  ) => update.mutate({ key, body, optimistic }, { onError: error => toastError(error) });
+  ) => update.mutate({ key, body, optimistic }, { onError: error => toastError(`Could not update ${key}`, error) });
 
   const exportCsv = () =>
     exporter.mutate(
       { q: fullQuery, project, sort: state.sort, columns: csvColumnsFor(columns, defs) },
-      { onError: error => toastError(error) },
+      { onError: error => toastError('Could not export the issues', error) },
     );
 
   const projectEmpty = project !== undefined && projectQuery.data && total === 0 && fullQuery === '';
@@ -177,9 +178,9 @@ export function IssueList({ project, base = '', title, views: withViews = true }
       {search.isPending && !search.data ? (
         <IssueTableSkeleton columns={shown} />
       ) : search.isError && !problem ? (
-        <FormAlert title="The list could not be loaded.">
-          {search.error instanceof Error ? search.error.message : null}
-        </FormAlert>
+        <LoadError onRetry={() => void search.refetch()} detail={errorDetail(search.error)}>
+          The list could not be loaded.
+        </LoadError>
       ) : problem && !search.data ? (
         <EmptyState
           title="Fix the query to see results."
@@ -252,6 +253,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
         onOpenChange={open => (open ? null : setDeleting(null))}
         title={`Delete the view ${deleting?.name ?? ''}?`}
         confirmLabel="Delete view"
+        pendingLabel="Deleting…"
         pending={deleteView.isPending}
         onConfirm={() => {
           if (!deleting) return;
@@ -261,7 +263,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
               setDeleting(null);
               navigate({ view: null }, 'replace');
             },
-            onError: e => toastError(e),
+            onError: e => toastError(`Could not delete ${deleting.name}`, e),
           });
         }}
       >

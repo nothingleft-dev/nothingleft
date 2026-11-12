@@ -44,6 +44,9 @@ const GROUP_ORDER: Suggestion['kind'][] = ['attribute', 'operator', 'value', 'sa
 
 const monoText = 'font-mono text-xs leading-none tabular';
 
+/** Below lg the bar is narrow: keep the example query, drop the lead-in. */
+const shortPlaceholder = (placeholder: string) => placeholder.split(' · ').at(-1) ?? placeholder;
+
 export function QueryBar({
   value,
   onCommit,
@@ -195,7 +198,10 @@ export function QueryBar({
             )}
           >
             {text === '' ? (
-              <span className="text-text-muted">{placeholder}</span>
+              <>
+                <span className="truncate text-text-muted max-lg:hidden">{placeholder}</span>
+                <span className="truncate text-text-muted lg:hidden">{shortPlaceholder(placeholder)}</span>
+              </>
             ) : (
               segments.map((segment, i) => (
                 <span

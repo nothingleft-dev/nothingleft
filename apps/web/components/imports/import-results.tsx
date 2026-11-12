@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import type { ImportDryRun, ImportField, ImportJob, ImportRowError } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { Meter } from '@components/dashboard/meter';
 import { cn } from '@lib/utils';
 import { formatCount } from '@lib/numbers';
+import { LoadMore } from '@components/text-button';
 
 export const FIELD_LABELS: Record<ImportField, string> = {
   title: 'Title',
@@ -128,17 +128,16 @@ export function ImportErrorsTable({ errors, failed }: { errors: ImportRowError[]
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-text-secondary">
-        {errors.length > SHOWN && !all ? (
-          <>
-            Showing {SHOWN} of {formatCount(errors.length)}.{' '}
-            <Button variant="link" className="h-auto p-0 text-xs" onClick={() => setAll(true)}>
-              Show all
-            </Button>
-          </>
-        ) : null}
-        {failed > errors.length ? ` ${rows(failed)} failed; the first ${formatCount(errors.length)} are listed.` : null}
-      </p>
+      {failed > errors.length ? (
+        <p className="text-xs text-text-secondary">
+          {rows(failed)} failed; the first {formatCount(errors.length)} are listed.
+        </p>
+      ) : null}
+      {errors.length > SHOWN && !all ? (
+        <LoadMore size="xs" onClick={() => setAll(true)} progress={`Showing ${SHOWN} of ${formatCount(errors.length)}`}>
+          Show all {formatCount(errors.length)}
+        </LoadMore>
+      ) : null}
     </div>
   );
 }

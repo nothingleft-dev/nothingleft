@@ -1,6 +1,5 @@
 'use client';
 
-import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import { BYO_MIGRATION_STALL_MINUTES, type StorageOverview } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -10,8 +9,11 @@ import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
 import { useStartMigration } from '@hooks/use-organization-storage';
 import { describeCheckError } from '@lib/storage/connection';
+import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
-const count = (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`;
+const count = (n: number) => `${plural(n, 'file')}`;
 
 export function MigrationPanel({ slug, overview }: { slug: string; overview: StorageOverview }) {
   const connection = overview.connection;
@@ -21,7 +23,7 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
   const verified = connection.status === 'verified';
   const left = overview.platform;
   const move = () =>
-    start.mutate(undefined, { onError: error => toast.error(`The files did not start moving. ${error.message}`) });
+    start.mutate(undefined, { onError: error => toastError('Could not start moving the files', error) });
 
   const running = migration.state === 'running';
   const title = running ? `Moving files to ${connection.bucket}` : 'Move existing files';
@@ -44,33 +46,37 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
       ) : null}
 
       {running && migration.stalled ? (
-        <FormAlert tone="warning" title={`Nothing has moved for ${BYO_MIGRATION_STALL_MINUTES} minutes.`}>
-          <p>The files moved so far are safe, and every file keeps opening. Retry to carry on from where it stopped.</p>
-          {verified ? (
-            <p>
-              <button type="button" onClick={move} disabled={start.isPending}>
+        <FormAlert
+          tone="warning"
+          title={`Nothing has moved for ${BYO_MIGRATION_STALL_MINUTES} minutes.`}
+          action={
+            verified ? (
+              <Button type="button" variant="outline" size="sm" onClick={move} disabled={start.isPending}>
                 Retry
-              </button>
-            </p>
-          ) : null}
+              </Button>
+            ) : undefined
+          }
+        >
+          <p>The files moved so far are safe, and every file keeps opening. Retry to carry on from where it stopped.</p>
         </FormAlert>
       ) : null}
 
       {migration.state === 'failed' ? (
-        <FormAlert title={`The move stopped after ${count(migration.migrated_files)} of ${migration.total_files}.`}>
+        <FormAlert
+          title={`The move stopped after ${count(migration.migrated_files)} of ${migration.total_files}.`}
+          action={
+            verified ? (
+              <Button type="button" variant="outline" size="sm" onClick={move} disabled={start.isPending}>
+                Retry
+              </Button>
+            ) : undefined
+          }
+        >
           <p>
             {migration.error ? describeCheckError(migration.error, connection).message : 'The bucket refused a file.'}{' '}
             Every file keeps opening from wherever it is now.
           </p>
-          {verified ? (
-            <p>
-              <button type="button" onClick={move} disabled={start.isPending}>
-                Retry
-              </button>
-            </p>
-          ) : (
-            <p>Update the key first; Retry carries on from where it stopped.</p>
-          )}
+          {verified ? null : <p>Update the key first; Retry carries on from where it stopped.</p>}
         </FormAlert>
       ) : null}
 
@@ -84,9 +90,15 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
       {!running && migration.state !== 'failed' ? (
         left.files > 0 ? (
           <div className="flex flex-wrap items-center gap-3">
-            <Button size="sm" onClick={move} disabled={start.isPending || !verified}>
-              {start.isPending ? 'Starting…' : 'Move files'}
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={move}
+              disabled={!verified}
+              pending={start.isPending}
+              pendingLabel="Starting…"
+            >
+              Move files
+            </PendingButton>
             <span className="text-sm text-text-secondary">
               {count(left.files)} ({formatBytes(left.bytes)}) still in the built-in storage
               {verified ? '.' : ' — update the key first.'}

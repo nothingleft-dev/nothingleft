@@ -1,6 +1,7 @@
 import type { Sprint } from '@nothingleft/types';
 import { cn } from '@lib/utils';
 import { formatCalendarDate, formatCalendarRange } from '@lib/datetime';
+import { plural } from '@lib/numbers';
 
 type Dated = Pick<Sprint, 'start_date' | 'end_date'>;
 
@@ -20,7 +21,7 @@ export function SprintDates({ sprint, className }: { sprint: Dated; className?: 
   );
 }
 
-const dayCount = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`;
+const dayCount = (n: number) => `${plural(n, 'day')}`;
 
 export const daysLeftLabel = (days: number) =>
   days < 0 ? `Ended ${dayCount(-days)} ago` : days === 0 ? 'Ends today' : `${dayCount(days)} left`;

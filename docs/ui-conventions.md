@@ -99,7 +99,13 @@ MCP, so a human and an agent describe the field identically.
 | Spent time | `?` (owner, 25 Sep 2026: the same as Estimation) |
 | Story points | `Not estimated` |
 | Sprint | `Unscheduled` |
-| Custom field | per-field `empty_label`, defaulting to `No <field name>` |
+| Custom field | per-field `empty_label`, defaulting to `No <field name>` (see below) |
+
+A custom field or work item attribute with no empty label of its own shows `No` plus its name
+lower-cased inside the sentence: `No severity`, `No vendor reference`; an acronym keeps its
+capitals (`No SLA tier`). One helper renders it for the API, the MCP, search and the web
+(`emptyLabel` in `@nothingleft/format`). Search matches it in any case, so `{No Severity}` in
+an old saved view still means empty.
 
 These are the labels of the issue page sidebar, where the field name sits above the
 value. In the create dialog's chip row, where it does not, an unset estimate reads
@@ -524,6 +530,8 @@ every chart:
   their left edge, red at the end when overdue.
 - Display choices sit at the right of the picker row as small segmented toggles (*Bar | Pie*,
   *Table | Stacked*, *Shade | Length*, *Days | Weeks*); parameters are `Label Value ▾` pickers.
+  The chosen option is filled (`--bg-active`, ink text); keyboard focus is the ring, so the two
+  never look alike.
 - On phones reports are read-only views: the picker row wraps, charts take the full width, and
   the matrix, Gantt and timesheet scroll sideways.
 
@@ -624,6 +632,9 @@ A shortcut appears there only once the thing it drives exists: `g b` arrived wit
 (the current project's board, else the last project visited), `g r` with Phase 5 (the current
 project's reports, else `/reports`). After `g`, the second key must follow within a second.
 Bare keys are ignored while typing, inside a dialog or menu, and with a modifier.
+
+Controls that appear on hover also appear when they take keyboard focus, and are always shown
+on touch screens. Tab strips: ← → move between tabs and select, Home / End jump to the ends.
 
 ## Theming
 

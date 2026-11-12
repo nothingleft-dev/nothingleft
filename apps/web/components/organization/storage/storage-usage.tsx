@@ -4,8 +4,9 @@ import { Meter } from '@components/dashboard/meter';
 import { StatRow } from '@components/dashboard/stat-row';
 import { Skeleton } from '@components/ui/skeleton';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
-const files = (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`;
+const files = (n: number) => `${plural(n, 'file')}`;
 
 const LEVEL_INK = { ok: 'text-text', warning: 'text-warning-fg', critical: 'text-danger-fg', full: 'text-danger-fg' };
 

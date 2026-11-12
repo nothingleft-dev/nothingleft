@@ -23,7 +23,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { FormAlert } from '@components/auth/form-alert';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { LetterBadge } from '@components/letter-badge';
@@ -44,6 +44,7 @@ import {
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const WORK_TYPE = '\u0000work-type';
 
@@ -76,7 +77,7 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
 
   const move = (name: string, to: number) => {
     if (to < 0 || to >= rows.length) return;
-    update.mutate({ name, body: { position: to } }, { onError: e => toastError(e) });
+    update.mutate({ name, body: { position: to } }, { onError: e => toastError(`Could not move ${name}`, e) });
   };
 
   const onRowKey = (event: KeyboardEvent, name: string, index: number) => {
@@ -523,6 +524,7 @@ function AttributePanel({
         onOpenChange={setConfirming}
         title={`Delete ${attribute.name}?`}
         confirmLabel="Delete attribute"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() =>
           remove.mutate(attribute.name, {
@@ -531,7 +533,7 @@ function AttributePanel({
               setConfirming(false);
               onDeleted();
             },
-            onError: e => toastError(e),
+            onError: e => toastError(`Could not delete ${attribute.name}`, e),
           })
         }
       >
@@ -657,7 +659,7 @@ function AddAttributeDialog({ projectKey, onClose }: { projectKey: string; onClo
   const [name, setName] = useState('');
   const [values, setValues] = useState('');
   const create = useCreateWorkItemAttribute(projectKey);
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name']);
   const list = values
     .split(',')
     .map(v => v.trim())
@@ -718,9 +720,9 @@ function AddAttributeDialog({ projectKey, onClose }: { projectKey: string; onClo
             <Button type="button" variant="outline" onClick={() => onClose()}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || create.isPending}>
-              {create.isPending ? 'Adding…' : 'Add attribute'}
-            </Button>
+            <PendingButton type="submit" disabled={!name.trim()} pending={create.isPending} pendingLabel="Adding…">
+              Add attribute
+            </PendingButton>
           </DialogFooter>
         </form>
       </DialogContent>

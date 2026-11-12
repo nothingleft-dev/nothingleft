@@ -156,13 +156,17 @@ apps/web/
 │   ├── former-member-chip.tsx  FormerMemberChip, InactiveChip, deactivatedInk, personTitle, and PersonName,
 │   │                           which every person's name goes through
 │   ├── step-up-dialog.tsx    the password + code confirmation for destructive account and organisation actions
-│   ├── confirm-dialog.tsx    irreversible or other-people-affecting actions only
+│   ├── confirm-dialog.tsx    irreversible or other-people-affecting actions only; `pendingLabel` names the verb in progress
+│   ├── pending-button.tsx    PendingButton (a Button that is running: `pending` + `pendingLabel`, width held, own fill) and PendingLabel
+│   ├── toast-error.tsx       toastError(title, error): the title names the failed action, the API message is the detail; 429 goes to the shared rate-limit toast
+│   ├── query-state.tsx       QueryState, LoadError, StaleNotice, RetryButton (see Loading states)
 │   ├── job-status.tsx        a background job's state as a dot and a word (imports, exports)
 │   ├── avatar-picker.tsx     the upload / remove pair, shared by settings and onboarding
 │   ├── site-scripts.tsx      third-party tags for every page, env-gated (see Page metadata)
-│   ├── page-header.tsx       title + date/meta + right-hand actions; segmented.tsx = the tab pills
+│   ├── page-header.tsx       title + date/meta + right-hand actions; tabs.tsx = page-level tab strips (TabStrip for custom pills);
+│   │                         segmented.tsx = a toggle of 2–4 options; title-input.tsx = a title edited in place
 │   ├── full-page-loader.tsx  boot only (see Loading)
-│   ├── skeletons.tsx         PageSkeleton, RowsSkeleton, TextSkeleton
+│   ├── skeletons.tsx         PageSkeleton, RowsSkeleton, TableSkeleton, FormSkeleton, SettingsSkeleton, TextSkeleton
 │   └── *.tsx                 design-system components: kbd, letter-badge, issue-key, empty-state,
 │                             relative-time, page-title, duration (every duration, in mono). One file per component.
 ├── hooks/                    TanStack Query hooks (use-session, use-me, use-sessions, use-tokens, use-sign-out,
@@ -176,8 +180,11 @@ apps/web/
 │                             use-project-visit (records `last_project_key`), use-recently-viewed and
 │                             use-visible-columns (localStorage), use-media-query, use-work-calendar
 │                             (the org's `1d`/`1w` for formatDuration; useWorkWeek, the days a range logs on), use-shortcut (bare single-key shortcuts),
-│                             use-api-error (API `error.field` → the input that
-│                             failed), use-shell-data (the org, its siblings and the project list for the sidebar),
+│                             use-api-error (`useApiError(error, fields)`: a refusal naming a
+│                             field the form renders lands on it, any other goes to `summary`; carries `code` and
+│                             `validValues`. `splitApiError` is the same rule outside React),
+│                             use-field-problems (the required / too-long check against the shared Zod schema,
+│                             before sending), use-shell-data (the org, its siblings and the project list for the sidebar),
 │                             use-debounced, use-sidebar-collapsed, use-articles (tree, article, moves, delete and
 │                             restore, tags, search, Referenced by, global search, the remembered collapse),
 │                             use-reports (a report, the timesheet drill-down, CSV), use-report-scope (projects in
@@ -214,7 +221,7 @@ apps/web/
 │   ├── files.ts              SHA-256 (base64) and image dimensions before presign; the markdown a file is stored as;
 │   │                         saveDownload, the one way a blob is handed to the browser (CSV, recovery codes)
 │   ├── issue-path.ts         issuePath(issue) → /issue/KEY/<slug>: the one place an issue URL is built
-│   ├── numbers.ts            formatCount: `10,000`, grouped the same in every locale
+│   ├── numbers.ts            formatCount: `10,000`, grouped the same in every locale · plural(n, 'issue'): `1 issue`, `1,284 issues`
 │   └── utils.ts              cn()
 ├── scripts/sync-tokens.ts    `bun run tokens:sync` — recopies design/tokens.css into globals.css
 ├── AGENTS.md, CLAUDE.md      written by `next dev`: point at node_modules/next/dist/docs. Read them; Next 16 differs from older training data.
@@ -315,7 +322,8 @@ always in reach. It owns, per [frontend.md](./frontend.md#one-api-client):
 | Envelope type        | `SuccessEnvelope<T>` from `@nothingleft/types`. The client does not declare its own.                                                                   |
 | Error envelope       | parsed with `ErrorEnvelopeSchema` from `@nothingleft/types` → `ApiError { status, code, message, requestId, field, validValues }`                      |
 | Readable headers     | only what the API's CORS `exposedHeaders` names ([api-conventions.md](./api-conventions.md#cors-and-exposed-headers)); anything else reads back `null` |
-| Non-envelope answers | `ApiNetworkError('malformed' \| 'timeout' \| 'offline')`                                                                                               |
+| Non-envelope answers | a failed status whose body is not the envelope becomes `ApiError(status, 'unknown', …)` with the API's generic `error.internal` sentence, never the HTTP status text; a 2xx that is not the envelope is `ApiNetworkError('malformed')`; `'timeout'` and `'offline'` are `ApiNetworkError` too |
+| `429`                | the body is read first: an envelope whose code is not `rate_limited` (`auth.account_locked`) is an ordinary refusal; anything else, a proxy's page included, is the request limit (banner, waits, shared toast). `ApiError.isRateLimited` means that code |
 | `401`                | only `unauthorized` (the session is gone) calls the unauthorized handler: the query provider clears its cache, then a full navigation to `/sign-in?next=<here>`. A wrong password or code typed while signed in is also a 401 (`auth.invalid_credentials`, `two_factor.invalid_code`) and stays on the form (6b) |
 | `Idempotency-Key`    | UUID on every `POST` unless `idempotencyKey: false`; pass your own to retry the same create                                                            |
 | Retry                | `GET` only: twice, on network failure or `502/503/504`. Never a write.                                                                                 |
@@ -451,6 +459,33 @@ token names collide with Tailwind's own theme namespace.
 **shadcn's `accent` is not the brand.** In shadcn's vocabulary `accent` is
 the hover fill behind menu items, so `bg-accent` maps to `--bg-hover` and the
 copied components work untouched. The yellow brand accent is `brand`.
+
+**Overlay wrappers.** Import `Popover*` from `@components/popover` and `Tooltip*` from
+`@components/tooltip`, never from `components/ui/`: the wrappers set the collision padding,
+the height bound and the tooltip timing. Radius, shadow, the dialog's position and the scrim
+are `data-slot` rules in `globals.css`. A picker is `PickerCommand` + `PickerItem
+checked={…}` from `@components/picker` (`CommandInput`, `CommandList`, `CommandGroup`,
+`CommandEmpty` still come from `ui/command`). A dialog that can outgrow the viewport wraps its
+middle in `DialogBody` (`@components/dialog-body`); a `<form>` between `DialogContent` and the
+body needs no extra class. A dialog that wants a different top offset sets
+`[--dialog-top:24px]`. Inline text actions are `TextButton` (`@components/text-button`), or
+the `action-link` utility on a `Link` or on a button inside a tinted alert or banner, where
+the text colour is inherited. Paging is `LoadMore`. Row controls that wait for the pointer are
+`reveal group-hover/<row>:opacity-100`: hidden at rest, shown on the row's hover, on their own
+keyboard focus, while their menu is open, and always on touch screens. `scroll-fade` gives any
+scroll box the end-of-list fade that command lists and dialog bodies already have. A custom
+utility is never prefixed with a Tailwind namespace (`text-`, `bg-`, `border-`): tailwind-merge
+reads any `text-*` class as a colour and drops it when a `text-text-*` follows in the same
+`cn()`.
+
+**Shell and strips.** The sidebar-to-sheet switch is the `shell` breakpoint (`max-shell:` /
+`shell:`, 900px); `MobileNavigation` matches the same width in JS. A page-level tab strip is
+`Tabs` from `@components/tabs` (`size="section"` inside a heading row that draws its own
+rule); a custom strip of pills reuses `TabStrip`, which scrolls with the `scroll-fade-x` edge
+fade and keeps the selected tab in view. A title edited in place is `TitleInput`
+(`@components/title-input`). People are `PersonName` (`avatar`, `label`, `chip` props) from
+`@components/former-member-chip`. Keys in a picker or link list are `<IssueKey column />`. The
+key-field strip is the `key-strip` class.
 
 Theme: `next-themes` writes `data-theme="light|dark"` on `<html>`, which is
 what `tokens.css` keys on; `dark:` utilities exist but are rarely needed
@@ -1124,6 +1159,22 @@ shape adds its own `loading.tsx` beside it. Inside a component, branch on the
 hook's `isPending` and render the skeleton in the same slot the content will
 occupy. Never a spinner, never a blank.
 
+`components/skeletons.tsx` holds the shapes: `RowsSkeleton` takes a `columns` spec
+(`ISSUE_ROW`, `PERSON_ROW`, or cells such as `['avatar', 'lines', 'meta']`), a `bordered` flag
+and an optional `rowClassName` for the real row height; `TableSkeleton` draws the header row
+and takes each column's width classes; `FormSkeleton` and `SettingsSkeleton` stand in for
+settings pages. Pick the one whose shape and height match the content, so nothing moves when
+it lands. A list that knows how many rows are coming (a sprint's issue count) asks for that
+many.
+
+Failures go through `components/query-state.tsx`. `QueryState` branches pending (your
+skeleton) → failed with nothing loaded (`LoadError` with Try again) → failed refresh
+(`StaleNotice` above the data) → empty (your `EmptyState`) → data. Writing it by hand is fine,
+but the order is the same: never test `data ?? []` for emptiness before testing for a failure.
+A project-scoped page calls `notFoundOn404(query.error)` before rendering its load error, so a
+missing or denied project shows the in-shell 404 (`app/(app)/not-found.tsx`), not a 500-style
+alert.
+
 `useSession()` drives the gate. It calls `GET /v1/me` once per five minutes;
 `401` triggers the client's sign-in redirect and a network failure shows the
 retry screen.
@@ -1183,3 +1234,26 @@ Adding a **shadcn primitive**: `bunx shadcn@latest add <name>`, then the
 | Relative `../../` imports                                                   | The aliases above                                                                                                                                                    |
 | A README next to code                                                       | Extend this document                                                                                                                                                 |
 | Tests in `apps/web`                                                         | None by decision; put logic that needs tests in a package                                                                                                            |
+| `(query.data ?? []).length === 0` → empty state | Check `isPending`, then `!query.data` (failed) first; `QueryState` does it |
+| An error inside `<EmptyState>` or a bare red `<p>` | `LoadError` with `onRetry` |
+| `opacity-60` on a list or panel while it refetches | `is-stale` (dims ink, not the surface) |
+| A Retry `<button>` or `Button` inside `FormAlert` children | `FormAlert action={<RetryButton …/>}` |
+| `FormAlert title="This project could not be loaded."` for a 404 | `notFoundOn404(error)` first |
+| `{x.isPending ? 'Saving…' : 'Save'}` inside a `Button` | `<PendingButton pending={x.isPending} pendingLabel="Saving…">Save</PendingButton>` (holds the width, keeps the fill) |
+| `toast.error(error.message)` or `toastError(error)` | `toastError('Could not save the view', error)`: the title names the action |
+| `useApiError(error)` with no field list | `useApiError(error, ['name', 'key'])`: the fields the form shows; everything else goes to the summary |
+| `` `${n} ${n === 1 ? 'issue' : 'issues'}` `` or a local plural helper | `plural(n, 'issue')` from `lib/numbers` |
+| `` `No ${field.name}` `` | `emptyLabel(field.name)` from `@nothingleft/format` (`No severity`) |
+| `import … from '@components/ui/popover'` / `'@components/ui/tooltip'` | `@components/popover` / `@components/tooltip` |
+| `<Check className={cn(…, on ? 'opacity-100' : 'opacity-0')} />` inside a `CommandItem` | `<PickerItem checked={on}>` inside a `PickerCommand` |
+| `opacity-0 group-hover:opacity-100` on a row control | `reveal group-hover/<row>:opacity-100` |
+| `<button className="underline …">`, `variant="link"` for an in-sentence action, `hover:no-underline` | `TextButton`, or `action-link` on a `Link` |
+| A hand-made "Load more" / "Show all" button | `LoadMore` |
+| `max-h-*` / `overflow-y-auto` on `DialogContent` to make it scroll | `DialogBody` around the part that should scroll |
+| A tab strip passed as `PageHeader` `actions`, or `Segmented` with five or more options | `Tabs` on its own row under the header |
+| A hand-made `role="tablist"` row of buttons | `Tabs`, or `TabStrip` around custom pills |
+| `text-text-muted` on a count inside an active nav item or selected tab | `text-text-secondary` (or nothing: `Tabs` and `NavItem` set it) |
+| `<input>` for a title edited in place | `TitleInput` |
+| `deactivatedInk(…)` + a hand-placed `FormerMemberChip` next to a name | `PersonName` |
+| A flex grid of cells with `border-r` dividers that wraps | equal grid columns (`key-strip`, or `gap-px` with the divider drawn per cell) |
+| A fixed-width table row inside the page with no scroll box of its own | wrap it in `overflow-x-auto scroll-fade-x` with a `min-w-*` on the table |

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { StatusDot } from '@components/issues/value-marks';
 import { useSchemaValues } from '@hooks/use-project-schema';
@@ -65,12 +66,13 @@ export function StatusPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-60 p-0">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Find a status" />
           <CommandList>
             {statuses.isPending ? <PickerSkeleton /> : <CommandEmpty>No status matches.</CommandEmpty>}
             {allowOff ? (
-              <CommandItem
+              <PickerItem
+                checked={value === null}
                 value={`${OFF} off`}
                 onSelect={() => {
                   setOpen(false);
@@ -78,11 +80,11 @@ export function StatusPicker({
                 }}
               >
                 <span className="min-w-0 flex-1 text-text-secondary">{OFF} off</span>
-                <Check className={cn('size-icon-sm', value === null ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ) : null}
             {live.map(status => (
-              <CommandItem
+              <PickerItem
+                checked={status.name === current?.name}
                 key={status.name}
                 value={status.name}
                 onSelect={() => {
@@ -92,11 +94,10 @@ export function StatusPicker({
               >
                 <StatusDot category={status.category} color={status.color} />
                 <span className="min-w-0 flex-1 truncate">{status.name}</span>
-                <Check className={cn('size-icon-sm', status.name === current?.name ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

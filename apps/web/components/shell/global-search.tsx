@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import { FileText, Search } from 'lucide-react';
 import type { GlobalSearchResult } from '@nothingleft/types';
+import { RetryButton } from '@components/query-state';
 import { Kbd } from '@components/kbd';
 import { IssueKey } from '@components/issue-key';
 import { DraftMark } from '@components/articles/draft-mark';
@@ -12,6 +13,7 @@ import { articlePath } from '@components/articles/article-row';
 import { StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { useGlobalSearch } from '@hooks/use-articles';
 import { useDebounced } from '@hooks/use-debounced';
+import { useMediaQuery } from '@hooks/use-media-query';
 import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
@@ -33,6 +35,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
   const [active, setActive] = useState(-1);
   const q = useDebounced(text.trim(), 400);
   const search = useGlobalSearch(q);
+  const wide = useMediaQuery('(min-width: 64rem)');
   useImperativeHandle(ref, () => ({ focus: () => input.current?.focus() }), []);
 
   const result = search.data;
@@ -84,7 +87,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
   const articleStart = issueCount + (result && result.issues.total > issueCount ? 1 : 0);
 
   return (
-    <div className="relative ml-auto hidden w-[440px] max-w-[40vw] md:block">
+    <div className="relative ml-auto hidden w-[440px] max-w-[30vw] md:block lg:max-w-[40vw]">
       <div className="flex h-control items-center gap-2 rounded-sm border bg-app px-2 text-text-muted focus-within:border-border-strong focus-within:bg-surface focus-within:shadow-(--focus-ring) hover:border-border-strong">
         <Search className="size-icon-sm flex-none" />
         <input
@@ -105,7 +108,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
           aria-autocomplete="list"
           autoComplete="off"
           spellCheck={false}
-          placeholder="Search issues and articles · tag: rca"
+          placeholder={wide ? 'Search issues and articles · tag: rca' : 'Search · tag: rca'}
           className="h-full min-w-0 flex-1 bg-transparent font-mono text-xs text-text outline-none placeholder:text-text-muted focus-visible:shadow-none"
         />
         <Kbd>/</Kbd>
@@ -117,14 +120,17 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
           role="listbox"
           aria-busy={Boolean(result) && (typing || search.isFetching)}
           onMouseDown={e => e.preventDefault()}
-          className="absolute inset-x-0 top-full z-50 mt-1 max-h-[min(560px,70vh)] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover transition-opacity duration-(--dur-fast) aria-busy:opacity-60"
+          className="absolute inset-x-0 top-full z-50 mt-1 max-h-[min(560px,70vh)] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover aria-busy:is-stale"
         >
           {!result && (search.isPending || typing) ? (
             <PanelNote>Searching…</PanelNote>
           ) : refusal ? (
             <PanelNote danger>{refusal}</PanelNote>
           ) : search.isError ? (
-            <PanelNote danger>The search could not run. Try again in a moment.</PanelNote>
+            <div className="flex items-center gap-3 px-3 py-1.5">
+              <p className="min-w-0 flex-1 text-xs text-danger-fg">The search could not run.</p>
+              <RetryButton onRetry={() => void search.refetch()} size="xs" />
+            </div>
           ) : result ? (
             <>
               <Group
@@ -150,7 +156,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                       onClick={() => go(issuePath(issue))}
                     >
                       <TypeBadge type={issue.type} />
-                      <IssueKey issueKey={issue.key} resolved={issue.resolved} />
+                      <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
                       <span className={cn('min-w-0 flex-1 truncate', issue.resolved && 'text-text-muted line-through')}>
                         {issue.title}
                       </span>

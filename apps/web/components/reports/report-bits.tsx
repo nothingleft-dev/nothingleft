@@ -8,6 +8,7 @@ import { Switch } from '@components/ui/switch';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
+import { formatCount, plural } from '@lib/numbers';
 
 /**
  * `in Product Platform, Mobile App · view Blocking bugs` — what the figures cover. With no projects
@@ -28,10 +29,7 @@ export function scopeText(scope: ReportScope, picked: boolean) {
   return scope.view ? `${where} · saved view ${scope.view}` : where;
 }
 
-/** `1,284`: thousands separated, as every figure in a report reads. */
-export const formatCount = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-export const plural = (n: number, one: string, many = `${one}s`) => `${formatCount(n)} ${n === 1 ? one : many}`;
+export { formatCount, plural };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -129,7 +127,7 @@ export function ToggleGroup<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex items-center rounded-sm border bg-inset p-0.5">
+    <div role="radiogroup" aria-label={label} className="flex items-center gap-0.5 rounded-sm border p-0.5">
       {options.map(o => (
         <button
           key={o.value}
@@ -138,8 +136,8 @@ export function ToggleGroup<T extends string>({
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'h-6 rounded-xs px-2 text-xs font-medium text-text-secondary hover:text-text',
-            o.value === value && 'bg-surface text-text shadow-[0_0_0_1px_var(--border-strong)]',
+            'h-6 rounded-xs px-2 text-xs font-medium text-text-secondary hover:bg-hover hover:text-text',
+            o.value === value && 'bg-active text-text hover:bg-active',
           )}
         >
           {o.label}

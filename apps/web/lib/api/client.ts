@@ -1,7 +1,13 @@
 import { ErrorEnvelopeSchema, type SuccessEnvelope } from '@nothingleft/types';
 import { isAnonymousRoute } from '@lib/auth-routes';
 import { env } from '@lib/env';
-import { ApiError, ApiNetworkError, RATE_LIMITED_MESSAGE } from '@lib/api/errors';
+import {
+  ApiError,
+  ApiNetworkError,
+  RATE_LIMITED_CODE,
+  RATE_LIMITED_MESSAGE,
+  UNKNOWN_FAILURE_MESSAGE,
+} from '@lib/api/errors';
 import { isRateLimitedNow, noteRateLimited, untilLifted } from '@lib/api/rate-limit';
 
 export const REQUEST_TIMEOUT_MS = 10_000;
@@ -79,7 +85,7 @@ async function send<T>(
   // Held back while limited: a request sent now would fail and, counted, push the wait further. A read
   // waits it out, so pages keep what they show; a write is refused, and never resent without a click.
   if (inBrowser && isRateLimitedNow()) {
-    if (method !== 'GET') throw new ApiError(429, 'rate_limited', RATE_LIMITED_MESSAGE, null);
+    if (method !== 'GET') throw new ApiError(429, RATE_LIMITED_CODE, RATE_LIMITED_MESSAGE, null);
     await untilLifted(opts.signal);
   }
 
@@ -111,28 +117,36 @@ async function send<T>(
     return send(method, path, opts, attempt + 1, waits);
   }
 
-  // Before parsing: a proxy in front of the API answers its own 429 with a page, not the envelope.
-  if (response.status === 429) {
-    if (inBrowser) noteRateLimited(response.headers);
-    if (inBrowser && method === 'GET' && waits < RATE_LIMIT_WAITS) return send(method, path, opts, attempt, waits + 1);
-    throw new ApiError(429, 'rate_limited', RATE_LIMITED_MESSAGE, requestId);
-  }
-
   let payload: unknown;
+  let unreadable = false;
   try {
     payload = await response.json();
   } catch {
-    throw new ApiNetworkError('malformed', requestId);
+    unreadable = true;
+  }
+
+  // A 429 that names its own cause (account locked) is a refusal; anything else, a proxy's page
+  // included, is the request limit.
+  if (response.status === 429) {
+    const refusal = ErrorEnvelopeSchema.safeParse(payload);
+    if (refusal.success && refusal.data.error.code !== RATE_LIMITED_CODE) {
+      throw ApiError.fromBody(429, refusal.data.error);
+    }
+    if (inBrowser) noteRateLimited(response.headers);
+    if (inBrowser && method === 'GET' && waits < RATE_LIMIT_WAITS) return send(method, path, opts, attempt, waits + 1);
+    throw new ApiError(429, RATE_LIMITED_CODE, RATE_LIMITED_MESSAGE, requestId);
   }
 
   if (!response.ok) {
     const parsed = ErrorEnvelopeSchema.safeParse(payload);
     const error = parsed.success
       ? ApiError.fromBody(response.status, parsed.data.error)
-      : new ApiError(response.status, 'unknown', response.statusText, requestId);
+      : new ApiError(response.status, 'unknown', UNKNOWN_FAILURE_MESSAGE, requestId);
     if (error.isSignedOut) sessionEnded();
     throw error;
   }
+
+  if (unreadable) throw new ApiNetworkError('malformed', requestId);
 
   if (typeof payload !== 'object' || payload === null || !('data' in payload) || !('meta' in payload)) {
     throw new ApiNetworkError('malformed', requestId);

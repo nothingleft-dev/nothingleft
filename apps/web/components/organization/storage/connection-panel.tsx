@@ -19,9 +19,10 @@ import { env } from '@lib/env';
 import { regionName } from '@lib/storage/aws-regions';
 import { connectBody, draftFrom, type ConnectionDraft } from '@lib/storage/connection';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const STORAGE_TAB = '/organization?tab=storage';
-const files = (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`;
+const files = (n: number) => `${plural(n, 'file')}`;
 
 interface ConnectionPanelProps {
   slug: string;

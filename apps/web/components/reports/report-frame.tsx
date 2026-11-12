@@ -5,7 +5,7 @@ import { Download, RefreshCw } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReportEmpty } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
 import { QueryBar, type QueryProblem } from '@components/issues/list/query-bar';
@@ -25,6 +25,7 @@ import { formatDateTimeWithZone, formatTime } from '@lib/datetime';
 import { reportDef } from '@lib/reports/registry';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 interface FramedReport {
   empty: ReportEmpty | null;
@@ -75,7 +76,11 @@ export function ReportFrame<D extends FramedReport>({
 
   const pick = (field: string, value: string) => (pickValue ? pickValue(field, value) : state.set({ [field]: value }));
 
-  const exportCsv = () => exporter.mutate({ name: state.name, query: state.query }, { onError: e => toastError(e) });
+  const exportCsv = () =>
+    exporter.mutate(
+      { name: state.name, query: state.query },
+      { onError: e => toastError('Could not export the report', e) },
+    );
 
   // The Gantt's CSV still lists the issues missing dates when there is nothing to draw.
   const canExport = Boolean(data && (!data.empty || ownEmpty)) && !result.isError;
@@ -109,10 +114,17 @@ export function ReportFrame<D extends FramedReport>({
           ) : null
         }
         actions={
-          <Button variant="outline" size="xs" onClick={exportCsv} disabled={!canExport || exporter.isPending}>
+          <PendingButton
+            variant="outline"
+            size="xs"
+            onClick={exportCsv}
+            disabled={!canExport}
+            pending={exporter.isPending}
+            pendingLabel="Preparing the file…"
+          >
             <Download className="size-3.5" />
-            {exporter.isPending ? 'Preparing the file…' : 'Export CSV'}
-          </Button>
+            Export CSV
+          </PendingButton>
         }
       />
 
@@ -162,7 +174,7 @@ export function ReportFrame<D extends FramedReport>({
       ) : result.isPending ? (
         <ReportSkeleton shape={skeleton} />
       ) : data && !result.isError ? (
-        <div className={cn('flex flex-col gap-4 transition-opacity', result.isPlaceholderData && 'opacity-60')}>
+        <div className={cn('flex flex-col gap-4', result.isPlaceholderData && 'is-stale')}>
           {summary && !data.empty ? <div className="text-xs text-text-secondary">{summary(data)}</div> : null}
           {data.empty && !ownEmpty ? (
             <ReportEmptyState

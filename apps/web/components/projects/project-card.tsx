@@ -9,7 +9,12 @@ import { MemberAvatar } from '@components/issues/member-avatar';
 
 export function ProjectCard({ project, actions }: { project: Project; actions?: React.ReactNode }) {
   return (
-    <div className={cn('flex flex-col gap-3 rounded-md border bg-surface p-4', project.is_archived && 'opacity-70')}>
+    <div
+      className={cn(
+        'flex min-w-0 flex-col gap-3 rounded-md border bg-surface p-4',
+        project.is_archived && 'opacity-70',
+      )}
+    >
       <div className="flex items-start gap-3">
         <ProjectMark project={project} />
 
@@ -34,15 +39,15 @@ export function ProjectCard({ project, actions }: { project: Project; actions?: 
 
       <div className="flex items-center gap-2 border-t pt-3 text-xs text-text-muted">
         {project.lead ? (
-          <span className="flex items-center gap-1.5">
-            <MemberAvatar member={project.lead} className="size-4" initialsClassName="text-[8px]" />
+          <span className="flex min-w-0 items-center gap-1.5">
+            <MemberAvatar member={project.lead} className="size-4 flex-none" initialsClassName="text-[8px]" />
             <PersonName person={project.lead} />
           </span>
         ) : (
           <span>No lead</span>
         )}
         <span>·</span>
-        <span>
+        <span className="flex-none">
           Updated <RelativeTime value={project.updated_at} className="inline" />
         </span>
       </div>

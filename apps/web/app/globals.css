@@ -1203,6 +1203,9 @@
   --spacing-avatar-sm: var(--avatar-sm);
   --spacing-avatar-lg: var(--avatar-lg);
   --spacing-badge-letter: var(--badge-letter);
+
+  /* DESIGN § 6: below 900 px the sidebar becomes a sheet. */
+  --breakpoint-shell: 56.25rem;
 }
 
 @layer base {
@@ -1255,6 +1258,10 @@
   samp,
   pre {
     font-family: var(--font-mono);
+  }
+
+  input:placeholder-shown {
+    text-overflow: ellipsis;
   }
 }
 
@@ -1344,7 +1351,9 @@
 }
 
 /* A ring drawn outside a control is clipped by the scroll container it sits in. */
-[data-slot='scroll-area-viewport'] :focus-visible {
+[data-slot='scroll-area-viewport'] :focus-visible,
+[data-tab-strip] :focus-visible,
+.key-strip > :focus-visible {
   box-shadow: inset 0 0 0 2px var(--focus-soft);
 }
 
@@ -1357,6 +1366,9 @@
 [data-slot='button']:disabled,
 [data-slot='button'][aria-disabled='true'] {
   opacity: 1;
+}
+
+[data-slot='button']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
   color: var(--text-muted);
 }
 
@@ -1365,12 +1377,18 @@
   cursor: not-allowed;
 }
 
+/* Pending is not disabled: the action is running, so the button keeps its own fill and ink. */
+[data-slot='button'][data-pending] {
+  cursor: progress;
+}
+
 [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='secondary']):is(
     :disabled,
     [aria-disabled='true']
-  ),
-[data-slot='button'][data-variant='outline']:is(:disabled, [aria-disabled='true']) {
-  background: var(--bg-inset);
+  ):not([data-pending]),
+[data-slot='button'][data-variant='outline']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
+  /* Translucent so it reads on the page, a card and a dialog alike. */
+  background: var(--bg-active);
   border-color: var(--border);
   box-shadow: none;
 }
@@ -1383,7 +1401,7 @@
 
 /* The one red fill (DESIGN § 9). The danger solid is a mark colour (3:1 on the surface); a fill
    that carries white text needs a deeper step of the same hue in both themes. */
-[data-slot='button'][data-variant='destructive']:not(:disabled, [aria-disabled='true']) {
+[data-slot='button'][data-variant='destructive']:is(:not(:disabled, [aria-disabled='true']), [data-pending]) {
   background: oklch(from var(--danger) 0.5 c h);
   color: oklch(1 0 0);
 }
@@ -1409,9 +1427,201 @@
   border-color: var(--text-muted);
 }
 
+[data-slot='checkbox'][data-state='indeterminate'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ink-fg);
+}
+
+[data-slot='checkbox-indicator'][data-state='indeterminate'] > svg {
+  display: none;
+}
+
+[data-slot='checkbox-indicator'][data-state='indeterminate']::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
 [data-slot='tooltip-content'] {
   max-width: 20rem;
   text-wrap: pretty;
+}
+
+[data-slot='dialog-overlay'],
+[data-slot='sheet-overlay'] {
+  background: var(--bg-overlay);
+}
+
+/* Anchored near the top, so a dialog whose content grows or shrinks keeps its title where it was. */
+[data-slot='dialog-content'] {
+  top: var(--dialog-top, 12dvh);
+  translate: -50% 0;
+  max-height: calc(100dvh - var(--dialog-top, 12dvh) - max(1rem, 4dvh));
+  border-color: transparent;
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-dialog);
+}
+
+[data-slot='dialog-content']:focus-visible {
+  box-shadow: var(--shadow-dialog);
+}
+
+/* With a DialogBody, the header and footer stay put and only the body scrolls. */
+[data-slot='dialog-content']:has([data-slot='dialog-body']) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+[data-slot='dialog-content'] > :not([data-slot='dialog-body']):has([data-slot='dialog-body']) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+[data-slot='popover-content'],
+[data-slot='dropdown-menu-content'],
+[data-slot='dropdown-menu-sub-content'] {
+  border-color: transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+}
+
+[data-slot='popover-content']:focus-visible,
+[data-slot='dropdown-menu-content']:focus-visible,
+[data-slot='dropdown-menu-sub-content']:focus-visible {
+  box-shadow: var(--shadow-popover);
+}
+
+/* A picker inside a popover gives up height from its list, never from its search box. */
+[data-slot='popover-content']:has(> [data-slot='command']) {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-slot='popover-content'] > [data-slot='command'] {
+  min-height: 0;
+}
+
+[data-slot='command-list'] {
+  min-height: 0;
+}
+
+/* A list cut off at its edge fades out until its end is reached; a list that fits never fades. */
+@property --scroll-fade {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-fade-end {
+  0%,
+  90% {
+    --scroll-fade: 1.5rem;
+  }
+  100% {
+    --scroll-fade: 0px;
+  }
+}
+
+.scroll-fade,
+[data-slot='command-list'],
+[data-slot='dialog-body'] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--scroll-fade)), transparent);
+  animation: scroll-fade-end linear both;
+  animation-timeline: scroll(self block);
+}
+
+/* Equal columns, so the dividers of a wrapped row line up with the row above; the outer ones are clipped. */
+.key-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.key-strip > * {
+  box-shadow:
+    1px 0 0 var(--border-subtle),
+    0 1px 0 var(--border-subtle);
+}
+
+@property --scroll-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-fade-inline {
+  0% {
+    --scroll-fade-start: 0px;
+    --scroll-fade: 1.5rem;
+  }
+  10%,
+  90% {
+    --scroll-fade-start: 1.5rem;
+    --scroll-fade: 1.5rem;
+  }
+  100% {
+    --scroll-fade-start: 1.5rem;
+    --scroll-fade: 0px;
+  }
+}
+
+.scroll-fade-x {
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--scroll-fade-start),
+    #000 calc(100% - var(--scroll-fade)),
+    transparent
+  );
+  animation: scroll-fade-inline linear both;
+  animation-timeline: scroll(self inline);
+}
+
+/* Row controls that wait for the pointer: the row adds `group-hover/<name>:opacity-100`. Touch has no
+   hover, so there they are always shown. */
+@utility reveal {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+
+  &:focus-visible,
+  &:focus-within,
+  &[data-state='open'] {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    opacity: 1;
+  }
+}
+
+@utility action-link {
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    text-decoration-color var(--dur-fast) var(--ease-out);
+
+  &:hover:not(:disabled, [aria-disabled='true']) {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+  }
+
+  &:is(:disabled, [aria-disabled='true']) {
+    color: var(--text-disabled);
+    text-decoration-color: currentColor;
+  }
 }
 
 @keyframes brand-burn {
@@ -1460,6 +1670,18 @@
 
   .comfortable-form [data-slot='button']:not([data-size^='icon']) {
     min-height: 40px;
+  }
+}
+
+/* Content kept on screen while a refetch is in flight. Dims the ink, never the surface: opacity let the
+   page behind show through popovers and pushed headers under AA. */
+@utility is-stale {
+  --text: var(--text-secondary);
+  color: var(--text);
+  transition: color var(--dur-fast);
+
+  & :is(img, svg, [data-slot='avatar']) {
+    opacity: 0.6;
   }
 }
 
@@ -1674,8 +1896,16 @@
     transform: rotate(45deg);
   }
 
+  /* A box the reader cannot tick sits on the inset fill, so it never reads as one they can. */
   .md li.task-list-item > input[type='checkbox']:disabled {
     cursor: default;
+    background: var(--bg-inset);
+    border-color: var(--border);
+  }
+
+  .md li.task-list-item > input[type='checkbox']:disabled:checked {
+    background: var(--text-muted);
+    border-color: var(--text-muted);
   }
 
   .md blockquote {

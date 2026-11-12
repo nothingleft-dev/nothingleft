@@ -9,6 +9,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { resendVerification } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
 import { queryKeys } from '@lib/query/keys';
+import { PendingButton } from '@components/pending-button';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -55,9 +56,15 @@ export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
       {resend.isSuccess && cooldown > 0 ? <FormAlert tone="success" title="Sent again. Give it a minute." /> : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" disabled={recheck.isPending} onClick={() => recheck.mutate()}>
-          {recheck.isPending ? 'Checking…' : 'Check verification'}
-        </Button>
+        <PendingButton
+          type="button"
+          size="sm"
+          onClick={() => recheck.mutate()}
+          pending={recheck.isPending}
+          pendingLabel="Checking…"
+        >
+          Check verification
+        </PendingButton>
         <Button
           type="button"
           variant="outline"

@@ -17,6 +17,7 @@ import {
 import { FormAlert } from '@components/auth/form-alert';
 import { useTestAutomation } from '@hooks/use-automations';
 import { SKIP_REASON } from '@lib/git/words';
+import { PendingButton } from '@components/pending-button';
 
 interface TestDialogProps {
   projectKey: string;
@@ -92,9 +93,9 @@ function TestForm({ projectKey, rule, onClose }: { projectKey: string; rule: Aut
         <Button type="button" variant="outline" onClick={onClose}>
           Close
         </Button>
-        <Button type="submit" disabled={test.isPending}>
-          {test.isPending ? 'Testing…' : 'Test'}
-        </Button>
+        <PendingButton type="submit" pending={test.isPending} pendingLabel="Testing…">
+          Test
+        </PendingButton>
       </DialogFooter>
     </form>
   );

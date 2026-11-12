@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import type { Issue, MemberRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { RelativeTime } from '@components/relative-time';
 import { AttachmentsSection } from '@components/attachments/attachments-section';
@@ -128,11 +129,9 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
   }
   if (issue.isError) {
     return (
-      <FormAlert title="This issue could not be loaded.">
-        <Button size="sm" variant="outline" className="mt-2" onClick={() => void issue.refetch()}>
-          Retry
-        </Button>
-      </FormAlert>
+      <LoadError onRetry={() => void issue.refetch()} detail={errorDetail(issue.error)}>
+        This issue could not be loaded.
+      </LoadError>
     );
   }
   if (issue.isPending) return <IssueSkeleton />;
@@ -424,12 +423,12 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
             onClick: () =>
               restore.mutateAsync(deleted.key).then(
                 back => router.push(issuePath(back)),
-                (error: Error) => toastError(error),
+                (error: Error) => toastError(`Could not restore ${deleted.key}`, error),
               ),
           },
         });
       },
-      onError: error => toastError(error),
+      onError: error => toastError(`Could not delete ${issue.key}`, error),
     });
 
   return (
@@ -497,6 +496,7 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
         onOpenChange={setConfirming}
         title={`Delete ${issue.key}?`}
         confirmLabel="Delete issue"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={onDelete}
       >

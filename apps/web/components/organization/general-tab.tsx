@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { Organization } from '@nothingleft/types';
+import { UpdateOrganizationSchema, type Organization } from '@nothingleft/types';
 import { parseDuration } from '@nothingleft/format';
-import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { SettingsSection } from '@components/settings/section';
@@ -13,6 +12,9 @@ import { useApiError } from '@hooks/use-api-error';
 import { useUpdateOrganization } from '@hooks/use-organizations';
 import { formatDate } from '@lib/datetime';
 import { PersonName } from '@components/former-member-chip';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 type WeekStart = '0' | '1' | '2' | '3' | '4' | '5' | '6';
 
@@ -38,7 +40,8 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
   const [weekStart, setWeekStart] = useState<WeekStart>(String(organization.week_starts_on) as WeekStart);
 
   const update = useUpdateOrganization(organization.slug);
-  const error = useApiError(update.error);
+  const error = useApiError(update.error, ['name', 'slug', 'workday_minutes', 'workweek_days']);
+  const local = useFieldProblems(UpdateOrganizationSchema, { name: 'Name', slug: 'Organisation ID' });
 
   const workdayMinutes = parseDuration(workday);
   const workweekDays = Number(workweek);
@@ -61,7 +64,7 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
         className="flex flex-col gap-5"
         onSubmit={event => {
           event.preventDefault();
-          if (workdayBad || workweekBad) return;
+          if (!local.check({ name, slug }) || workdayBad || workweekBad) return;
           update.mutate(
             {
               name,
@@ -80,17 +83,23 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
               label="Name"
               value={name}
               disabled={!isAdmin}
-              error={error.fields['name']}
-              onChange={e => setName(e.target.value)}
+              error={local.problems['name'] ?? error.fields['name']}
+              onChange={e => {
+                setName(e.target.value);
+                local.clear('name');
+              }}
             />
             <Field
               label="Organisation ID"
               className="font-mono"
               value={slug}
               disabled={!isAdmin}
-              error={error.fields['slug']}
+              error={local.problems['slug'] ?? error.fields['slug']}
               hint="Used to identify this workspace. Changing it breaks existing links and integrations that use the old ID."
-              onChange={e => setSlug(e.target.value)}
+              onChange={e => {
+                setSlug(e.target.value);
+                local.clear('slug');
+              }}
             />
           </div>
         </SettingsSection>
@@ -116,7 +125,7 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
               hint={
                 workweekBad || workdayBad
                   ? undefined
-                  : `1w = ${workweekDays} ${workweekDays === 1 ? 'day' : 'days'} (${hoursAndMinutes(workdayMinutes * workweekDays)}).`
+                  : `1w = ${plural(workweekDays, 'day')} (${hoursAndMinutes(workdayMinutes * workweekDays)}).`
               }
               onChange={e => setWorkweek(e.target.value)}
             />
@@ -133,9 +142,15 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
         </SettingsSection>
 
         {isAdmin ? (
-          <Button type="submit" disabled={!dirty || update.isPending} className="self-start">
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
+          <PendingButton
+            type="submit"
+            disabled={!dirty}
+            className="self-start"
+            pending={update.isPending}
+            pendingLabel="Saving…"
+          >
+            Save changes
+          </PendingButton>
         ) : (
           <p className="text-xs text-text-muted">Only an Org Admin can change these.</p>
         )}

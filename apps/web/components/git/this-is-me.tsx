@@ -86,7 +86,7 @@ export function ThisIsMe({
                 toast.success(`@${login} on ${providerLabel(provider)} is now yours. Its work shows under your name.`);
                 setHidden(true);
               },
-              onError: error => toastError(error),
+              onError: error => toastError(`Could not claim @${login}`, error),
             },
           )
         }

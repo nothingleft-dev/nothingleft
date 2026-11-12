@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
 import { IssueKey } from '@components/issue-key';
 import { RelativeTime } from '@components/relative-time';
-import { RowsSkeleton } from '@components/skeletons';
+import { TableSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { SettingsSection } from '@components/settings/section';
 import { PriorityBadge, TypeBadge } from '@components/issues/value-marks';
 import { DELETED_PAGE_SIZE, useDeletedIssues, useRestoreIssue } from '@hooks/use-issues';
@@ -32,9 +32,15 @@ export function DeletedIssues({ projectKey, canRestore }: { projectKey: string; 
       description="A deleted issue can be restored for 14 days. After that it is removed for good, with its history."
     >
       {deleted.isPending ? (
-        <RowsSkeleton rows={4} />
-      ) : deleted.isError ? (
-        <FormAlert title="Deleted issues could not be loaded." />
+        <TableSkeleton
+          rows={4}
+          rowClassName="h-row"
+          columns={[{}, { className: 'w-36' }, { className: 'w-36' }, { className: 'w-28', align: 'right' }]}
+        />
+      ) : deleted.isError && !deleted.data ? (
+        <LoadError onRetry={() => void deleted.refetch()} detail={errorDetail(deleted.error)}>
+          Deleted issues could not be loaded.
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState title="Nothing has been deleted in the last 14 days." />
       ) : (
@@ -77,7 +83,7 @@ export function DeletedIssues({ projectKey, canRestore }: { projectKey: string; 
                               toast.success(`Restored ${back.key}.`, {
                                 action: { label: 'Open', onClick: () => router.push(issuePath(back)) },
                               }),
-                            onError: error => toastError(error),
+                            onError: error => toastError(`Could not restore ${issue.key}`, error),
                           })
                         }
                       >

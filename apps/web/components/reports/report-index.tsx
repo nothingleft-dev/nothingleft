@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ReportName } from '@nothingleft/types';
+import { notFoundOn404 } from '@components/query-state';
 import { PageHeader } from '@components/page-header';
 import { daysLeftLabel } from '@components/agile/sprint-dates';
 import { useActiveSprints } from '@hooks/use-sprints';
@@ -45,6 +46,7 @@ function hrefFor(report: ReportDef, project: string | undefined): Route {
 export function ReportIndex({ project }: { project?: string }) {
   const projectQuery = useProject(project ?? null);
   useRecordProjectVisit(project ?? null);
+  notFoundOn404(projectQuery.error);
   const sprints = useActiveSprints(project !== undefined);
   const active = project ? sprints.data?.find(s => s.project.key === project) : undefined;
   // Issues per project means nothing inside one project.

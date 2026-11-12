@@ -14,7 +14,7 @@ import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
 import { Segmented } from '@components/segmented';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { ProjectCard } from '@components/projects/project-card';
 import { CreateProjectDialog } from '@components/projects/project-dialog';
 import { useArchiveProject, useProjects } from '@hooks/use-projects';
@@ -64,7 +64,11 @@ export function ProjectList() {
         }
       />
 
-      {projects.isError ? <FormAlert title="Your projects could not be loaded." /> : null}
+      {projects.isError && !projects.data ? (
+        <LoadError onRetry={() => void projects.refetch()} detail={errorDetail(projects.error)}>
+          Your projects could not be loaded.
+        </LoadError>
+      ) : null}
 
       {session.status === 'signed-in' && !hasOrg ? (
         <EmptyState
@@ -143,6 +147,7 @@ export function ProjectList() {
         onOpenChange={open => (open ? null : setArchiving(null))}
         title={`Archive ${archiving?.name ?? ''}?`}
         confirmLabel="Archive project"
+        pendingLabel="Archiving…"
         destructive={false}
         pending={archive.isPending}
         onConfirm={() => {
@@ -154,7 +159,7 @@ export function ProjectList() {
                 toast.success(`${p.name} archived.`);
                 setArchiving(null);
               },
-              onError: e => toastError(e),
+              onError: e => toastError(`Could not archive ${archiving.name}`, e),
             },
           );
         }}

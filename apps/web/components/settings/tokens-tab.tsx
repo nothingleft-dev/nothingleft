@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CreatedPersonalAccessToken, PatScope, PersonalAccessToken } from '@nothingleft/types';
+import {
+  CreatePersonalAccessTokenSchema,
+  type CreatedPersonalAccessToken,
+  type PatScope,
+  type PersonalAccessToken,
+} from '@nothingleft/types';
+import { LoadError, errorDetail } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
@@ -26,6 +32,8 @@ import { CopyButton } from '@components/copy-button';
 import { useNeedsVerification, VerifyEmailNotice } from '@components/settings/verify-email-notice';
 import { useCreateToken, useRevokeToken, useTokens } from '@hooks/use-tokens';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 function projectReach(keys: readonly string[] | null): string {
   if (keys === null) return 'all projects';
@@ -47,8 +55,19 @@ export function TokensTab() {
       {unverified ? <VerifyEmailNotice title="Verify your email address before creating an access token." /> : null}
       {created ? <NewTokenNotice token={created} onDismiss={() => setCreated(null)} /> : null}
 
-      {tokens.isPending ? <RowsSkeleton rows={2} /> : null}
-      {tokens.isError ? <FormAlert title="Your tokens could not be loaded." /> : null}
+      {tokens.isPending ? (
+        <RowsSkeleton
+          rows={2}
+          columns={['icon', 'lines', 'button']}
+          bordered={false}
+          rowClassName="h-auto min-h-row py-2"
+        />
+      ) : null}
+      {tokens.isError && !tokens.data ? (
+        <LoadError onRetry={() => void tokens.refetch()} detail={errorDetail(tokens.error)}>
+          Your tokens could not be loaded.
+        </LoadError>
+      ) : null}
       {tokens.isSuccess && tokens.data.length === 0 ? (
         <EmptyState title="No access tokens yet." description="Create one to connect an MCP client or a script." />
       ) : null}
@@ -122,10 +141,12 @@ function CreateTokenDialog({
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<PatScope[]>(['issues:read']);
   const create = useCreateToken();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name']);
+  const local = useFieldProblems(CreatePersonalAccessTokenSchema, { name: 'Name' });
 
   const reset = () => {
     setName('');
+    local.clear('name');
     setScopes(['issues:read']);
     create.reset();
   };
@@ -157,6 +178,7 @@ function CreateTokenDialog({
           className="flex flex-col gap-4"
           onSubmit={event => {
             event.preventDefault();
+            if (!local.check({ name, scopes })) return;
             create.mutate(
               { name, scopes },
               {
@@ -173,8 +195,11 @@ function CreateTokenDialog({
             label="Name"
             placeholder="MCP client on my laptop"
             value={name}
-            error={error.fields['name']}
-            onChange={e => setName(e.target.value)}
+            error={local.problems['name'] ?? error.fields['name']}
+            onChange={e => {
+              setName(e.target.value);
+              local.clear('name');
+            }}
           />
           <ScopeChecklist value={scopes} onChange={setScopes} />
         </form>
@@ -183,9 +208,15 @@ function CreateTokenDialog({
           <Button variant="ghost" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button type="submit" form="create-token" disabled={scopes.length === 0 || create.isPending}>
-            {create.isPending ? 'Creating…' : 'Create token'}
-          </Button>
+          <PendingButton
+            type="submit"
+            form="create-token"
+            disabled={scopes.length === 0}
+            pending={create.isPending}
+            pendingLabel="Creating…"
+          >
+            Create token
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

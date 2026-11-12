@@ -19,6 +19,7 @@ import { isApiError } from '@lib/api/errors';
 import { formatDate } from '@lib/datetime';
 import { formatCount } from '@lib/numbers';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 export interface ConnectTarget {
   provider: GitProviderInfo;
@@ -225,13 +226,18 @@ function ConnectForm({
           Cancel
         </Button>
         {token.trim() && !checked ? (
-          <Button type="submit" disabled={pending}>
-            {check.isPending ? 'Checking…' : 'Check'}
-          </Button>
+          <PendingButton type="submit" disabled={pending} pending={check.isPending} pendingLabel="Checking…">
+            Check
+          </PendingButton>
         ) : (
-          <Button type="submit" disabled={pending || !canSave}>
-            {create.isPending ? 'Connecting…' : 'Connect'}
-          </Button>
+          <PendingButton
+            type="submit"
+            disabled={pending || !canSave}
+            pending={create.isPending}
+            pendingLabel="Connecting…"
+          >
+            Connect
+          </PendingButton>
         )}
       </SheetFooter>
     </form>

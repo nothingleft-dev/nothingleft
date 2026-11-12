@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Kbd } from '@components/kbd';
 import { IssueKey } from '@components/issue-key';
 import { Segmented } from '@components/segmented';
@@ -29,6 +29,7 @@ import { useSchemaValuesMany } from '@hooks/use-project-schema';
 import { useShortcut } from '@hooks/use-shortcut';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
 
 interface BulkBarProps {
   selected: readonly IssueListItem[];
@@ -72,15 +73,15 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
           const failed = results.filter(r => r.result === 'failed');
           const updated = results.filter(r => r.result === 'updated').length;
           if (failed.length === 0) {
-            toast.success(`${summary} on ${updated} ${updated === 1 ? 'issue' : 'issues'}.`);
+            toast.success(`${summary} on ${plural(updated, 'issue')}.`);
             onClear();
             return;
           }
-          toast.error(`${summary} on ${updated}; ${failed.length} ${failed.length === 1 ? 'was' : 'were'} refused.`);
+          toast.error(`${summary} on ${updated}; ${plural(failed.length, 'was', 'were')} refused.`);
           setFailures(failed);
           onKeepFailed(failed.map(f => f.key));
         },
-        onError: error => toastError(error),
+        onError: error => toastError('Could not change the selected issues', error),
       },
     );
   };
@@ -178,9 +179,7 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
       <Dialog open={failures !== null} onOpenChange={open => (open ? null : setFailures(null))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {failures?.length} {failures?.length === 1 ? 'issue was' : 'issues were'} not changed
-            </DialogTitle>
+            <DialogTitle>{plural(failures?.length ?? 0, 'issue was', 'issues were')} not changed</DialogTitle>
             <DialogDescription>
               The others were updated. Each refusal is the same answer a single edit would have given; the refused
               issues stay selected.
@@ -284,7 +283,7 @@ function AssignPicker({
         <span>
           {mode === 'replace' && draft.length === 0
             ? 'Everyone will be unassigned'
-            : `${draft.length} ${draft.length === 1 ? 'person' : 'people'}`}
+            : `${plural(draft.length, 'person', 'people')}`}
         </span>
         <Button size="xs" onClick={onApply} disabled={mode !== 'replace' && draft.length === 0}>
           Apply

@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { EmptyState } from '@components/empty-state';
-import { RowsSkeleton } from '@components/skeletons';
+import { PERSON_ROW, RowsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { FormAlert } from '@components/auth/form-alert';
 import { RemoveMemberDialog } from '@components/organization/remove-member-dialog';
@@ -24,6 +25,7 @@ import { useMembers, useUpdateMember } from '@hooks/use-members';
 import { useDebounced } from '@hooks/use-debounced';
 import { cn } from '@lib/utils';
 import { ORG_ROLE_LABELS, orgRoleLabel } from '@lib/roles';
+import { plural } from '@lib/numbers';
 
 export function MembersTab({ organization, isAdmin }: { organization: Organization; isAdmin: boolean }) {
   const [search, setSearch] = useState('');
@@ -32,7 +34,7 @@ export function MembersTab({ organization, isAdmin }: { organization: Organizati
   const [removing, setRemoving] = useState<Member | null>(null);
 
   const update = useUpdateMember(organization.slug);
-  const error = useApiError(update.error);
+  const error = useApiError(update.error, []);
 
   const rows = members.data ?? [];
 
@@ -51,15 +53,15 @@ export function MembersTab({ organization, isAdmin }: { organization: Organizati
             className="h-control w-full rounded-md border bg-surface pl-8 pr-3 text-sm text-text placeholder:text-text-muted hover:border-border-strong focus:border-border-strong"
           />
         </div>
-        <span className="text-xs text-text-muted">
-          {organization.seats.used} {organization.seats.used === 1 ? 'member' : 'members'}
-        </span>
+        <span className="text-xs text-text-muted">{plural(organization.seats.used, 'member')}</span>
       </div>
 
       {members.isPending ? (
-        <RowsSkeleton rows={6} />
-      ) : members.isError && rows.length === 0 ? (
-        <FormAlert title="The members could not be loaded." />
+        <RowsSkeleton rows={6} columns={PERSON_ROW} />
+      ) : members.isError && !members.data ? (
+        <LoadError onRetry={() => void members.refetch()} detail={errorDetail(members.error)}>
+          The members could not be loaded.
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState
           title={q ? `Nobody matches “${q}”.` : 'No members yet.'}

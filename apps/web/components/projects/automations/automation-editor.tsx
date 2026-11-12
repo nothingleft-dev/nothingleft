@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   STATUS_CATEGORIES,
@@ -15,8 +15,9 @@ import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { Switch } from '@components/ui/switch';
-import { Command, CommandGroup, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandGroup, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@components/ui/sheet';
 import { FormAlert } from '@components/auth/form-alert';
 import { Segmented } from '@components/segmented';
@@ -26,6 +27,7 @@ import { useSchemaValues } from '@hooks/use-project-schema';
 import { isApiError } from '@lib/api/errors';
 import { CATEGORY_LABEL } from '@lib/git/words';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 export type EditorTarget = { rule: Automation } | { trigger: AutomationTrigger | null };
 
@@ -249,9 +251,9 @@ function EditorForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending || !trigger || !status}>
-          {pending ? 'Saving…' : rule ? 'Save changes' : 'Create automation'}
-        </Button>
+        <PendingButton type="submit" disabled={!trigger || !status} pending={pending} pendingLabel="Saving…">
+          {rule ? 'Save changes' : 'Create automation'}
+        </PendingButton>
       </SheetFooter>
     </form>
   );
@@ -300,14 +302,15 @@ function TriggerPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-72 p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
             {groups.map(group => (
               <CommandGroup key={group.heading} heading={group.heading}>
                 {group.triggers.map(t => {
                   const off = t.group === 'git' && !gitEnabled;
                   return (
-                    <CommandItem
+                    <PickerItem
+                      checked={t.key === value}
                       key={t.key}
                       value={t.key}
                       disabled={off}
@@ -318,14 +321,13 @@ function TriggerPicker({
                     >
                       <span className="min-w-0 flex-1 truncate">{t.label}</span>
                       {off ? <span className="text-2xs text-text-muted">link a repository first</span> : null}
-                      <Check className={cn('size-icon-sm', t.key === value ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   );
                 })}
               </CommandGroup>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

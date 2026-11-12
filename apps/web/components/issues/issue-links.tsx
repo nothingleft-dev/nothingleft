@@ -5,9 +5,10 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { ListTree, Plus, Star, X } from 'lucide-react';
 import type { IssueLinkGroup, IssueRef } from '@nothingleft/types';
+import { Tabs } from '@components/tabs';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { IssueKey } from '@components/issue-key';
 import { linkLabel } from '@components/issues/add-links-dialog';
 import { StatusPill } from '@components/issues/status-pill';
@@ -15,6 +16,7 @@ import { TypeBadge } from '@components/issues/value-marks';
 import { useIssueLinks, useRemoveIssueLink, useStarLinkedIssue } from '@hooks/use-issue-links';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { TextButton } from '@components/text-button';
 
 interface IssueLinksProps {
   issueKey: string;
@@ -33,35 +35,24 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
 
   return (
     <section className="mt-8" aria-label="Links">
-      <div className="flex min-h-control flex-wrap items-center gap-x-3 gap-y-1 border-b">
-        <h2 className="text-sm font-semibold">Links</h2>
-        {groups.length > 0 ? (
-          <div role="tablist" aria-label="Link types" className="flex flex-wrap gap-1">
-            {groups.map(g => (
-              <button
-                key={g.link}
-                type="button"
-                role="tab"
-                aria-selected={g.link === active?.link}
-                onClick={() => setChosen(g.link)}
-                className={cn(
-                  'inline-flex h-control-sm items-center gap-1.5 rounded-sm px-2 text-xs text-text-secondary hover:bg-hover hover:text-text',
-                  g.link === active?.link && 'bg-active text-text',
-                )}
-              >
-                {linkLabel(g.link)}
-                <span className="tabular text-text-muted">{g.count}</span>
-              </button>
-            ))}
-          </div>
+      <div className="flex h-control items-center gap-3 border-b">
+        <h2 className="flex-none text-sm font-semibold">Links</h2>
+        {groups.length > 0 && active ? (
+          <Tabs
+            size="section"
+            ariaLabel="Link types"
+            value={active.link}
+            onChange={setChosen}
+            options={groups.map(g => ({ value: g.link, label: linkLabel(g.link), count: g.count }))}
+          />
         ) : null}
         {canEdit ? (
-          <span className="ml-auto flex gap-1">
+          <span className="ml-auto flex flex-none gap-1">
             <Button variant="ghost" size="xs" onClick={onCreateSubtask} className="text-text-secondary">
-              <ListTree /> Create subtask
+              <ListTree /> <span className="max-sm:sr-only">Create subtask</span>
             </Button>
             <Button variant="ghost" size="xs" onClick={onAddLinks} className="text-text-secondary">
-              <Plus /> Add links
+              <Plus /> <span className="max-sm:sr-only">Add links</span>
             </Button>
           </span>
         ) : null}
@@ -75,11 +66,8 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
         <LinkRows issueKey={issueKey} group={active} canEdit={canEdit} />
       ) : (
         <p className="py-3 text-xs text-text-secondary">
-          No linked issues.{' '}
-          <button type="button" onClick={onAddLinks} className="text-text underline underline-offset-2">
-            Add links
-          </button>{' '}
-          to show what this depends on, duplicates or relates to.
+          No linked issues. <TextButton onClick={onAddLinks}>Add links</TextButton> to show what this depends on,
+          duplicates or relates to.
         </p>
       )}
     </section>
@@ -96,10 +84,22 @@ function LinkRows({ issueKey, group, canEdit }: { issueKey: string; group: Issue
         <LinkRow
           key={issue.key}
           issue={issue}
-          onStar={() => star.mutate({ target: issue.key, on: !issue.starred }, { onError: error => toastError(error) })}
+          onStar={() =>
+            star.mutate(
+              { target: issue.key, on: !issue.starred },
+              {
+                onError: error =>
+                  toastError(issue.starred ? `Could not unstar ${issue.key}` : `Could not star ${issue.key}`, error),
+              },
+            )
+          }
           onRemove={
             canEdit
-              ? () => remove.mutate({ link: group.link, target: issue.key }, { onError: error => toastError(error) })
+              ? () =>
+                  remove.mutate(
+                    { link: group.link, target: issue.key },
+                    { onError: error => toastError(`Could not remove the link to ${issue.key}`, error) },
+                  )
               : undefined
           }
           removeLabel={`Remove “${group.link} ${issue.key}”`}
@@ -141,7 +141,7 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
         href={`/issue/${issue.key}` as Route}
         className="flex min-w-0 flex-1 items-center gap-2 self-stretch hover:underline"
       >
-        <IssueKey issueKey={issue.key} resolved={issue.resolved} className="flex-none" />
+        <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
         <span className={cn('truncate text-sm', issue.resolved && 'text-text-muted')}>{issue.title}</span>
       </Link>
       <StatusPill status={issue.status} className="flex-none max-sm:hidden" />
@@ -153,7 +153,7 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
               size="icon-xs"
               aria-label={removeLabel}
               onClick={onRemove}
-              className="flex-none text-text-muted opacity-0 group-hover/link:opacity-100 focus-visible:opacity-100"
+              className="flex-none text-text-muted reveal group-hover/link:opacity-100"
             >
               <X />
             </Button>

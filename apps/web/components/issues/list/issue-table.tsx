@@ -12,7 +12,7 @@ import {
 } from '@nothingleft/types';
 import { Checkbox } from '@components/ui/checkbox';
 import { Skeleton } from '@components/ui/skeleton';
-import { Button } from '@components/ui/button';
+import { LoadMore } from '@components/text-button';
 import { GROUP_GAP, GROUP_HEIGHT, GroupHeader } from '@components/issues/list/group-header';
 import { IssueRow, ROW_HEIGHT, type RowUpdate } from '@components/issues/list/issue-row';
 import { usePhone } from '@hooks/use-media-query';
@@ -203,7 +203,7 @@ export function IssueTable({
       ref={outerRef}
       role="grid"
       aria-rowcount={total}
-      className={cn('relative', wide && !phone && 'overflow-x-auto', stale && 'opacity-60 transition-opacity')}
+      className={cn('relative', wide && !phone && 'overflow-x-auto', stale && 'is-stale')}
     >
       <div style={wide && !phone ? { minWidth } : undefined}>
         {phone ? null : (
@@ -225,8 +225,7 @@ export function IssueTable({
                 }}
                 className={cn(
                   'bg-surface',
-                  !someSelected &&
-                    'opacity-0 hover:opacity-100 focus-visible:opacity-100 [[role=grid]:hover_&]:opacity-100',
+                  !someSelected && 'reveal hover:opacity-100 [[role=grid]:hover_&]:opacity-100',
                 )}
               />
             </span>
@@ -337,23 +336,18 @@ export function IssueTable({
         </div>
       </div>
 
-      <p className="flex items-center justify-center gap-2 py-5 text-center text-xs text-text-muted">
-        Showing {rows.length} of {total}
-        {hasMore ? (
-          <>
-            <span>·</span>
-            <Button
-              variant="link"
-              size="xs"
-              className="h-auto p-0 text-xs text-text-secondary"
-              onClick={onLoadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </Button>
-          </>
-        ) : null}
-      </p>
+      {hasMore ? (
+        <LoadMore
+          className="justify-center py-4"
+          pending={loadingMore}
+          onClick={onLoadMore}
+          progress={`Showing ${rows.length} of ${total}`}
+        />
+      ) : (
+        <p className="py-5 text-center text-xs text-text-secondary">
+          Showing {rows.length} of {total}
+        </p>
+      )}
     </div>
   );
 }

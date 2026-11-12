@@ -1,12 +1,13 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { Check, ChevronsUpDown, Timer } from 'lucide-react';
+import { ChevronsUpDown, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CustomField, Project, UpdateProject } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandGroup, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandGroup, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';
 import { useCustomFields } from '@hooks/use-custom-fields';
 import { useUpdateProject } from '@hooks/use-projects';
@@ -120,27 +121,30 @@ function RolePicker({ role, project, durations, loading, canEdit }: RolePickerPr
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-[280px] p-0">
-          <Command>
+          <PickerCommand>
             <CommandList>
-              <CommandItem value={`\u0000${copy.builtin}`} onSelect={() => choose(null)}>
+              <PickerItem checked={current === null} value={`\u0000${copy.builtin}`} onSelect={() => choose(null)}>
                 <span className="min-w-0 flex-1 truncate">{copy.builtin}</span>
                 <span className="text-xs text-text-muted">built in</span>
-                <Check className={cn('size-icon-sm', current === null ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
               {choices.length > 0 ? (
                 <CommandGroup heading="Duration fields">
                   {choices.map(f => (
-                    <CommandItem key={f.slug} value={f.name} onSelect={() => choose(f.slug)}>
+                    <PickerItem
+                      checked={current === f.slug}
+                      key={f.slug}
+                      value={f.name}
+                      onSelect={() => choose(f.slug)}
+                    >
                       <Timer className="text-text-secondary" />
                       <span className="min-w-0 flex-1 truncate">{f.name}</span>
                       <span className="font-mono text-2xs text-text-muted">{f.slug}</span>
-                      <Check className={cn('size-icon-sm', current === f.slug ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   ))}
                 </CommandGroup>
               ) : null}
             </CommandList>
-          </Command>
+          </PickerCommand>
         </PopoverContent>
       </Popover>
       {error ? (

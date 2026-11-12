@@ -294,14 +294,14 @@ describe('issues per field', () => {
     const data = await report(w.admin, 'issues-per-field', { field: 'custom:severity' });
     expect(countOf(data.groups, 'High')).toBe(1);
     expect(countOf(data.groups, 'Low')).toBe(1);
-    expect(countOf(data.groups, 'No Severity')).toBe(3);
+    expect(countOf(data.groups, 'No severity')).toBe(3);
     const high = data.groups.find((g: { label: string }) => g.label === 'High');
     expect(high.query).toContain('severity: High');
     expect(await issueCount(w.admin, high.query)).toBe(1);
 
     const area = await report(w.admin, 'issues-per-field', { field: 'custom:area', projects: KEY });
     expect(countOf(area.groups, 'Web')).toBe(0);
-    expect(countOf(area.groups, 'No Area')).toBe(4);
+    expect(countOf(area.groups, 'No area')).toBe(4);
   });
 
   test('status by category merges renamed statuses and links each category to its statuses', async () => {
@@ -345,20 +345,22 @@ describe('scope', () => {
     const data = await report(w.admin, 'issues-per-assignee', { q: 'priority: Critical', projects: KEY });
     expect(data.total_issues).toBe(0);
     expect(data.empty.reason).toBe('no_issues');
-    expect(data.empty.message).toBe('No issues match priority: Critical, in RP.');
+    expect(data.empty.message).toBe('No issues match priority: Critical, in Acme Web.');
     expect(data.empty.filters[0]).toEqual({ kind: 'clause', label: 'priority: Critical', widen_query: '' });
     expect(data.empty.filters[1].kind).toBe('projects');
 
     const onlyProjects = await report(w.admin, 'time', { period: '2026-01', projects: KEY });
-    expect(onlyProjects.empty.message).toBe('No time was logged between 1 Jan 2026 and 31 Jan 2026 on issues in RP.');
+    expect(onlyProjects.empty.message).toBe(
+      'No time was logged between 1 Jan 2026 and 31 Jan 2026 on issues in Acme Web.',
+    );
     const both = await report(w.admin, 'time', { period: '2026-01', projects: KEY, q: 'type: Bug' });
     expect(both.empty.message).toBe(
-      'No time was logged between 1 Jan 2026 and 31 Jan 2026 on issues matching type: Bug, in RP.',
+      'No time was logged between 1 Jan 2026 and 31 Jan 2026 on issues matching type: Bug, in Acme Web.',
     );
     const nobody = await report(w.admin, 'issues-per-assignee', { projects: KEY, q: 'created: 2001-01-01' });
-    expect(nobody.empty.message).toBe('No issues match created: 2001-01-01, in RP.');
+    expect(nobody.empty.message).toBe('No issues match created: 2001-01-01, in Acme Web.');
     const unresolved = await report(w.admin, 'average-age', { projects: KEY, q: '#Resolved' });
-    expect(unresolved.empty.message).toBe('No issues match #Resolved, in RP, unresolved issues only.');
+    expect(unresolved.empty.message).toBe('No issues match #Resolved, in Acme Web, unresolved issues only.');
     const time = await report(w.admin, 'time', { period: '2026-01' });
     expect(time.empty.reason).toBe('no_time');
     expect(time.empty.message).toBe('No time was logged between 1 Jan 2026 and 31 Jan 2026.');

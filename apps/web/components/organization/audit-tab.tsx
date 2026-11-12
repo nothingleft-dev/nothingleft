@@ -2,23 +2,25 @@
 
 import { useState } from 'react';
 import { Download, X } from 'lucide-react';
-import { toast } from 'sonner';
 import { ORG_ACTIVITY_KINDS, type OrgActivityKind, type Organization } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { EmptyState } from '@components/empty-state';
 import { RowsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
-import { FormAlert } from '@components/auth/form-alert';
 import { DatePicker } from '@components/date-picker';
 import { ACTIVITY_LABELS, activityDetail, activityLabel } from '@components/organization/activity-labels';
-import { FormerMemberChip, deactivatedInk } from '@components/former-member-chip';
+import { PersonName } from '@components/former-member-chip';
 import { useActivity, useActivityExport } from '@hooks/use-activity';
 import { useMembers } from '@hooks/use-members';
 import type { ActivityFilters } from '@lib/api/activity';
-import { cn } from '@lib/utils';
 import { MemberAvatar } from '@components/issues/member-avatar';
+import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { LoadMore } from '@components/text-button';
 
 export function AuditTab({ organization }: { organization: Organization }) {
   const [filters, setFilters] = useState<ActivityFilters>({});
@@ -61,26 +63,29 @@ export function AuditTab({ organization }: { organization: Organization }) {
           </Button>
         ) : null}
 
-        <Button
+        <PendingButton
           variant="outline"
           size="sm"
           className="ml-auto"
-          disabled={exportCsv.isPending}
           onClick={() =>
             exportCsv.mutate(filters, {
-              onError: e => toast.error(e instanceof Error ? e.message : 'The export failed.'),
+              onError: e => toastError('Could not download the audit log', e),
             })
           }
+          pending={exportCsv.isPending}
+          pendingLabel="Preparing…"
         >
           <Download className="size-icon-sm" />
-          {exportCsv.isPending ? 'Preparing…' : 'Download CSV'}
-        </Button>
+          Download CSV
+        </PendingButton>
       </div>
 
-      {activity.isError ? <FormAlert title="The audit log could not be loaded." /> : null}
-
       {activity.isPending ? (
-        <RowsSkeleton rows={8} />
+        <RowsSkeleton rows={8} columns={['avatar', 'lines', 'meta']} />
+      ) : !activity.data ? (
+        <LoadError onRetry={() => void activity.refetch()} detail={errorDetail(activity.error)}>
+          The audit log could not be loaded.
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState
           title={filtered ? 'Nothing matches those filters.' : 'Nothing has happened yet.'}
@@ -101,10 +106,11 @@ export function AuditTab({ organization }: { organization: Organization }) {
 
                   <div className="flex min-w-0 flex-1 flex-col leading-5">
                     <span className="truncate">
-                      <span className={cn('font-medium', deactivatedInk(row.actor))}>
-                        {row.actor?.name ?? 'Somebody no longer here'}
-                      </span>{' '}
-                      {row.actor?.former_member ? <FormerMemberChip className="mr-1 align-middle" /> : null}
+                      {row.actor ? (
+                        <PersonName person={row.actor} className="max-w-full align-bottom font-medium" />
+                      ) : (
+                        <span className="font-medium">Somebody no longer here</span>
+                      )}{' '}
                       {activityLabel(row)}
                     </span>
                     {detail ? <span className="truncate font-mono text-xs text-text-muted">{detail}</span> : null}
@@ -118,14 +124,9 @@ export function AuditTab({ organization }: { organization: Organization }) {
           </ul>
 
           {activity.hasNextPage ? (
-            <Button
-              variant="outline"
-              className="self-start"
-              disabled={activity.isFetchingNextPage}
-              onClick={() => void activity.fetchNextPage()}
-            >
-              {activity.isFetchingNextPage ? 'Loading…' : 'Show more'}
-            </Button>
+            <LoadMore pending={activity.isFetchingNextPage} onClick={() => void activity.fetchNextPage()}>
+              Show more
+            </LoadMore>
           ) : null}
         </>
       )}
@@ -154,11 +155,12 @@ function ActorFilter({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[280px] p-0" align="start">
-        <Command shouldFilter={false}>
+        <PickerCommand shouldFilter={false}>
           <CommandInput placeholder="Search members…" value={q} onValueChange={setQ} />
           <CommandList>
             <CommandEmpty>Nobody matches that.</CommandEmpty>
-            <CommandItem
+            <PickerItem
+              checked={value === null}
               value="__anyone"
               onSelect={() => {
                 onChange(null);
@@ -166,10 +168,11 @@ function ActorFilter({
               }}
             >
               Anyone
-            </CommandItem>
+            </PickerItem>
             {(members.data ?? []).map(member => (
-              <CommandItem
+              <PickerItem
                 key={member.username}
+                checked={member.username === value}
                 value={member.username}
                 onSelect={() => {
                   onChange(member.username);
@@ -178,10 +181,10 @@ function ActorFilter({
               >
                 <span className="flex-1 truncate">{member.name}</span>
                 <span className="font-mono text-xs text-text-muted">@{member.username}</span>
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -218,33 +221,25 @@ function KindFilter({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Filter kinds…" />
           <CommandList>
             <CommandEmpty>No kind matches that.</CommandEmpty>
             {ORG_ACTIVITY_KINDS.map(kind => {
               const on = value.includes(kind);
               return (
-                <CommandItem
+                <PickerItem
                   key={kind}
+                  checked={on}
                   value={`${kind} ${ACTIVITY_LABELS[kind]}`}
                   onSelect={() => onChange(on ? value.filter(k => k !== kind) : [...value, kind])}
                 >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'grid size-4 flex-none place-items-center rounded-xs border text-[9px]',
-                      on && 'border-ink bg-ink text-ink-fg',
-                    )}
-                  >
-                    {on ? '✓' : ''}
-                  </span>
                   <span className="flex-1 truncate">{ACTIVITY_LABELS[kind]}</span>
-                </CommandItem>
+                </PickerItem>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

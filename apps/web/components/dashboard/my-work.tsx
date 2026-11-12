@@ -7,7 +7,8 @@ import type { DueBucket, IssueGroup, IssueListItem } from '@nothingleft/types';
 import { IssueKey } from '@components/issue-key';
 import { CompactIssueRow, CompactRowsSkeleton } from '@components/dashboard/compact-issue-row';
 import { Meter } from '@components/dashboard/meter';
-import { Section, SectionEmpty, SectionError, StaleNotice } from '@components/dashboard/section';
+import { Section, SectionEmpty } from '@components/dashboard/section';
+import { LoadError, StaleNotice } from '@components/query-state';
 import { StatRow, statRowState, type Stat } from '@components/dashboard/stat-row';
 import { ActiveSprintRow, ActiveSprintRowsSkeleton, backlogHref } from '@components/agile/active-sprint';
 import { InboxPreview } from '@components/notifications/inbox-preview';
@@ -20,6 +21,7 @@ import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { DUE_GROUP_QUERY, DUE_TODAY, MY_OPEN, OVERDUE, listHref } from '@lib/issue-list/links';
 import { todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const BY_DUE_DATE = 'sort by: {due date} asc';
 const ASSIGNED_QUERY = `${MY_OPEN} ${BY_DUE_DATE}`;
@@ -59,7 +61,7 @@ export function MyWork() {
     {
       label: 'Open, assigned to me',
       value: sum(f => f.open),
-      unit: withOpen > 0 ? `across ${withOpen} ${withOpen === 1 ? 'project' : 'projects'}` : undefined,
+      unit: withOpen > 0 ? `across ${plural(withOpen, 'project')}` : undefined,
       href: listHref(MY_OPEN),
     },
     {
@@ -107,7 +109,7 @@ export function MyWork() {
             {assigned.isPending ? (
               <CompactRowsSkeleton rows={6} />
             ) : assigned.isError && !assigned.data ? (
-              <SectionError onRetry={() => void assigned.refetch()}>Your assignments could not be loaded.</SectionError>
+              <LoadError onRetry={() => void assigned.refetch()}>Your assignments could not be loaded.</LoadError>
             ) : assignedTotal === 0 ? (
               <SectionEmpty>
                 Nothing is assigned to you. <Link href={'/issues' as Route}>Browse the issue list</Link>
@@ -123,7 +125,7 @@ export function MyWork() {
             ) : (
               <>
                 {assigned.isError ? (
-                  <StaleNotice onRetry={() => void assigned.refetch()}>
+                  <StaleNotice className="px-2" onRetry={() => void assigned.refetch()}>
                     Your assignments could not be refreshed and may be out of date.
                   </StaleNotice>
                 ) : null}
@@ -140,15 +142,13 @@ export function MyWork() {
             {starred.isPending ? (
               <CompactRowsSkeleton rows={3} />
             ) : starred.isError && !starred.data ? (
-              <SectionError onRetry={() => void starred.refetch()}>
-                Your starred issues could not be loaded.
-              </SectionError>
+              <LoadError onRetry={() => void starred.refetch()}>Your starred issues could not be loaded.</LoadError>
             ) : (starred.data?.data.length ?? 0) === 0 ? (
               <SectionEmpty>Star an issue from its page and it stays within reach here.</SectionEmpty>
             ) : (
               <div className="flex flex-col">
                 {starred.isError ? (
-                  <StaleNotice onRetry={() => void starred.refetch()}>
+                  <StaleNotice className="px-2" onRetry={() => void starred.refetch()}>
                     Your starred issues could not be refreshed and may be out of date.
                   </StaleNotice>
                 ) : null}
@@ -166,7 +166,7 @@ export function MyWork() {
             {sprints.isPending ? (
               <ActiveSprintRowsSkeleton />
             ) : sprints.isError && !sprints.data ? (
-              <SectionError onRetry={() => void sprints.refetch()}>Sprints could not be loaded.</SectionError>
+              <LoadError onRetry={() => void sprints.refetch()}>Sprints could not be loaded.</LoadError>
             ) : mySprints.length === 0 ? (
               <SectionEmpty>
                 None of your issues is in an active sprint.{' '}
@@ -180,7 +180,7 @@ export function MyWork() {
               <ul className="flex flex-col">
                 {sprints.isError ? (
                   <li>
-                    <StaleNotice onRetry={() => void sprints.refetch()}>
+                    <StaleNotice className="px-2" onRetry={() => void sprints.refetch()}>
                       Sprints could not be refreshed and may be out of date.
                     </StaleNotice>
                   </li>

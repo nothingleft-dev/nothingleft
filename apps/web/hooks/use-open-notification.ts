@@ -3,10 +3,9 @@
 import type { MouseEvent } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { toastError } from '@components/toast-error';
 import { useSwitchOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
-import { isApiError } from '@lib/api/errors';
 
 /**
  * A click on a notification's link. Inside the current organisation the link navigates as
@@ -24,7 +23,7 @@ export function useOpenNotification() {
     event.preventDefault();
     switchTo.mutate(org, {
       onSuccess: () => router.push(path as Route),
-      onError: error => toast.error(isApiError(error) ? error.message : 'That organisation could not be opened.'),
+      onError: error => toastError('Could not open the organisation', error),
     });
   };
 }

@@ -24,6 +24,7 @@ import {
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { PersonName } from '@components/former-member-chip';
 import { MemberAvatar } from '@components/issues/member-avatar';
@@ -48,6 +49,7 @@ import { CONNECTION_REASON, HEALTH, count, providerLabel } from '@lib/git/words'
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const AUTH_KIND = { app_installation: 'App installation', token: 'Access token', manual: 'Webhook by hand' } as const;
 
@@ -145,11 +147,9 @@ export function IntegrationsTab({ organization }: { organization: Organization }
         {connections.isPending ? (
           <ConnectionsSkeleton />
         ) : connections.isError && !connections.data ? (
-          <FormAlert title="The connections could not be loaded.">
-            <button type="button" onClick={() => void connections.refetch()}>
-              Try again
-            </button>
-          </FormAlert>
+          <LoadError onRetry={() => void connections.refetch()} detail={errorDetail(connections.error)}>
+            The connections could not be loaded.
+          </LoadError>
         ) : live.length === 0 ? (
           <EmptyState
             title="No account is connected yet."
@@ -181,11 +181,9 @@ export function IntegrationsTab({ organization }: { organization: Organization }
             <Skeleton className="h-28" />
           </div>
         ) : providers.isError ? (
-          <FormAlert title="The providers could not be loaded.">
-            <button type="button" onClick={() => void providers.refetch()}>
-              Try again
-            </button>
-          </FormAlert>
+          <LoadError onRetry={() => void providers.refetch()} detail={errorDetail(providers.error)}>
+            The providers could not be loaded.
+          </LoadError>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {providers.data.map(provider => (
@@ -346,7 +344,7 @@ function ConnectionMenu({
             onSelect={() =>
               refresh.mutate(connection.name, {
                 onSuccess: () => toast.success(`${connection.account.login} was checked again with ${provider}.`),
-                onError: error => toastError(error),
+                onError: error => toastError(`Could not check ${connection.account.login} again`, error),
               })
             }
           >
@@ -372,13 +370,14 @@ function ConnectionMenu({
         onOpenChange={value => setConfirm(value ? 'remove' : null)}
         title={`Disconnect ${connection.account.login} on ${provider}?`}
         confirmLabel="Disconnect"
+        pendingLabel="Disconnecting…"
         pending={remove.isPending}
         onConfirm={() =>
           remove
             .mutateAsync(connection.name)
             .then(
               () => toast.success(`${connection.account.login} on ${provider} is disconnected.`),
-              (error: Error) => toastError(error),
+              (error: Error) => toastError(`Could not disconnect ${connection.account.login}`, error),
             )
             .finally(() => setConfirm(null))
         }
@@ -400,6 +399,7 @@ function ConnectionMenu({
         onOpenChange={value => setConfirm(value ? 'rotate' : null)}
         title={connection.auth_kind === 'manual' ? 'Rotate the webhook secret?' : 'Replace the hook tokens?'}
         confirmLabel={connection.auth_kind === 'manual' ? 'Rotate secret' : 'Replace tokens'}
+        pendingLabel={connection.auth_kind === 'manual' ? 'Rotating…' : 'Replacing…'}
         destructive={false}
         pending={rotate.isPending}
         onConfirm={() =>
@@ -414,7 +414,7 @@ function ConnectionMenu({
             },
             onError: error => {
               setConfirm(null);
-              toastError(error);
+              toastError('Could not replace the hook tokens', error);
             },
           })
         }
@@ -468,15 +468,16 @@ function ProviderCard({
       {start.isError ? <p className="text-xs text-danger-fg">{start.error.message}</p> : null}
       <div className="mt-auto flex flex-wrap items-center gap-2">
         {app ? (
-          <Button
+          <PendingButton
             size="sm"
-            disabled={start.isPending}
             onClick={() =>
               start.mutate(undefined, { onSuccess: ({ install_url }) => window.location.assign(install_url) })
             }
+            pending={start.isPending}
+            pendingLabel="Opening GitHub…"
           >
-            {start.isPending ? 'Opening GitHub…' : 'Connect GitHub'}
-          </Button>
+            Connect GitHub
+          </PendingButton>
         ) : (
           <Button
             size="sm"
@@ -565,7 +566,8 @@ function ConnectionDetail({
         ) : null}
         {connection.webhook_url ? (
           <p className="text-xs text-text-secondary">
-            Payload URL <code className="rounded-xs bg-inset px-1 font-mono text-text">{connection.webhook_url}</code>
+            Payload URL{' '}
+            <code className="rounded-xs bg-inset px-1 font-mono break-all text-text">{connection.webhook_url}</code>
           </p>
         ) : null}
       </div>
@@ -593,11 +595,9 @@ function MemberIdentities({ slug }: { slug: string }) {
       {identities.isPending ? (
         <ConnectionsSkeleton rows={2} />
       ) : identities.isError && !identities.data ? (
-        <FormAlert title="The identities could not be loaded.">
-          <button type="button" onClick={() => void identities.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void identities.refetch()} detail={errorDetail(identities.error)}>
+          The identities could not be loaded.
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState
           title="No member has added a git identity yet."
@@ -654,6 +654,7 @@ function MemberIdentities({ slug }: { slug: string }) {
         onOpenChange={open => (open ? null : setRemoving(null))}
         title={removing ? `Remove @${removing.login} from ${removing.member.name}?` : ''}
         confirmLabel="Remove identity"
+        pendingLabel="Removing…"
         pending={remove.isPending}
         onConfirm={() =>
           removing &&
@@ -661,7 +662,7 @@ function MemberIdentities({ slug }: { slug: string }) {
             onSuccess: () => setRemoving(null),
             onError: error => {
               setRemoving(null);
-              toastError(error);
+              toastError('Could not remove the identity', error);
             },
           })
         }

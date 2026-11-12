@@ -1,6 +1,7 @@
 import { STATUS_CATEGORIES, type BoardValueCount, type StatusCategory } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const CATEGORY_LABEL: Record<StatusCategory, string> = {
   backlog: 'Backlog',
@@ -44,7 +45,7 @@ export function StatusStrip({ counts, legend = true, className }: StatusStripPro
               <i className={cn('block h-full bg-c-solid', CATEGORY_CLASS[category])} style={{ flex: n }} />
             </TooltipTrigger>
             <TooltipContent>
-              {n} {n === 1 ? 'issue' : 'issues'} {CATEGORY_LABEL[category].toLowerCase()}
+              {plural(n, 'issue')} {CATEGORY_LABEL[category].toLowerCase()}
             </TooltipContent>
           </Tooltip>
         ))}

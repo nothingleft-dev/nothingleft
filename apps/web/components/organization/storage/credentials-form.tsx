@@ -1,11 +1,12 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { BucketNameSchema, ConnectStorageSchema, type R2Jurisdiction } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { Field } from '@components/auth/field';
 import { PROVIDER_NAMES } from '@components/organization/storage/byo-steps';
@@ -208,12 +209,13 @@ function RegionPicker({ value, onChange, error }: { value: string; onChange: (v:
           align="start"
           className="w-(--radix-popover-trigger-width) min-w-72 max-w-[calc(100vw-32px)] p-0"
         >
-          <Command>
+          <PickerCommand>
             <CommandInput placeholder="Search regions…" />
             <CommandList className="max-h-[min(50vh,320px)]">
               <CommandEmpty>No region matches.</CommandEmpty>
               {AWS_REGIONS.map(r => (
-                <CommandItem
+                <PickerItem
+                  checked={r.code === value}
                   key={r.code}
                   value={`${r.name} ${r.code}`}
                   onSelect={() => {
@@ -221,13 +223,12 @@ function RegionPicker({ value, onChange, error }: { value: string; onChange: (v:
                     setOpen(false);
                   }}
                 >
-                  <Check className={cn('size-icon-sm', r.code === value ? 'opacity-100' : 'opacity-0')} />
                   <span className="min-w-0 flex-1 truncate">{r.name}</span>
                   <span className="font-mono text-2xs text-text-muted">{r.code}</span>
-                </CommandItem>
+                </PickerItem>
               ))}
             </CommandList>
-          </Command>
+          </PickerCommand>
         </PopoverContent>
       </Popover>
       {error ? (

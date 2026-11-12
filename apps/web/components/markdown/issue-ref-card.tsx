@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import type { IssueRef } from '@nothingleft/types';
-import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { IssueKey } from '@components/issue-key';
 import { StatusDot, TypeBadge } from '@components/issues/value-marks';
 

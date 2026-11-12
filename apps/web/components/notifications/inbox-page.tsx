@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import type { NotificationFacets } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { PageHeader } from '@components/page-header';
 import { ReportMultiPicker, ReportPicker, type ReportOption } from '@components/reports/report-picker';
 import { InboxEntry, InboxEntrySkeletons } from '@components/notifications/inbox-entry';
@@ -15,8 +15,10 @@ import { entryId, useInbox, useMarkRead, useNotificationFacets, useUnreadCount }
 import type { InboxFilter } from '@lib/api/notifications';
 import { ProjectMark } from '@components/projects/project-mark';
 import { useOrganizations } from '@hooks/use-organizations';
-import { isApiError } from '@lib/api/errors';
 import { AREA_LABELS, KIND_FILTERS, kindsOf, parseKindFilters } from '@lib/notifications/kinds';
+import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
+import { LoadMore } from '@components/text-button';
 
 interface InboxState {
   kinds: string[];
@@ -77,7 +79,7 @@ export function InboxPage() {
 
   const onMark = (target: Parameters<typeof mark.mutate>[0]) =>
     mark.mutate(target, {
-      onError: error => toast.error(isApiError(error) ? error.message : 'That could not be marked read. Try again.'),
+      onError: error => toastError('Could not mark it read', error),
     });
 
   const markAll = () =>
@@ -86,11 +88,9 @@ export function InboxPage() {
       {
         onSuccess: result =>
           toast.success(
-            result.marked === 0
-              ? 'Nothing was unread.'
-              : `Marked ${result.marked} ${result.marked === 1 ? 'notification' : 'notifications'} read.`,
+            result.marked === 0 ? 'Nothing was unread.' : `Marked ${plural(result.marked, 'notification')} read.`,
           ),
-        onError: error => toast.error(isApiError(error) ? error.message : 'Nothing was marked read. Try again.'),
+        onError: error => toastError('Could not mark everything read', error),
       },
     );
 
@@ -117,13 +117,9 @@ export function InboxPage() {
       {inbox.isPending ? (
         <InboxEntrySkeletons />
       ) : inbox.isError ? (
-        <FormAlert title="Your inbox could not be loaded.">
-          {isApiError(inbox.error) ? `${inbox.error.message} ` : 'The server did not answer. '}
-          Nothing was marked read.{' '}
-          <button type="button" className="font-medium underline" onClick={() => void inbox.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void inbox.refetch()} detail={errorDetail(inbox.error)}>
+          Your inbox could not be loaded.
+        </LoadError>
       ) : entries.length === 0 ? (
         filtered ? (
           <FilteredEmpty state={state} set={set} facets={facets.data} severalOrgs={severalOrgs} />
@@ -149,15 +145,7 @@ export function InboxPage() {
             ))}
           </ul>
           {inbox.hasNextPage ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              disabled={inbox.isFetchingNextPage}
-              onClick={() => void inbox.fetchNextPage()}
-            >
-              {inbox.isFetchingNextPage ? 'Loading…' : 'Load more'}
-            </Button>
+            <LoadMore pending={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} />
           ) : null}
         </>
       )}

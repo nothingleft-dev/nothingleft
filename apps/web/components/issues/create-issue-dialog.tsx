@@ -7,7 +7,8 @@ import { Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { DialogBody } from '@components/dialog-body';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Kbd } from '@components/kbd';
 import {
   DraftChips,
@@ -19,6 +20,7 @@ import {
 import { parkDraft, useIssueDraft } from '@components/issues/use-issue-draft';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 interface CreateIssueDialogProps {
   open: boolean;
@@ -95,21 +97,29 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
               }
             }}
           >
-            <div className="px-4 pt-3">
-              <DraftText draft={draft} />
-            </div>
-            {draft.project ? (
-              <div className="px-4 pt-2 pb-4">
-                <DraftChips draft={draft} project={draft.project} />
+            <DialogBody className="m-0 p-0">
+              <div className="px-4 pt-3">
+                <DraftText draft={draft} />
               </div>
-            ) : null}
+              {draft.project ? (
+                <div className="px-4 pt-2 pb-4">
+                  <DraftChips draft={draft} project={draft.project} />
+                </div>
+              ) : null}
+            </DialogBody>
 
             <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3">
               <CreateMoreToggle on={createMore} onChange={setCreateMore} />
-              <Button type="submit" className="ml-auto gap-2" disabled={!draft.canSubmit}>
-                {draft.pending ? 'Creating…' : draft.uploader.busy ? 'Uploading…' : 'Create issue'}
-                <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-              </Button>
+              <PendingButton
+                type="submit"
+                className="ml-auto gap-2"
+                disabled={!draft.canSubmit}
+                pending={draft.pending || draft.uploader.busy}
+                pendingLabel={draft.pending ? 'Creating…' : 'Uploading…'}
+                after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+              >
+                Create issue
+              </PendingButton>
             </div>
           </form>
         )}

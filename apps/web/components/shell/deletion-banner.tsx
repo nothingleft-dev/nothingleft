@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import type { Organization } from '@nothingleft/types';
 import { useCancelDeletion } from '@hooks/use-organization-lifecycle';
 import { formatDate } from '@lib/datetime';
-import { isApiError } from '@lib/api/errors';
+import { toastError } from '@components/toast-error';
 
 /** Every member sees it on every page while the grace period runs; only the Owner can cancel. */
 export function DeletionBanner({ organization }: { organization: Organization }) {
@@ -35,10 +35,10 @@ export function DeletionBanner({ organization }: { organization: Organization })
           onClick={() =>
             cancel.mutate(undefined, {
               onSuccess: () => toast.success(`${organization.name} will not be deleted.`),
-              onError: error => toast.error(isApiError(error) ? error.message : 'The deletion could not be cancelled.'),
+              onError: error => toastError('Could not cancel the deletion', error),
             })
           }
-          className="flex-none text-xs leading-5 font-medium underline underline-offset-2 hover:no-underline disabled:opacity-60"
+          className="action-link flex-none text-xs leading-5 font-medium"
         >
           {cancel.isPending ? 'Cancelling…' : 'Cancel deletion'}
         </button>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import type { Issue } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { TitleInput } from '@components/title-input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { useUpdateIssue } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
 
@@ -59,24 +60,21 @@ export function IssueTitle({ issue, canEdit }: { issue: Issue; canEdit: boolean 
       <label htmlFor="issue-title" className="sr-only">
         Title
       </label>
-      <input
+      <TitleInput
         id="issue-title"
         autoFocus
         value={draft}
-        onChange={e => setDraft(e.target.value)}
+        onValueChange={setDraft}
         onBlur={commit}
+        onEnter={commit}
         onKeyDown={e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          }
           if (e.key === 'Escape') {
             setDraft(null);
             setError(null);
           }
         }}
         aria-invalid={Boolean(error)}
-        className="-mx-1 w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text"
+        className="-mx-1 block w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text [overflow-wrap:anywhere]"
       />
       {error ? <p className="mt-1 text-xs text-danger-fg">{error}</p> : null}
     </div>

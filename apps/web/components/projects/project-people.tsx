@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { PROJECT_ROLES, type Project, type ProjectRole } from '@nothingleft/types';
+import { LoadError, errorDetail } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
 import {
@@ -13,9 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { EmptyState } from '@components/empty-state';
-import { RowsSkeleton } from '@components/skeletons';
+import { PERSON_ROW, RowsSkeleton } from '@components/skeletons';
 import { RelativeTime } from '@components/relative-time';
 import { FormAlert } from '@components/auth/form-alert';
 import { SettingsSection } from '@components/settings/section';
@@ -32,6 +33,7 @@ import { PROJECT_ROLE_HINTS, PROJECT_ROLE_LABELS } from '@lib/roles';
 import { deactivatedInk, InactiveChip } from '@components/former-member-chip';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 const ROLE_OPTIONS: ChoiceOption<ProjectRole>[] = PROJECT_ROLES.map(value => ({
   value,
@@ -52,7 +54,7 @@ export function ProjectPeople({
   const add = useAddProjectMember(project.key);
   const update = useUpdateProjectMember(project.key);
   const remove = useRemoveProjectMember(project.key);
-  const error = useApiError(add.error ?? update.error ?? remove.error);
+  const error = useApiError(add.error ?? update.error ?? remove.error, []);
 
   const [role, setRole] = useState<ProjectRole>('contributor');
   const [search, setSearch] = useState('');
@@ -103,9 +105,11 @@ export function ProjectPeople({
         ) : null}
 
         {members.isPending ? (
-          <RowsSkeleton rows={4} />
+          <RowsSkeleton rows={4} columns={PERSON_ROW} />
         ) : members.isError && all.length === 0 ? (
-          <FormAlert title="The people in this project could not be loaded." />
+          <LoadError onRetry={() => void members.refetch()} detail={errorDetail(members.error)}>
+            The people in this project could not be loaded.
+          </LoadError>
         ) : all.length === 0 ? (
           <EmptyState
             title="Nobody has been added yet."
@@ -197,9 +201,9 @@ function AddMember({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" disabled={pending}>
-          <Plus className="size-icon-sm" /> {pending ? 'Adding…' : 'Add someone'}
-        </Button>
+        <PendingButton variant="outline" pending={pending} pendingLabel="Adding…">
+          <Plus className="size-icon-sm" /> Add someone
+        </PendingButton>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command shouldFilter={false}>

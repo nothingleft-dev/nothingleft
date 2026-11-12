@@ -22,6 +22,7 @@ import { useApiError } from '@hooks/use-api-error';
 import { useCreateToken, useTokenFirstUse } from '@hooks/use-tokens';
 import { formatTime } from '@lib/datetime';
 import { env } from '@lib/env';
+import { PendingButton } from '@components/pending-button';
 
 // What an agent triaging issues needs; admin scopes are a deliberate extra tick.
 const AGENT_SCOPES: PatScope[] = ['issues:read', 'issues:write', 'comments:write', 'time:write'];
@@ -155,7 +156,7 @@ function TokenStep({ onCreated }: { onCreated: (token: CreatedPersonalAccessToke
   const [name, setName] = useState('Claude Code');
   const [scopes, setScopes] = useState<PatScope[]>(AGENT_SCOPES);
   const create = useCreateToken();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name']);
 
   return (
     <>
@@ -189,9 +190,15 @@ function TokenStep({ onCreated }: { onCreated: (token: CreatedPersonalAccessToke
       </form>
 
       <DialogFooter>
-        <Button type="submit" form="connect-agent-token" disabled={scopes.length === 0 || create.isPending}>
-          {create.isPending ? 'Creating…' : 'Create token'}
-        </Button>
+        <PendingButton
+          type="submit"
+          form="connect-agent-token"
+          disabled={scopes.length === 0}
+          pending={create.isPending}
+          pendingLabel="Creating…"
+        >
+          Create token
+        </PendingButton>
       </DialogFooter>
     </>
   );

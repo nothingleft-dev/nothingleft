@@ -4,9 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import type { Me, Organization } from '@nothingleft/types';
 import { PageHeader } from '@components/page-header';
-import { Segmented } from '@components/segmented';
-import { PageSkeleton } from '@components/skeletons';
-import { FormAlert } from '@components/auth/form-alert';
+import { Tabs } from '@components/tabs';
+import { FormSkeleton, PERSON_ROW, RowsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { EmptyState } from '@components/empty-state';
 import { Button } from '@components/ui/button';
 import { SeatBanner } from '@components/invitations/seat-notice';
@@ -68,25 +68,27 @@ export function OrganizationSettings() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader
-        title="Organisation"
-        actions={
-          <Segmented
-            ariaLabel="Organisation settings"
-            value={tab}
-            options={visible}
-            onChange={next => router.replace(`/organization?tab=${next}` as Route)}
-          />
-        }
-      />
+      <div className="flex flex-col gap-2">
+        <PageHeader title="Organisation" />
+        <Tabs
+          ariaLabel="Organisation settings"
+          value={tab}
+          options={visible}
+          onChange={next => router.replace(`/organization?tab=${next}` as Route)}
+        />
+      </div>
 
       {session.status === 'loading' || (slug !== null && organization.isPending) || awaitingRoles ? (
-        <PageSkeleton rows={5} />
+        <TabSkeleton tab={tab} />
       ) : null}
 
       {slug === null && session.status === 'signed-in' ? <NoOrganization /> : null}
 
-      {organization.isError ? <FormAlert title="This organisation could not be loaded." /> : null}
+      {organization.isError && !organization.data ? (
+        <LoadError onRetry={() => void organization.refetch()} detail={errorDetail(organization.error)}>
+          This organisation could not be loaded.
+        </LoadError>
+      ) : null}
 
       {organization.data && user && !awaitingRoles ? (
         <OrganizationTabs
@@ -96,6 +98,20 @@ export function OrganizationSettings() {
           isAdmin={isAdmin}
         />
       ) : null}
+    </div>
+  );
+}
+
+function TabSkeleton({ tab }: { tab: Tab }) {
+  return (
+    <div className="max-w-4xl" role="status" aria-label="Loading">
+      {tab === 'members' || tab === 'invites' ? (
+        <RowsSkeleton rows={6} columns={PERSON_ROW} />
+      ) : tab === 'audit' || tab === 'tags' ? (
+        <RowsSkeleton rows={8} columns={['avatar', 'lines', 'meta']} />
+      ) : (
+        <FormSkeleton fields={4} />
+      )}
     </div>
   );
 }

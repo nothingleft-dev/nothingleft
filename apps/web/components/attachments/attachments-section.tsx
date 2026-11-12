@@ -6,7 +6,7 @@ import { formatBytes } from '@nothingleft/format';
 import type { Attachment, ByoStatus } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { PersonName } from '@components/former-member-chip';
 import { FileBadge } from '@components/attachments/file-badge';
@@ -21,6 +21,7 @@ import { formatDateTime } from '@lib/datetime';
 import { isInlineImage } from '@lib/files';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { TextButton } from '@components/text-button';
 
 interface AttachmentsSectionProps {
   issueKey: string;
@@ -101,14 +102,9 @@ export function AttachmentsSection({
             Hidden files <span className="tabular">{hidden.length}</span>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-pressed={showHidden}
-                  onClick={() => setShowHidden(on => !on)}
-                  className="rounded-xs px-1 text-text underline underline-offset-2 hover:no-underline"
-                >
+                <TextButton aria-pressed={showHidden} onClick={() => setShowHidden(on => !on)} className="px-1">
                   {showHidden ? 'Hide' : 'Show'}
-                </button>
+                </TextButton>
               </TooltipTrigger>
               <TooltipContent>
                 {hidden.length === 1 ? 'This file is' : 'These files are'} already shown in the description or a comment
@@ -227,6 +223,7 @@ export function AttachmentsSection({
         onOpenChange={open => (open ? undefined : setDeleting(null))}
         title={`Delete ${deleting?.filename ?? 'this file'}?`}
         confirmLabel="Delete file"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() => {
           if (!deleting) return;
@@ -234,7 +231,7 @@ export function AttachmentsSection({
             onSuccess: () => setDeleting(null),
             onError: error => {
               setDeleting(null);
-              toastError(error);
+              toastError(`Could not delete ${deleting.filename}`, error);
             },
           });
         }}
@@ -286,7 +283,7 @@ function FileTile({ file, byo, timeZone, onDelete, children }: FileTileProps) {
           size="icon-xs"
           aria-label={`Delete ${file.filename}`}
           onClick={() => onDelete(file)}
-          className="absolute -top-2 -right-2 rounded-full bg-raised text-text-secondary opacity-0 shadow-sm group-hover/file:opacity-100 focus-visible:opacity-100 hover:text-danger-fg"
+          className="absolute -top-2 -right-2 rounded-full bg-raised text-text-secondary reveal shadow-sm group-hover/file:opacity-100 hover:text-danger-fg"
         >
           <X />
         </Button>

@@ -1131,7 +1131,7 @@ describe('custom fields', () => {
     expect(created).toContain('| Severity | High |');
     expect(created).toContain(`| Reviewer | @${w.contributor.username}`);
     expect(created).toContain('| Launch | 1 Oct 2026 |');
-    expect(created).toContain('| Budget | No Budget |');
+    expect(created).toContain('| Budget | No budget |');
 
     const updated = await ok(t.contributor, 'update_issue', {
       issue: key,
@@ -1151,7 +1151,7 @@ describe('custom fields', () => {
     });
     expect(many).toContain('**2 updated**');
     const one = await ok(t.contributor, 'set_field_values', { issues: other, values: { Severity: null } });
-    expect(one).toContain('| Severity | No Severity |');
+    expect(one).toContain('| Severity | No severity |');
 
     const bulk = await ok(t.contributor, 'bulk_update_issues', {
       issues: [key, other],
@@ -1178,7 +1178,7 @@ describe('custom fields', () => {
       project: KEY,
       group_by: 'custom:severity',
     });
-    expect(grouped).toMatch(/Groups: Low 1 · No Severity \d+/);
+    expect(grouped).toMatch(/Groups: Low 1 · No severity \d+/);
     const bad = await tool(t.contributor, 'search_issues', { query: 'severity: Huge' });
     expect(bad.code).toBe('query.invalid_value');
     expect(bad.text).toContain('`Critical`');
@@ -1472,7 +1472,7 @@ describe('reports', () => {
       query: 'created: 2001-01-01',
       projects: [KEY],
     });
-    expect(empty).toContain('No issues match created: 2001-01-01, in MT.');
+    expect(empty).toContain('No issues match created: 2001-01-01, in Acme Web.');
     expect(empty).toContain('drop `created: 2001-01-01`');
 
     const stray = await tool(t.admin, 'run_report', { report: 'burndown', project: KEY, field: 'status' });
@@ -2087,7 +2087,7 @@ describe('tag management', () => {
 
     const asked = await tool(t.admin, 'merge_tags', { tags: ['mcp-dup'], into: 'mcp-new' }, 'declines');
     expect(asked.code).toBe('mcp.confirm_declined');
-    expect(asked.asked).toContain('merge `mcp-dup` into “MCP New”: 1 issues and 0 articles');
+    expect(asked.asked).toContain('merge `mcp-dup` into “MCP New”: 1 issue and 0 articles');
     expect(await ok(t.admin, 'merge_tags', { tags: ['mcp-dup'], into: 'mcp-new' })).toContain('Merged');
     expect((await tool(t.projectAdmin, 'merge_tags', { tags: ['mcp-gone'], into: 'mcp-new' })).code).toBe('forbidden');
     expect(await ok(t.admin, 'delete_tag', { tag: 'mcp-gone' })).toContain('came off 1 issues');

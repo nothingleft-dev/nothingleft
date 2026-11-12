@@ -7,7 +7,7 @@ import { Button } from '@components/ui/button';
 import { PageHeader } from '@components/page-header';
 import { PageSkeleton } from '@components/skeletons';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { SettingsSection } from '@components/settings/section';
 import { CsvImportFlow } from '@components/imports/csv-import-flow';
 import { RecentImports } from '@components/imports/recent-imports';
@@ -22,7 +22,14 @@ export function ImportPage({ projectKey }: { projectKey: string }) {
   useRecordProjectVisit(projectKey);
 
   if (project.isPending || roles.isPending) return <PageSkeleton rows={4} />;
-  if (project.isError || !project.data) return <FormAlert title="This project could not be loaded." />;
+  if (!project.data) {
+    notFoundOn404(project.error);
+    return (
+      <LoadError onRetry={() => void project.refetch()} detail={errorDetail(project.error)}>
+        This project could not be loaded.
+      </LoadError>
+    );
+  }
 
   const header = (
     <PageHeader

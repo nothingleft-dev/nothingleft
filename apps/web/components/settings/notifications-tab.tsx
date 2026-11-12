@@ -12,16 +12,13 @@ import {
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { ChoiceSelect } from '@components/choice-select';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@hooks/use-notifications';
-import { isApiError } from '@lib/api/errors';
 import { useOrganizations } from '@hooks/use-organizations';
 import { AREA_LABELS, EMAIL_OPTIONS, KIND_COPY } from '@lib/notifications/kinds';
-
-const messageOf = (error: unknown) =>
-  isApiError(error) ? error.message : 'Your choice was not saved. Check the connection and try again.';
+import { toastError } from '@components/toast-error';
 
 export function NotificationsTab({ user }: { user: Me }) {
   const preferences = useNotificationPreferences();
@@ -43,13 +40,13 @@ export function NotificationsTab({ user }: { user: Me }) {
           toast.success('Every notification email is off.', {
             action: { label: 'Undo', onClick: () => update.mutate({ email: before }) },
           }),
-        onError: error => toast.error(messageOf(error)),
+        onError: error => toastError('Could not turn the emails off', error),
       },
     );
   };
 
   const choose = (kind: NotificationKind, email: NotificationEmail) =>
-    update.mutate({ email: { [kind]: email } }, { onError: error => toast.error(messageOf(error)) });
+    update.mutate({ email: { [kind]: email } }, { onError: error => toastError('Could not save your choice', error) });
 
   return (
     <div className="flex flex-col gap-5">
@@ -73,11 +70,9 @@ export function NotificationsTab({ user }: { user: Me }) {
 
       {preferences.isPending ? <RowsSkeleton rows={8} /> : null}
       {preferences.isError ? (
-        <FormAlert title="Your notification settings could not be loaded.">
-          <button type="button" onClick={() => void preferences.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void preferences.refetch()} detail={errorDetail(preferences.error)}>
+          Your notification settings could not be loaded.
+        </LoadError>
       ) : null}
 
       {NOTIFICATION_AREAS.map(area => {

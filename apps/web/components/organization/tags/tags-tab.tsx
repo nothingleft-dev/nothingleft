@@ -7,7 +7,7 @@ import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { SettingsSection } from '@components/settings/section';
 import { TagChip } from '@components/issues/issue-tags';
 import { DeleteTagDialog, EditTagDialog, MergeTagsDialog } from '@components/organization/tags/tag-dialogs';
@@ -56,11 +56,9 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
       {list.isPending ? (
         <TagsSkeleton />
       ) : list.isError && !list.data ? (
-        <FormAlert title="The tags could not be loaded.">
-          <button type="button" onClick={() => void list.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+          The tags could not be loaded.
+        </LoadError>
       ) : tags.length === 0 && q ? (
         <EmptyState
           title={`No tag matches “${q}”.`}
@@ -78,7 +76,7 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
         />
       ) : (
         <ul
-          className={cn('divide-y divide-border-subtle rounded-md border', list.isPlaceholderData && 'opacity-60')}
+          className={cn('divide-y divide-border-subtle rounded-md border', list.isPlaceholderData && 'is-stale')}
           aria-label="Tags"
         >
           {tags.map(tag => (

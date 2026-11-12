@@ -1,11 +1,12 @@
 'use client';
 
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
-import { Check, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import type { WorkCalendar } from '@nothingleft/format';
 import type { CustomField, CustomFieldValueInput, IssueCustomFieldValue, MemberRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
 import { MonthGrid } from '@components/date-picker';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { AssigneeCommand, DateEditor, EstimateEditor, PickerSkeleton } from '@components/issues/pickers';
@@ -19,6 +20,7 @@ import {
   zonedDateAndMinutes,
 } from '@lib/datetime';
 import { cn } from '@lib/utils';
+import { fieldNameInSentence } from '@nothingleft/format';
 
 /** A value in the form a request writes it, read from what the issue shows. */
 export function inputOf(entry: IssueCustomFieldValue): CustomFieldValueInput {
@@ -293,7 +295,7 @@ export function MarkdownValueEditor({ label, value, projectKey, error, onSave, o
         onChange={setText}
         projectKey={projectKey}
         label={label}
-        placeholder={`Write ${label}`}
+        placeholder={`Write ${fieldNameInSentence(label)}`}
         autoFocus
         invalid={Boolean(error)}
         onSubmit={save}
@@ -327,30 +329,33 @@ export function OptionCommand({ field, selected, withEmpty, onSelect }: OptionCo
     .toSorted((a, b) => a.position - b.position);
   const empty = emptyLabelOf(field);
   return (
-    <Command>
-      <CommandInput placeholder={`Find ${field.name}`} />
+    <PickerCommand>
+      <CommandInput placeholder={`Find ${fieldNameInSentence(field.name)}`} />
       <CommandList>
         <CommandEmpty>No option matches.</CommandEmpty>
         {withEmpty ? (
-          <CommandItem value={`\u0000${empty}`} onSelect={() => onSelect(null)}>
+          <PickerItem checked={selected.length === 0} value={`\u0000${empty}`} onSelect={() => onSelect(null)}>
             <i aria-hidden className="inline-block size-2 flex-none rounded-full border border-border-strong" />
             <span className="min-w-0 flex-1 truncate text-text-muted">{empty}</span>
-            <Check className={cn('size-icon-sm', selected.length === 0 ? 'opacity-100' : 'opacity-0')} />
-          </CommandItem>
+          </PickerItem>
         ) : null}
         {options.map(option => (
-          <CommandItem key={option.name} value={option.name} onSelect={() => onSelect(option.name)}>
+          <PickerItem
+            checked={selected.includes(option.name)}
+            key={option.name}
+            value={option.name}
+            onSelect={() => onSelect(option.name)}
+          >
             <i
               aria-hidden
               className={cn(`l-${option.color}`, 'inline-block size-2 flex-none rounded-full bg-c-solid')}
             />
             <span className="min-w-0 flex-1 truncate">{option.name}</span>
             {option.is_archived ? <span className="text-2xs text-text-muted">Archived</span> : null}
-            <Check className={cn('size-icon-sm', selected.includes(option.name) ? 'opacity-100' : 'opacity-0')} />
-          </CommandItem>
+          </PickerItem>
         ))}
       </CommandList>
-    </Command>
+    </PickerCommand>
   );
 }
 
@@ -364,17 +369,17 @@ interface PersonCommandProps {
 
 export function PersonCommand({ people, loading, selected, emptyLabel, onSelect }: PersonCommandProps) {
   return (
-    <Command>
+    <PickerCommand>
       <CommandInput placeholder="Find a person" />
       <CommandList>
         {loading ? <PickerSkeleton /> : <CommandEmpty>Nobody in this project matches.</CommandEmpty>}
-        <CommandItem value={`\u0000${emptyLabel}`} onSelect={() => onSelect(null)}>
+        <PickerItem checked={selected === null} value={`\u0000${emptyLabel}`} onSelect={() => onSelect(null)}>
           <span aria-hidden className="inline-block size-5 rounded-full border border-dashed border-border-strong" />
           <span className="min-w-0 flex-1 truncate text-text-muted">{emptyLabel}</span>
-          <Check className={cn('size-icon-sm', selected === null ? 'opacity-100' : 'opacity-0')} />
-        </CommandItem>
+        </PickerItem>
         {people.map(person => (
-          <CommandItem
+          <PickerItem
+            checked={person.username === selected}
             key={person.username}
             value={`${person.name} ${person.username}`}
             onSelect={() => onSelect(person.username)}
@@ -382,11 +387,10 @@ export function PersonCommand({ people, loading, selected, emptyLabel, onSelect 
             <MemberAvatar member={person} className="size-5" />
             <span className="min-w-0 flex-1 truncate">{person.name}</span>
             <span className="text-xs text-text-muted">@{person.username}</span>
-            <Check className={cn('size-icon-sm', person.username === selected ? 'opacity-100' : 'opacity-0')} />
-          </CommandItem>
+          </PickerItem>
         ))}
       </CommandList>
-    </Command>
+    </PickerCommand>
   );
 }
 

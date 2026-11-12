@@ -29,8 +29,10 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { ScrollArea } from '@components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Skeleton } from '@components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Kbd } from '@components/kbd';
+import { RetryButton } from '@components/query-state';
 import { Brand } from '@components/shell/brand';
 import { NavCount, NavItem } from '@components/shell/nav-item';
 import { OrgSwitcher } from '@components/shell/org-switcher';
@@ -62,6 +64,19 @@ function SectionHead({ children, action, collapsed }: { children: string; action
 
 function Hint({ children }: { children: string }) {
   return <p className="px-2 py-1 text-xs text-text-muted">{children}</p>;
+}
+
+function NavSkeleton({ rows, collapsed }: { rows: number; collapsed: boolean }) {
+  return (
+    <div className="flex flex-col gap-px" aria-hidden>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex h-control items-center gap-2 px-2">
+          <Skeleton className="size-icon flex-none rounded-xs" />
+          {collapsed ? null : <Skeleton className="h-3" style={{ width: `${50 + ((i * 19) % 30)}%` }} />}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }: SidebarProps) {
@@ -135,8 +150,15 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
             <ProjectNavItem key={p.key} project={p} collapsed={collapsed} />
           ))}
         </nav>
-        {!collapsed && data.projects.length === 0 ? (
-          <Hint>{data.isPending ? 'Loading projects…' : 'No projects yet.'}</Hint>
+        {data.projectsState === 'loading' ? (
+          <NavSkeleton rows={3} collapsed={collapsed} />
+        ) : collapsed ? null : data.projectsState === 'failed' ? (
+          <div className="flex items-center gap-2 px-2 py-1">
+            <p className="min-w-0 flex-1 text-xs text-danger-fg">Projects could not be loaded.</p>
+            <RetryButton onRetry={data.retryProjects} size="xs" />
+          </div>
+        ) : data.projects.length === 0 ? (
+          <Hint>No projects yet.</Hint>
         ) : null}
 
         {collapsed ? null : (
@@ -147,7 +169,13 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
                 <SavedViewNavItem key={`${v.owner.username}/${v.name}`} view={v} />
               ))}
             </nav>
-            {data.savedViews.length === 0 ? <Hint>Save a search to pin it here.</Hint> : null}
+            {data.savedViewsState === 'loading' ? (
+              <NavSkeleton rows={2} collapsed={collapsed} />
+            ) : data.savedViewsState === 'failed' ? (
+              <Hint>Saved views could not be loaded.</Hint>
+            ) : data.savedViews.length === 0 ? (
+              <Hint>Save a search to pin it here.</Hint>
+            ) : null}
           </>
         )}
       </ScrollArea>

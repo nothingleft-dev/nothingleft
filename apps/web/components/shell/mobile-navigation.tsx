@@ -12,7 +12,7 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 768px)');
+    const desktop = window.matchMedia('(min-width: 56.25rem)');
     const closeOnDesktop = () => {
       if (desktop.matches) setOpen(false);
     };
@@ -23,7 +23,7 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Open navigation" className="md:hidden">
+        <Button variant="ghost" size="icon" aria-label="Open navigation" className="shell:hidden">
           <Menu className="size-5" />
         </Button>
       </SheetTrigger>

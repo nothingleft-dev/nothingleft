@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@components/page-header';
-import { Segmented } from '@components/segmented';
+import { Tabs } from '@components/tabs';
 import { PageSkeleton } from '@components/skeletons';
 import { FormAlert } from '@components/auth/form-alert';
 import { NotificationsTab } from '@components/settings/notifications-tab';
@@ -44,17 +44,15 @@ export function AccountSettings() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader
-        title="Settings"
-        actions={
-          <Segmented
-            ariaLabel="Account settings"
-            value={tab}
-            options={tabs}
-            onChange={next => router.replace(`/settings?tab=${next}`)}
-          />
-        }
-      />
+      <div className="flex flex-col gap-2">
+        <PageHeader title="Settings" />
+        <Tabs
+          ariaLabel="Account settings"
+          value={tab}
+          options={tabs}
+          onChange={next => router.replace(`/settings?tab=${next}`)}
+        />
+      </div>
 
       {session.status === 'loading' ? <PageSkeleton rows={4} /> : null}
       {session.status === 'error' ? <FormAlert title="Your account could not be loaded." /> : null}

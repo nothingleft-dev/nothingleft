@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Plus, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { slugify } from '@nothingleft/format';
 import { DEFAULT_LABEL_COLOR, type Issue, type LabelColor, type TagContext, type TagRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { LabelColorPicker } from '@components/label-color-picker';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { useDebounced } from '@hooks/use-debounced';
@@ -33,7 +34,7 @@ export function IssueTags({ issue, canEdit, pickerOpen, onPickerOpenChange }: Is
   const change = (t: TagRef, on: boolean, isNew = false) =>
     tag.mutate(
       { tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined },
-      { onError: error => toastError(error) },
+      { onError: error => toastError(on ? `Could not add ${t.name}` : `Could not remove ${t.name}`, error) },
     );
 
   return (
@@ -69,7 +70,7 @@ export function TagChip({ tag, onRemove }: { tag: TagRef; onRemove?: () => void 
           type="button"
           aria-label={`Remove tag ${tag.name}`}
           onClick={onRemove}
-          className="ml-0.5 inline-flex size-3.5 items-center justify-center rounded-xs opacity-0 group-hover/tag:opacity-70 hover:bg-c-fg/15 hover:opacity-100! focus-visible:opacity-100"
+          className="ml-0.5 inline-flex size-3.5 items-center justify-center rounded-xs reveal group-hover/tag:opacity-100 hover:bg-c-fg/15"
         >
           <X className="size-3" />
         </button>
@@ -156,7 +157,7 @@ export function TagPicker({ applied, open, onOpenChange, onChange, empty, contex
             </div>
           </form>
         ) : (
-          <Command shouldFilter={false}>
+          <PickerCommand shouldFilter={false}>
             <CommandInput placeholder="Find or create a tag" value={search} onValueChange={setSearch} />
             <CommandList>
               {loading && (tags.data ?? []).length === 0 ? (
@@ -169,11 +170,10 @@ export function TagPicker({ applied, open, onOpenChange, onChange, empty, contex
                   {(tags.data ?? []).map(t => {
                     const on = appliedSlugs.has(t.slug);
                     return (
-                      <CommandItem key={t.slug} value={t.slug} onSelect={() => onChange(t, !on)}>
+                      <PickerItem checked={on} key={t.slug} value={t.slug} onSelect={() => onChange(t, !on)}>
                         <i aria-hidden className={`l-${t.color} size-2 flex-none rounded-full bg-c-solid`} />
                         <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                        <Check className={cn('size-icon-sm', on ? 'opacity-100' : 'opacity-0')} />
-                      </CommandItem>
+                      </PickerItem>
                     );
                   })}
                 </CommandGroup>
@@ -189,7 +189,7 @@ export function TagPicker({ applied, open, onOpenChange, onChange, empty, contex
                 </CommandGroup>
               ) : null}
             </CommandList>
-          </Command>
+          </PickerCommand>
         )}
       </PopoverContent>
     </Popover>

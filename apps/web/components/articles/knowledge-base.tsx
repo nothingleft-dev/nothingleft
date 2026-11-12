@@ -9,8 +9,9 @@ import type { ArticleNode } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@components/ui/sheet';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ArticleTree } from '@components/articles/article-tree';
+import { RetryButton, notFoundOn404 } from '@components/query-state';
 import { DraftMark } from '@components/articles/draft-mark';
 import { NewArticleDialog, type NewArticleRequest } from '@components/articles/new-article-dialog';
 import { TagCloud } from '@components/articles/tag-cloud';
@@ -46,6 +47,9 @@ export function KnowledgeBase({ project, children }: { project: string; children
   const [request, setRequest] = useState<NewArticleRequest | null>(null);
   const [railOpen, setRailOpen] = useState(false);
   const capabilities = projectQuery.data?.knowledge_base;
+  notFoundOn404(projectQuery.error);
+  const treeFailed = tree.isError && !tree.data;
+  const retryTree = () => void tree.refetch();
 
   const value = useMemo<KnowledgeBaseContextValue>(
     () => ({
@@ -67,7 +71,7 @@ export function KnowledgeBase({ project, children }: { project: string; children
           aria-label="Knowledge base"
           className="sticky top-0 -my-5 h-[calc(100dvh-var(--topbar))] self-start overflow-y-auto border-r py-5 pr-3 max-lg:hidden"
         >
-          <Rail loading={tree.isPending} />
+          <Rail loading={tree.isPending} failed={treeFailed} onRetry={retryTree} />
         </aside>
         <div className="min-w-0">
           <Button variant="outline" size="sm" className="mb-4 lg:hidden" onClick={() => setRailOpen(true)}>
@@ -82,7 +86,7 @@ export function KnowledgeBase({ project, children }: { project: string; children
             <SheetTitle>Knowledge base</SheetTitle>
           </SheetHeader>
           <div onClick={e => e.target instanceof Element && e.target.closest('a[href]') && setRailOpen(false)}>
-            <Rail loading={tree.isPending} />
+            <Rail loading={tree.isPending} failed={treeFailed} onRetry={retryTree} />
           </div>
         </SheetContent>
       </Sheet>
@@ -105,7 +109,7 @@ function RailHead({ children, action }: { children: string; action?: ReactNode }
   );
 }
 
-function Rail({ loading }: { loading: boolean }) {
+function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean; onRetry: () => void }) {
   const { project, nodes, canCreate, canMove, openNewArticle } = useKnowledgeBase();
   const params = useParams<{ slug?: string }>();
   const pathname = usePathname();
@@ -179,6 +183,11 @@ function Rail({ loading }: { loading: boolean }) {
           {[70, 55, 62, 40, 58].map((w, i) => (
             <Skeleton key={i} className="h-3.5" style={{ width: `${w}%`, marginLeft: (i % 3) * 14 }} />
           ))}
+        </div>
+      ) : failed ? (
+        <div className="flex items-center gap-2 px-2 py-1">
+          <p className="min-w-0 flex-1 text-xs text-danger-fg">The articles could not be loaded.</p>
+          <RetryButton onRetry={onRetry} size="xs" />
         </div>
       ) : nodes.length === 0 ? (
         <p className="px-2 text-xs text-text-muted">No articles yet.</p>

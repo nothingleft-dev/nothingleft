@@ -74,7 +74,7 @@ How issues spread over the organisation's projects.
 How issues spread over any field: status, priority, type, assignee, tag, sprint, due date
 (Overdue, Today, This week, Later, No due date), or a custom field - a select, multi-select,
 person, people or checkbox field. Issues without a value are counted under the field's empty
-label (*No Severity*), and a custom field counts only on the issue types it applies to.
+label (*No severity*), and a custom field counts only on the issue types it applies to.
 
 When the projects in a report name their statuses differently, **group by category** adds them
 up by the five status categories - Backlog, Unstarted, Started, Done, Cancelled - so *Fixed* in

@@ -10,6 +10,11 @@ describe('t', () => {
     expect(t('error.project.not_found', { key: 'PMS' })).toBe('No project with key PMS.');
   });
 
+  test('agrees a plural with its count and groups thousands', () => {
+    expect(t('error.config.in_use', { name: 'Done', count: 1 })).toContain('used by 1 item.');
+    expect(t('error.config.in_use', { name: 'Done', count: 1284 })).toContain('used by 1,284 items.');
+  });
+
   test('leaves unknown placeholders untouched', () => {
     expect(t('error.internal', { nope: 1 })).toBe(t('error.internal'));
   });

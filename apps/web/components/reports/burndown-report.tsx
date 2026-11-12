@@ -35,6 +35,7 @@ import { formatCalendarDate, formatCalendarDateShort, formatCalendarRange, today
 import type { MarkPaint } from '@lib/reports/colors';
 import { burndownSprintParam } from '@lib/reports/url';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const line = (fill: string): MarkPaint => ({ fill, hatched: false, faded: false });
 const REMAINING = line('var(--chart-1)');
@@ -191,7 +192,7 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
       ? `Finished ${formatCalendarDateShort(data.sprint.completed_at.slice(0, 10))}`
       : data.sprint.state === 'active' && daysTo !== null && end
         ? daysTo > 0
-          ? `${daysTo} ${daysTo === 1 ? 'day' : 'days'} left, ending ${formatCalendarDateShort(end)}`
+          ? `${plural(daysTo, 'day')} left, ending ${formatCalendarDateShort(end)}`
           : daysTo === 0
             ? 'Ends today'
             : `Ended ${formatCalendarDateShort(end)}, ${-daysTo} ${daysTo === -1 ? 'day' : 'days'} ago, and still running`

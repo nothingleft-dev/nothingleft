@@ -24,6 +24,7 @@ import {
   useScheduleDeletion,
 } from '@hooks/use-organization-lifecycle';
 import { formatDate } from '@lib/datetime';
+import { PendingButton } from '@components/pending-button';
 
 type DangerConfirm = 'transfer' | 'delete';
 const DANGER_TAB = '/organization?tab=danger';
@@ -63,7 +64,7 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
   const members = useMembers(slug, { limit: PAGINATION_MAX_LIMIT });
   const offer = useOfferOwnership(slug);
   const cancel = useCancelTransfer(slug);
-  const cancelError = useApiError(cancel.error);
+  const cancelError = useApiError(cancel.error, []);
   const [picked, setTarget] = useState<string | null>(null);
   const [chosenOpen, setOpen] = useState(false);
   const target = picked ?? reopen;
@@ -191,7 +192,7 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
   const slug = organization.slug;
   const schedule = useScheduleDeletion(slug);
   const cancel = useCancelDeletion(slug);
-  const cancelError = useApiError(cancel.error);
+  const cancelError = useApiError(cancel.error, []);
   const [chosenOpen, setOpen] = useState(false);
   const open = chosenOpen || reopen;
   const [typed, setTyped] = useState('');
@@ -215,16 +216,17 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
               banner with the date.
             </p>
           </div>
-          <Button
+          <PendingButton
             variant="outline"
             size="sm"
-            disabled={cancel.isPending}
             onClick={() =>
               cancel.mutate(undefined, { onSuccess: () => toast.success(`${organization.name} will not be deleted.`) })
             }
+            pending={cancel.isPending}
+            pendingLabel="Cancelling…"
           >
-            {cancel.isPending ? 'Cancelling…' : 'Cancel deletion'}
-          </Button>
+            Cancel deletion
+          </PendingButton>
         </div>
       ) : (
         <div className="flex items-center gap-4 rounded-md border border-danger-fg/25 px-4 py-3 max-sm:flex-col max-sm:items-start">

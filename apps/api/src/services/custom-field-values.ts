@@ -26,7 +26,7 @@ import type {
   ProjectsRepository,
   TenantContext,
 } from '@nothingleft/db';
-import { parseDuration, type WorkCalendar } from '@nothingleft/format';
+import { fieldNameInSentence, parseDuration, type WorkCalendar } from '@nothingleft/format';
 import { t, type MessageKey } from '@nothingleft/i18n';
 import { AppError } from '@lib/errors';
 import type { FieldChange } from '@services/issue-history';
@@ -48,7 +48,7 @@ export const kindOf = (field: Pick<CustomFieldRow, 'type'>): CustomFieldKind =>
 const isMulti = (type: string) => (CUSTOM_FIELD_MULTI_TYPES as readonly string[]).includes(type);
 
 export const emptyLabelOf = (field: Pick<CustomFieldRow, 'name' | 'empty_label'>) =>
-  field.empty_label ?? t('custom_field.empty_label', { name: field.name });
+  field.empty_label ?? t('custom_field.empty_label', { name: fieldNameInSentence(field.name) });
 
 export async function loadCatalogue(
   repo: CustomFieldsRepository,

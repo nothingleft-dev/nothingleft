@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { MonthGrid } from '@components/date-picker';
@@ -28,6 +28,8 @@ import { todayCalendarDate } from '@lib/datetime';
 import { listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
 const unresolvedOf = (s: Sprint) => s.progress.issues - s.progress.resolved_issues;
 const sprintQuery = (s: Sprint) => `sprint: {${s.name}} #Unresolved`;
@@ -143,7 +145,7 @@ function SprintForm({
   const create = useCreateSprint(projectKey);
   const update = useUpdateSprint(projectKey);
   const pending = create.isPending || update.isPending;
-  const error = useApiError(create.error ?? update.error);
+  const error = useApiError(create.error ?? update.error, ['name', 'goal_md', 'start_date', 'end_date']);
   const [name, setName] = useState(sprint?.name ?? '');
   const [goal, setGoal] = useState(sprint?.goal_md ?? '');
   const [range, setRange] = useState<Range>({ from: sprint?.start_date ?? null, to: sprint?.end_date ?? null });
@@ -234,9 +236,15 @@ function SprintForm({
         <Button variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" form="sprint-form" disabled={pending || name.trim() === ''}>
-          {pending ? 'Saving…' : sprint ? 'Save changes' : 'Create sprint'}
-        </Button>
+        <PendingButton
+          type="submit"
+          form="sprint-form"
+          disabled={name.trim() === ''}
+          pending={pending}
+          pendingLabel="Saving…"
+        >
+          {sprint ? 'Save changes' : 'Create sprint'}
+        </PendingButton>
       </DialogFooter>
     </>
   );
@@ -277,7 +285,7 @@ function StartForm({
   onClose: () => void;
 }) {
   const start = useStartSprint(projectKey);
-  const error = useApiError(start.error);
+  const error = useApiError(start.error, ['start_date', 'end_date']);
   const [range, setRange] = useState<Range>({ from: todayCalendarDate(timeZone), to: sprint.end_date });
   const { issues, points } = sprint.progress;
 
@@ -299,7 +307,7 @@ function StartForm({
       <DialogHeader>
         <DialogTitle>Start {sprint.name}</DialogTitle>
         <DialogDescription>
-          {issues} {issues === 1 ? 'issue' : 'issues'}
+          {plural(issues, 'issue')}
           {points > 0 ? `, ${points} story points` : ''}. It starts today unless you pick another day, and it needs an
           end date for the countdown.
         </DialogDescription>
@@ -314,9 +322,14 @@ function StartForm({
         <Button variant="outline" onClick={onClose} disabled={start.isPending}>
           Cancel
         </Button>
-        <Button onClick={submit} disabled={start.isPending || !range.from || !range.to}>
-          {start.isPending ? 'Starting…' : 'Start sprint'}
-        </Button>
+        <PendingButton
+          onClick={submit}
+          disabled={!range.from || !range.to}
+          pending={start.isPending}
+          pendingLabel="Starting…"
+        >
+          Start sprint
+        </PendingButton>
       </DialogFooter>
     </>
   );
@@ -351,7 +364,7 @@ function FinishForm({
   onClose: () => void;
 }) {
   const finish = useFinishSprint(projectKey);
-  const error = useApiError(finish.error);
+  const error = useApiError(finish.error, []);
   const [target, setTarget] = useState<string | null>(null);
   const unfinished = unresolvedOf(sprint);
   const { resolved_issues, points, resolved_points } = sprint.progress;
@@ -365,7 +378,7 @@ function FinishForm({
           const where = result.moved_to ? result.moved_to.name : 'the backlog';
           toast.success(
             result.moved.length > 0
-              ? `${sprint.name} finished. ${result.moved.length} ${result.moved.length === 1 ? 'issue' : 'issues'} moved to ${where}.`
+              ? `${sprint.name} finished. ${plural(result.moved.length, 'issue')} moved to ${where}.`
               : `${sprint.name} finished.`,
           );
           onClose();
@@ -409,9 +422,9 @@ function FinishForm({
         <Button variant="outline" onClick={onClose} disabled={finish.isPending}>
           Cancel
         </Button>
-        <Button onClick={submit} disabled={finish.isPending || target === null}>
-          {finish.isPending ? 'Finishing…' : 'Finish sprint'}
-        </Button>
+        <PendingButton onClick={submit} disabled={target === null} pending={finish.isPending} pendingLabel="Finishing…">
+          Finish sprint
+        </PendingButton>
       </DialogFooter>
     </>
   );
@@ -426,6 +439,7 @@ export function DeleteSprintDialog({ projectKey, sprint, onOpenChange }: SprintA
       onOpenChange={onOpenChange}
       title={`Delete ${sprint?.name ?? 'sprint'}?`}
       confirmLabel="Delete sprint"
+      pendingLabel="Deleting…"
       pending={remove.isPending}
       onConfirm={() =>
         sprint &&
@@ -434,14 +448,14 @@ export function DeleteSprintDialog({ projectKey, sprint, onOpenChange }: SprintA
             toast.success(`${sprint.name} deleted.`);
             onOpenChange(false);
           },
-          onError: e => toastError(e),
+          onError: e => toastError(`Could not delete ${sprint.name}`, e),
         })
       }
     >
       <p>
         {n === 0
           ? 'It has no issues. This cannot be undone.'
-          : `Its ${n} ${n === 1 ? 'issue goes' : 'issues go'} back to the backlog, each with a history entry. The sprint itself cannot be restored.`}
+          : `Its ${plural(n, 'issue goes', 'issues go')} back to the backlog, each with a history entry. The sprint itself cannot be restored.`}
       </p>
     </ConfirmDialog>
   );

@@ -7,7 +7,7 @@ import { Bot, CalendarClock, CheckCheck, ChevronRight, CircleX, FileText, GitMer
 import type { Notification, NotificationGroup } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { FormerMemberChip } from '@components/former-member-chip';
 import { IssueKey } from '@components/issue-key';
 import { MemberAvatar } from '@components/issues/member-avatar';
@@ -16,6 +16,7 @@ import { subjectRef, useSubjectNotifications, type MarkTarget } from '@hooks/use
 import { useOpenNotification } from '@hooks/use-open-notification';
 import { DUE_KINDS } from '@lib/notifications/kinds';
 import { cn } from '@lib/utils';
+import { LoadMore } from '@components/text-button';
 
 interface EntryProps {
   group: NotificationGroup;
@@ -58,7 +59,7 @@ function MarkButton({ label, onClick }: { label: string; onClick: () => void }) 
           size="icon-xs"
           aria-label={label}
           onClick={onClick}
-          className="text-text-secondary opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 max-md:opacity-100"
+          className="text-text-secondary reveal group-hover/row:opacity-100"
         >
           <CheckCheck className="size-icon-sm" />
         </Button>
@@ -171,20 +172,17 @@ function EntryLines({ group, onMark }: { group: NotificationGroup; onMark: (targ
         </p>
       ) : null}
       {more && !all ? (
-        <Button variant="ghost" size="xs" className="mt-1 ml-1 text-text-secondary" onClick={() => setAll(true)}>
+        <LoadMore size="xs" className="mt-1 ml-1" onClick={() => setAll(true)}>
           Show all {group.count}
-        </Button>
+        </LoadMore>
       ) : null}
       {all && full.hasNextPage ? (
-        <Button
-          variant="ghost"
+        <LoadMore
           size="xs"
-          className="mt-1 ml-1 text-text-secondary"
-          disabled={full.isFetchingNextPage}
+          className="mt-1 ml-1"
+          pending={full.isFetchingNextPage}
           onClick={() => void full.fetchNextPage()}
-        >
-          Load more
-        </Button>
+        />
       ) : null}
     </div>
   );

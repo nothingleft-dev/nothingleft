@@ -9,9 +9,9 @@ import { ReportPicker } from '@components/reports/report-picker';
 import {
   calendarNote,
   durationUnitOf,
-  formatCount,
   formatMinutes,
   HueNote,
+  plural,
   scopeText,
   UnitToggle,
   type DurationUnit,
@@ -30,11 +30,11 @@ const GROUPS = [
   { value: 'project', label: 'Project' },
 ] as const;
 
-const OTHER_NOUN: Record<string, string> = {
-  work_type: 'work types',
-  user: 'people',
-  issue: 'issues',
-  project: 'projects',
+const OTHER_NOUN: Record<string, readonly [string, string]> = {
+  work_type: ['work type', 'work types'],
+  user: ['person', 'people'],
+  issue: ['issue', 'issues'],
+  project: ['project', 'projects'],
 };
 
 const calendarOf = (data: Time): WorkCalendar => ({
@@ -83,7 +83,7 @@ function rowsOf(data: Time): Row[] {
     const total = data.totals.spent_minutes || 1;
     rows.push({
       key: 'other',
-      label: `Other · ${formatCount(beyond.groups)} ${OTHER_NOUN[data.group_by] ?? 'values'}`,
+      label: `Other · ${plural(beyond.groups, ...(OTHER_NOUN[data.group_by] ?? (['value', 'values'] as const)))}`,
       amount: beyond.minutes,
       estimate: null,
       difference: null,

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import type { ComponentType, ReactNode } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { cn } from '@lib/utils';
 
 interface NavItemProps<T extends string> {
@@ -23,6 +23,8 @@ export function NavCount({ value, unread = false }: { value: number; unread?: bo
   if (value <= 0) return null;
   return (
     <span
+      data-nav-count
+      data-unread={unread || undefined}
       className={cn(
         'ml-auto text-2xs font-medium tabular text-text-muted',
         unread && 'min-w-[18px] rounded-full bg-brand px-[5px] text-center leading-4 text-on-brand',
@@ -53,7 +55,7 @@ export function NavItem<T extends string>({
       className={cn(
         'relative flex w-full items-center gap-2 rounded-sm px-2 text-text-secondary hover:bg-hover hover:text-text',
         size === 'sub' ? 'h-7 text-xs' : 'h-control',
-        active && 'bg-active font-medium text-text',
+        active && 'bg-active font-medium text-text [&_[data-nav-count]:not([data-unread])]:text-text-secondary',
         active &&
           size === 'default' &&
           'before:absolute before:left-0 before:top-[7px] before:bottom-[7px] before:w-0.5 before:rounded-[1px] before:bg-brand',

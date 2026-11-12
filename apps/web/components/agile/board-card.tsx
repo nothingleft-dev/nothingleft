@@ -2,7 +2,7 @@
 
 import { useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { toast } from 'sonner';
-import { Check, ListChecks, Plus } from 'lucide-react';
+import { ListChecks, Plus } from 'lucide-react';
 import type {
   BoardCard as Card,
   BoardColumnField,
@@ -12,9 +12,10 @@ import type {
   TagRef,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { MonthGrid } from '@components/date-picker';
 import { IssueKey } from '@components/issue-key';
 import { DueDate } from '@components/issues/due-date';
@@ -31,6 +32,7 @@ import { DevelopmentIcon } from '@components/git/git-marks';
 import { cn } from '@lib/utils';
 import { personTitle } from '@components/former-member-chip';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 export function SubtaskProgress({ resolved, total }: { resolved: number; total: number }) {
   if (total === 0) return null;
@@ -213,7 +215,7 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
         body: { assignees: usernames },
         apply: c => ({ ...c, assignees: usernames.map(u => known.find(p => p.username === u)!).filter(Boolean) }),
       },
-      { onError: e => toastError(e) },
+      { onError: e => toastError(`Could not change the assignees of ${card.key}`, e) },
     );
   };
 
@@ -239,12 +241,13 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0" {...own}>
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Search user" />
           <CommandList>
             {people.isPending ? <PickerSkeleton /> : <CommandEmpty>Nobody in this project matches.</CommandEmpty>}
             {people.isPending ? null : (
-              <CommandItem
+              <PickerItem
+                checked={draft.length === 0}
                 value="Unassigned"
                 onSelect={() => {
                   setDraft([]);
@@ -257,13 +260,13 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
                   className="inline-block size-5 rounded-full border border-dashed border-border-strong"
                 />
                 <span className="flex-1">Unassigned</span>
-                <Check className={cn('size-icon-sm', draft.length === 0 ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             )}
             {list.map(person => {
               const on = draft.includes(person.username);
               return (
-                <CommandItem
+                <PickerItem
+                  checked={on}
                   key={person.username}
                   value={`${person.name} ${person.username}`}
                   onSelect={() => setDraft(d => (on ? d.filter(u => u !== person.username) : [...d, person.username]))}
@@ -271,12 +274,11 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
                   <MemberAvatar member={person} className="size-5" />
                   <span className="min-w-0 flex-1 truncate">{person.username === me ? 'Me' : person.name}</span>
                   <span className="truncate text-xs text-text-muted">@{person.username}</span>
-                  <Check className={cn('size-icon-sm', on ? 'opacity-100' : 'opacity-0')} />
-                </CommandItem>
+                </PickerItem>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -298,7 +300,7 @@ function CardDueDate({ card, today, canEdit }: { card: Card; today: string; canE
     if (value === card.due_date) return;
     patch.mutate(
       { key: card.key, body: { due_date: value }, apply: c => ({ ...c, due_date: value }) },
-      { onError: e => toastError(e) },
+      { onError: e => toastError(`Could not change the due date of ${card.key}`, e) },
     );
   };
 
@@ -367,7 +369,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-start text-text-secondary opacity-0 group-hover/cell:opacity-100 focus-visible:opacity-100"
+        className="w-full justify-start text-text-secondary reveal group-hover/cell:opacity-100"
         onClick={() => setOpen(true)}
       >
         <Plus />
@@ -389,7 +391,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
           setTitle('');
           toast.success(`Created ${issue.key}.`);
         },
-        onError: error => toastError(error),
+        onError: error => toastError('Could not create the issue', error),
       },
     );
   };
@@ -420,9 +422,15 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
         className="w-full resize-none bg-transparent text-sm text-text placeholder:text-text-muted"
       />
       <div className="flex gap-1">
-        <Button type="submit" size="sm" disabled={create.isPending || title.trim() === ''}>
-          {create.isPending ? 'Creating…' : 'Create'}
-        </Button>
+        <PendingButton
+          type="submit"
+          size="sm"
+          disabled={title.trim() === ''}
+          pending={create.isPending}
+          pendingLabel="Creating…"
+        >
+          Create
+        </PendingButton>
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>

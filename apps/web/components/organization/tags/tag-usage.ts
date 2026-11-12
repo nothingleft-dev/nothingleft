@@ -1,6 +1,5 @@
 import type { Tag } from '@nothingleft/types';
-
-const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+import { plural } from '@lib/numbers';
 
 /** `3 issues · 12 articles`, or null for a tag nothing uses. */
 export function tagUsage(tag: Pick<Tag, 'issue_count' | 'article_count'>, join = ' · ') {

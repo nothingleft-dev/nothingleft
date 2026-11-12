@@ -16,6 +16,7 @@ import { useOrganizations, useSwitchOrganization } from '@hooks/use-organization
 import { useSession } from '@hooks/use-session';
 import { OrganizationMark } from '@components/organization/organization-mark';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 /**
  * onboarding.md § Returning-user landing: the server decides, this page only routes. The
@@ -84,7 +85,7 @@ function OrganisationSwitcher({ preferred }: { preferred: string | null }) {
                 <span className="flex min-w-0 flex-1 flex-col leading-4">
                   <span className="truncate font-medium">{org.name}</span>
                   <span className="text-2xs text-text-muted">
-                    {org.seats.used} {org.seats.used === 1 ? 'member' : 'members'}
+                    {plural(org.seats.used, 'member')}
                     {isPreferred ? ' · most recently used' : ''}
                   </span>
                 </span>

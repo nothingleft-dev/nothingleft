@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { MonthGrid } from '@components/date-picker';
 import { formatCalendarRange } from '@lib/datetime';
 import { cn } from '@lib/utils';
@@ -73,8 +73,8 @@ export function PeriodPicker({ value, resolved, onChange }: PeriodPickerProps) {
                 onClick={() => pick(preset)}
                 className="flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left hover:bg-hover"
               >
-                <Check className={cn('size-icon-sm', name === preset ? 'opacity-100' : 'opacity-0')} />
                 {preset}
+                <Check className={cn('ml-auto size-icon-sm', name !== preset && 'invisible')} />
               </button>
             </li>
           ))}

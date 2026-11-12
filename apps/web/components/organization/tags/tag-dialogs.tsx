@@ -27,6 +27,8 @@ import { ReportMultiPicker, ReportPicker, type ReportOption } from '@components/
 import { tagUsage } from '@components/organization/tags/tag-usage';
 import { useDeleteTag, useManagedTags, useMergeTags, useUpdateTag } from '@hooks/use-tags';
 import { isApiError } from '@lib/api/errors';
+import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 interface EditTagDialogProps {
   tag: Tag;
@@ -128,9 +130,15 @@ export function EditTagDialog({ tag, orgAdmin, onClose, onMergeInstead }: EditTa
           <Button variant="outline" onClick={onClose} disabled={update.isPending}>
             Cancel
           </Button>
-          <Button type="submit" form="edit-tag" disabled={update.isPending || !trimmed}>
-            {update.isPending ? 'Saving…' : 'Save'}
-          </Button>
+          <PendingButton
+            type="submit"
+            form="edit-tag"
+            disabled={!trimmed}
+            pending={update.isPending}
+            pendingLabel="Saving…"
+          >
+            Save
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -244,11 +252,15 @@ export function MergeTagsDialog({ initial, onClose }: MergeTagsDialogProps) {
           <Button variant="outline" onClick={onClose} disabled={merge.isPending}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={confirm} disabled={!ready || merge.isPending}>
-            {merge.isPending
-              ? 'Merging…'
-              : `Merge ${sources.length === 1 ? 'tag' : `${sources.length} tags`}${into ? ` into ${into.name}` : ''}`}
-          </Button>
+          <PendingButton
+            variant="destructive"
+            onClick={confirm}
+            disabled={!ready}
+            pending={merge.isPending}
+            pendingLabel="Merging…"
+          >
+            {`Merge ${sources.length === 1 ? 'tag' : `${sources.length} tags`}${into ? ` into ${into.name}` : ''}`}
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -264,13 +276,14 @@ export function DeleteTagDialog({ tag, onClose }: { tag: Tag | null; onClose: ()
       onOpenChange={open => (open ? undefined : onClose())}
       title={`Delete ${tag?.name ?? 'this tag'}?`}
       confirmLabel="Delete tag"
+      pendingLabel="Deleting…"
       pending={remove.isPending}
       onConfirm={() => {
         if (!tag) return;
         onClose();
         remove.mutate(tag, {
           onSuccess: () => toast.success(`Deleted ${tag.name}`),
-          onError: error => toast.error(`${tag.name} was not deleted. ${error.message}`),
+          onError: error => toastError(`Could not delete ${tag.name}`, error),
         });
       }}
     >

@@ -8,9 +8,10 @@ import { formatBytes } from '@nothingleft/format';
 import type { IssueFigures, Organization, OrgActivity, Project, Sprint } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Meter } from '@components/dashboard/meter';
-import { Section, SectionEmpty, SectionError, StaleNotice } from '@components/dashboard/section';
+import { Section, SectionEmpty } from '@components/dashboard/section';
+import { LoadError, StaleNotice } from '@components/query-state';
 import { StatRow, statRowState, weekDelta, type Stat, type StatRowState } from '@components/dashboard/stat-row';
 import { StatusStrip } from '@components/dashboard/status-strip';
 import { MemberAvatar } from '@components/issues/member-avatar';
@@ -19,7 +20,7 @@ import { SeatBanner } from '@components/invitations/seat-notice';
 import { ACTIVITY_LABELS, activitySubject, projectJoin } from '@components/organization/activity-labels';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
-import { FormerMemberChip, PersonName, deactivatedInk } from '@components/former-member-chip';
+import { PersonName } from '@components/former-member-chip';
 import { useActivity } from '@hooks/use-activity';
 import { useIssueFigures } from '@hooks/use-issue-search';
 import { useProjects } from '@hooks/use-projects';
@@ -27,6 +28,7 @@ import { useActiveSprints } from '@hooks/use-sprints';
 import { ActiveSprintLine, backlogHref } from '@components/agile/active-sprint';
 import { CREATED_7D, OVERDUE, RESOLVED_7D, UNASSIGNED, listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const ACTIVITY_SHOWN = 8;
 // A count past this reads as a lot of open work; it says nothing about the person's capacity.
@@ -121,7 +123,7 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
           {active.data
             ? scope === 'active' && archivedList.length > 0
               ? `${shown.length} active · ${archivedList.length} archived not shown`
-              : `${shown.length} ${shown.length === 1 ? 'project' : 'projects'}`
+              : `${plural(shown.length, 'project')}`
             : null}
         </span>
         {orgAdmin ? (
@@ -159,7 +161,7 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
             </>
           ) : projectsFailed ? (
             <div className="min-[900px]:col-span-2">
-              <SectionError onRetry={() => void active.refetch()}>Your projects could not be loaded.</SectionError>
+              <LoadError onRetry={() => void active.refetch()}>Your projects could not be loaded.</LoadError>
             </div>
           ) : ordered.length === 0 ? (
             <div className="min-[900px]:col-span-2">
@@ -175,6 +177,7 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
                 figures={figuresOf(project.key)}
                 sprint={sprints.data?.find(s => s.project.key === project.key) ?? null}
                 loading={figures.isPending}
+                figuresFailed={figures.isError && !figures.data}
                 sprintState={sprints.isPending ? 'loading' : sprints.isError && !sprints.data ? 'failed' : 'ready'}
               />
             ))
@@ -196,14 +199,14 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
                   ))}
                 </div>
               ) : activity.isError && !activity.data ? (
-                <SectionError onRetry={() => void activity.refetch()}>Activity could not be loaded.</SectionError>
+                <LoadError onRetry={() => void activity.refetch()}>Activity could not be loaded.</LoadError>
               ) : (activity.data?.rows.length ?? 0) === 0 ? (
                 <SectionEmpty>Nothing has happened in the organisation yet.</SectionEmpty>
               ) : (
                 <ul className="flex flex-col">
                   {activity.isError ? (
                     <li>
-                      <StaleNotice onRetry={() => void activity.refetch()}>
+                      <StaleNotice className="px-2" onRetry={() => void activity.refetch()}>
                         Activity could not be refreshed and may be out of date.
                       </StaleNotice>
                     </li>
@@ -273,10 +276,11 @@ function ActivityRow({ row }: { row: OrgActivity }) {
     <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 border-b border-border-subtle px-2 py-1.5 text-xs text-text-secondary">
       <MemberAvatar member={row.actor ?? { name: '-', avatar_url: null }} className="size-5" />
       <span className="min-w-0">
-        <b className={cn('font-medium text-text', deactivatedInk(row.actor))}>
-          {row.actor?.name ?? 'Somebody no longer here'}
-        </b>{' '}
-        {row.actor?.former_member ? <FormerMemberChip className="mr-1 align-middle" /> : null}
+        {row.actor ? (
+          <PersonName person={row.actor} className="max-w-full align-bottom font-medium text-text" />
+        ) : (
+          <b className="font-medium text-text">Somebody no longer here</b>
+        )}{' '}
         {join === 'self' ? 'joined' : join === 'other' ? 'added' : ACTIVITY_LABELS[row.kind]}
         {subject.text ? <span className="text-text"> {subject.text}</span> : null}
         {subject.projectKey ? (
@@ -298,28 +302,28 @@ function ProjectFiguresCard({
   figures,
   sprint,
   loading,
+  figuresFailed,
   sprintState,
 }: {
   project: Project;
   figures: IssueFigures | null;
   sprint: Sprint | null;
   loading: boolean;
+  figuresFailed: boolean;
   sprintState: 'loading' | 'failed' | 'ready';
 }) {
   const base = `/projects/${project.key}`;
-  const nums: { label: string; value: number; alert?: boolean; q: string }[] = figures
-    ? [
-        { label: 'Open', value: figures.open, q: '#Unresolved' },
-        { label: 'Unassigned', value: figures.unassigned, q: UNASSIGNED },
-        { label: 'Overdue', value: figures.overdue, alert: true, q: OVERDUE },
-        { label: 'Created 7d', value: figures.created_7d, q: CREATED_7D },
-        { label: 'Resolved 7d', value: figures.resolved_7d, q: RESOLVED_7D },
-      ]
-    : [];
+  const nums: { label: string; value: number; alert?: boolean; q: string }[] = [
+    { label: 'Open', value: figures?.open ?? 0, q: '#Unresolved' },
+    { label: 'Unassigned', value: figures?.unassigned ?? 0, q: UNASSIGNED },
+    { label: 'Overdue', value: figures?.overdue ?? 0, alert: true, q: OVERDUE },
+    { label: 'Created 7d', value: figures?.created_7d ?? 0, q: CREATED_7D },
+    { label: 'Resolved 7d', value: figures?.resolved_7d ?? 0, q: RESOLVED_7D },
+  ];
   const team = figures?.by_assignee ?? [];
 
   return (
-    <article className="flex flex-col gap-3 rounded-md border bg-surface px-4 py-3">
+    <article className="flex min-w-0 flex-col gap-3 rounded-md border bg-surface px-4 py-3">
       <div className="flex items-center gap-2">
         <ProjectMark project={project} size="md" />
         <Link href={base as Route} className="truncate font-semibold hover:underline">
@@ -330,7 +334,7 @@ function ProjectFiguresCard({
           <span className="rounded-sm bg-inset px-1.5 py-0.5 text-2xs text-text-secondary">Archived</span>
         ) : null}
         {project.lead ? (
-          <span className="ml-auto flex items-center gap-1.5 text-xs text-text-muted">
+          <span className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-text-muted">
             <MemberAvatar member={project.lead} className="size-4" />
             <PersonName person={project.lead} />
           </span>
@@ -360,36 +364,49 @@ function ProjectFiguresCard({
           </div>
           {loading || sprintState === 'loading' ? (
             <Skeleton className="mt-2 h-1.5 w-full" />
+          ) : figuresFailed ? (
+            <div className="mt-2 h-1.5 rounded-full bg-inset" />
           ) : (
             <StatusStrip counts={figures?.by_category ?? {}} className="mt-2" />
           )}
         </div>
       )}
 
-      <div className="flex justify-between gap-3 border-t border-border-subtle pt-3">
+      <div className="grid grid-cols-3 gap-x-3 gap-y-2 border-t border-border-subtle pt-3 sm:flex sm:justify-between">
         {loading
           ? Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-8 w-10" />)
-          : nums.map(n => (
-              <Link
-                key={n.label}
-                href={listHref(n.q, { project: project.key })}
-                className="group/num -mx-1 flex flex-col rounded-xs px-1"
-              >
-                <span
-                  className={cn(
-                    'text-md font-semibold tracking-tight tabular group-hover/num:underline',
-                    n.alert && n.value > 0 && 'text-danger-fg',
-                  )}
-                >
-                  {n.value}
+          : figuresFailed
+            ? nums.map(n => (
+                <span key={n.label} className="flex flex-col">
+                  <span className="text-md font-semibold text-text-muted" aria-label="Not available">
+                    –
+                  </span>
+                  <span className="text-2xs whitespace-nowrap text-text-muted">{n.label}</span>
                 </span>
-                <span className="text-2xs whitespace-nowrap text-text-muted">{n.label}</span>
-              </Link>
-            ))}
+              ))
+            : nums.map(n => (
+                <Link
+                  key={n.label}
+                  href={listHref(n.q, { project: project.key })}
+                  className="group/num -mx-1 flex flex-col rounded-xs px-1"
+                >
+                  <span
+                    className={cn(
+                      'text-md font-semibold tracking-tight tabular group-hover/num:underline',
+                      n.alert && n.value > 0 && 'text-danger-fg',
+                    )}
+                  >
+                    {n.value}
+                  </span>
+                  <span className="text-2xs whitespace-nowrap text-text-muted">{n.label}</span>
+                </Link>
+              ))}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border-subtle pt-3">
-        {team.length === 0 && !loading ? (
+        {figuresFailed ? (
+          <span className="text-xs text-text-muted">Team load is not available.</span>
+        ) : team.length === 0 && !loading ? (
           <span className="text-xs text-text-muted">Nobody has open issues.</span>
         ) : null}
         {team.slice(0, 4).map(({ member, open }) => {
@@ -398,9 +415,7 @@ function ProjectFiguresCard({
               href={listHref(`#Unresolved assignee: @${member.username}`, { project: project.key })}
               className="inline-flex items-center gap-1.5 rounded-xs text-xs text-text-secondary hover:underline"
             >
-              <MemberAvatar member={member} className="size-5" />
-              <span className={deactivatedInk(member)}>{member.name.split(' ')[0]}</span>
-              {member.former_member ? <FormerMemberChip /> : null}{' '}
+              <PersonName person={member} label={member.name.split(' ')[0]} avatar />
               <b className={cn('font-medium tabular text-text', open > MANY_OPEN && 'text-danger-fg')}>{open}</b>
             </Link>
           );

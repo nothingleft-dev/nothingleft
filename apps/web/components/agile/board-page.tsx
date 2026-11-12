@@ -19,7 +19,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { Check, ChevronDown, ChevronRight, ChevronsLeftRight, ListOrdered, Settings } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronsLeftRight, ListOrdered, Settings } from 'lucide-react';
 import {
   BOARD_CURRENT_SPRINT,
   BOARD_OPEN_ISSUES,
@@ -32,16 +32,16 @@ import {
   type Sprint,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandGroup, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandGroup, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { IssueKey } from '@components/issue-key';
 import { PageTitle } from '@components/page-title';
 import { StatusDistribution } from '@components/dashboard/status-strip';
-import { MemberAvatar } from '@components/issues/member-avatar';
 import { IssueModal } from '@components/issues/issue-modal';
 import { QueryBar, type QueryProblem } from '@components/issues/list/query-bar';
 import { StartButton } from '@components/agile/backlog-page';
@@ -57,8 +57,9 @@ import { useSprints } from '@hooks/use-sprints';
 import { isApiError } from '@lib/api/errors';
 import { todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
-import { deactivatedInk } from '@components/former-member-chip';
+import { PersonName } from '@components/former-member-chip';
 import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
 
 // A column never narrows past a readable card, and stops widening where cards would sprawl;
 // past the minimum the board scrolls sideways instead of squeezing.
@@ -136,6 +137,13 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
   const sprints = useSprints(projectKey);
   const target = sprint === BOARD_CURRENT_SPRINT ? currentTarget(sprints.data, today) : sprint;
   const view = useBoardView(projectKey, boardSlug, target, q);
+  // A refused filter keeps the cards that were on screen; opened with one, it shows the unfiltered board.
+  const viewKey = `${boardSlug}/${target ?? ''}`;
+  const [lastGood, setLastGood] = useState<{ key: string; view: BoardView } | null>(null);
+  if (view.data && !view.isPlaceholderData && lastGood?.view !== view.data)
+    setLastGood({ key: viewKey, view: view.data });
+  const refused = view.isError && isApiError(view.error) && view.error.status === 400;
+  const unfiltered = useBoardView(projectKey, boardSlug, refused && lastGood?.key !== viewKey ? target : null, '');
   const boards = useBoards(projectKey);
   const [starting, setStarting] = useState<Sprint | null>(null);
   const [finishing, setFinishing] = useState<Sprint | null>(null);
@@ -164,16 +172,16 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
   const goToSprint = (slug: string) =>
     router.push(`${base}/${boardSlug}/${slug}${q ? `?q=${encodeURIComponent(q)}` : ''}` as Route);
 
-  if (view.isError && !problem) {
-    const missing = isApiError(view.error) && view.error.status === 404;
+  if (view.isError && !problem && !view.data) {
+    notFoundOn404(view.error);
     return (
-      <FormAlert
-        title={missing ? view.error.message : 'This board could not be loaded. Check the connection, then try again.'}
-      />
+      <LoadError onRetry={() => void view.refetch()} detail={errorDetail(view.error)}>
+        This board could not be loaded.
+      </LoadError>
     );
   }
 
-  const data = view.data;
+  const data = view.data ?? (problem ? (lastGood?.key === viewKey ? lastGood.view : unfiltered.data) : undefined);
   const current = data?.sprint ?? null;
   const openIssues = data?.scope === 'open';
   const planned = (sprints.data ?? []).filter(s => s.state === 'planned');
@@ -280,7 +288,7 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
           title={`${data.board.project.name} has no active sprint.`}
           description={
             planned.length > 0
-              ? `${planned.length} ${planned.length === 1 ? 'sprint is' : 'sprints are'} planned. Pick one above to see its board.`
+              ? `${plural(planned.length, 'sprint is', 'sprints are')} planned. Pick one above to see its board.`
               : 'The board shows the active sprint; nothing is running right now.'
           }
           action={
@@ -347,10 +355,11 @@ function BoardSwitcher({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
             {boards.map(b => (
-              <CommandItem
+              <PickerItem
+                checked={b.slug === current.slug}
                 key={b.slug}
                 value={b.slug}
                 onSelect={() => {
@@ -359,11 +368,10 @@ function BoardSwitcher({
                 }}
               >
                 <span className="flex-1 truncate">{b.name}</span>
-                <Check className={cn('size-icon-sm', b.slug === current.slug ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -404,10 +412,11 @@ function SprintPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
             <CommandGroup>
-              <CommandItem
+              <PickerItem
+                checked={openIssues}
                 value={BOARD_OPEN_ISSUES}
                 onSelect={() => {
                   setOpen(false);
@@ -418,8 +427,7 @@ function SprintPicker({
                   <span className="truncate">{OPEN_ISSUES_LABEL}</span>
                   <span className="text-2xs text-text-secondary">Every unresolved issue, in a sprint or not</span>
                 </span>
-                <Check className={cn('size-icon-sm', openIssues ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             </CommandGroup>
             {loading ? <p className="px-3 py-2 text-xs text-text-muted">Loading sprints…</p> : null}
             {STATE_GROUPS.map(([state, heading]) => {
@@ -428,7 +436,8 @@ function SprintPicker({
               return (
                 <CommandGroup key={state} heading={heading}>
                   {group.map(s => (
-                    <CommandItem
+                    <PickerItem
+                      checked={s.slug === current?.slug}
                       key={s.slug}
                       value={s.slug}
                       onSelect={() => {
@@ -440,14 +449,13 @@ function SprintPicker({
                         <span className="truncate">{s.name}</span>
                         <span className="text-2xs text-text-secondary">{sprintDatesLabel(s)}</span>
                       </span>
-                      <Check className={cn('size-icon-sm', s.slug === current?.slug ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   ))}
                 </CommandGroup>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -458,13 +466,13 @@ function UnmappedNotice({ view, canManage, projectKey }: { view: BoardView; canM
   return (
     <p className="flex flex-wrap items-center gap-x-2 rounded-md bg-warning-bg px-3 py-1.5 text-xs text-warning-fg">
       <span>
-        {n} {n === 1 ? 'card is' : 'cards are'} not shown: {view.unmapped.map(s => `${s.name} (${s.count})`).join(', ')}{' '}
+        {plural(n, 'card is', 'cards are')} not shown: {view.unmapped.map(s => `${s.name} (${s.count})`).join(', ')}{' '}
         {view.unmapped.length === 1 ? 'is' : 'are'} on no column.
       </span>
       {canManage ? (
         <Link
           href={`/projects/${projectKey}/settings?tab=boards&board=${view.board.slug}` as Route}
-          className="font-medium underline"
+          className="action-link font-medium"
         >
           Add a column
         </Link>
@@ -521,7 +529,7 @@ function BoardGrid({ projectKey, view, sprint, canPlan, today, filtered, onOpen 
     if (!value) return;
     move.mutate(
       { card: from.card, from: from.column, to: to.column, lane: from.lane, field: view.board.column_field, value },
-      { onError: error => toastError(error) },
+      { onError: error => toastError(`Could not move ${from.card}`, error) },
     );
   };
 
@@ -684,7 +692,7 @@ function ColumnHeader({
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              {wip ?? 'Work-in-progress limits'}: {column.total} {column.total === 1 ? 'card' : 'cards'} in the column
+              {wip ?? 'Work-in-progress limits'}: {plural(column.total, 'card')} in the column
             </TooltipContent>
           </Tooltip>
         ) : null}
@@ -703,7 +711,7 @@ function ColumnHeader({
           <TooltipContent>
             {filtered
               ? `${column.count} matching the filter, ${column.total} in the column`
-              : `${column.total} ${column.total === 1 ? 'card' : 'cards'}`}
+              : `${plural(column.total, 'card')}`}
           </TooltipContent>
         </Tooltip>
       </span>
@@ -741,9 +749,7 @@ function Lane({
           <ChevronRight className={cn('size-3.5 transition-transform duration-(--dur-fast)', !closed && 'rotate-90')} />
         </button>
         <LaneTitle lane={lane} />
-        <span className="text-xs tabular text-text-muted">
-          {lane.count} {lane.count === 1 ? 'card' : 'cards'}
-        </span>
+        <span className="text-xs tabular text-text-muted">{plural(lane.count, 'card')}</span>
       </div>
       {children}
     </>
@@ -774,12 +780,11 @@ function LaneTitle({ lane }: { lane: BoardLane }) {
   }
   return (
     <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
-      {lane.member ? <MemberAvatar member={lane.member} className="size-5" /> : null}
-      <span
-        className={cn('truncate', lane.kind === 'uncategorized' && 'text-text-secondary', deactivatedInk(lane.member))}
-      >
-        {lane.label}
-      </span>
+      {lane.member ? (
+        <PersonName person={lane.member} label={lane.label} avatar />
+      ) : (
+        <span className={cn('truncate', lane.kind === 'uncategorized' && 'text-text-secondary')}>{lane.label}</span>
+      )}
     </span>
   );
 }

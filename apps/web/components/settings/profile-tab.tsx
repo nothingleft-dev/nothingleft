@@ -2,7 +2,14 @@
 
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { USER_THEMES, AVATAR_MAX_BYTES, AVATAR_MIME_TYPES, type Me, type UserTheme } from '@nothingleft/types';
+import {
+  USER_THEMES,
+  AVATAR_MAX_BYTES,
+  AVATAR_MIME_TYPES,
+  type Me,
+  type UserTheme,
+  UpdateMeSchema,
+} from '@nothingleft/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@components/ui/avatar';
 import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
@@ -13,6 +20,9 @@ import { TimezonePicker, ZoneExample } from '@components/settings/timezone-picke
 import { Segmented } from '@components/segmented';
 import { useRemoveAvatar, useUpdateMe, useUpdatePreferences, useUploadAvatar } from '@hooks/use-me';
 import { initialsOf } from '@lib/initials';
+import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 const THEME_OPTIONS = USER_THEMES.map(value => ({
   value,
@@ -23,7 +33,8 @@ export function ProfileTab({ user }: { user: Me }) {
   const [name, setName] = useState(user.name);
   const [timezone, setTimezone] = useState(user.timezone);
   const update = useUpdateMe();
-  const error = useApiError(update.error);
+  const error = useApiError(update.error, ['name']);
+  const local = useFieldProblems(UpdateMeSchema, { name: 'Full name' });
   const dirty = name !== user.name || timezone !== user.timezone;
 
   return (
@@ -37,18 +48,33 @@ export function ProfileTab({ user }: { user: Me }) {
           className="flex max-w-sm flex-col gap-3"
           onSubmit={event => {
             event.preventDefault();
+            if (!local.check({ name, timezone })) return;
             update.mutate({ name, timezone }, { onSuccess: () => toast.success('Profile saved.') });
           }}
         >
-          <Field label="Full name" value={name} error={error.fields['name']} onChange={e => setName(e.target.value)} />
+          <Field
+            label="Full name"
+            value={name}
+            error={local.problems['name'] ?? error.fields['name']}
+            onChange={e => {
+              setName(e.target.value);
+              local.clear('name');
+            }}
+          />
           <div className="flex flex-col gap-1.5">
             <span className="font-medium">Time zone</span>
             <TimezonePicker value={timezone} onChange={setTimezone} />
             <ZoneExample timeZone={timezone} />
           </div>
-          <Button type="submit" disabled={!dirty || update.isPending} className="self-start">
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
+          <PendingButton
+            type="submit"
+            disabled={!dirty}
+            className="self-start"
+            pending={update.isPending}
+            pendingLabel="Saving…"
+          >
+            Save changes
+          </PendingButton>
         </form>
       </SettingsSection>
 
@@ -74,7 +100,7 @@ function AvatarSection({ user }: { user: Me }) {
     }
     upload.mutate(file, {
       onSuccess: () => toast.success('Photo updated.'),
-      onError: e => toast.error(e instanceof Error ? e.message : 'The upload failed.'),
+      onError: e => toastError('Could not upload the picture', e),
     });
   };
 
@@ -84,9 +110,14 @@ function AvatarSection({ user }: { user: Me }) {
       description="PNG, JPEG or WebP, up to 2MB. Avatars never count toward your organisation’s storage."
       actions={
         <>
-          <Button variant="outline" disabled={upload.isPending} onClick={() => input.current?.click()}>
-            {upload.isPending ? 'Uploading…' : 'Upload'}
-          </Button>
+          <PendingButton
+            variant="outline"
+            onClick={() => input.current?.click()}
+            pending={upload.isPending}
+            pendingLabel="Uploading…"
+          >
+            Upload
+          </PendingButton>
           <Button
             variant="ghost"
             disabled={remove.isPending}

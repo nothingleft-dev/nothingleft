@@ -16,6 +16,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { ReauthButtons } from '@components/auth/provider-buttons';
 import { useApiError } from '@hooks/use-api-error';
 import { isApiError, type ApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
 
 const PROVIDER_LABELS: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 
@@ -67,7 +68,7 @@ export function StepUpDialog({
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [missing, setMissing] = useState<{ current_password?: string; code?: string }>({});
-  const parsed = useApiError(error);
+  const parsed = useApiError(error, ['current_password', 'code']);
   const needsCode = user.has_password && user.two_factor.enabled;
   const reauth = isApiError(error) && error.code === 'auth.recent_sign_in_required';
   const custom = isApiError(error) && !reauth ? renderError?.(error) : undefined;
@@ -157,9 +158,15 @@ export function StepUpDialog({
             <Button type="button" variant="outline" onClick={() => close(false)} disabled={pending}>
               Cancel
             </Button>
-            <Button type="submit" variant={destructive ? 'destructive' : 'default'} disabled={pending || !ready}>
-              {pending ? pendingLabel : confirmLabel}
-            </Button>
+            <PendingButton
+              type="submit"
+              variant={destructive ? 'destructive' : 'default'}
+              disabled={!ready}
+              pending={pending}
+              pendingLabel={pendingLabel}
+            >
+              {confirmLabel}
+            </PendingButton>
           </DialogFooter>
         </form>
       </DialogContent>

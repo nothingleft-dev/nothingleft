@@ -12,6 +12,7 @@ import { useArticle } from '@hooks/use-articles';
 import { useProject } from '@hooks/use-projects';
 import { queryKeys } from '@lib/query/keys';
 import { isReportName, reportDef } from '@lib/reports/registry';
+import { cn } from '@lib/utils';
 
 // Labels for the flat routes in frontend-guide.md § Routes.
 const ROOTS: Record<string, string> = {
@@ -127,25 +128,36 @@ export function Breadcrumb() {
   const crumbs = useArticleCrumbs(pathname, useNamedCrumbs(crumbsFor(pathname)));
   const last = crumbs.length - 1;
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 truncate font-medium">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-medium whitespace-nowrap">
       {crumbs.map((c, i) => (
         <Fragment key={`${c.label}-${i}`}>
-          {i > 0 ? <span className="shrink-0 text-text-muted max-sm:hidden">/</span> : null}
+          {i > 0 ? (
+            <span className={cn('shrink-0 text-text-muted max-sm:hidden', i < last && 'max-lg:hidden')}>/</span>
+          ) : null}
           {c.href && i !== last ? (
             <Link
               href={c.href}
-              className={
-                c.mono
-                  ? 'shrink-0 font-mono text-xs text-text-secondary max-sm:hidden'
-                  : 'shrink-0 font-normal text-text-secondary hover:text-text max-sm:hidden'
-              }
+              title={c.label}
+              className={cn(
+                // Ancestors give up their width long before the current page does.
+                'max-w-[16rem] min-w-[5ch] shrink-[1000] truncate text-text-secondary hover:text-text max-sm:hidden',
+                // Narrow top bars keep the parent and the page.
+                i < last - 1 && 'max-lg:hidden',
+                c.mono ? 'font-mono text-xs' : 'font-normal',
+              )}
             >
               {c.label}
             </Link>
           ) : (
             <span
               aria-current={i === last ? 'page' : undefined}
-              className={c.mono ? 'truncate font-mono text-xs' : 'truncate'}
+              title={c.label}
+              className={cn(
+                'min-w-0 truncate',
+                i !== last && 'min-w-[5ch] shrink-[1000] max-sm:hidden',
+                i < last - 1 && 'max-lg:hidden',
+                c.mono && 'font-mono text-xs',
+              )}
             >
               {c.label}
             </span>

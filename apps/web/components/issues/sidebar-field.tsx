@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Pencil } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { useMediaQuery } from '@hooks/use-media-query';
 import { cn } from '@lib/utils';
 
@@ -27,7 +27,7 @@ interface SidebarFieldProps {
 
 const ROW_CLASS = {
   rail: 'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-sm px-2 py-[7px] text-left',
-  strip: 'grid min-w-32 grid-cols-[minmax(0,1fr)] content-start gap-y-0.5 px-3 py-2 text-left',
+  strip: 'grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-y-0.5 px-3 py-2 text-left',
 };
 
 function Body({

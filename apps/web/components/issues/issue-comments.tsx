@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { PersonName } from '@components/former-member-chip';
@@ -33,6 +33,7 @@ import { useSession } from '@hooks/use-session';
 import { isApiError } from '@lib/api/errors';
 import { formatDateTimeWithZone } from '@lib/datetime';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const SUBMIT_KBD = 'h-4 border-transparent bg-ink-fg/15 text-ink-fg/80';
 
@@ -90,7 +91,10 @@ export function CommentBody({ scope, projectKey, comment, editing, onEditingChan
       onToggleTask={
         comment.me.can_edit
           ? (index, checked) =>
-              toggle.mutate({ id: comment.id, index, checked }, { onError: error => toastError(error) })
+              toggle.mutate(
+                { id: comment.id, index, checked },
+                { onError: error => toastError('Could not update the task', error) },
+              )
           : undefined
       }
     />
@@ -118,7 +122,7 @@ export function CommentMenu({ scope, subject, comment, onEdit }: CommentMenuProp
             variant="ghost"
             size="icon-xs"
             aria-label="Comment actions"
-            className="ml-auto text-text-muted opacity-0 group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            className="ml-auto text-text-muted reveal group-hover/comment:opacity-100"
           >
             <MoreHorizontal />
           </Button>
@@ -142,13 +146,14 @@ export function CommentMenu({ scope, subject, comment, onEdit }: CommentMenuProp
         onOpenChange={setConfirming}
         title="Delete this comment?"
         confirmLabel="Delete comment"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() =>
           remove.mutate(comment.id, {
             onSuccess: () => setConfirming(false),
             onError: error => {
               setConfirming(false);
-              toastError(error);
+              toastError('Could not delete the comment', error);
             },
           })
         }
@@ -182,7 +187,7 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
     if (blocked) return;
     if (text !== comment.body_md) {
       // Shown saved at once; a refusal puts the old text back and says why.
-      update.mutate({ id: comment.id, body_md: text }, { onError: e => toastError(e) });
+      update.mutate({ id: comment.id, body_md: text }, { onError: e => toastError('Could not save the comment', e) });
     }
     onDone();
   };
@@ -202,9 +207,16 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
         uploader={uploader}
         footer={
           <>
-            <Button size="sm" onClick={submit} disabled={blocked}>
-              {uploader.busy ? 'Uploading…' : 'Save'} <Kbd className={SUBMIT_KBD}>⌘↵</Kbd>
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={submit}
+              disabled={blocked}
+              pending={uploader.busy}
+              pendingLabel="Uploading…"
+              after={<Kbd className={SUBMIT_KBD}>⌘↵</Kbd>}
+            >
+              Save
+            </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel
             </Button>
@@ -284,9 +296,16 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
           uploader={uploader}
           footer={
             <>
-              <Button size="sm" onClick={submit} disabled={blocked}>
-                {uploader.busy ? 'Uploading…' : 'Add comment'} <Kbd className={SUBMIT_KBD}>⌘↵</Kbd>
-              </Button>
+              <PendingButton
+                size="sm"
+                onClick={submit}
+                disabled={blocked}
+                pending={uploader.busy}
+                pendingLabel="Uploading…"
+                after={<Kbd className={SUBMIT_KBD}>⌘↵</Kbd>}
+              >
+                Add comment
+              </PendingButton>
               {empty ? null : (
                 <Button size="sm" variant="ghost" onClick={discard}>
                   Cancel

@@ -16,6 +16,7 @@ import { Skeleton } from '@components/ui/skeleton';
 import { OrganizationMark } from '@components/organization/organization-mark';
 import { useSwitchOrganization } from '@hooks/use-organizations';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 interface OrgSwitcherProps {
   collapsed: boolean;
@@ -29,9 +30,7 @@ export function OrgSwitcher({ collapsed, org, organizations, isPending, onNaviga
   const router = useRouter();
   const switchTo = useSwitchOrganization();
 
-  const caption = org
-    ? `Organisation · ${org.seats.used} ${org.seats.used === 1 ? 'member' : 'members'}`
-    : 'Organisation';
+  const caption = org ? `Organisation · ${plural(org.seats.used, 'member')}` : 'Organisation';
 
   return (
     <DropdownMenu>

@@ -7,9 +7,9 @@ import { toast } from 'sonner';
 import type { Project } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { PageHeader } from '@components/page-header';
-import { Segmented } from '@components/segmented';
-import { PageSkeleton } from '@components/skeletons';
-import { FormAlert } from '@components/auth/form-alert';
+import { Tabs } from '@components/tabs';
+import { RowsSkeleton, SettingsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { SettingsSection } from '@components/settings/section';
 import { InviteEmailsForm } from '@components/invitations/invite-emails-form';
@@ -55,7 +55,7 @@ const SCHEMA_TABS: Partial<Record<Tab, SchemaTable>> = {
   'time-tracking': 'work-types',
 };
 
-const ADMIN_ONLY: readonly Tab[] = ['deleted'];
+const ADMIN_ONLY: readonly Tab[] = ['deleted', 'invites'];
 
 const isTab = (value: string | null): value is Tab => TABS.some(t => t.value === value);
 
@@ -70,14 +70,13 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
   const organization = useOrganization(slug);
   const repositories = useProjectRepositories(projectKey, requested === 'automations');
 
-  if (project.isPending) return <PageSkeleton rows={5} />;
-  if (project.isError || !project.data) {
+  if (project.isPending) return <SettingsSkeleton />;
+  if (!project.data) {
+    notFoundOn404(project.error);
     return (
-      <FormAlert title="This project could not be loaded.">
-        <Button size="sm" variant="outline" className="mt-2" onClick={() => void project.refetch()}>
-          Retry
-        </Button>
-      </FormAlert>
+      <LoadError onRetry={() => void project.refetch()} detail={errorDetail(project.error)}>
+        This project could not be loaded.
+      </LoadError>
     );
   }
 
@@ -98,18 +97,15 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader
-        title={project.data.name}
-        meta={<span className="font-mono">{project.data.key}</span>}
-        actions={
-          <Segmented
-            ariaLabel="Project settings"
-            value={tab}
-            options={tabs}
-            onChange={next => router.replace(`/projects/${projectKey}/settings?tab=${next}` as Route)}
-          />
-        }
-      />
+      <div className="flex flex-col gap-2">
+        <PageHeader title={project.data.name} meta={<span className="font-mono">{project.data.key}</span>} />
+        <Tabs
+          ariaLabel="Project settings"
+          value={tab}
+          options={tabs}
+          onChange={next => router.replace(`/projects/${projectKey}/settings?tab=${next}` as Route)}
+        />
+      </div>
 
       <div className="flex max-w-4xl flex-col gap-5">
         {tab === 'general' ? (
@@ -154,7 +150,7 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
 
         {tab === 'automations' ? (
           repositories.isPending && gitEnabled ? (
-            <PageSkeleton rows={4} />
+            <RowsSkeleton rows={4} columns={['lines', 'chip', 'icon']} />
           ) : (
             <AutomationsSettings
               projectKey={projectKey}
@@ -234,6 +230,7 @@ function ArchiveSection({ project }: { project: Project }) {
         onOpenChange={setConfirming}
         title={`Archive ${project.name}?`}
         confirmLabel="Archive project"
+        pendingLabel="Archiving…"
         destructive={false}
         pending={archive.isPending}
         onConfirm={() =>

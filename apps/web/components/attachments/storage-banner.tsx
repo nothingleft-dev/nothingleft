@@ -40,10 +40,7 @@ export function StorageBanner({ storage, withLink = true, className }: StorageBa
       <Icon className="mt-0.5 size-icon-sm flex-none" />
       <p className="flex-1 text-xs leading-5">{sentence}</p>
       {withLink ? (
-        <Link
-          href={'/organization' as Route}
-          className="flex-none text-xs leading-5 font-medium underline underline-offset-2 hover:no-underline"
-        >
+        <Link href={'/organization' as Route} className="action-link flex-none text-xs leading-5 font-medium">
           Organisation settings
         </Link>
       ) : null}

@@ -5,14 +5,14 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import type { WorkCalendar } from '@nothingleft/format';
 import type { MemberRef, TimesheetReport as Timesheet } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { RetryButton } from '@components/query-state';
+import { RowsSkeleton } from '@components/skeletons';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Duration } from '@components/duration';
 import { IssueKey } from '@components/issue-key';
 import { LetterBadge } from '@components/letter-badge';
 import { PersonName } from '@components/former-member-chip';
 import { MemberAvatar } from '@components/issues/member-avatar';
-import { PickerSkeleton } from '@components/issues/pickers';
 import { PeriodPicker } from '@components/reports/period-picker';
 import { ReportFrame } from '@components/reports/report-frame';
 import { ReportMultiPicker } from '@components/reports/report-picker';
@@ -31,6 +31,7 @@ import {
 } from '@lib/datetime';
 import { EVERYONE } from '@lib/reports/url';
 import { cn } from '@lib/utils';
+import { LoadMore } from '@components/text-button';
 
 const calendarOf = (data: Timesheet): WorkCalendar => ({
   workdayMinutes: data.calendar.workday_minutes,
@@ -277,9 +278,12 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.isPending ? (
-          <PickerSkeleton rows={3} />
-        ) : items.isError ? (
-          <p className="px-3 py-3 text-xs text-danger-fg">{items.error.message}</p>
+          <RowsSkeleton rows={3} columns={['key', 'title', 'short']} bordered={false} className="px-3" />
+        ) : items.isError && !items.data ? (
+          <div className="flex items-center gap-3 px-3 py-3">
+            <p className="min-w-0 flex-1 text-xs text-danger-fg">{items.error.message}</p>
+            <RetryButton onRetry={() => void items.refetch()} size="xs" />
+          </div>
         ) : (
           <ul className="divide-y divide-border-subtle">
             {rows.map(item => (
@@ -289,7 +293,7 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
                     href={`/issue/${item.issue}` as Route}
                     className="flex min-w-0 flex-1 items-center gap-2 hover:underline"
                   >
-                    <IssueKey issueKey={item.issue} />
+                    <IssueKey issueKey={item.issue} column />
                     <span className="truncate">{item.issue_title}</span>
                   </Link>
                   <Duration minutes={item.duration_minutes} calendar={calendar} />
@@ -316,15 +320,7 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
       </div>
       {items.hasNextPage ? (
         <div className="border-t p-2">
-          <Button
-            variant="ghost"
-            size="xs"
-            className="w-full"
-            disabled={items.isFetchingNextPage}
-            onClick={() => void items.fetchNextPage()}
-          >
-            {items.isFetchingNextPage ? 'Loading…' : 'Load more'}
-          </Button>
+          <LoadMore size="xs" pending={items.isFetchingNextPage} onClick={() => void items.fetchNextPage()} />
         </div>
       ) : null}
     </div>

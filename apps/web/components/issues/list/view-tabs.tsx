@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
+import { TabStrip } from '@components/tabs';
 import { useIssueCount } from '@hooks/use-issue-search';
 import { cn } from '@lib/utils';
 
@@ -35,19 +36,21 @@ const VISIBILITY_LABEL: Record<SavedView['visibility'], string> = {
 export function ViewTabs({ views, active, project, onSelect, onAction, modified }: ViewTabsProps) {
   if (views.length === 0) return null;
   return (
-    <div role="tablist" aria-label="Saved views" className="flex flex-wrap items-center gap-1">
-      {views.map(view => (
-        <ViewTab
-          key={`${view.owner.username}/${view.name}`}
-          view={view}
-          project={project}
-          active={active?.name === view.name && active.owner.username === view.owner.username}
-          modified={modified}
-          onSelect={() => onSelect(view)}
-          onAction={action => onAction(view, action)}
-        />
-      ))}
-    </div>
+    <TabStrip selected={active ? `${active.owner.username}/${active.name}` : ''}>
+      <div role="tablist" aria-label="Saved views" className="flex items-center gap-1 py-0.5">
+        {views.map(view => (
+          <ViewTab
+            key={`${view.owner.username}/${view.name}`}
+            view={view}
+            project={project}
+            active={active?.name === view.name && active.owner.username === view.owner.username}
+            modified={modified}
+            onSelect={() => onSelect(view)}
+            onAction={action => onAction(view, action)}
+          />
+        ))}
+      </div>
+    </TabStrip>
   );
 }
 
@@ -84,14 +87,14 @@ function ViewTab({
     >
       <span className="max-w-[24ch] truncate">{view.name}</span>
       {count.isError ? (
-        <span className="text-text-muted" title="This view's query no longer runs">
+        <span className="text-text-secondary" title="This view's query no longer runs">
           !
         </span>
       ) : count.data !== undefined ? (
-        <span className="font-normal tabular text-text-muted">{count.data}</span>
+        <span className="font-normal tabular text-text-secondary">{count.data}</span>
       ) : null}
       {active && modified ? (
-        <span className="text-text-muted" title="Query changed since the view was saved">
+        <span className="text-text-secondary" title="Query changed since the view was saved">
           •
         </span>
       ) : null}
@@ -99,10 +102,10 @@ function ViewTab({
   );
 
   return (
-    <span className="inline-flex items-center">
+    <span className="inline-flex shrink-0 items-center">
       <Tooltip>
         <TooltipTrigger asChild>{pill}</TooltipTrigger>
-        <TooltipContent>
+        <TooltipContent side="bottom">
           <span className="font-mono">{view.query || '(everything)'}</span>
           <br />
           {owner}
@@ -114,7 +117,7 @@ function ViewTab({
             <button
               type="button"
               aria-label={`Manage view ${view.name}`}
-              className="grid h-control-sm w-5 place-items-center rounded-r-sm bg-active text-text-muted hover:text-text max-md:min-h-11"
+              className="grid h-control-sm w-5 place-items-center rounded-r-sm bg-active text-text-secondary hover:text-text max-md:min-h-11"
             >
               <ChevronDown className="size-3" />
             </button>

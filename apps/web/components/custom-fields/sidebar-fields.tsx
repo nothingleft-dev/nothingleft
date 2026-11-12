@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import type { CustomField, CustomFieldValueInput, Issue, IssueCustomFieldValue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { Switch } from '@components/ui/switch';
 import { Markdown } from '@components/markdown/markdown';
 import { SidebarField, useRailPopoverSide } from '@components/issues/sidebar-field';

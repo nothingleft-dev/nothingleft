@@ -7,6 +7,7 @@ import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus, type JobTone } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
@@ -40,11 +41,9 @@ export function RecentImports({ project, onContinue }: RecentImportsProps) {
   if (list.isPending) return <RecentSkeleton />;
   if (list.isError && !list.data) {
     return (
-      <FormAlert title="Recent imports could not be loaded.">
-        <button type="button" onClick={() => void list.refetch()}>
-          Try again
-        </button>
-      </FormAlert>
+      <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+        Recent imports could not be loaded.
+      </LoadError>
     );
   }
   const jobs = list.data;
@@ -115,9 +114,7 @@ function ImportRow({ job, expanded, onToggle, onContinue }: ImportRowProps) {
         <span className={cn('text-right tabular', job.failed_rows > 0 ? 'text-danger-fg' : 'text-text-secondary')}>
           {ran ? count(job.failed_rows) : count(null)}
         </span>
-        <span className="min-w-0 truncate text-text-secondary">
-          <PersonName person={job.created_by} />
-        </span>
+        <PersonName person={job.created_by} className="text-text-secondary" />
         <RelativeTime value={job.created_at} className="text-text-secondary" />
       </button>
       {expanded ? (

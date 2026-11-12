@@ -4,14 +4,15 @@ import { Fragment, useState, type ReactNode } from 'react';
 import { Link2, Tag, X } from 'lucide-react';
 import { formatDuration, parseDuration, type WorkCalendar } from '@nothingleft/format';
 import type { CustomField, CustomFieldValueInput, IssueLinkName, MemberRef, Project, TagRef } from '@nothingleft/types';
+import { TitleInput } from '@components/title-input';
 import { Switch } from '@components/ui/switch';
 import { FieldEditor, editorWidth } from '@components/custom-fields/field-editors';
 import { OptionChip, markdownPreview } from '@components/custom-fields/field-value';
 import { emptyLabelOf } from '@components/custom-fields/field-types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { FormAlert } from '@components/auth/form-alert';
 import { ChoiceSelect } from '@components/choice-select';
 import { IssueKey } from '@components/issue-key';
@@ -456,15 +457,15 @@ export function DraftText({ draft, large, withLinks = false }: DraftTextProps) {
         <label htmlFor="create-issue-title" className="sr-only">
           Title
         </label>
-        <input
+        <TitleInput
           id="create-issue-title"
           autoFocus
           value={draft.title}
-          onChange={e => draft.setTitle(e.target.value)}
+          onValueChange={draft.setTitle}
           placeholder="Issue title"
           aria-invalid={Boolean(draft.error.fields['title'])}
           className={cn(
-            'min-w-0 flex-1 bg-transparent py-1.5 font-semibold text-text placeholder:text-text-muted focus-visible:shadow-none',
+            'min-w-0 flex-1 bg-transparent py-1.5 font-semibold text-text [overflow-wrap:anywhere] placeholder:text-text-muted focus-visible:shadow-none',
             large ? 'text-2xl tracking-tight' : 'text-lg',
           )}
         />
@@ -582,7 +583,7 @@ function DraftLinks({ draft, onClose }: { draft: IssueDraft; onClose: () => void
             <li key={`${name} ${issue.key}`} className="flex h-row items-center gap-2 pr-1 pl-2.5 text-sm">
               <span className="w-28 flex-none text-xs text-text-secondary">{linkLabel(name)}</span>
               <TypeBadge type={issue.type} />
-              <IssueKey issueKey={issue.key} resolved={issue.resolved} />
+              <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
               <span className="min-w-0 flex-1 truncate">{issue.title}</span>
               <Button
                 type="button"

@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { CustomField, CustomFieldType } from '@nothingleft/types';
+import { emptyLabel } from '@nothingleft/format';
 
 export interface FieldTypeMeta {
   label: string;
@@ -54,7 +55,7 @@ export const isGroupable = (type: CustomFieldType) =>
 export const isSortable = (type: CustomFieldType) => type !== 'text' && type !== 'markdown' && type !== 'url';
 
 export const emptyLabelOf = (field: Pick<CustomField, 'name' | 'empty_label'>) =>
-  field.empty_label ?? `No ${field.name}`;
+  field.empty_label ?? emptyLabel(field.name);
 
 /** Fields a new issue of `typeName` carries: live, applying to the type, and not standing in for Estimation or Spent time. */
 export const fieldsForType = (fields: readonly CustomField[], typeName: string | null) =>

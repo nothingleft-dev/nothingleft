@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SignInSchema, type Me, type TwoFactorChallenge } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
 import { Field } from '@components/auth/field';
@@ -17,6 +16,7 @@ import { signIn } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
 import { viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
+import { PendingButton } from '@components/pending-button';
 
 export function SignInForm() {
   const params = useSearchParams();
@@ -85,12 +85,12 @@ export function SignInForm() {
             <>
               Wait, then try again - or <TextLink href="/reset-password">reset your password</TextLink>.
             </>
-          ) : (
+          ) : code === 'auth.invalid_credentials' ? (
             <>
               Check both fields, or <TextLink href="/reset-password">reset your password</TextLink>. Five failed
               attempts pause sign-in for fifteen minutes.
             </>
-          )}
+          ) : null}
         </FormAlert>
       ) : null}
 
@@ -120,9 +120,9 @@ export function SignInForm() {
           }
           onChange={e => form.set('password', e.target.value)}
         />
-        <Button type="submit" disabled={form.isPending} className="mt-1 w-full">
-          {form.isPending ? 'Signing in…' : 'Sign in'}
-        </Button>
+        <PendingButton type="submit" className="mt-1 w-full" pending={form.isPending} pendingLabel="Signing in…">
+          Sign in
+        </PendingButton>
         <FinePrint>
           Signing in with Google or GitHub for the first time creates an account, and you agree to the{' '}
           <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}

@@ -1,11 +1,11 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Check } from 'lucide-react';
 import { formatDuration, parseDuration, type WorkCalendar } from '@nothingleft/format';
 import type { MemberRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
 import { Skeleton } from '@components/ui/skeleton';
 import { MonthGrid } from '@components/date-picker';
 import { MemberAvatar } from '@components/issues/member-avatar';
@@ -67,7 +67,7 @@ export function ValueCommand({
   onRetry,
 }: ValueCommandProps) {
   return (
-    <Command>
+    <PickerCommand>
       <CommandInput placeholder={placeholder} />
       <CommandList>
         {loading ? (
@@ -78,7 +78,8 @@ export function ValueCommand({
           <CommandEmpty>No value matches.</CommandEmpty>
         )}
         {options.map(option => (
-          <CommandItem
+          <PickerItem
+            checked={option.name === selected}
             key={option.name}
             value={option.hint ? `${option.name} ${option.hint}` : option.name}
             onSelect={() => onSelect(option.name)}
@@ -86,11 +87,10 @@ export function ValueCommand({
             {option.mark}
             <span className="min-w-0 flex-1 truncate">{option.name}</span>
             {option.hint ? <span className="font-mono text-2xs text-text-muted">{option.hint}</span> : null}
-            <Check className={cn('size-icon-sm', option.name === selected ? 'opacity-100' : 'opacity-0')} />
-          </CommandItem>
+          </PickerItem>
         ))}
       </CommandList>
-    </Command>
+    </PickerCommand>
   );
 }
 
@@ -105,7 +105,7 @@ interface AssigneeCommandProps {
 /** Stays open while toggling: several people are often assigned in one go. */
 export function AssigneeCommand({ people, selected, onToggle, loading = false, onRetry }: AssigneeCommandProps) {
   return (
-    <Command>
+    <PickerCommand>
       <CommandInput placeholder="Find a person" />
       <CommandList>
         {loading ? (
@@ -118,7 +118,8 @@ export function AssigneeCommand({ people, selected, onToggle, loading = false, o
         {people.map(person => {
           const on = selected.includes(person.username);
           return (
-            <CommandItem
+            <PickerItem
+              checked={on}
               key={person.username}
               value={`${person.name} ${person.username}`}
               onSelect={() => onToggle(person.username)}
@@ -127,12 +128,11 @@ export function AssigneeCommand({ people, selected, onToggle, loading = false, o
               <MemberAvatar member={person} className="size-5" />
               <span className="min-w-0 flex-1 truncate">{person.name}</span>
               <span className="text-xs text-text-muted">@{person.username}</span>
-              <Check className={cn('size-icon-sm', on ? 'opacity-100' : 'opacity-0')} />
-            </CommandItem>
+            </PickerItem>
           );
         })}
       </CommandList>
-    </Command>
+    </PickerCommand>
   );
 }
 

@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import type { Me, OAuthProvider } from '@nothingleft/types';
 import { useMutation } from '@tanstack/react-query';
-import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PasswordStrength } from '@components/auth/password-strength';
@@ -16,6 +15,7 @@ import { TwoFactorSection, type SecurityConfirm } from '@components/settings/two
 import { changePassword, requestEmailChange, requestPasswordReset } from '@lib/api/auth';
 import { needsVerification } from '@components/onboarding/verify-gate';
 import { VerifyEmailNotice } from '@components/settings/verify-email-notice';
+import { PendingButton } from '@components/pending-button';
 
 const PROVIDER_LABELS: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 const providerList = (user: Me) => user.linked_providers.map(p => PROVIDER_LABELS[p]).join(' and ');
@@ -50,7 +50,7 @@ function EmailSection({ user }: { user: Me }) {
       toast.success('Confirm the new address from the email we just sent.');
     },
   });
-  const error = useApiError(change.error);
+  const error = useApiError(change.error, ['email', 'current_password']);
   const unverified = needsVerification(user);
 
   return (
@@ -96,9 +96,15 @@ function EmailSection({ user }: { user: Me }) {
               error={error.fields['current_password']}
               onChange={e => setForm({ ...form, current_password: e.target.value })}
             />
-            <Button type="submit" disabled={unverified || change.isPending} className="self-start">
-              {change.isPending ? 'Sending…' : 'Send confirmation'}
-            </Button>
+            <PendingButton
+              type="submit"
+              disabled={unverified}
+              className="self-start"
+              pending={change.isPending}
+              pendingLabel="Sending…"
+            >
+              Send confirmation
+            </PendingButton>
           </form>
         ) : null}
       </div>
@@ -115,7 +121,7 @@ function PasswordSection() {
       toast.success('Password changed. Every other session was signed out.');
     },
   });
-  const error = useApiError(change.error);
+  const error = useApiError(change.error, ['current_password', 'password']);
 
   return (
     <SettingsSection
@@ -148,9 +154,9 @@ function PasswordSection() {
           error={error.fields['password']}
           onChange={e => setForm({ ...form, password: e.target.value })}
         />
-        <Button type="submit" disabled={change.isPending} className="self-start">
-          {change.isPending ? 'Saving…' : 'Change password'}
-        </Button>
+        <PendingButton type="submit" className="self-start" pending={change.isPending} pendingLabel="Saving…">
+          Change password
+        </PendingButton>
       </form>
     </SettingsSection>
   );
@@ -163,7 +169,7 @@ function SetPasswordSection({ user }: { user: Me }) {
     mutationFn: () => requestPasswordReset(user.email),
     onSuccess: () => toast.success(`We sent a link to ${user.email}.`),
   });
-  const error = useApiError(send.error);
+  const error = useApiError(send.error, []);
 
   return (
     <SettingsSection
@@ -171,14 +177,16 @@ function SetPasswordSection({ user }: { user: Me }) {
       description={`You sign in with ${providerList(user)}. Set a password to sign in with your email as well.`}
     >
       {error.summary ? <FormAlert title={error.summary} /> : null}
-      <Button
+      <PendingButton
         variant="outline"
-        disabled={send.isPending || send.isSuccess}
+        disabled={send.isSuccess}
         className="self-start"
         onClick={() => send.mutate()}
+        pending={send.isPending}
+        pendingLabel="Sending…"
       >
-        {send.isPending ? 'Sending…' : send.isSuccess ? 'Link sent' : 'Email me a link to set one'}
-      </Button>
+        {send.isSuccess ? 'Link sent' : 'Email me a link to set one'}
+      </PendingButton>
     </SettingsSection>
   );
 }

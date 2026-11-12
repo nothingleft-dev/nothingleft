@@ -21,7 +21,7 @@ import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { BoardColumnsEditor } from '@components/agile/board-settings-columns';
@@ -29,6 +29,8 @@ import { BoardSwimlanes } from '@components/agile/board-settings-swimlanes';
 import { useBoard, useBoards, useCreateBoard, useDeleteBoard, useUpdateBoard } from '@hooks/use-boards';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
 interface BoardSettingsProps {
   projectKey: string;
@@ -75,8 +77,10 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
       >
         {boards.isPending ? (
           <RowsSkeleton rows={2} />
-        ) : boards.isError ? (
-          <FormAlert title="The boards could not be loaded." />
+        ) : boards.isError && !boards.data ? (
+          <LoadError onRetry={() => void boards.refetch()} detail={errorDetail(boards.error)}>
+            The boards could not be loaded.
+          </LoadError>
         ) : list.length === 0 ? (
           <EmptyState
             title="This project has no board."
@@ -97,8 +101,7 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
                     <span className="truncate font-medium">{b.name}</span>
                     <span className="font-mono text-2xs text-text-muted">{b.slug}</span>
                     <span className="ml-auto hidden text-xs text-text-secondary sm:inline">
-                      {b.columns.length} {b.columns.length === 1 ? 'column' : 'columns'} ·{' '}
-                      {SWIMLANE_SUMMARY[b.swimlane_by](b)}
+                      {plural(b.columns.length, 'column')} · {SWIMLANE_SUMMARY[b.swimlane_by](b)}
                     </span>
                   </button>
                   <Button asChild variant="ghost" size="sm" className="text-text-secondary">
@@ -149,6 +152,7 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
         onOpenChange={open => (open ? null : setDeleting(null))}
         title={`Delete the board ${deleting?.name ?? ''}?`}
         confirmLabel="Delete board"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() => {
           if (!deleting) return;
@@ -159,7 +163,7 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
               setDeleting(null);
               if (gone.slug === selected?.slug) select(null);
             },
-            onError: error => toastError(error),
+            onError: error => toastError(`Could not delete ${gone.name}`, error),
           });
         }}
       >
@@ -274,9 +278,9 @@ function BoardNameForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : renaming ? 'Rename' : 'Create board'}
-        </Button>
+        <PendingButton type="submit" pending={pending} pendingLabel="Saving…">
+          {renaming ? 'Rename' : 'Create board'}
+        </PendingButton>
       </DialogFooter>
     </form>
   );

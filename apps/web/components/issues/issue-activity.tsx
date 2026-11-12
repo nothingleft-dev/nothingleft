@@ -16,7 +16,8 @@ import {
   type MemberRef,
   type WorkItemSnapshot,
 } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
+import { Tabs } from '@components/tabs';
+import { LoadError } from '@components/query-state';
 import { Skeleton } from '@components/ui/skeleton';
 import { Duration } from '@components/duration';
 import { EmptyState } from '@components/empty-state';
@@ -33,6 +34,7 @@ import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { formatCalendarDate, formatDateTime } from '@lib/datetime';
 import { LINK_SOURCE } from '@lib/git/words';
 import { cn } from '@lib/utils';
+import { LoadMore } from '@components/text-button';
 
 const TABS = [
   { value: 'all', label: 'All' },
@@ -218,34 +220,25 @@ export function IssueActivitySection({
   return (
     <section className="mt-8" aria-label="Activity">
       <div className="flex h-control items-center gap-3 border-b">
-        <h2 className="text-sm font-semibold">Activity</h2>
-        <div role="tablist" aria-label="Activity" className="flex gap-1">
-          {tabs.map(t => (
-            <button
-              key={t.value}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.value}
-              onClick={() => setTab(t.value)}
-              className={cn(
-                'inline-flex h-control-sm items-center gap-1.5 rounded-sm px-2 text-xs text-text-secondary hover:bg-hover hover:text-text',
-                tab === t.value && 'bg-active text-text',
-              )}
-            >
-              {t.label}
-              {t.value === 'comments' && issue.comment_count > 0 ? (
-                <span className="tabular text-text-muted">{issue.comment_count}</span>
-              ) : null}
-              {t.value === 'development' && development && development.count > 0 ? (
-                <span className="tabular text-text-muted">{development.count}</span>
-              ) : null}
-              {t.value === 'time' && issue.spent_minutes > 0 ? (
-                <Duration minutes={issue.spent_minutes} calendar={calendar} className="text-2xs text-text-muted" />
-              ) : null}
-            </button>
-          ))}
-        </div>
-        <span className="ml-auto text-xs text-text-muted max-sm:hidden">Oldest first</span>
+        <h2 className="flex-none text-sm font-semibold">Activity</h2>
+        <Tabs
+          size="section"
+          ariaLabel="Activity"
+          value={tab}
+          onChange={setTab}
+          options={tabs.map(t => ({
+            ...t,
+            count:
+              t.value === 'comments' && issue.comment_count > 0 ? (
+                issue.comment_count
+              ) : t.value === 'development' && development && development.count > 0 ? (
+                development.count
+              ) : t.value === 'time' && issue.spent_minutes > 0 ? (
+                <Duration minutes={issue.spent_minutes} calendar={calendar} className="text-2xs" />
+              ) : undefined,
+          }))}
+        />
+        <span className="ml-auto flex-none text-xs whitespace-nowrap text-text-muted max-sm:hidden">Oldest first</span>
       </div>
 
       {tab === 'comments' ? (
@@ -307,7 +300,11 @@ function ActivityTab({ issueKey, projectKey, timeZone, history }: TabContext & {
   if (activity.isPending) return <ActivitySkeleton />;
   if (activity.isError) {
     return (
-      <EmptyState className="mt-3" title="The history could not be loaded." description={activity.error.message} />
+      <div className="mt-3">
+        <LoadError onRetry={() => void activity.refetch()} detail={activity.error.message}>
+          The history could not be loaded.
+        </LoadError>
+      </div>
     );
   }
 
@@ -329,15 +326,14 @@ function ActivityTab({ issueKey, projectKey, timeZone, history }: TabContext & {
         ))}
       </ol>
       {activity.hasNextPage ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2"
-          disabled={activity.isFetchingNextPage}
+        <LoadMore
+          className="mt-2 pl-11"
+          pending={activity.isFetchingNextPage}
+          pendingLabel="Loading more…"
           onClick={() => void activity.fetchNextPage()}
         >
-          {activity.isFetchingNextPage ? 'Loading more…' : 'Show later changes'}
-        </Button>
+          Show later changes
+        </LoadMore>
       ) : null}
     </>
   );
@@ -350,7 +346,11 @@ function CommentsTab({ issueKey, projectKey, timeZone, canComment }: TabContext 
   if (comments.isPending) return <ActivitySkeleton />;
   if (comments.isError) {
     return (
-      <EmptyState className="mt-3" title="The comments could not be loaded." description={comments.error.message} />
+      <div className="mt-3">
+        <LoadError onRetry={() => void comments.refetch()} detail={comments.error.message}>
+          The comments could not be loaded.
+        </LoadError>
+      </div>
     );
   }
   if (rows.length === 0) {
@@ -378,15 +378,14 @@ function CommentsTab({ issueKey, projectKey, timeZone, canComment }: TabContext 
         ))}
       </ol>
       {comments.hasNextPage ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2"
-          disabled={comments.isFetchingNextPage}
+        <LoadMore
+          className="mt-2 pl-11"
+          pending={comments.isFetchingNextPage}
+          pendingLabel="Loading more…"
           onClick={() => void comments.fetchNextPage()}
         >
-          {comments.isFetchingNextPage ? 'Loading more…' : 'Show later comments'}
-        </Button>
+          Show later comments
+        </LoadMore>
       ) : null}
     </>
   );

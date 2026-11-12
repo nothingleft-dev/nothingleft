@@ -2,7 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { IssuePage } from '@components/issues/issue-page';
 
 interface IssueModalProps {
@@ -16,7 +16,7 @@ export function IssueModal({ issueKey, onClose }: IssueModalProps) {
     <Dialog open={issueKey !== null} onOpenChange={open => !open && onClose()}>
       <DialogContent
         onOpenAutoFocus={e => e.preventDefault()}
-        className="max-h-[calc(100dvh-48px)] overflow-y-auto p-6 pt-8 sm:max-w-[min(1240px,calc(100%-48px))]"
+        className="overflow-y-auto p-6 pt-8 [--dialog-top:24px] sm:max-w-[min(1240px,calc(100%-48px))]"
       >
         <DialogTitle className="sr-only">{issueKey}</DialogTitle>
         <DialogDescription className="sr-only">The issue, editable in place.</DialogDescription>

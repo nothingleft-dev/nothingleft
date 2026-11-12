@@ -11,6 +11,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { useApplyUnsubscribe, useUnsubscribePreview } from '@hooks/use-notifications';
 import { isApiError } from '@lib/api/errors';
 import { KIND_COPY } from '@lib/notifications/kinds';
+import { PendingButton } from '@components/pending-button';
 
 const SETTINGS = '/settings?tab=notifications' as Route;
 
@@ -80,9 +81,14 @@ export function Unsubscribe() {
     <div className="flex flex-col gap-6">
       <AuthHeading title="Unsubscribe from these emails?" lede={`This turns off ${what}.`} />
       {apply.isError ? <FormAlert title={messageOf(apply.error)} /> : null}
-      <Button className="w-full" disabled={apply.isPending} onClick={() => apply.mutate()}>
-        {apply.isPending ? 'Turning it off…' : 'Turn these emails off'}
-      </Button>
+      <PendingButton
+        className="w-full"
+        onClick={() => apply.mutate()}
+        pending={apply.isPending}
+        pendingLabel="Turning it off…"
+      >
+        Turn these emails off
+      </PendingButton>
       <FinePrint>
         Only that changes: other emails, account emails such as password resets, and your inbox in the app stay as they
         are. To choose kind by kind, open <Link href={SETTINGS}>Settings → Notifications</Link>.

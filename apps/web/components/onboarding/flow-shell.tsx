@@ -22,7 +22,12 @@ export function FlowShell({ steps, current, email, intro, children }: FlowShellP
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
       <header className="flex h-16 flex-none items-center justify-between border-b px-8 max-lg:h-topbar max-lg:px-page-x-mobile">
-        <Link href="/" className="flex items-center gap-2" title="Nothing Left" aria-label="Nothing Left">
+        <Link
+          href="/"
+          className="-mx-1.5 flex items-center gap-2 rounded-sm px-1.5 py-1 transition-colors duration-(--dur-fast) hover:bg-hover"
+          title="Nothing Left"
+          aria-label="Nothing Left"
+        >
           <BrandMark size={22} />
           <Wordmark />
         </Link>

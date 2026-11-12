@@ -8,7 +8,7 @@ import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@components/ui/sheet';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { HueChip } from '@components/git/git-marks';
 import { useAutomationRuns } from '@hooks/use-automations';
@@ -64,11 +64,9 @@ function Runs({ projectKey, target }: { projectKey: string; target: RunsTarget }
           <RunsSkeleton />
         ) : runs.isError && !runs.data ? (
           <div className="p-5">
-            <FormAlert title="The runs could not be loaded.">
-              <button type="button" onClick={() => void runs.refetch()}>
-                Try again
-              </button>
-            </FormAlert>
+            <LoadError onRetry={() => void runs.refetch()} detail={errorDetail(runs.error)}>
+              The runs could not be loaded.
+            </LoadError>
           </div>
         ) : rows.length === 0 ? (
           <div className="p-5">

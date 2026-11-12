@@ -41,10 +41,7 @@ export function ByoFailingBanner({ storage, bucket, canFix, withAction = true, c
           : 'An organisation admin has been emailed and can fix it.'}
       </p>
       {canFix && withAction ? (
-        <Link
-          href={UPDATE_KEY_HREF as Route}
-          className="flex-none text-xs leading-5 font-medium underline underline-offset-2 hover:no-underline"
-        >
+        <Link href={UPDATE_KEY_HREF as Route} className="action-link flex-none text-xs leading-5 font-medium">
           Update key
         </Link>
       ) : null}

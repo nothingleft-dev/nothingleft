@@ -6,7 +6,7 @@ import { Dialog as DialogPrimitive } from 'radix-ui';
 import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import type { Attachment } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { useDeleteAttachment } from '@hooks/use-attachments';
 import { isInlineImage } from '@lib/files';
@@ -294,6 +294,7 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
           onOpenChange={setDeleting}
           title={`Delete ${file.filename}?`}
           confirmLabel="Delete file"
+          pendingLabel="Deleting…"
           pending={remove.isPending}
           onConfirm={() =>
             remove.mutate(file.id, {
@@ -304,7 +305,7 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
               },
               onError: error => {
                 setDeleting(false);
-                toastError(error);
+                toastError(`Could not delete ${file.filename}`, error);
               },
             })
           }

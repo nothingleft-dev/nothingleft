@@ -14,6 +14,7 @@ import {
 } from '@components/issues/draft-fields';
 import { takeParkedDraft, useIssueDraft } from '@components/issues/use-issue-draft';
 import { issuePath } from '@lib/issue-path';
+import { PendingButton } from '@components/pending-button';
 
 /** The create form with room to write: text on the left, the issue page's field column on the right. */
 export function CreateIssuePage({ projectKey }: { projectKey: string | null }) {
@@ -51,10 +52,16 @@ export function CreateIssuePage({ projectKey }: { projectKey: string | null }) {
         </div>
         <DraftText draft={draft} large withLinks />
         <div className="flex items-center gap-2">
-          <Button type="submit" className="gap-2" disabled={!draft.canSubmit}>
-            {draft.pending ? 'Creating…' : draft.uploader.busy ? 'Uploading…' : 'Create issue'}
-            <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-          </Button>
+          <PendingButton
+            type="submit"
+            className="gap-2"
+            disabled={!draft.canSubmit}
+            pending={draft.pending || draft.uploader.busy}
+            pendingLabel={draft.pending ? 'Creating…' : 'Uploading…'}
+            after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+          >
+            Create issue
+          </PendingButton>
           <Button type="button" variant="ghost" onClick={() => router.back()}>
             Cancel
           </Button>

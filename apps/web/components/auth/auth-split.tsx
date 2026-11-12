@@ -13,7 +13,12 @@ export function AuthSplit({ panel = 'default', children }: { panel?: PanelVarian
     <div className="grid min-h-[calc(100dvh-1.5rem)] gap-3 max-lg:min-h-dvh lg:grid-cols-2">
       <div className="flex flex-col">
         <header className="flex h-topbar flex-none items-center justify-between px-2 max-lg:px-page-x-mobile">
-          <Link href="/" className="flex items-center gap-2" title="Nothing Left" aria-label="Nothing Left">
+          <Link
+            href="/"
+            className="-mx-1.5 flex items-center gap-2 rounded-sm px-1.5 py-1 transition-colors duration-(--dur-fast) hover:bg-hover"
+            title="Nothing Left"
+            aria-label="Nothing Left"
+          >
             <BrandMark size={22} />
             <Wordmark />
           </Link>

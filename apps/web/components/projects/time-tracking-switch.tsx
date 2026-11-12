@@ -28,7 +28,8 @@ export function TimeTrackingSwitch({ project, canEdit }: { project: Project; can
               { time_tracking_enabled: checked },
               {
                 onSuccess: () => toast.success(checked ? 'Time tracking turned on' : 'Time tracking turned off'),
-                onError: error => toastError(error),
+                onError: error =>
+                  toastError(checked ? 'Could not turn time tracking on' : 'Could not turn time tracking off', error),
               },
             )
           }

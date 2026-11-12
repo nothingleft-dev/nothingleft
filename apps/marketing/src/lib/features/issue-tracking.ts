@@ -210,7 +210,7 @@ export const SEVERITY_FIELD = [
   { term: 'Type', detail: 'Select, with Low, High and Critical' },
   { term: 'Applies to', detail: 'Bug only, so it never clutters an Epic' },
   { term: 'Required', detail: 'Yes, with High as the default' },
-  { term: 'Empty label', detail: 'No Severity' },
+  { term: 'Empty label', detail: 'No severity' },
 ];
 
 const criticalBugs = OTHER_CRITICAL_BUGS.length + (SEVERITY_DEFAULT_VALUE === 'Critical' ? 1 : 0);

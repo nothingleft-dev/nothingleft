@@ -25,9 +25,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { LetterBadge } from '@components/letter-badge';
 import { LabelColorPicker } from '@components/label-color-picker';
 import { RowsSkeleton } from '@components/skeletons';
@@ -43,6 +43,7 @@ import { isApiError } from '@lib/api/errors';
 import type { SchemaTable, SchemaTables } from '@lib/api/project-schema';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const CATEGORY_LABELS: Record<StatusCategory, string> = {
   backlog: 'Backlog',
@@ -124,7 +125,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
   const rows = ((values.data ?? []) as AnyValue[]).toSorted((a, b) => a.position - b.position);
 
   const patch = (name: string, body: AnyUpdate) =>
-    update.mutate({ name, body } as never, { onError: error => toastError(error) });
+    update.mutate({ name, body } as never, { onError: error => toastError(`Could not update ${name}`, error) });
 
   const move = (name: string, to: number) => {
     const from = rows.findIndex(r => r.name === name);
@@ -143,7 +144,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
         onError: error => {
           if (isApiError(error) && error.code === 'config.in_use') {
             setDeleting({ name, message: error.message, targets: error.validValues ?? [] });
-          } else toastError(error);
+          } else toastError(`Could not delete ${name}`, error);
         },
       },
     );
@@ -158,8 +159,10 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
     <SettingsSection title={copy.title} description={copy.description}>
       {values.isPending ? (
         <RowsSkeleton rows={5} />
-      ) : values.isError ? (
-        <FormAlert title={`The ${copy.noun} list could not be loaded.`} />
+      ) : values.isError && !values.data ? (
+        <LoadError onRetry={() => void values.refetch()} detail={errorDetail(values.error)}>
+          {`The ${copy.noun} list could not be loaded.`}
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState title={`No ${copy.noun} yet.`} description={canEdit ? 'Add the first one below.' : undefined} />
       ) : (
@@ -581,13 +584,15 @@ export function DeleteValueDialog({
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button
+          <PendingButton
             variant="destructive"
-            disabled={(mustMove && !target) || pending}
+            disabled={mustMove && !target}
             onClick={() => onConfirm(mustMove ? (target ?? undefined) : undefined)}
+            pending={pending}
+            pendingLabel="Deleting…"
           >
-            {pending ? 'Deleting…' : mustMove ? `Delete and move ${movedNoun}` : `Delete ${name}`}
-          </Button>
+            {mustMove ? `Delete and move ${movedNoun}` : `Delete ${name}`}
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

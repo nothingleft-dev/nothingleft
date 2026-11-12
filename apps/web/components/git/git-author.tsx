@@ -1,7 +1,7 @@
 'use client';
 
 import type { GitAuthor, GitProviderKind } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { PersonName } from '@components/former-member-chip';
 import { ProviderGlyph } from '@components/git/provider-glyph';

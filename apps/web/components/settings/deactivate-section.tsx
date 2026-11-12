@@ -4,7 +4,6 @@ import { useState } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { FormAlert } from '@components/auth/form-alert';
@@ -13,7 +12,7 @@ import { StepUpDialog } from '@components/step-up-dialog';
 import { SettingsSection } from '@components/settings/section';
 import { useDeactivateAccount } from '@hooks/use-account-security';
 import { useOrganizations, useSwitchOrganization } from '@hooks/use-organizations';
-import { isApiError } from '@lib/api/errors';
+import { toastError } from '@components/toast-error';
 
 interface DeactivateSectionProps {
   user: Me;
@@ -99,7 +98,7 @@ function OwnedOrganizations({ slugs }: { slugs: readonly string[] }) {
   const open = (slug: string) =>
     switchTo.mutate(slug, {
       onSuccess: () => router.push('/organization?tab=danger' as Route),
-      onError: error => toast.error(isApiError(error) ? error.message : 'That organisation could not be opened.'),
+      onError: error => toastError('Could not open the organisation', error),
     });
 
   return (
@@ -112,7 +111,7 @@ function OwnedOrganizations({ slugs }: { slugs: readonly string[] }) {
               type="button"
               disabled={switchTo.isPending}
               onClick={() => open(slug)}
-              className="inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:no-underline"
+              className="action-link inline-flex items-center gap-1 font-medium"
             >
               {name(slug)} - Danger zone <ArrowRight className="size-3" />
             </button>

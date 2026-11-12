@@ -20,6 +20,7 @@ import {
 } from '@hooks/use-account-security';
 import { formatDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 export type SecurityConfirm = 'disable-two-factor' | 'recovery-codes' | 'deactivate';
 
@@ -41,7 +42,7 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
   const start = useStartTwoFactorSetup();
   const disable = useDisableTwoFactor();
   const regenerate = useRegenerateRecoveryCodes();
-  const startError = useApiError(start.error);
+  const startError = useApiError(start.error, []);
   const status = user.two_factor;
 
   const dialog =
@@ -73,9 +74,14 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
           </Button>
         </>
       ) : (
-        <Button size="sm" disabled={start.isPending} onClick={() => start.mutate(undefined, { onSuccess: setSetup })}>
-          {start.isPending ? 'Starting…' : 'Turn on'}
-        </Button>
+        <PendingButton
+          size="sm"
+          onClick={() => start.mutate(undefined, { onSuccess: setSetup })}
+          pending={start.isPending}
+          pendingLabel="Starting…"
+        >
+          Turn on
+        </PendingButton>
       )
     ) : null;
 
@@ -187,7 +193,7 @@ function SetupPanel({ setup, email, onCancel, onEnabled }: SetupPanelProps) {
   const [form, setForm] = useState({ code: '', current_password: '' });
   const [missing, setMissing] = useState<{ code?: string; current_password?: string }>({});
   const confirm = useConfirmTwoFactor();
-  const error = useApiError(confirm.error);
+  const error = useApiError(confirm.error, ['code', 'current_password']);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -262,9 +268,9 @@ function SetupPanel({ setup, email, onCancel, onEnabled }: SetupPanelProps) {
       </SetupStep>
 
       <div className="flex gap-2 border-t pt-4">
-        <Button type="submit" size="sm" disabled={confirm.isPending}>
-          {confirm.isPending ? 'Turning on…' : 'Turn on two-factor'}
-        </Button>
+        <PendingButton type="submit" size="sm" pending={confirm.isPending} pendingLabel="Turning on…">
+          Turn on two-factor
+        </PendingButton>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={confirm.isPending}>
           Cancel
         </Button>

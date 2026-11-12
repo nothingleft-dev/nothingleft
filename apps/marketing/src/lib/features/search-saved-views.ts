@@ -129,7 +129,7 @@ export function runQuery(state: BuilderState): QueryResult {
       problem: {
         value: state.assignee,
         attribute: 'assignee',
-        message: `${state.assignee} is not a valid value for assignee.`,
+        message: `For assignee, “${state.assignee}” is not a valid value.`,
         validValues: ASSIGNEE_VALID_VALUES,
       },
     };

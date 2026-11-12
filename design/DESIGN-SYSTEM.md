@@ -338,6 +338,15 @@ category as a 4 px left edge — the board card's dot, stretched — hatched whe
 Radius: 3 badge · 4 buttons, inputs, tags, pills · 6 cards, panels · 8 dialogs, popovers.
 Radius encodes hierarchy: the bigger the floating surface, the rounder.
 
+**Overlays.** Dialogs sit on `--bg-raised` with `--shadow-dialog` over the `--bg-overlay`
+scrim, popovers and menus on `--bg-raised` with `--shadow-popover`; both radius 8, the shadow
+carrying the edge. A dialog is anchored 12 % of the viewport from the top, not centred, so its
+title stays put while its content grows or shrinks. When it is taller than the viewport, its
+header and footer stay in view and only its body scrolls. A popover never runs past the
+viewport (8 px gutter) and gives up height from its list, never from its search box. A list cut
+off at its edge fades out over its last 24 px until its end is reached; a list that fits never
+fades.
+
 Motion: 120ms for hover/press/focus, 200ms expand/collapse/popover, 320ms dialog and
 sidebar. `ease-out` for entering, `ease-in-out` for state changes. Everything collapses
 to 0ms under `prefers-reduced-motion`. No page-load animation.
@@ -399,8 +408,19 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
   icon with the unread count on an accent pill (in the top bar as well as the sidebar, so
   it survives a collapsed sidebar and phones), theme toggle. The search input is set in mono because it *is* the query language;
   its placeholder shows a real query.
-- Below 1200px the rail drops beneath the main column as a 2-up grid; below 900px the
-  sidebar becomes a sheet, stat rows go 2-up, and rows hide tags / status / assignees.
+- **Breadcrumb.** Ancestors give way first: each truncates (full text in its tooltip) down to
+  about five characters before the current page's crumb shrinks at all, and the current crumb is
+  always shown. Below 1024px the trail is the parent and the page; on phones it is the page
+  alone.
+- **Placeholders** ellipsize, never clip under a kbd. Below 1024px the search box and the query
+  bar show the short form: the example query alone (`Search · tag: rca`, `assignee: me
+  #Unresolved`).
+- **Create issue** shows only to someone who may create an issue somewhere (Contributor or
+  above in at least one unarchived project, or an organisation admin), and never on
+  `/new-issue`.
+- Below 1200px the rail drops beneath the main column as a 2-up grid. Below 900px (the `shell`
+  breakpoint, `--breakpoint-shell` in `globals.css`) the sidebar becomes a sheet behind the top
+  bar's menu button, stat rows go 2-up, and rows hide tags / status / assignees.
 
 ---
 
@@ -420,19 +440,31 @@ signal inline editability; click opens a `command` picker.
 
 ### Issue key
 Mono 12px, `--text-secondary`. Struck through and muted when resolved. Copy on click on
-detail pages.
+detail pages. Never wraps. In a picker or a list of linked issues the key takes a fixed 8ch
+column, so the titles after it line up.
 
 ### Tag
 20px tall, 12px/500, radius 4. In lists: neutral outlined chip. On the issue page and
 in the tag manager: `--c-bg`/`--c-fg` tinted. Displays `name` as typed. Inline `×` on
-hover only where removal is allowed.
+hover or keyboard focus only where removal is allowed, and always shown on touch screens.
 
 ### Issue row (32px)
 `[P][T] KEY  Title  sub-progress · tags … · status · due · assignees`
 Grid columns: `auto auto minmax(80px,auto) minmax(0,1fr) auto auto auto auto`.
 Title truncates; nothing else does. Overdue due-dates use `--danger-fg` + 500; today
-uses `--text` + 500; everything else muted. Multi-assignees stack with a 1.5px surface
-ring, overlapping 4px. Unassigned = dashed hollow circle, tooltip "Unassigned".
+uses `--text` + 500; everything else muted. Multiple assignees show as the assignee stack
+(below). Unassigned = dashed hollow circle, tooltip "Unassigned".
+
+### Assignee stack
+Up to three avatars overlapping 4 px including their 1.5 px surface ring, then the first
+person's name and `+N`; the `+N` never truncates. Without the name, more than three people end
+in a `+N` chip of the avatar's size. The tooltip lists everyone.
+
+### Person name
+Wherever a person is named: avatar (when the place shows one), name, then the state chip:
+*Inactive* for a deactivated account (name in muted ink), *Former member* for someone removed.
+The chip gives way before the name when space runs out. Compact places that already name the
+state in a tooltip (the assignee stack in rows and on cards) leave the chip out.
 
 ### Group header (28px)
 `--bg-app` band, 12px/500 secondary text, count in muted regular. Counts respect the
@@ -460,6 +492,46 @@ and fade in a small arrow after it; the figure itself never changes. No underlin
 scale, nothing moves. A row with any link insets its outer cells 12px so the figure
 clears the wash's edge.
 
+### Tabs
+Page-level tab strips (account, project and organisation settings; the issue's Activity and
+Links) are one component: a single row on its own line under the page title, left-aligned,
+never in the header's actions and never wrapping. When it does not fit it scrolls sideways,
+with a 24 px fade on the side that has more, and the selected tab is scrolled into view.
+Selected is ink text at 500 plus a 2 px ink underline sitting on the row's rule; hover is the
+plain `--bg-hover` fill, so the two never look alike. A count after the label is
+`--text-secondary`. Keyboard: ← → Home End move and select. **Segmented** stays for a toggle
+of 2–4 options (dashboard My work | Projects, Active | All, theme); it never wraps either.
+
+### Counts on a selected fill
+A count inside a selected or active control (a nav item, a tab, a saved-view pill, "Relates
+to 1") is `--text-secondary`. Muted on `--bg-active` falls under 4.5:1.
+
+### Checkbox
+A **mixed** checkbox (some rows selected) is the checked ink fill with a minus. A task-list
+box the reader cannot tick sits on `--bg-inset` with a `--border` edge (ticked: a
+`--text-muted` fill), so it never looks like one they can.
+
+### Tooltip
+Opens after 400 ms; moving to a neighbour within 300 ms opens its tooltip at once. Sits 6 px
+from its trigger, keeps 8 px from the viewport edge and wraps at 20rem. Keyboard focus opens
+it; focus a dialog or sheet moves on its own does not.
+
+### Picker
+A search box over a list. It opens with the keyboard highlight on the checked row, so
+highlighted and chosen never disagree; typing moves it to the first match. The check sits in
+the trailing column in every picker, single or multi.
+
+### Text action
+An action inside a sentence ("No linked issues. *Add links* to …", "Choose another file", a
+banner's "Cancel deletion"): text with a 1 px underline at 45 % of its colour at rest, a
+full-colour 2 px underline and ink text on hover, the focus ring on keyboard focus. Never bare
+bold text, never an underline that disappears on hover.
+
+### Load more
+Every "Load more", "Show more", "Show later …" and "Show all N" is one small outlined button
+whose width holds while it loads ("Loading…"), with what is shown so far beside it when the
+count is known ("Showing 100 of 160").
+
 ### Kbd
 11px/500 muted, `--bg-inset`, 1px border with a 2px bottom. Shown inside the primary
 button (`c`), the search input (`/`), and the shortcuts nav item (`?`).
@@ -473,6 +545,19 @@ Muted 12px sentence inside the section it replaces, naming the action:
 *"Internal Tools has no active sprint."* / *"Plan one from the backlog"* as a link.
 The first-project empty state (`docs/onboarding.md`) is the one exception that gets
 three equal actions.
+
+### Load error
+A read that failed with nothing loaded: the inline alert (§ 9, danger tint and icon) with the
+sentence _"The members could not be loaded."_, the server's reason under it when there is one,
+and an outline small **Try again** button on the right. Never the dashed empty-state frame,
+never an empty list, never `0` (a failed figure is `–`). A failed refresh keeps what loaded
+under a one-line warning-ink notice with the same button. Code: `components/query-state.tsx`
+(`LoadError`, `StaleNotice`, `QueryState`).
+
+### Refreshing
+Content kept on screen while a new answer loads steps its ink down one level (`--text` →
+`--text-secondary`) and dims its images and avatars; surfaces, borders and backgrounds never
+change. Utility: `is-stale` (also as `aria-busy:is-stale`).
 
 ---
 
@@ -585,10 +670,17 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
    block, table, image; `Visual | Markdown` toggle; `Add comment ⌘↵`, `Cancel`,
    `Add spent time` right-aligned. No visibility dropdown, no AI button.
 
+The issue, article and create-dialog titles edit in place in a field that wraps like the title
+it replaces, so the start of a long title never scrolls out of view. Enter saves (or submits
+the create form); it never adds a line, and pasted line breaks become spaces.
+
 **Key-field strip** (option C, owner, 2 Nov 2026): under the tags, one hairline-bordered
 row of cells, label above value: Status, Priority, Type, Assignees, Sprint, Due date. Priority
-and Type wear their letter badge inline before the name. The cells wrap at narrow widths, and
-their pickers open below the cell. Below 1100 px a *More fields ↓* link under the strip jumps
+and Type wear their letter badge inline before the name. The cells are equal columns that wrap at
+narrow widths, so a wrapped row's dividers line up with the row above and no cell is left with
+a stray divider. Assignees shows the assignee stack (first name, `+N`, the full list in its
+tooltip and picker) so the strip stays one row at desktop width. Their pickers open below the
+cell. Below 1100 px a *More fields ↓* link under the strip jumps
 to the rail.
 
 **Rail** (`--rail-slim`, 280 px, sticky): the remaining fields — Project, Start date, Story
@@ -745,15 +837,33 @@ action — Undo, Retry, Open — never two. Used only for things that happened *
 the pointer; an inline edit you just made needs no toast. `role="status"` for success /
 info, `role="alert"` for warning / error.
 
+An error toast's title names the action that failed, in the voice of the button that started
+it: "Could not export the issues", "Could not delete Sprint 14". The API's message is the
+detail under it. A toast that only repeats the server's sentence ("Something went wrong on our
+side.") never says *what* failed.
+
 **Inline alerts** (`.alert`): inside the form or panel they concern, above the first
 field, persistent. Error and warning take the palette tint (`-bg`, `-fg`, tinted
 border); success and info stay on the surface with a hairline. Optional actions on the
-right.
+right, as real buttons (outline, small); a link inside the body text stays a link. A button
+is never underlined.
 
 **Field validation** (`.field.invalid` / `.valid`): validate on blur, then on every
 keystroke once invalid. Red border and red help text move together; nothing else on the
 page changes. Help text says what fails *and* what passes. Green is used only for
-availability checks, never as praise.
+availability checks, never as praise. A refusal the API ties to a field lands under that
+field when the form shows it, and in the form's alert when it does not, so no refusal is
+silent. When the API sends what it would accept instead (a free project key), the field's
+error offers it as one click: "Use PP2 instead". Required and too-long are checked in the
+browser against the same Zod schema before sending, in the field's own words: "Name is
+required.", "Name can be up to 100 characters." The API's generic "The request is invalid."
+never reaches a field.
+
+**Pending buttons**: a button whose action is running says so in its own verb, "Saving…",
+"Deleting…", "Removing…", never a generic "Working…". It keeps its fill at full contrast (it
+is busy, not unavailable), shows a progress cursor and refuses clicks; disabled is the inset
+fill with muted ink. The two labels share one width, so nothing beside the button moves while
+it works.
 
 **Banners**: page-level, rendered only while the condition is true, one sentence and
 one link. Warning tint at thresholds, danger tint when blocked, neutral inset for
@@ -773,9 +883,13 @@ If the shell itself could not load, a full-page version of the same counts down 
 reloads.
 
 **Empty / loading / error**: an empty result names the query that produced it and
-offers to widen or clear; loading keeps the layout with skeleton bars; error pages say
-what happened, whether data is safe, one way forward. Denied and missing both render
-`404`.
+offers to widen or clear; loading keeps the layout with skeleton bars shaped like the content
+(a table skeleton has the table's header row; a form skeleton has labels over fields); a read
+that failed says so with **Try again** and is never shown as empty or as zero. A missing or
+denied resource renders the 404 inside the shell: page-width, the `404` eyebrow, one sentence,
+one way forward (_Go home_). Outside the shell (unknown URL, render failure) the same block
+centres in the viewport. The error page says what happened, that saved work is safe, and
+offers _Reload the page_; it never prints the exception. Denied and missing both render `404`.
 
 **Words**: no "Oops", "Sorry", "successfully", or exclamation marks. Title = what
 happened. Detail = cause, current truth, way out. Buttons repeat the title's verb.
@@ -787,3 +901,12 @@ Sentence case everywhere. Buttons say what happens: "Create issue", "Mark all re
 mentioned you"*, not `mention · Alex · 12m`. Relative times under 7 days, absolute
 after, always with the absolute tooltip. Empty values use the configured label.
 Product name never leads a subject or a heading.
+
+Counts are grouped (`1,284`) and agree with their noun: `1 issue`, `2 issues`, never
+`1 issues`. Sentences name things the way the screen does: a project's name, not its key ("in
+Nimbus Live", not "in NL"); a person's name, not their username. A refusal leads with the
+thing it is about ("For status, “Donee” is not a valid value.", "There is no search attribute
+called “nosuchfield”.") rather than with the raw value the user typed. A field's generated
+empty label lower-cases the field's name inside the sentence: `No severity`, `No vendor
+reference` (an acronym keeps its capitals: `No SLA tier`). Quotes and apostrophes are curly:
+“Sprint 14”, issue’s.

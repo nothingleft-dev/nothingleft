@@ -23,6 +23,7 @@ import { StorageCheckBlockedError, StorageCheckRefusedError } from '@lib/api/sto
 import { env } from '@lib/env';
 import { connectBody, describeCheckError, draftFrom, emptyDraft, type ConnectionDraft } from '@lib/storage/connection';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 export const WIZARD_STEPS = [
   { id: 'provider', label: 'Provider' },
@@ -437,7 +438,7 @@ function ConnectedStep({
       </FormAlert>
       <p className="text-sm text-text-secondary">
         {platformFiles > 0
-          ? `The ${platformFiles} ${platformFiles === 1 ? 'file' : 'files'} you already had stay in the built-in storage and keep working. Move them across and each is copied, checked, and only then removed from the built-in storage, so every file keeps opening throughout. You can leave the page while it runs.`
+          ? `The ${plural(platformFiles, 'file')} you already had stay in the built-in storage and keep working. Move them across and each is copied, checked, and only then removed from the built-in storage, so every file keeps opening throughout. You can leave the page while it runs.`
           : 'There were no files in the built-in storage, so there is nothing to move.'}
       </p>
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">

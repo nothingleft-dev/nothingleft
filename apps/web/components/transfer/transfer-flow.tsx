@@ -22,6 +22,7 @@ import { useSwitchOrganization } from '@hooks/use-organizations';
 import { useAcceptTransfer, useDeclineTransfer, useTransferPreview } from '@hooks/use-organization-lifecycle';
 import { formatDate } from '@lib/datetime';
 import { isApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
 
 const STEPS: readonly FlowStep[] = [
   {
@@ -102,16 +103,23 @@ export function TransferFlow({ token }: { token: string }) {
       lede={`You are signed in as ${user.email}. Nothing changes until you accept.`}
       footer={
         <>
-          <Button onClick={() => accept.mutate(token, { onSuccess: setAccepted })} disabled={pending}>
-            {accept.isPending ? 'Accepting…' : 'Accept'}
-          </Button>
-          <Button
+          <PendingButton
+            onClick={() => accept.mutate(token, { onSuccess: setAccepted })}
+            disabled={pending}
+            pending={accept.isPending}
+            pendingLabel="Accepting…"
+          >
+            Accept
+          </PendingButton>
+          <PendingButton
             variant="outline"
             onClick={() => decline.mutate(token, { onSuccess: () => setDeclined(true) })}
             disabled={pending}
+            pending={decline.isPending}
+            pendingLabel="Declining…"
           >
-            {decline.isPending ? 'Declining…' : 'Decline'}
-          </Button>
+            Decline
+          </PendingButton>
         </>
       }
     >
@@ -157,7 +165,7 @@ function TransferCard({ transfer }: { transfer: OwnershipTransfer }) {
 }
 
 function ErrorAlert({ error }: { error: unknown }) {
-  const parsed = useApiError(error);
+  const parsed = useApiError(error, []);
   return parsed.summary ? <FormAlert title={parsed.summary} /> : null;
 }
 

@@ -82,7 +82,7 @@ corrections made within a few minutes collapse into one entry, as for any other 
 
 ### Empty values, required fields and defaults
 
-An empty field shows its **empty label** - _No Severity_ unless you set another, such as
+An empty field shows its **empty label** - _No severity_ unless you set another, such as
 _Not triaged_. In the issue list an empty cell shows `--`.
 
 A **default** is filled in on every new issue that does not set the field. A **required**
@@ -122,7 +122,7 @@ summary-line: order-4471
   number goes in braces: `budget: {-5}`.
 - **Checkboxes** take `Yes` or `No`.
 - **Empty** is the field's empty label, in braces when it has spaces:
-  `severity: {No Severity}`; `has: severity` and `has: -severity` also work.
+  `severity: {No severity}`; `has: severity` and `has: -severity` also work.
 - A value that names nothing - `severity: Huge` - is an error that lists the valid options.
 
 Sort by any field except text, markdown and URL fields: `sort by: severity desc, launch`.

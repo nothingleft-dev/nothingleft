@@ -1,9 +1,9 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Check, ChevronsUpDown, GripVertical, X } from 'lucide-react';
+import { ChevronsUpDown, GripVertical, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { customFieldSlug } from '@nothingleft/format';
+import { customFieldSlug, isCustomFieldSlug } from '@nothingleft/format';
 import {
   CUSTOM_FIELD_DECIMALS_MAX,
   type CreateCustomField,
@@ -15,7 +15,8 @@ import {
   type UpdateCustomField,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { CommandEmpty, CommandGroup, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
 import {
   Dialog,
   DialogContent,
@@ -24,10 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Switch } from '@components/ui/switch';
 import { FormAlert } from '@components/auth/form-alert';
 import { ConfirmDialog } from '@components/confirm-dialog';
+import { DialogBody } from '@components/dialog-body';
 import { LabelColorPicker } from '@components/label-color-picker';
 import { TypeBadge } from '@components/issues/value-marks';
 import { DeleteValueDialog } from '@components/projects/schema-values';
@@ -55,6 +57,8 @@ import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
 const OPTION_COLORS: readonly LabelColor[] = [
   'blue-2',
@@ -80,7 +84,7 @@ interface CustomFieldDialogProps {
 export function CustomFieldDialog({ projectKey, field, onClose }: CustomFieldDialogProps) {
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100vh-4rem)] gap-0 overflow-y-auto p-0 sm:max-w-xl">
+      <DialogContent className="gap-0 p-0 sm:max-w-xl">
         <FieldForm projectKey={projectKey} field={field} onClose={onClose} />
       </DialogContent>
     </Dialog>
@@ -132,6 +136,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
   const [name, setName] = useState(field?.name ?? '');
   const [type, setType] = useState<CustomFieldType | null>(field?.type ?? null);
   const [slug, setSlug] = useState('');
+  const [slugLeft, setSlugLeft] = useState(false);
   const [appliesTo, setAppliesTo] = useState<string[]>(field?.applies_to ?? []);
   const [required, setRequired] = useState(field?.is_required ?? false);
   const [defaultValue, setDefaultValue] = useState<CustomFieldValueInput>(field?.default_value ?? null);
@@ -146,7 +151,15 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
   const update = useUpdateCustomField(projectKey);
   const remove = useDeleteCustomField(projectKey);
   const mutation = editing ? update : create;
-  const error = useApiError(mutation.error);
+  const error = useApiError(mutation.error, [
+    'name',
+    'slug',
+    'applies_to',
+    'config',
+    'default_value',
+    'empty_label',
+    'is_required',
+  ]);
 
   const generatedSlug = customFieldSlug(name);
   const options: CustomFieldOption[] = editing
@@ -189,9 +202,15 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
     : null;
 
   const canSave = name.trim() !== '' && type !== null && !configProblem && !mutation.isPending;
+  const slugProblem =
+    !editing && slug.trim() !== '' && !isCustomFieldSlug(slug.trim())
+      ? 'Use a lower-case letter, then letters, digits or hyphens, at most 40 characters.'
+      : null;
 
   const submit = () => {
     if (!canSave || !type) return;
+    setSlugLeft(true);
+    if (slugProblem) return;
     const trimmedEmpty = emptyLabel.trim();
     if (!editing) {
       const body: CreateCustomField = {
@@ -244,7 +263,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col gap-5 px-5 py-5">
+      <DialogBody className="m-0 flex flex-col gap-5 p-5">
         {error.summary ? <FormAlert title={error.summary} /> : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -279,11 +298,12 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
             value={editing ? field.slug : slug}
             disabled={editing}
             onChange={e => setSlug(e.target.value.toLowerCase())}
+            onBlur={() => setSlugLeft(true)}
             placeholder={generatedSlug ?? 'severity'}
-            aria-invalid={Boolean(error.fields['slug'])}
+            aria-invalid={Boolean((slugLeft && slugProblem) || error.fields['slug'])}
             className={cn(inputClass, 'font-mono text-xs')}
           />
-          <FieldError message={error.fields['slug']} />
+          <FieldError message={(slugLeft ? slugProblem : null) ?? error.fields['slug']} />
         </Row>
 
         <Row
@@ -376,7 +396,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
               id={ids.empty}
               value={emptyLabel}
               onChange={e => setEmptyLabel(e.target.value)}
-              placeholder={`No ${name.trim() || 'value'}`}
+              placeholder={emptyLabelOf({ name: name.trim() || 'value', empty_label: null })}
               className={inputClass}
             />
             <FieldError message={error.fields['empty_label']} />
@@ -385,7 +405,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
 
         <RequiredSwitch type={type} value={required} onChange={setRequired} />
         <FieldError message={error.fields['is_required']} />
-      </div>
+      </DialogBody>
 
       <DialogFooter className="flex-row items-center border-t px-5 py-3 sm:justify-start">
         {editing ? (
@@ -405,9 +425,9 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={!canSave}>
-          {mutation.isPending ? 'Saving…' : editing ? 'Save changes' : 'Add field'}
-        </Button>
+        <PendingButton type="submit" disabled={!canSave} pending={mutation.isPending} pendingLabel="Saving…">
+          {editing ? 'Save changes' : 'Add field'}
+        </PendingButton>
       </DialogFooter>
 
       {editing ? (
@@ -416,6 +436,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
           onOpenChange={setConfirmingDelete}
           title={`Delete ${field.name}?`}
           confirmLabel="Delete field"
+          pendingLabel="Deleting…"
           pending={remove.isPending}
           onConfirm={() =>
             remove.mutate(field.slug, {
@@ -424,7 +445,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 setConfirmingDelete(false);
                 onClose();
               },
-              onError: e => toastError(e),
+              onError: e => toastError(`Could not delete ${field.name}`, e),
             })
           }
         >
@@ -445,7 +466,7 @@ export function DeleteConsequences({ field }: { field: CustomField }) {
         ) : (
           <>
             <b className="font-semibold text-text">
-              {count} {count === 1 ? 'issue loses its value' : 'issues lose their values'}
+              {plural(count, 'issue loses its value', 'issues lose their values')}
             </b>{' '}
             for {field.name}, permanently. The entries it left in issue histories stay.
           </>
@@ -508,7 +529,8 @@ function ArchiveButton({ projectKey, field, onDone }: { projectKey: string; fiel
               );
               onDone();
             },
-            onError: e => toastError(e),
+            onError: e =>
+              toastError(field.is_archived ? `Could not restore ${field.name}` : `Could not archive ${field.name}`, e),
           },
         )
       }
@@ -558,7 +580,7 @@ function TypePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[320px] p-0">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Find a type" />
           <CommandList className="max-h-[360px]">
             <CommandEmpty>No type matches.</CommandEmpty>
@@ -567,7 +589,9 @@ function TypePicker({
                 {group.types.map(t => {
                   const m = FIELD_TYPE_META[t];
                   return (
-                    <CommandItem
+                    <PickerItem
+                      checked={t === value}
+                      checkClassName="mt-0.5"
                       key={t}
                       value={`${m.label} ${m.hint}`}
                       onSelect={() => {
@@ -581,14 +605,13 @@ function TypePicker({
                         <span>{m.label}</span>
                         <span className="text-xs text-text-muted">{m.hint}</span>
                       </span>
-                      <Check className={cn('mt-0.5 size-icon-sm', t === value ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   );
                 })}
               </CommandGroup>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -635,28 +658,27 @@ function AppliesToPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
-            <CommandItem value="\u0000all" onSelect={() => onChange([])}>
+            <PickerItem checked={value.length === 0} value="\u0000all" onSelect={() => onChange([])}>
               <span className="min-w-0 flex-1">All types</span>
-              <Check className={cn('size-icon-sm', value.length === 0 ? 'opacity-100' : 'opacity-0')} />
-            </CommandItem>
+            </PickerItem>
             {live.map(t => {
               const on = value.includes(t.name);
               return (
-                <CommandItem
+                <PickerItem
+                  checked={on}
                   key={t.name}
                   value={t.name}
                   onSelect={() => onChange(on ? value.filter(v => v !== t.name) : [...value, t.name])}
                 >
                   <TypeBadge type={t} />
                   <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                  <Check className={cn('size-icon-sm', on ? 'opacity-100' : 'opacity-0')} />
-                </CommandItem>
+                </PickerItem>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

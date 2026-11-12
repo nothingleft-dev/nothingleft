@@ -2,13 +2,13 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RequestPasswordResetSchema, ResetPasswordSchema } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { AuthHeading, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PasswordStrength } from '@components/auth/password-strength';
 import { useAuthForm } from '@components/auth/use-auth-form';
 import { requestPasswordReset, resetPassword } from '@lib/api/auth';
+import { PendingButton } from '@components/pending-button';
 
 export function ResetPassword() {
   const token = useSearchParams().get('token');
@@ -61,9 +61,9 @@ function RequestLink() {
           error={form.errors.email}
           onChange={e => form.set('email', e.target.value)}
         />
-        <Button type="submit" disabled={form.isPending} className="mt-1 w-full">
-          {form.isPending ? 'Sending…' : 'Send reset link'}
-        </Button>
+        <PendingButton type="submit" className="mt-1 w-full" pending={form.isPending} pendingLabel="Sending…">
+          Send reset link
+        </PendingButton>
       </form>
 
       <Swap>
@@ -79,6 +79,7 @@ function ChooseNewPassword({ token }: { token: string }) {
     schema: ResetPasswordSchema,
     initial: { token, password: '' },
     messages: { password: 'Passwords need at least 8 characters.', token: 'That link is not valid.' },
+    hidden: ['token'],
     submit: values => resetPassword(values),
     onSuccess: () => router.replace('/sign-in'),
   });
@@ -108,9 +109,9 @@ function ChooseNewPassword({ token }: { token: string }) {
           below={<PasswordStrength value={form.values.password} />}
           onChange={e => form.set('password', e.target.value)}
         />
-        <Button type="submit" disabled={form.isPending} className="mt-1 w-full">
-          {form.isPending ? 'Saving…' : 'Save and sign in'}
-        </Button>
+        <PendingButton type="submit" className="mt-1 w-full" pending={form.isPending} pendingLabel="Saving…">
+          Save and sign in
+        </PendingButton>
       </form>
     </div>
   );

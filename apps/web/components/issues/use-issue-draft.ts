@@ -155,7 +155,7 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
   const attachmentIds = files.filter(f => description.includes(f.url)).map(f => f.id);
 
   const create = useCreateIssue();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, 'any');
   const size = checkMarkdownSize(description);
 
   const body: CreateIssue | null = projectKey

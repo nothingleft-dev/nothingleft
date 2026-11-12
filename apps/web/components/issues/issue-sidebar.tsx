@@ -7,10 +7,9 @@ import { RESOLVED_STATUS_CATEGORIES, type Issue, type UpdateIssue } from '@nothi
 import { Plus } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Meter } from '@components/dashboard/meter';
 import { Duration } from '@components/duration';
-import { MemberAvatar } from '@components/issues/member-avatar';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
 import { SidebarField } from '@components/issues/sidebar-field';
@@ -20,6 +19,7 @@ import type { TimeTracking } from '@components/issues/issue-activity';
 import { SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
 import { useCustomFields } from '@hooks/use-custom-fields';
 import { PersonName } from '@components/former-member-chip';
+import { AssigneeStack } from '@components/issues/assignee-stack';
 import { useIssueWatchers, useUpdateIssue, type IssueUpdate } from '@hooks/use-issues';
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
@@ -30,6 +30,7 @@ import { isApiError } from '@lib/api/errors';
 import { formatCalendarDate, todayCalendarDate } from '@lib/datetime';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 type Editor =
   | 'priority'
@@ -83,7 +84,7 @@ export function IssueSidebar({
     update.mutate(input, {
       onError: error => {
         if (onError) onError(error.message);
-        else toastError(error);
+        else toastError('Could not save the change', error);
       },
     });
   };
@@ -144,11 +145,7 @@ export function IssueSidebar({
 
   if (part === 'primary') {
     return (
-      <div
-        role="group"
-        aria-label="Key fields"
-        className="mt-4 flex flex-wrap rounded-md border [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0"
-      >
+      <div role="group" aria-label="Key fields" className="key-strip mt-4">
         <SidebarField
           variant={variant}
           label="Status"
@@ -243,14 +240,11 @@ export function IssueSidebar({
             />
           }
         >
-          {issue.assignees.length === 0
-            ? 'Unassigned'
-            : issue.assignees.map(a => (
-                <span key={a.username} className="inline-flex items-center gap-1.5">
-                  <MemberAvatar member={a} className="size-5" />
-                  <PersonName person={a} />
-                </span>
-              ))}
+          {issue.assignees.length === 0 ? (
+            'Unassigned'
+          ) : (
+            <AssigneeStack assignees={issue.assignees} chip className="max-w-full text-sm text-text" />
+          )}
         </SidebarField>
         <SidebarField
           variant={variant}
@@ -431,8 +425,7 @@ function WatchersField({ issueKey, count }: { issueKey: string; count: number })
         <ul className="flex max-h-72 flex-col overflow-y-auto p-1">
           {(watchers.data ?? []).map(w => (
             <li key={w.username} className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm">
-              <MemberAvatar member={w} className="size-5" />
-              <PersonName person={w} className="flex-1" />
+              <PersonName person={w} avatar className="flex-1" />
               <span className="text-xs text-text-muted">@{w.username}</span>
             </li>
           ))}
@@ -447,7 +440,7 @@ function WatchersField({ issueKey, count }: { issueKey: string; count: number })
         </ul>
       }
     >
-      {count === 0 ? 'Nobody' : `${count} ${count === 1 ? 'person' : 'people'}`}
+      {count === 0 ? 'Nobody' : `${plural(count, 'person', 'people')}`}
     </SidebarField>
   );
 }

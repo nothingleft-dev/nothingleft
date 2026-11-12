@@ -15,6 +15,7 @@ import { Label } from '@components/ui/label';
 import { Skeleton } from '@components/ui/skeleton';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
 import { SettingsSection } from '@components/settings/section';
@@ -25,6 +26,7 @@ import { isApiError } from '@lib/api/errors';
 import { providerLabel } from '@lib/git/words';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const PUBLIC_HOSTS: Record<GitProviderKind, string> = { github: 'https://github.com', gitlab: 'https://gitlab.com' };
 
@@ -47,11 +49,9 @@ export function GitIdentitiesTab() {
         {identities.isPending ? (
           <IdentitiesSkeleton />
         ) : identities.isError && !identities.data ? (
-          <FormAlert title="Your identities could not be loaded.">
-            <button type="button" onClick={() => void identities.refetch()}>
-              Try again
-            </button>
-          </FormAlert>
+          <LoadError onRetry={() => void identities.refetch()} detail={errorDetail(identities.error)}>
+            Your identities could not be loaded.
+          </LoadError>
         ) : rows.length === 0 ? (
           <EmptyState
             title="No identity added yet."
@@ -108,7 +108,7 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
                       toast.success(
                         `A link is on its way to ${identity.email}. If we sent one a few minutes ago, that one still works.`,
                       ),
-                    onError: error => toastError(error),
+                    onError: error => toastError('Could not send the verification link', error),
                   },
                 )
               }
@@ -130,7 +130,7 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
           onClick={() =>
             remove.mutateAsync(identity.id).then(
               () => toast.success(`${identity.login ? `@${identity.login}` : identity.email} is no longer yours.`),
-              (error: Error) => toastError(error),
+              (error: Error) => toastError('Could not remove the identity', error),
             )
           }
         >
@@ -276,9 +276,15 @@ function AddIdentity() {
           </div>
         ) : null}
         <div className="flex items-center gap-3">
-          <Button type="submit" size="sm" disabled={claim.isPending || value.trim() === ''}>
-            {claim.isPending ? 'Adding…' : kind === 'login' ? 'Add login' : 'Send verification link'}
-          </Button>
+          <PendingButton
+            type="submit"
+            size="sm"
+            disabled={value.trim() === ''}
+            pending={claim.isPending}
+            pendingLabel="Adding…"
+          >
+            {kind === 'login' ? 'Add login' : 'Send verification link'}
+          </PendingButton>
           {selfHosted ? null : (
             <button
               type="button"

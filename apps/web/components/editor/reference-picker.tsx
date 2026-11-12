@@ -3,7 +3,7 @@
 import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
 import type { IssueRef, MemberRef } from '@nothingleft/types';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { IssueKey } from '@components/issue-key';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { MemberAvatar } from '@components/issues/member-avatar';
@@ -172,7 +172,7 @@ function IssueOption({ issue }: { issue: IssueRef }) {
   return (
     <>
       <TypeBadge type={issue.type} />
-      <IssueKey issueKey={issue.key} resolved={issue.resolved} className="flex-none" />
+      <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
       <span className={issue.resolved ? 'min-w-0 flex-1 truncate text-text-muted' : 'min-w-0 flex-1 truncate'}>
         {issue.title}
       </span>

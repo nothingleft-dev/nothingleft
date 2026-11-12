@@ -3,13 +3,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { Me, TwoFactorChallenge, TwoFactorSignIn } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { AuthHeading, TextLink } from '@components/auth/auth-card';
 import { CODE_LENGTH, CodeInput } from '@components/auth/code-input';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { signInWithTwoFactor } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
 
 // The API's own sentence for two_factor.challenge_expired, for when the clock runs out before
 // anything is sent.
@@ -125,9 +125,15 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
             }}
           />
         )}
-        <Button type="submit" disabled={verify.isPending || locked} className="mt-1 w-full">
-          {verify.isPending ? 'Verifying…' : 'Verify'}
-        </Button>
+        <PendingButton
+          type="submit"
+          disabled={locked}
+          className="mt-1 w-full"
+          pending={verify.isPending}
+          pendingLabel="Verifying…"
+        >
+          Verify
+        </PendingButton>
       </form>
 
       <p className="text-sm text-text-secondary">

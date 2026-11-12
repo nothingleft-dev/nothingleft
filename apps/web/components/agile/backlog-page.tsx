@@ -27,6 +27,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ChevronRight, GripVertical, Kanban, MoreHorizontal, Plus } from 'lucide-react';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type Sprint } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,9 +36,8 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
 import { IssueKey } from '@components/issue-key';
 import { PageHeader } from '@components/page-header';
 import { Meter } from '@components/dashboard/meter';
@@ -52,7 +52,7 @@ import {
   SprintFormDialog,
   StartSprintDialog,
 } from '@components/agile/sprint-dialogs';
-import { useBacklog, useBacklogMove, type BacklogDrop } from '@hooks/use-backlog';
+import { BACKLOG_PAGE_SIZE, useBacklog, useBacklogMove, type BacklogDrop } from '@hooks/use-backlog';
 import { useBoards } from '@hooks/use-boards';
 import { useProject } from '@hooks/use-projects';
 import { useProjectRoles } from '@hooks/use-project-roles';
@@ -63,6 +63,7 @@ import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { LoadMore } from '@components/text-button';
 
 export const BACKLOG_DEFAULT_QUERY = '#Unresolved';
 const BACKLOG = 'backlog';
@@ -154,10 +155,17 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
     if (drop.container === from && drop.key === null) return;
     const body: BacklogDrop = { issues: [key], sprint: drop.container === BACKLOG ? null : drop.container };
     if (drop.key) body[drop.side] = drop.key;
-    move.mutate(body, { onError: error => toastError(error) });
+    move.mutate(body, { onError: error => toastError(`Could not move ${key}`, error) });
   };
 
-  if (project.isError) return <FormAlert title="This project could not be loaded." />;
+  if (project.isError && !project.data) {
+    notFoundOn404(project.error);
+    return (
+      <LoadError onRetry={() => void project.refetch()} detail={errorDetail(project.error)}>
+        This project could not be loaded.
+      </LoadError>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -198,6 +206,10 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
         <div className="flex flex-col gap-6">
           {sprints.isPending ? (
             <SectionSkeleton />
+          ) : !sprints.data ? (
+            <LoadError onRetry={() => void sprints.refetch()} detail={errorDetail(sprints.error)}>
+              The sprints could not be loaded.
+            </LoadError>
           ) : open.length === 0 ? (
             <EmptyState
               title={`${project.data?.name ?? projectKey} has no sprint planned.`}
@@ -396,6 +408,14 @@ function SprintSection({
             id={sprint.slug}
             issues={issues}
             loading={list.isPending}
+            skeletonRows={Math.max(1, Math.min(sprint.progress.issues, BACKLOG_PAGE_SIZE))}
+            failed={
+              list.isError && !list.data ? (
+                <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+                  {`${sprint.name} could not be loaded.`}
+                </LoadError>
+              ) : null
+            }
             canPlan={canPlan}
             hint={hint}
             empty={canPlan ? 'Drag issues here from the backlog.' : 'Nothing is planned into this sprint yet.'}
@@ -453,8 +473,14 @@ function BacklogSection({
   hint: Hint;
 }) {
   const list = useBacklog(projectKey, null, q);
-  const issues = useMemo(() => list.data?.pages.flatMap(p => p.data) ?? [], [list.data]);
-  const total = list.data?.pages[0]?.meta.pagination?.total;
+  const refused = list.isError && isApiError(list.error) && list.error.status === 400;
+  // A refused query keeps the rows that were on screen; opened with one, it shows the unfiltered backlog.
+  const [lastGood, setLastGood] = useState<typeof list.data>(undefined);
+  if (list.data && !list.isPlaceholderData && lastGood !== list.data) setLastGood(list.data);
+  const unfiltered = useBacklog(projectKey, null, '', refused && !lastGood);
+  const shown = list.data ?? (refused ? (lastGood ?? unfiltered.data) : undefined);
+  const issues = useMemo(() => shown?.pages.flatMap(p => p.data) ?? [], [shown]);
+  const total = shown?.pages[0]?.meta.pagination?.total;
 
   const problem = useMemo<QueryProblem | null>(() => {
     const error = list.error;
@@ -484,7 +510,14 @@ function BacklogSection({
       <Container
         id={BACKLOG}
         issues={issues}
-        loading={list.isPending}
+        loading={list.isPending || (refused && !shown)}
+        failed={
+          list.isError && !shown ? (
+            <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+              The backlog could not be loaded.
+            </LoadError>
+          ) : null
+        }
         canPlan={canPlan}
         hint={hint}
         empty={
@@ -503,6 +536,9 @@ interface ContainerProps {
   id: string;
   issues: readonly Issue[];
   loading: boolean;
+  /** How many rows are coming, when the container already knows. */
+  skeletonRows?: number;
+  failed?: ReactNode;
   canPlan: boolean;
   hint: Hint;
   empty: string;
@@ -510,11 +546,23 @@ interface ContainerProps {
   loadingMore: boolean;
 }
 
-function Container({ id, issues, loading, canPlan, hint, empty, more, loadingMore }: ContainerProps) {
+function Container({
+  id,
+  issues,
+  loading,
+  skeletonRows,
+  failed,
+  canPlan,
+  hint,
+  empty,
+  more,
+  loadingMore,
+}: ContainerProps) {
   const { setNodeRef } = useDroppable({ id: `${DROP_PREFIX}${id}`, data: { container: id }, disabled: !canPlan });
   const targeted = hint?.container === id;
 
-  if (loading) return <RowsSkeleton />;
+  if (loading) return <RowsSkeleton rows={skeletonRows} />;
+  if (failed) return <div className="p-2">{failed}</div>;
 
   return (
     <div
@@ -542,11 +590,7 @@ function Container({ id, issues, loading, canPlan, hint, empty, more, loadingMor
           {empty}
         </p>
       ) : null}
-      {more ? (
-        <Button variant="ghost" size="sm" className="m-1 self-start" onClick={more} disabled={loadingMore}>
-          {loadingMore ? 'Loading…' : 'Load more'}
-        </Button>
-      ) : null}
+      {more ? <LoadMore className="m-1" pending={loadingMore} onClick={more} /> : null}
     </div>
   );
 }
@@ -588,7 +632,7 @@ function SortableLine({
             <button
               type="button"
               aria-label={`Move ${issue.key}`}
-              className="grid h-full w-5 cursor-grab place-items-center text-text-muted opacity-0 group-hover/line:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
+              className="grid h-full w-5 cursor-grab place-items-center text-text-muted reveal group-hover/line:opacity-100 active:cursor-grabbing"
               {...attributes}
               {...listeners}
             >
@@ -643,14 +687,22 @@ function IssueLine({
   );
 }
 
-function RowsSkeleton() {
+function RowsSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="flex flex-col">
-      {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-3 border-b border-border-subtle px-7">
-          <Skeleton className="size-4" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3" style={{ width: `${30 + ((i * 17) % 40)}%` }} />
+    <div className="flex flex-col" aria-hidden>
+      {Array.from({ length: rows }, (_, i) => (
+        <div
+          key={i}
+          className="grid h-row grid-cols-[20px_18px_18px_84px_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border-subtle pr-3 min-[900px]:grid-cols-[20px_18px_18px_84px_minmax(0,1fr)_140px_120px_28px]"
+        >
+          <span />
+          <Skeleton className="size-badge-letter rounded-xs" />
+          <Skeleton className="size-badge-letter rounded-xs" />
+          <Skeleton className="h-3 w-14" />
+          <Skeleton className="h-3" style={{ maxWidth: `${40 + ((i * 17) % 40)}%` }} />
+          <Skeleton className="h-3 w-20 max-[899px]:hidden" />
+          <Skeleton className="size-avatar-sm rounded-full max-[899px]:hidden" />
+          <span />
         </div>
       ))}
     </div>
@@ -659,8 +711,12 @@ function RowsSkeleton() {
 
 function SectionSkeleton() {
   return (
-    <div className="flex flex-col">
-      <Skeleton className="h-10 w-full rounded-none" />
+    <div className="flex flex-col" role="status" aria-label="Loading">
+      <div className="flex min-h-10 items-center gap-3 border-y bg-app px-2 py-1.5">
+        <Skeleton className="ml-5.5 h-3.5 w-28" />
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="ml-auto h-control-sm w-20 rounded-md" />
+      </div>
       <RowsSkeleton />
     </div>
   );

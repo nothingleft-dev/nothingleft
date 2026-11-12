@@ -9,7 +9,7 @@ import type { Automation, AutomationCatalogue, AutomationTrigger, ProjectReposit
 import { Button } from '@components/ui/button';
 import { Switch } from '@components/ui/switch';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { ConfirmDialog } from '@components/confirm-dialog';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
 import { ProviderGlyph } from '@components/git/provider-glyph';
@@ -104,11 +104,9 @@ export function AutomationsSettings({
   if (rules.isPending || catalogue.isPending) return <AutomationsSkeleton />;
   if ((rules.isError && !rules.data) || catalogue.isError) {
     return (
-      <FormAlert title="The automations could not be loaded.">
-        <button type="button" onClick={() => void (rules.refetch(), catalogue.refetch())}>
-          Try again
-        </button>
-      </FormAlert>
+      <LoadError onRetry={() => void (rules.refetch(), catalogue.refetch())} detail={errorDetail(rules.error)}>
+        The automations could not be loaded.
+      </LoadError>
     );
   }
 
@@ -260,7 +258,7 @@ function GitMatrix({
   const update = useUpdateAutomation(projectKey);
 
   const pick = (trigger: AutomationTrigger, rule: Automation | undefined, status: string | null) => {
-    const fail = { onError: (error: Error) => toastError(error) };
+    const fail = { onError: (error: Error) => toastError('Could not change the automation', error) };
     if (rule) {
       if (status === null) update.mutate({ name: rule.name, body: { is_enabled: false } }, fail);
       else update.mutate({ name: rule.name, body: { action_params: { status }, is_enabled: true } }, fail);
@@ -383,7 +381,7 @@ function MergedInto({
                     repository: repository.full_name,
                     body: { connection: repository.connection, merge_base_branches: branches },
                   },
-                  { onError: error => toastError(error) },
+                  { onError: error => toastError('Could not change the base branches', error) },
                 )
               }
             />
@@ -421,7 +419,12 @@ function RuleRow({
         aria-label={`${rule.name}: ${rule.is_enabled ? 'on' : 'off'}`}
         className="mt-0.5"
         onCheckedChange={value =>
-          update.mutate({ name: rule.name, body: { is_enabled: value } }, { onError: e => toastError(e) })
+          update.mutate(
+            { name: rule.name, body: { is_enabled: value } },
+            {
+              onError: e => toastError(value ? `Could not turn ${rule.name} on` : `Could not turn ${rule.name} off`, e),
+            },
+          )
         }
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -474,13 +477,14 @@ function RuleRow({
         onOpenChange={setConfirming}
         title={`Delete ${rule.name}?`}
         confirmLabel="Delete automation"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() =>
           remove
             .mutateAsync(rule.name)
             .then(
               () => toast.success(`${rule.name} is deleted.`),
-              (error: Error) => toastError(error),
+              (error: Error) => toastError(`Could not delete ${rule.name}`, error),
             )
             .finally(() => setConfirming(false))
         }

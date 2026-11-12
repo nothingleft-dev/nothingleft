@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { z } from 'zod';
-import { isApiError } from '@lib/api/errors';
+import { splitApiError } from '@hooks/use-api-error';
 
 type Errors<T> = Partial<Record<keyof T & string, string>>;
 
@@ -12,6 +12,8 @@ interface AuthFormOptions<S extends z.ZodType, R> {
   initial: z.input<S>;
   /** One message per field, so the copy is ours rather than Zod's. */
   messages: Partial<Record<keyof z.input<S> & string, string>>;
+  /** Values the form carries but never renders, such as a link's token: their errors go to the summary. */
+  hidden?: readonly (keyof z.input<S> & string)[];
   submit: (values: z.output<S>) => Promise<R>;
   onSuccess?: (result: R) => void;
 }
@@ -26,6 +28,7 @@ export function useAuthForm<S extends z.ZodType, R>({
   schema,
   initial,
   messages,
+  hidden = [],
   submit,
   onSuccess,
 }: AuthFormOptions<S, R>) {
@@ -51,25 +54,15 @@ export function useAuthForm<S extends z.ZodType, R>({
   }, []);
 
   const { serverSummary, serverFields } = useMemo(() => {
-    const error = mutation.error;
-    if (!error) return { serverSummary: null, serverFields: {} as Errors<Values> };
-    if (isApiError(error)) {
-      if (error.field) {
-        const field = error.field as keyof Values & string;
-        return {
-          serverSummary: null,
-          serverFields:
-            submittedValues && values[field] === submittedValues[field]
-              ? ({ [field]: error.message } as Errors<Values>)
-              : ({} as Errors<Values>),
-        };
-      }
-      return { serverSummary: error.message, serverFields: {} as Errors<Values> };
+    const rendered = Object.keys(initial as object).filter(k => !hidden.includes(k as keyof Values & string));
+    const split = splitApiError(mutation.error, rendered);
+    const fields: Errors<Values> = {};
+    for (const [name, message] of Object.entries(split.fields)) {
+      const field = name as keyof Values & string;
+      if (submittedValues && values[field] === submittedValues[field]) fields[field] = message;
     }
-    return {
-      serverSummary: error instanceof Error ? error.message : 'Something went wrong. Try again.',
-      serverFields: {} as Errors<Values>,
-    };
+    return { serverSummary: split.summary, serverFields: fields };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` and `hidden` are fixed for the form's life.
   }, [mutation.error, submittedValues, values]);
 
   const onSubmit = (event: FormEvent) => {
@@ -94,7 +87,10 @@ export function useAuthForm<S extends z.ZodType, R>({
     set,
     onSubmit,
     errors: { ...serverFields, ...localErrors } as Errors<Values>,
-    summary: Object.keys(localErrors).length > 0 ? null : serverSummary,
+    summary:
+      Object.keys(localErrors).length > 0
+        ? (hidden.map(field => localErrors[field]).find(Boolean) ?? null)
+        : serverSummary,
     error: mutation.error,
     isPending: mutation.isPending,
     isSuccess: mutation.isSuccess,

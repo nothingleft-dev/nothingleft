@@ -28,11 +28,14 @@ export function toastRateLimited(error: object, retry: (() => void) | null) {
   });
 }
 
-/** The toast for a failed action. A rate-limited one has already been toasted by the query provider. */
-export function toastError(error: Error) {
+/**
+ * The toast for a failed action: `title` names the action ("Could not export the issues"), the API's
+ * message is the detail. A rate-limited one has already been toasted by the query provider.
+ */
+export function toastError(title: string, error: Error) {
   if (isRateLimited(error)) {
     if (!shown.has(error)) toastRateLimited(error, null);
     return;
   }
-  toast.error(error.message);
+  toast.error(title, { description: error.message });
 }

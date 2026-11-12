@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadError } from '@components/query-state';
 import { Button } from '@components/ui/button';
-import { FormAlert } from '@components/auth/form-alert';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
 import { RelativeTime } from '@components/relative-time';
@@ -44,7 +44,9 @@ export function DeletedArticles({ project }: { project: string }) {
       {deleted.isPending ? (
         <ArticleRowsSkeleton rows={3} />
       ) : deleted.isError ? (
-        <FormAlert title="The deleted articles could not be loaded.">{deleted.error.message}</FormAlert>
+        <LoadError onRetry={() => void deleted.refetch()} detail={deleted.error.message}>
+          The deleted articles could not be loaded.
+        </LoadError>
       ) : deleted.data.length === 0 ? (
         <EmptyState title="Nothing to restore." description="Articles deleted in the last 14 days appear here." />
       ) : (

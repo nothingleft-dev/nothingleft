@@ -5,10 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Route } from 'next';
 import { HardDrive } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Me, Organization, StorageOverview } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError } from '@components/query-state';
 import { SettingsSection } from '@components/settings/section';
 import { ByoFailingBanner } from '@components/attachments/byo-failing-banner';
 import { ByoWizard, entryStep, isWizardStep, type WizardStep } from '@components/organization/storage/byo-wizard';
@@ -18,6 +17,7 @@ import { FilesSkeleton, StorageFiles, type FilesFilter } from '@components/organ
 import { StorageUsage, StorageUsageSkeleton } from '@components/organization/storage/storage-usage';
 import { useStartMigration, useStorageOverview } from '@hooks/use-organization-storage';
 import { queryKeys } from '@lib/query/keys';
+import { toastError } from '@components/toast-error';
 
 /** Org Admins and the Owner only: the tab is not offered to anyone else, and the API refuses them too. */
 export function StorageTab({ organization, user }: { organization: Organization; user: Me }) {
@@ -72,14 +72,9 @@ export function StorageTab({ organization, user }: { organization: Organization;
   }
   if (overview.isError) {
     return (
-      <FormAlert title="Storage usage could not be loaded.">
-        <p>{overview.error.message}</p>
-        <p>
-          <button type="button" onClick={() => void overview.refetch()}>
-            Try again
-          </button>
-        </p>
-      </FormAlert>
+      <LoadError onRetry={() => void overview.refetch()} detail={overview.error.message}>
+        Storage usage could not be loaded.
+      </LoadError>
     );
   }
 
@@ -112,7 +107,7 @@ export function StorageTab({ organization, user }: { organization: Organization;
           onMoveFiles={() => {
             setParams({ setup: null });
             migrate.mutate(undefined, {
-              onError: error => toast.error(`The files did not start moving. ${error.message}`),
+              onError: error => toastError('Could not start moving the files', error),
             });
           }}
         />

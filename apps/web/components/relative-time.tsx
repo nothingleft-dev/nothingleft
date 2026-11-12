@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { formatDateTimeWithZone, formatRelative, type Instant } from '@lib/datetime';
 import { cn } from '@lib/utils';
 

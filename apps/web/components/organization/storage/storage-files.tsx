@@ -4,15 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { CloudOff, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import type { ByoStatus, StorageFile, StorageTarget } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
@@ -26,6 +25,7 @@ import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { ProjectMark, ProjectMarkByKey } from '@components/projects/project-mark';
 import { isInlineImage } from '@lib/files';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export interface FilesFilter {
   sort: 'size' | 'created';
@@ -121,11 +121,9 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
       {files.isPending ? (
         <FilesSkeleton />
       ) : files.isError ? (
-        <FormAlert title="The file list could not be loaded.">
-          <button type="button" onClick={() => void files.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void files.refetch()} detail={errorDetail(files.error)}>
+          The file list could not be loaded.
+        </LoadError>
       ) : rows.length === 0 && narrowed ? (
         <EmptyState
           title="No files match these filters."
@@ -142,7 +140,7 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
           description="Files attached to issues, comments, spent time and articles appear here, largest first."
         />
       ) : (
-        <div className={cn('overflow-x-auto rounded-md border', files.isPlaceholderData && 'opacity-60')}>
+        <div className={cn('overflow-x-auto rounded-md border', files.isPlaceholderData && 'is-stale')}>
           <table className="w-full min-w-[880px] table-fixed text-sm">
             <thead className="bg-app text-left text-2xs text-text-secondary">
               <tr>
@@ -201,12 +199,13 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
         onOpenChange={open => (open ? undefined : setDeleting(null))}
         title={`Delete ${deleting?.filename ?? 'this file'}?`}
         confirmLabel="Delete file"
+        pendingLabel="Deleting…"
         onConfirm={() => {
           if (!deleting) return;
           const file = deleting;
           setDeleting(null);
           remove.mutate(file, {
-            onError: error => toast.error(`${file.filename} was not deleted. ${error.message}`),
+            onError: error => toastError(`Could not delete ${file.filename}`, error),
           });
         }}
       >

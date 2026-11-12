@@ -6,6 +6,7 @@ import type { Route } from 'next';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatDuration } from '@nothingleft/format';
 import type { Issue, MemberRef, WorkItem } from '@nothingleft/types';
+import { LoadError } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { Duration } from '@components/duration';
 import {
@@ -28,6 +29,8 @@ import { useDeleteWorkItem, useWorkItems } from '@hooks/use-work-items';
 import { formatCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
+import { LoadMore } from '@components/text-button';
 
 interface IssueSpentTimeProps {
   issue: Issue;
@@ -49,7 +52,11 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   if (records.isPending) return <SpentTimeSkeleton />;
   if (records.isError) {
     return (
-      <EmptyState className="mt-3" title="The spent time could not be loaded." description={records.error.message} />
+      <div className="mt-3">
+        <LoadError onRetry={() => void records.refetch()} detail={records.error.message}>
+          The spent time could not be loaded.
+        </LoadError>
+      </div>
     );
   }
 
@@ -66,9 +73,7 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
           of <Duration minutes={issue.estimate_minutes} calendar={calendar} className="text-text" /> estimated
         </span>
       ) : null}
-      <span className="text-text-muted">
-        {total} {total === 1 ? 'record' : 'records'}
-      </span>
+      <span className="text-text-muted">{plural(total, 'record')}</span>
       {canLog ? (
         <Button size="sm" variant="outline" className="ml-auto" onClick={onLogTime}>
           <Plus /> Add spent time
@@ -113,15 +118,14 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
         ))}
       </ol>
       {records.hasNextPage ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2"
-          disabled={records.isFetchingNextPage}
+        <LoadMore
+          className="mt-2 pl-9"
+          pending={records.isFetchingNextPage}
+          pendingLabel="Loading more…"
           onClick={() => void records.fetchNextPage()}
         >
-          {records.isFetchingNextPage ? 'Loading more…' : 'Show later records'}
-        </Button>
+          Show later records
+        </LoadMore>
       ) : null}
       {me && editing ? (
         <SpentTimeDialog
@@ -204,7 +208,7 @@ function RecordMenu({ item, durationText, onEdit }: { item: WorkItem; durationTe
             variant="ghost"
             size="icon-xs"
             aria-label={`Actions for ${durationText} on ${formatCalendarDate(item.work_date)}`}
-            className="text-text-muted opacity-0 group-hover/record:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            className="text-text-muted reveal group-hover/record:opacity-100"
           >
             <MoreHorizontal />
           </Button>
@@ -228,10 +232,11 @@ function RecordMenu({ item, durationText, onEdit }: { item: WorkItem; durationTe
         onOpenChange={setConfirming}
         title="Delete this record?"
         confirmLabel="Delete record"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() => {
           setConfirming(false);
-          remove.mutate(item, { onError: error => toastError(error) });
+          remove.mutate(item, { onError: error => toastError('Could not delete the record', error) });
         }}
       >
         <p>

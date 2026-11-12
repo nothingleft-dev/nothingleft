@@ -10,15 +10,17 @@ import { Label } from '@components/ui/label';
 import { Skeleton } from '@components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@components/ui/sheet';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus, type JobTone } from '@components/job-status';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
+import { TextButton } from '@components/text-button';
 import { GIT_PAGE, useGitEvent, useGitEvents, useReplayGitEvent } from '@hooks/use-git';
 import { EVENT_STATUS, eventReason, providerLabel } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const TONE: Record<GitEventStatus, JobTone> = { pending: 'waiting', done: 'done', ignored: 'idle', failed: 'failed' };
 
@@ -96,11 +98,9 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
           <LogSkeleton />
         ) : events.isError && !events.data ? (
           <div className="p-5">
-            <FormAlert title="The delivery log could not be loaded.">
-              <button type="button" onClick={() => void events.refetch()}>
-                Try again
-              </button>
-            </FormAlert>
+            <LoadError onRetry={() => void events.refetch()} detail={errorDetail(events.error)}>
+              The delivery log could not be loaded.
+            </LoadError>
           </div>
         ) : rows.length === 0 ? (
           <div className="p-5">
@@ -111,7 +111,19 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
               description={
                 filter === 'all'
                   ? 'A push, a pull request or a check on a linked repository arrives here within seconds.'
-                  : 'Show all to see every delivery.'
+                  : undefined
+              }
+              action={
+                filter === 'all' ? undefined : (
+                  <TextButton
+                    onClick={() => {
+                      setFilter('all');
+                      setOffset(0);
+                    }}
+                  >
+                    Show every delivery
+                  </TextButton>
+                )
               }
             />
           </div>
@@ -231,22 +243,23 @@ function EventDetail({ slug, event }: { slug: string; event: GitWebhookEvent }) 
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button
+        <PendingButton
           variant="outline"
           size="sm"
-          disabled={replay.isPending}
+          pending={replay.isPending}
+          pendingLabel="Redelivering…"
           onClick={() =>
             replay.mutate(
               { id: event.id, runAutomations },
               {
                 onSuccess: () => toast.success('Redelivered. It is processed again in a few seconds.'),
-                onError: error => toastError(error),
+                onError: error => toastError('Could not redeliver the event', error),
               },
             )
           }
         >
-          <RotateCcw /> {replay.isPending ? 'Redelivering…' : 'Redeliver'}
-        </Button>
+          <RotateCcw /> Redeliver
+        </PendingButton>
         <div className="flex items-center gap-2">
           <Checkbox
             id={`replay-automations-${event.id}`}

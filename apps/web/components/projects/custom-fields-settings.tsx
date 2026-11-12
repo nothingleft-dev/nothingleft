@@ -15,10 +15,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { CustomFieldDialog, DeleteConsequences } from '@components/projects/custom-field-dialog';
@@ -26,6 +26,7 @@ import { FIELD_TYPE_META, hasOptions } from '@components/custom-fields/field-typ
 import { useCustomFields, useDeleteCustomField, useUpdateCustomField } from '@hooks/use-custom-fields';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
 
 interface CustomFieldsSettingsProps {
   projectKey: string;
@@ -50,7 +51,7 @@ export function CustomFieldsSettings({ projectKey, canEdit, readOnlyReason }: Cu
   const patch = (field: CustomField, body: Parameters<typeof update.mutate>[0]['body'], done?: string) =>
     update.mutate(
       { slug: field.slug, body },
-      { onSuccess: () => done && toast.success(done), onError: e => toastError(e) },
+      { onSuccess: () => done && toast.success(done), onError: e => toastError(`Could not update ${field.name}`, e) },
     );
 
   // Positions are across every field, archived included, so a move names the target's own position.
@@ -107,8 +108,10 @@ export function CustomFieldsSettings({ projectKey, canEdit, readOnlyReason }: Cu
 
       {fields.isPending ? (
         <RowsSkeleton rows={5} />
-      ) : fields.isError ? (
-        <FormAlert title="The fields could not be loaded." />
+      ) : fields.isError && !fields.data ? (
+        <LoadError onRetry={() => void fields.refetch()} detail={errorDetail(fields.error)}>
+          The fields could not be loaded.
+        </LoadError>
       ) : all.length === 0 ? (
         <EmptyState
           title="No custom fields yet."
@@ -279,6 +282,7 @@ export function CustomFieldsSettings({ projectKey, canEdit, readOnlyReason }: Cu
         onOpenChange={open => (open ? null : setDeleting(null))}
         title={`Delete ${deleting?.name ?? ''}?`}
         confirmLabel="Delete field"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() => {
           if (!deleting) return;
@@ -287,7 +291,7 @@ export function CustomFieldsSettings({ projectKey, canEdit, readOnlyReason }: Cu
               toast.success(`Deleted ${f.name}.`);
               setDeleting(null);
             },
-            onError: e => toastError(e),
+            onError: e => toastError(`Could not delete ${deleting.name}`, e),
           });
         }}
       >
@@ -348,9 +352,7 @@ function FieldRow({
           {scope}
         </span>
         <span className="w-20 flex-none text-right tabular text-text-muted max-md:hidden">
-          {optionCount !== null
-            ? `${optionCount} ${optionCount === 1 ? 'option' : 'options'}`
-            : `${field.issue_count} ${field.issue_count === 1 ? 'issue' : 'issues'}`}
+          {optionCount !== null ? `${plural(optionCount, 'option')}` : `${plural(field.issue_count, 'issue')}`}
         </span>
         <span className="w-6 flex-none">{menu}</span>
       </span>

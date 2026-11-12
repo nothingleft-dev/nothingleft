@@ -337,7 +337,7 @@ To match issues by their own key: `key: ACME-1, ACME-2`.
 Every custom field is an attribute, by its slug: `severity: High`, `platforms: iOS`,
 `reviewer: me`, `launch: {This month}`, `budget: 10 .. 50`, `blocking: Yes`. Values follow the
 field's type, a negative number goes in braces (`budget: {-5}`), and the field's empty label is
-its empty value (`severity: {No Severity}`). Select options also answer the `#` shortcut. See
+its empty value (`severity: {No severity}`). Select options also answer the `#` shortcut. See
 [Custom fields](./custom-fields.md#searching).
 
 ## Sorting

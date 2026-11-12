@@ -1,10 +1,11 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { Command, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { cn } from '@lib/utils';
 
 export interface ChoiceOption<T extends string> {
@@ -70,19 +71,20 @@ export function ChoiceSelect<T extends string>({
           className="w-(--radix-popover-trigger-width) min-w-[min(280px,calc(100vw-32px))] max-w-[calc(100vw-32px)] p-0"
           align="start"
         >
-          <Command>
+          <PickerCommand>
             <CommandList>
               {options.map(option => (
-                <CommandItem
+                <PickerItem
                   key={option.value}
                   value={option.value}
+                  checked={option.value === value}
+                  checkClassName="mt-0.5"
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
                   }}
                   className="items-start"
                 >
-                  <Check className={cn('mt-0.5 size-icon-sm', option.value === value ? 'opacity-100' : 'opacity-0')} />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="flex items-center gap-2 font-medium">
                       {option.mark}
@@ -90,10 +92,10 @@ export function ChoiceSelect<T extends string>({
                     </span>
                     <span className="text-xs text-text-muted">{option.hint}</span>
                   </span>
-                </CommandItem>
+                </PickerItem>
               ))}
             </CommandList>
-          </Command>
+          </PickerCommand>
         </PopoverContent>
       </Popover>
       {showHint && selected ? (

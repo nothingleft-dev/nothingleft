@@ -7,11 +7,11 @@ import { STATUS_CATEGORIES } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { PageHeader } from '@components/page-header';
-import { PageSkeleton } from '@components/skeletons';
+import { DashboardSkeleton } from '@components/skeletons';
 import { RelativeTime } from '@components/relative-time';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, notFoundOn404 } from '@components/query-state';
 import { Section, SectionEmpty } from '@components/dashboard/section';
-import { StatRow, weekDelta, type Stat } from '@components/dashboard/stat-row';
+import { StatRow, statRowState, weekDelta, type Stat } from '@components/dashboard/stat-row';
 import { StatusStrip } from '@components/dashboard/status-strip';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { FirstProjectEmptyState } from '@components/projects/first-project-empty-state';
@@ -34,8 +34,11 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
   const roles = useProjectRoles();
   useRecordProjectVisit(project.data && !project.data.is_archived ? projectKey : null);
 
-  if (project.isPending) return <PageSkeleton rows={4} />;
-  if (project.isError || !project.data) return <FormAlert title="This project could not be loaded." />;
+  if (project.isPending) return <DashboardSkeleton stats={5} />;
+  if (!project.data) {
+    notFoundOn404(project.error);
+    return <LoadError onRetry={() => void project.refetch()}>This project could not be loaded.</LoadError>;
+  }
 
   const data = project.data;
   const active = sprints.data?.find(s => s.state === 'active') ?? null;
@@ -45,6 +48,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
   const canCreate = !data.is_archived && data.my_role !== 'observer';
   const href = (q: string) => listHref(q, { project: data.key });
 
+  const figuresFailed = figures.isError && !figures.data;
   const stats: Stat[] = fig
     ? [
         { label: 'Open', value: fig.open, href: href('#Unresolved') },
@@ -109,8 +113,6 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
         </div>
       </div>
 
-      {figures.isError ? <FormAlert title="The figures could not be loaded." /> : null}
-
       {total === 0 && !figures.isPending ? (
         <FirstProjectEmptyState
           projectKey={data.key}
@@ -119,7 +121,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
           canImport={roles.canAdmin(data.key)}
         />
       ) : (
-        <StatRow stats={stats} state={figures.isPending ? 'loading' : 'ready'} />
+        <StatRow stats={stats} state={statRowState(figures)} onRetry={() => void figures.refetch()} />
       )}
 
       <div className="grid items-start gap-8 min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]">
@@ -127,6 +129,8 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
           <Section title="By status" count={total ?? undefined}>
             {figures.isPending ? (
               <Skeleton className="mx-2 h-1.5" />
+            ) : figuresFailed ? (
+              <FiguresUnavailable />
             ) : total === 0 ? (
               <SectionEmpty>The strip fills in as issues move through statuses.</SectionEmpty>
             ) : (
@@ -140,6 +144,8 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
           >
             {figures.isPending ? (
               <Skeleton className="mx-2 h-9" />
+            ) : figuresFailed ? (
+              <FiguresUnavailable />
             ) : (fig?.by_assignee.length ?? 0) === 0 ? (
               <SectionEmpty>
                 Nobody has open issues.{' '}
@@ -188,7 +194,9 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
           >
             {members.isPending ? (
               <Skeleton className="h-24 rounded-md" />
-            ) : (members.data ?? []).length === 0 ? (
+            ) : !members.data ? (
+              <LoadError onRetry={() => void members.refetch()}>People could not be loaded.</LoadError>
+            ) : members.data.length === 0 ? (
               <SectionEmpty>Nobody has been added yet.</SectionEmpty>
             ) : (
               <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
@@ -205,6 +213,8 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
           <Section title="Active sprint">
             {sprints.isPending ? (
               <Skeleton className="h-32 rounded-md" />
+            ) : !sprints.data ? (
+              <LoadError onRetry={() => void sprints.refetch()}>Sprints could not be loaded.</LoadError>
             ) : active ? (
               <ActiveSprintPanel sprint={active} />
             ) : (
@@ -217,4 +227,8 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
       </div>
     </div>
   );
+}
+
+function FiguresUnavailable() {
+  return <p className="px-2 py-1 text-xs text-text-secondary">Not available until the figures load.</p>;
 }

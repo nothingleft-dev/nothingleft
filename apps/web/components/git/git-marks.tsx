@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { GitDevelopmentRollup, GitDevelopmentSummary, GitPullRequestState } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { PR_STATE, ROLLUP, count, type Hue } from '@lib/git/words';
 import { cn } from '@lib/utils';
 

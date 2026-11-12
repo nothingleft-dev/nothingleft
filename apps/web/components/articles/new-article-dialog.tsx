@@ -22,6 +22,7 @@ import { useCreateArticle } from '@hooks/use-articles';
 import { isApiError } from '@lib/api/errors';
 import { STARTERS, starterById, type StarterId } from '@lib/articles/starters';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 const TOP = '__top__';
 
@@ -178,10 +179,14 @@ function NewArticleForm({
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Creating…' : 'Create draft'}
-          <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-        </Button>
+        <PendingButton
+          type="submit"
+          pending={create.isPending}
+          pendingLabel="Creating…"
+          after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+        >
+          Create draft
+        </PendingButton>
       </DialogFooter>
     </form>
   );

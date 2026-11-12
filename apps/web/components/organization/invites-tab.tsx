@@ -5,6 +5,7 @@ import type { Invitation, Organization } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/empty-state';
 import { RowsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
 import { InviteEmailsForm } from '@components/invitations/invite-emails-form';
@@ -42,7 +43,11 @@ export function InvitesTab({ organization }: { organization: Organization }) {
 
       <SettingsSection title="Email invitations" description="Everything sent, in every state.">
         {invitations.isPending ? (
-          <RowsSkeleton rows={4} />
+          <RowsSkeleton rows={4} columns={['lines', 'short', 'meta', 'button']} />
+        ) : !invitations.data ? (
+          <LoadError onRetry={() => void invitations.refetch()} detail={errorDetail(invitations.error)}>
+            The invitations could not be loaded.
+          </LoadError>
         ) : emails.length === 0 ? (
           <EmptyState
             title="Nothing sent yet."

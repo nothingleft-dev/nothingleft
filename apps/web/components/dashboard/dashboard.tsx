@@ -8,7 +8,8 @@ import { ProjectsOverview } from '@components/dashboard/projects-overview';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
 import { Segmented } from '@components/segmented';
-import { PageSkeleton } from '@components/skeletons';
+import { DashboardSkeleton } from '@components/skeletons';
+import { LoadError } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useSession } from '@hooks/use-session';
@@ -33,18 +34,15 @@ export function Dashboard() {
 
   if (roles.failed) {
     return (
-      <EmptyState
-        title="Your dashboard could not be loaded."
-        description="Your organisation and projects did not load. Nothing is shown rather than figures that may be wrong."
-        action={
-          <Button size="sm" onClick={roles.retry}>
-            Retry
-          </Button>
-        }
-      />
+      <LoadError
+        onRetry={roles.retry}
+        detail="Your organisation and projects did not load. Nothing is shown rather than figures that may be wrong."
+      >
+        Your dashboard could not be loaded.
+      </LoadError>
     );
   }
-  if (roles.isPending) return <PageSkeleton rows={6} />;
+  if (roles.isPending) return <DashboardSkeleton />;
   if (!roles.org) {
     return (
       <EmptyState

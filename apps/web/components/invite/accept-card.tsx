@@ -7,6 +7,7 @@ import { StepPanel } from '@components/onboarding/step-panel';
 import { InvitationCard } from '@components/invite/invitation-card';
 import { useApiError } from '@hooks/use-api-error';
 import { VerifyGate, needsVerification } from '@components/onboarding/verify-gate';
+import { PendingButton } from '@components/pending-button';
 
 interface AcceptCardProps {
   preview: InvitationPreview;
@@ -18,7 +19,7 @@ interface AcceptCardProps {
 }
 
 export function AcceptCard({ preview, user, onAccept, onDecline, isPending, error }: AcceptCardProps) {
-  const parsed = useApiError(error);
+  const parsed = useApiError(error, []);
   // A share link proves nothing about the address, so it needs a confirmed one.
   const blocked = preview.kind === 'link' && needsVerification(user);
 
@@ -29,9 +30,15 @@ export function AcceptCard({ preview, user, onAccept, onDecline, isPending, erro
       lede={`You are signed in as ${user.email}. Nothing happens to your account until you accept.`}
       footer={
         <>
-          <Button type="button" onClick={onAccept} disabled={isPending || blocked}>
-            {isPending ? 'Joining…' : 'Accept'}
-          </Button>
+          <PendingButton
+            type="button"
+            onClick={onAccept}
+            disabled={blocked}
+            pending={isPending}
+            pendingLabel="Joining…"
+          >
+            Accept
+          </PendingButton>
           <Button type="button" variant="outline" onClick={onDecline} disabled={isPending}>
             Decline
           </Button>

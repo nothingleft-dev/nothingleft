@@ -5,6 +5,7 @@ import type { ReportEmpty, ReportFilter } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError } from '@components/query-state';
 import type { ReportChanges } from '@lib/reports/url';
 import { EVERYONE } from '@lib/reports/url';
 import { cn } from '@lib/utils';
@@ -103,12 +104,9 @@ export function ReportProblem({
 
 export function ReportFailure({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <FormAlert title="The report could not be loaded.">
-      <p>{message} Nothing was changed.</p>
-      <Button variant="outline" size="xs" className="mt-2" onClick={onRetry}>
-        Try again
-      </Button>
-    </FormAlert>
+    <LoadError onRetry={onRetry} detail={message}>
+      The report could not be loaded.
+    </LoadError>
   );
 }
 

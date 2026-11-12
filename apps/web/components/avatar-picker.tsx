@@ -8,6 +8,8 @@ import { Button } from '@components/ui/button';
 import { useRemoveAvatar, useUploadAvatar } from '@hooks/use-me';
 import { initialsOf } from '@lib/initials';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const isAllowed = (type: string): type is (typeof AVATAR_MIME_TYPES)[number] =>
   (AVATAR_MIME_TYPES as readonly string[]).includes(type);
@@ -29,7 +31,7 @@ export function AvatarPicker({ user, size = 'md' }: { user: Me; size?: 'md' | 'l
     }
     upload.mutate(file, {
       onSuccess: () => toast.success('Photo updated.'),
-      onError: e => toast.error(e instanceof Error ? e.message : 'The upload failed.'),
+      onError: e => toastError('Could not upload the picture', e),
     });
   };
 
@@ -41,15 +43,16 @@ export function AvatarPicker({ user, size = 'md' }: { user: Me; size?: 'md' | 'l
       </Avatar>
 
       <div className="flex items-center gap-2">
-        <Button
+        <PendingButton
           type="button"
           variant="outline"
           size="sm"
-          disabled={upload.isPending}
           onClick={() => input.current?.click()}
+          pending={upload.isPending}
+          pendingLabel="Uploading…"
         >
-          {upload.isPending ? 'Uploading…' : 'Upload'}
-        </Button>
+          Upload
+        </PendingButton>
         <Button
           type="button"
           variant="ghost"

@@ -22,6 +22,7 @@ import { useDeleteArticle, useRestoreArticle, useUpdateArticle } from '@hooks/us
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 interface DeleteArticleDialogProps {
   article: Article;
@@ -68,7 +69,7 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
               onClick: () =>
                 restore.mutateAsync(deleted.slug).then(
                   back => router.push(articlePath(back)),
-                  (e: Error) => toastError(e),
+                  (e: Error) => toastError(`Could not restore ${deleted.title}`, e),
                 ),
             },
           });
@@ -136,9 +137,9 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
           <Button variant="outline" onClick={() => close(false)} disabled={remove.isPending}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={confirm} disabled={remove.isPending}>
-            {remove.isPending ? 'Working…' : withChildren && children === 'delete' ? 'Delete branch' : 'Delete article'}
-          </Button>
+          <PendingButton variant="destructive" onClick={confirm} pending={remove.isPending} pendingLabel="Deleting…">
+            {withChildren && children === 'delete' ? 'Delete branch' : 'Delete article'}
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -245,9 +246,9 @@ function AddressForm({ article, onDone }: { article: Article; onDone: () => void
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={update.isPending}>
-          {update.isPending ? 'Saving…' : 'Change address'}
-        </Button>
+        <PendingButton type="submit" pending={update.isPending} pendingLabel="Saving…">
+          Change address
+        </PendingButton>
       </DialogFooter>
     </form>
   );

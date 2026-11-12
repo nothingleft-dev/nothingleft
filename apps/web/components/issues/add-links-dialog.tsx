@@ -22,6 +22,7 @@ import { useDebounced } from '@hooks/use-debounced';
 import { useAddIssueLinks } from '@hooks/use-issue-links';
 import { useIssueRefSearch } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
 
 const HINTS: Record<IssueLinkName, string> = {
   'relates to': 'Connected, with no order between them.',
@@ -113,7 +114,7 @@ function AddLinksForm({
             {chosen.map(issue => (
               <li key={issue.key} className="flex h-row items-center gap-2 pr-1 pl-2.5 text-sm">
                 <TypeBadge type={issue.type} />
-                <IssueKey issueKey={issue.key} resolved={issue.resolved} />
+                <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
                 <span className="min-w-0 flex-1 truncate">{issue.title}</span>
                 <Button
                   type="button"
@@ -145,9 +146,9 @@ function AddLinksForm({
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={chosen.length === 0 || add.isPending}>
-          {add.isPending ? 'Adding…' : chosen.length > 1 ? `Add ${chosen.length} links` : 'Add link'}
-        </Button>
+        <PendingButton type="submit" disabled={chosen.length === 0} pending={add.isPending} pendingLabel="Adding…">
+          {chosen.length > 1 ? `Add ${chosen.length} links` : 'Add link'}
+        </PendingButton>
       </DialogFooter>
     </form>
   );
@@ -192,7 +193,7 @@ export function LinkTargetSearch({ projectKey, exclude, onPick }: LinkTargetSear
             }}
           >
             <TypeBadge type={issue.type} />
-            <IssueKey issueKey={issue.key} resolved={issue.resolved} className="flex-none" />
+            <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
             <span className="min-w-0 flex-1 truncate">{issue.title}</span>
           </CommandItem>
         ))}

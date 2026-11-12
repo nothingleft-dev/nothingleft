@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import type { MemberRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { PickerSkeleton } from '@components/issues/pickers';
-import { cn } from '@lib/utils';
 
 interface MemberPickerProps {
   people: readonly MemberRef[];
@@ -48,12 +48,13 @@ export function MemberPicker({ people, value, onChange, placeholder, label, load
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 max-w-[calc(100vw-32px)] p-0" align="start">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Search people" />
           <CommandList>
             {loading ? <PickerSkeleton /> : <CommandEmpty>Nobody matches.</CommandEmpty>}
             {people.map(person => (
-              <CommandItem
+              <PickerItem
+                checked={person.username === value}
                 key={person.username}
                 value={`${person.name} ${person.username}`}
                 onSelect={() => {
@@ -64,11 +65,10 @@ export function MemberPicker({ people, value, onChange, placeholder, label, load
                 <MemberAvatar member={person} />
                 <span className="min-w-0 flex-1 truncate">{person.name}</span>
                 <span className="truncate font-mono text-2xs text-text-muted">@{person.username}</span>
-                <Check className={cn('size-icon-sm', person.username === value ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import type { AcceptedInvitation, Me } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { AvatarPicker } from '@components/avatar-picker';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -13,6 +12,7 @@ import { StepPanel } from '@components/onboarding/step-panel';
 import { useApiError } from '@hooks/use-api-error';
 import { useUpdateMe } from '@hooks/use-me';
 import { useUpdateMember } from '@hooks/use-members';
+import { PendingButton } from '@components/pending-button';
 
 interface InviteProfileStepProps {
   user: Me;
@@ -32,8 +32,8 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
 
   const updateMe = useUpdateMe();
   const updateMember = useUpdateMember(organization.slug);
-  const meError = useApiError(updateMe.error);
-  const memberError = useApiError(updateMember.error);
+  const meError = useApiError(updateMe.error, ['name']);
+  const memberError = useApiError(updateMember.error, ['username']);
   const isPending = updateMe.isPending || updateMember.isPending;
 
   const land = () => router.replace((project_key ? `/projects/${project_key}` : '/projects') as Route);
@@ -54,9 +54,9 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
       title={`You’re in ${organization.name}`}
       lede="One last look at how you appear to everyone else here. All of it can be changed later."
       footer={
-        <Button type="submit" form="invite-profile" disabled={isPending}>
-          {isPending ? 'Saving…' : project_key ? `Go to ${project_key}` : 'Go to your projects'}
-        </Button>
+        <PendingButton type="submit" form="invite-profile" pending={isPending} pendingLabel="Saving…">
+          {project_key ? `Go to ${project_key}` : 'Go to your projects'}
+        </PendingButton>
       }
     >
       {meError.summary ? <FormAlert title={meError.summary} /> : null}

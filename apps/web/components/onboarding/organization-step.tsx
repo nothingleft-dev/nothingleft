@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Me } from '@nothingleft/types';
+import { CreateOrganizationSchema, type Me } from '@nothingleft/types';
 import { generateOrganizationSlug } from '@nothingleft/format';
-import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { BackButton, StepPanel } from '@components/onboarding/step-panel';
 import { VerifyGate, needsVerification } from '@components/onboarding/verify-gate';
 import { useApiError } from '@hooks/use-api-error';
 import { useCreateOrganization } from '@hooks/use-organizations';
+import { PendingButton } from '@components/pending-button';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 export function OrganizationStep({ user }: { user: Me }) {
   const router = useRouter();
@@ -18,7 +19,8 @@ export function OrganizationStep({ user }: { user: Me }) {
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
   const create = useCreateOrganization();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name', 'slug']);
+  const local = useFieldProblems(CreateOrganizationSchema, { name: 'Organisation name', slug: 'Organisation ID' });
   const blocked = needsVerification(user);
 
   const derived = slugEdited ? slug : (generateOrganizationSlug(name) ?? '');
@@ -31,9 +33,15 @@ export function OrganizationStep({ user }: { user: Me }) {
       footer={
         <>
           <BackButton onClick={() => router.push('/welcome')} disabled={create.isPending} />
-          <Button type="submit" form="organization-step" disabled={create.isPending || blocked || name.trim() === ''}>
-            {create.isPending ? 'Creating…' : 'Save and continue'}
-          </Button>
+          <PendingButton
+            type="submit"
+            form="organization-step"
+            disabled={blocked || name.trim() === ''}
+            pending={create.isPending}
+            pendingLabel="Creating…"
+          >
+            Save and continue
+          </PendingButton>
         </>
       }
     >
@@ -47,6 +55,7 @@ export function OrganizationStep({ user }: { user: Me }) {
         className="flex flex-col gap-5"
         onSubmit={event => {
           event.preventDefault();
+          if (!local.check({ name, ...(derived ? { slug: derived } : {}) })) return;
           create.mutate(
             { name: name.trim(), ...(derived ? { slug: derived } : {}) },
             { onSuccess: () => router.push('/welcome/project') },
@@ -59,8 +68,11 @@ export function OrganizationStep({ user }: { user: Me }) {
           autoComplete="organization"
           placeholder="Acme Corporation"
           value={name}
-          error={error.fields['name']}
-          onChange={e => setName(e.target.value)}
+          error={local.problems['name'] ?? error.fields['name']}
+          onChange={e => {
+            setName(e.target.value);
+            local.clear('name');
+          }}
         />
 
         <Field
@@ -68,8 +80,9 @@ export function OrganizationStep({ user }: { user: Me }) {
           placeholder="acme-corporation"
           hint="A unique ID for your workspace. Use lowercase letters, numbers and hyphens."
           value={derived}
-          error={error.fields['slug']}
+          error={local.problems['slug'] ?? error.fields['slug']}
           onChange={e => {
+            local.clear('slug');
             setSlugEdited(true);
             setSlug(e.target.value);
           }}

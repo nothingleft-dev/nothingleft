@@ -8279,7 +8279,7 @@ components:
         slug: { type: string }
         name: { type: string }
         type: { $ref: '#/components/schemas/CustomFieldType' }
-        empty_label: { type: string, example: No Severity }
+        empty_label: { type: string, example: No severity }
         value: {}
     WorkItemAttributeValue:
       type: object

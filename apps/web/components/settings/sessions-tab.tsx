@@ -3,9 +3,9 @@
 import { Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Session } from '@nothingleft/types';
+import { LoadError, errorDetail } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { RelativeTime } from '@components/relative-time';
@@ -33,8 +33,19 @@ export function SessionsTab() {
         </Button>
       }
     >
-      {sessions.isPending ? <RowsSkeleton rows={3} /> : null}
-      {sessions.isError ? <FormAlert title="Your sessions could not be loaded." /> : null}
+      {sessions.isPending ? (
+        <RowsSkeleton
+          rows={3}
+          columns={['icon', 'lines', 'button']}
+          bordered={false}
+          rowClassName="h-auto min-h-row py-2"
+        />
+      ) : null}
+      {sessions.isError && !sessions.data ? (
+        <LoadError onRetry={() => void sessions.refetch()} detail={errorDetail(sessions.error)}>
+          Your sessions could not be loaded.
+        </LoadError>
+      ) : null}
       {sessions.isSuccess && sessions.data.length === 0 ? (
         <EmptyState title="No active sessions." description="Signing in from a browser adds one here." />
       ) : null}

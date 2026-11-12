@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check } from 'lucide-react';
 import { STORY_POINTS_MAX, type Sprint } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { sprintDatesLabel } from '@components/agile/sprint-dates';
 import { cn } from '@lib/utils';
@@ -28,28 +28,31 @@ interface SprintCommandProps {
 export function SprintCommand({ sprints, selected, loading = false, onSelect }: SprintCommandProps) {
   const options = assignableSprints(sprints);
   return (
-    <Command>
+    <PickerCommand>
       <CommandInput placeholder="Move to sprint" />
       <CommandList>
         {loading ? <PickerSkeleton rows={3} /> : <CommandEmpty>No sprint matches.</CommandEmpty>}
         {options.map(sprint => (
-          <CommandItem key={sprint.slug} value={`${sprint.name} ${sprint.slug}`} onSelect={() => onSelect(sprint.slug)}>
+          <PickerItem
+            checked={sprint.slug === selected}
+            key={sprint.slug}
+            value={`${sprint.name} ${sprint.slug}`}
+            onSelect={() => onSelect(sprint.slug)}
+          >
             <span className="min-w-0 flex-1 truncate">{sprint.name}</span>
             <span className="text-2xs text-text-muted">
               {sprint.state === 'active' ? 'Active' : sprintDatesLabel(sprint)}
             </span>
-            <Check className={cn('size-icon-sm', sprint.slug === selected ? 'opacity-100' : 'opacity-0')} />
-          </CommandItem>
+          </PickerItem>
         ))}
         {loading ? null : (
-          <CommandItem value={UNSCHEDULED} onSelect={() => onSelect(null)}>
+          <PickerItem checked={selected === null} value={UNSCHEDULED} onSelect={() => onSelect(null)}>
             <span className="min-w-0 flex-1 truncate text-text-secondary">{UNSCHEDULED}</span>
             <span className="text-2xs text-text-muted">Backlog</span>
-            <Check className={cn('size-icon-sm', selected === null ? 'opacity-100' : 'opacity-0')} />
-          </CommandItem>
+          </PickerItem>
         )}
       </CommandList>
-    </Command>
+    </PickerCommand>
   );
 }
 

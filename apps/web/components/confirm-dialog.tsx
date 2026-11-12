@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { Button } from '@components/ui/button';
+import { PendingButton } from '@components/pending-button';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,8 @@ interface ConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   confirmLabel: string;
+  /** The confirm verb in progress: "Deleting…", "Removing…". */
+  pendingLabel: string;
   onConfirm: () => void;
   pending?: boolean;
   destructive?: boolean;
@@ -31,8 +34,9 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   confirmLabel,
+  pendingLabel,
   onConfirm,
-  pending,
+  pending = false,
   destructive = true,
   children,
 }: ConfirmDialogProps) {
@@ -49,9 +53,14 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel
           </Button>
-          <Button variant={destructive ? 'destructive' : 'default'} onClick={onConfirm} disabled={pending}>
-            {pending ? 'Working…' : confirmLabel}
-          </Button>
+          <PendingButton
+            variant={destructive ? 'destructive' : 'default'}
+            onClick={onConfirm}
+            pending={pending}
+            pendingLabel={pendingLabel}
+          >
+            {confirmLabel}
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

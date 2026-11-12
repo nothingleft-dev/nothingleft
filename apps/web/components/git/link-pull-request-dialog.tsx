@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@components/ui/dialog';
 import { useLinkPullRequest } from '@hooks/use-git';
+import { PendingButton } from '@components/pending-button';
 
 interface LinkPullRequestDialogProps {
   open: boolean;
@@ -91,9 +92,9 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
         <Button type="button" variant="outline" onClick={onDone} disabled={link.isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={link.isPending || url.trim() === ''}>
-          {link.isPending ? 'Linking…' : 'Link pull request'}
-        </Button>
+        <PendingButton type="submit" disabled={url.trim() === ''} pending={link.isPending} pendingLabel="Linking…">
+          Link pull request
+        </PendingButton>
       </DialogFooter>
     </form>
   );

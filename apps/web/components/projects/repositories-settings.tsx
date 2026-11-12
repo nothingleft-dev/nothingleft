@@ -9,11 +9,11 @@ import type { GitRepository, ProjectRepository } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Switch } from '@components/ui/switch';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { ConfirmDialog } from '@components/confirm-dialog';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
@@ -36,6 +36,7 @@ import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 interface RepositoriesSettingsProps {
   projectKey: string;
@@ -78,11 +79,9 @@ export function RepositoriesSettings({
         {repositories.isPending ? (
           <RowsSkeleton />
         ) : repositories.isError && !repositories.data ? (
-          <FormAlert title="The repositories could not be loaded.">
-            <button type="button" onClick={() => void repositories.refetch()}>
-              Try again
-            </button>
-          </FormAlert>
+          <LoadError onRetry={() => void repositories.refetch()} detail={errorDetail(repositories.error)}>
+            The repositories could not be loaded.
+          </LoadError>
         ) : rows.length === 0 ? (
           <NoRepository projectKey={projectKey} canEdit={canEdit} />
         ) : (
@@ -177,7 +176,7 @@ function RepositoryRow({
   const patch = (body: Parameters<typeof update.mutate>[0]['body']) =>
     update.mutate(
       { repository: repository.full_name, body: { ...body, connection: repository.connection } },
-      { onError: error => toastError(error) },
+      { onError: error => toastError(`Could not update ${repository.full_name}`, error) },
     );
 
   return (
@@ -254,13 +253,14 @@ function RepositoryRow({
         onOpenChange={setConfirming}
         title={`Unlink ${repository.full_name}?`}
         confirmLabel="Unlink repository"
+        pendingLabel="Unlinking…"
         pending={unlink.isPending}
         onConfirm={() =>
           unlink
             .mutateAsync({ repository: repository.full_name, connection: repository.connection })
             .then(
               () => toast.success(`${repository.full_name} is no longer linked to ${projectKey}.`),
-              (error: Error) => toastError(error),
+              (error: Error) => toastError(`Could not unlink ${repository.full_name}`, error),
             )
             .finally(() => setConfirming(false))
         }
@@ -310,9 +310,9 @@ function LinkRepositoryPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button size="sm" disabled={link.isPending}>
-          <Plus /> {link.isPending ? 'Linking…' : 'Link repository'}
-        </Button>
+        <PendingButton size="sm" pending={link.isPending} pendingLabel="Linking…">
+          <Plus /> Link repository
+        </PendingButton>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 max-w-[calc(100vw-32px)] p-0">
         <Command shouldFilter={false}>
@@ -349,7 +349,7 @@ function LinkRepositoryPicker({
                             toast.success(`${repository.full_name} is linked. Its recent history is being read.`);
                             onLinked(linked.length === 0);
                           },
-                          onError: error => toastError(error),
+                          onError: error => toastError(`Could not link ${repository.full_name}`, error),
                         },
                       );
                     }}

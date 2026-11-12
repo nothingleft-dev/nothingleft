@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { formatDateTimeWithZone, supportedTimeZones, viewerTimeZone } from '@lib/datetime';
-import { cn } from '@lib/utils';
 
 interface TimezonePickerProps {
   value: string;
@@ -38,12 +38,13 @@ export function TimezonePicker({ value, onChange, disabled }: TimezonePickerProp
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) min-w-[280px] p-0" align="start">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Search time zones…" />
           <CommandList>
             <CommandEmpty>No zone matches that.</CommandEmpty>
             {zones.map(zone => (
-              <CommandItem
+              <PickerItem
+                checked={zone === value}
                 key={zone}
                 value={zone}
                 onSelect={() => {
@@ -51,13 +52,12 @@ export function TimezonePicker({ value, onChange, disabled }: TimezonePickerProp
                   setOpen(false);
                 }}
               >
-                <Check className={cn('size-icon-sm', zone === value ? 'opacity-100' : 'opacity-0')} />
                 <span className="flex-1 truncate">{zone}</span>
                 {zone === viewerTimeZone() ? <span className="text-2xs text-text-muted">this device</span> : null}
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

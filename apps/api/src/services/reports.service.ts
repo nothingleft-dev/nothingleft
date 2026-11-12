@@ -292,7 +292,9 @@ export function reportsService(deps: ReportsDeps) {
     if (s.projectKeys.length > 0) {
       filters.push({
         kind: 'projects',
-        label: t('report.filter.projects', { projects: s.projectKeys.join(', ') }),
+        label: t('report.filter.projects', {
+          projects: s.projectKeys.map(key => s.sc.projects.find(p => p.key === key)?.name ?? key).join(', '),
+        }),
         widen_query: null,
       });
     }
@@ -605,16 +607,12 @@ export function reportsService(deps: ReportsDeps) {
     s: Scoped,
     names: readonly string[],
     field: string,
-  ): Promise<{ id: number; username: string }[]> {
-    const wanted = names.map(n => n.replace(/^@/, ''));
-    const others = wanted.filter(n => n.toLowerCase() !== 'me');
-    const found = await organizations.findMembersByUsernames(s.sc.ctx, others, { includeRemoved: true });
-    const out: { id: number; username: string }[] = [];
+  ): Promise<{ id: number; username: string; name: string }[]> {
+    const own = s.sc.org.membership.username;
+    const wanted = names.map(n => n.replace(/^@/, '')).map(n => (n.toLowerCase() === 'me' ? own : n));
+    const found = await organizations.findMembersByUsernames(s.sc.ctx, wanted, { includeRemoved: true });
+    const out: { id: number; username: string; name: string }[] = [];
     for (const name of wanted) {
-      if (name.toLowerCase() === 'me') {
-        out.push({ id: principal.userId, username: s.sc.org.membership.username });
-        continue;
-      }
       const member = found.find(f => f.membership.username.toLowerCase() === name.toLowerCase());
       if (!member) {
         const vocabulary = await issueSearch.vocabulary(s.sc.ctx, s.sc.scope.projectIds, new Set(['user']));
@@ -626,7 +624,7 @@ export function reportsService(deps: ReportsDeps) {
           vocabulary.usernames.filter(u => !u.removed).map(u => u.username),
         );
       }
-      out.push({ id: member.user.id, username: member.membership.username });
+      out.push({ id: member.user.id, username: member.membership.username, name: member.user.name });
     }
     return out.filter((u, i) => out.findIndex(o => o.id === u.id) === i);
   }
@@ -1016,7 +1014,7 @@ export function reportsService(deps: ReportsDeps) {
           ? [
               {
                 kind: 'users',
-                label: t('report.filter.users', { users: users.map(u => u.username).join(', ') }),
+                label: t('report.filter.users', { users: users.map(u => u.name).join(', ') }),
                 widen_query: null,
               },
             ]
@@ -1162,16 +1160,15 @@ export function reportsService(deps: ReportsDeps) {
 
   async function findSprint(
     ctx: TenantContext,
-    projectId: number,
-    projectKey: string,
+    project: { id: number; key: string; name: string },
     name?: string,
   ): Promise<SprintRow> {
-    const sprint = name ? await sprints.find(ctx, projectId, name) : await sprints.findActive(ctx, projectId);
+    const sprint = name ? await sprints.find(ctx, project.id, name) : await sprints.findActive(ctx, project.id);
     if (sprint) return sprint;
-    const names = (await sprints.list(ctx, [projectId])).map(sp => sp.name);
+    const names = (await sprints.list(ctx, [project.id])).map(sp => sp.name);
     throw name
-      ? new AppError('report.unknown_sprint', 400, { sprint: name, project: projectKey }, 'sprint', names)
-      : new AppError('report.no_active_sprint', 400, { project: projectKey }, 'sprint', names);
+      ? new AppError('report.unknown_sprint', 400, { sprint: name, project: project.key }, 'sprint', names)
+      : new AppError('report.no_active_sprint', 400, { project: project.name }, 'sprint', names);
   }
 
   async function burndown(
@@ -1183,7 +1180,7 @@ export function reportsService(deps: ReportsDeps) {
     const project = await access.project(principal, input.project, hints);
     access.require(principal, 'issue.read', project.scope);
     access.require(principal, capability, project.scope);
-    const sprint = await findSprint(project.ctx, project.project.id, project.project.key, input.sprint);
+    const sprint = await findSprint(project.ctx, project.project, input.sprint);
     const at = now();
     const today = utcDate(at);
     const org = project.organization;

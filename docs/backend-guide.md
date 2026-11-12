@@ -197,7 +197,7 @@ with the schema.
 | Error envelope | `@plugins/error-handler` | anything thrown → `{ error }`; 5xx also reported to PostHog |
 | Unique races | `@plugins/error-handler` | a Postgres unique violation (a slug, key or username taken between the service's check and its insert) answers `409 conflict`, not a 500 |
 | Domain errors | `@lib/errors` | `AppError(code, status, params, field?, validValues?, span?)`, message from the catalogue; `AppError.fromQuery(QueryError)` for a search query, carrying its `span` |
-| Catalogue | `packages/i18n/en.json` | `error.code` == key minus `error.` |
+| Catalogue | `packages/i18n/en.json` | `error.code` == key minus `error.`; `t()` fills `{name}`, and `{count\|issue\|issues}` renders the count grouped (`1,284`) with the noun that agrees with it, so every count in a sentence takes the plural form. Quotes and apostrophes are curly |
 | Auth middleware | `@middleware/auth` | cookie `sid` or `Bearer nl_pat_…` → `request.principal`; `preHandler: requireAuth` to demand one |
 | Origin check | `@middleware/origin` | mutating + session principal → `Origin` must equal `APP_BASE_URL`. PAT callers are exempt: they carry no ambient credential |
 | Permissions | `@services/permissions` | `can(principal, capability, scope)`, one cell per row of `docs/permissions.md`, every cell tested; `missingScope()` names the scope when only a token's scopes refused it |

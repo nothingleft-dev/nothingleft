@@ -9,6 +9,7 @@ import { CSV_IMPORT_MAX_BYTES, CSV_IMPORT_MAX_ROWS, type ImportDryRun, type Impo
 import { Button } from '@components/ui/button';
 import { Meter } from '@components/dashboard/meter';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { ColumnMapping, hasTitle } from '@components/imports/column-mapping';
 import {
   Figures,
@@ -31,6 +32,8 @@ import {
 } from '@hooks/use-imports';
 import { cn } from '@lib/utils';
 import { formatCount } from '@lib/numbers';
+import { PendingButton } from '@components/pending-button';
+import { TextButton } from '@components/text-button';
 
 type Step =
   | { kind: 'pick' }
@@ -257,9 +260,9 @@ function MapStep({ project, preview, onRestart, onStarted }: MapStepProps) {
         <span className="text-sm text-text-secondary tabular">
           {rows(job.total_rows ?? 0)} · {formatBytes(job.size_bytes)}
         </span>
-        <Button variant="link" className="h-auto p-0 text-sm" onClick={onRestart} disabled={busy}>
+        <TextButton className="text-sm" onClick={onRestart} disabled={busy}>
           Choose another file
-        </Button>
+        </TextButton>
       </div>
 
       <p className="text-sm text-text-secondary">
@@ -286,17 +289,26 @@ function MapStep({ project, preview, onRestart, onStarted }: MapStepProps) {
       {start.error ? <FormAlert title="The import did not start.">{start.error.message}</FormAlert> : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant={current ? 'outline' : 'default'} size="sm" onClick={runDry} disabled={busy}>
-          {dryRun.isPending ? 'Checking every row…' : current ? 'Dry run again' : 'Dry run'}
-        </Button>
+        <PendingButton
+          variant={current ? 'outline' : 'default'}
+          size="sm"
+          onClick={runDry}
+          disabled={busy}
+          pending={dryRun.isPending}
+          pendingLabel="Checking every row…"
+        >
+          {current ? 'Dry run again' : 'Dry run'}
+        </PendingButton>
         {current ? (
-          <Button
+          <PendingButton
             size="sm"
             disabled={busy || current.valid_rows === 0}
             onClick={() => start.mutate({ id: job.id, mapping }, { onSuccess: started => onStarted(started.id) })}
+            pending={start.isPending}
+            pendingLabel="Starting…"
           >
-            {start.isPending ? 'Starting…' : `Import ${issues(current.valid_rows)}`}
-          </Button>
+            {`Import ${issues(current.valid_rows)}`}
+          </PendingButton>
         ) : (
           <span className="text-sm text-text-secondary">Checks every row and creates nothing.</span>
         )}
@@ -345,11 +357,9 @@ function StartedStep({ project, id, onAnother }: { project: string; id: number; 
 
   if (!job.data) {
     return job.isError ? (
-      <FormAlert title="The import's progress could not be loaded.">
-        <button type="button" onClick={() => void job.refetch()}>
-          Try again
-        </button>
-      </FormAlert>
+      <LoadError onRetry={() => void job.refetch()} detail={errorDetail(job.error)}>
+        The import’s progress could not be loaded.
+      </LoadError>
     ) : (
       <p className="text-sm text-text-secondary" role="status">
         Starting…

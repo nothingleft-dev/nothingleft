@@ -23,8 +23,8 @@ import type {
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -565,6 +565,7 @@ function CardMenu({
           onOpenChange={setConfirming}
           title={`Unlink this ${what} from ${issueKey}?`}
           confirmLabel="Unlink"
+          pendingLabel="Unlinking…"
           destructive={false}
           pending={unlink.isPending}
           onConfirm={() =>
@@ -572,7 +573,7 @@ function CardMenu({
               .mutateAsync(link.link_id)
               .then(
                 () => toast.success(`Unlinked from ${issueKey}.`),
-                (error: Error) => toastError(error),
+                (error: Error) => toastError(`Could not unlink it from ${issueKey}`, error),
               )
               .finally(() => setConfirming(false))
           }

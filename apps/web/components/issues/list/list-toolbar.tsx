@@ -14,10 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import type { ColumnDef, ColumnId, CustomColumn } from '@lib/issue-list/columns';
 import type { GroupChoice } from '@lib/issue-list/url-state';
 import { GROUP_CHOICES, GROUP_LABELS, type BuiltinGroup } from '@lib/issue-list/groups';
+import { plural } from '@lib/numbers';
 
 interface ListToolbarProps {
   total: number | null;
@@ -60,11 +61,7 @@ export function ListToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {leading}
-      {total !== null ? (
-        <span className="text-xs tabular text-text-muted">
-          {total} {total === 1 ? 'issue' : 'issues'}
-        </span>
-      ) : null}
+      {total !== null ? <span className="text-xs tabular text-text-muted">{plural(total, 'issue')}</span> : null}
       <span className="flex-1" />
 
       <DropdownMenu>
@@ -151,7 +148,7 @@ export function ListToolbar({
               </Link>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Import issues from CSV</TooltipContent>
+          <TooltipContent side="bottom">Import issues from CSV</TooltipContent>
         </Tooltip>
       ) : null}
 
@@ -161,7 +158,7 @@ export function ListToolbar({
             <Download className="size-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>{exporting ? 'Preparing the file…' : 'Export this list as CSV'}</TooltipContent>
+        <TooltipContent side="bottom">{exporting ? 'Preparing the file…' : 'Export this list as CSV'}</TooltipContent>
       </Tooltip>
     </div>
   );

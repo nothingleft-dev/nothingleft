@@ -10,7 +10,6 @@ import {
   type ProjectRole,
   type Seats,
 } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { FormAlert } from '@components/auth/form-alert';
 import { EmailChips } from '@components/invitations/email-chips';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
@@ -19,6 +18,7 @@ import { useApiError } from '@hooks/use-api-error';
 import { useInviteByEmail } from '@hooks/use-invitations';
 import type { InviteScope } from '@lib/api/invitations';
 import { ORG_ROLE_HINTS, ORG_ROLE_LABELS, PROJECT_ROLE_HINTS, PROJECT_ROLE_LABELS } from '@lib/roles';
+import { PendingButton } from '@components/pending-button';
 
 const ORG_OPTIONS: ChoiceOption<OrgRole>[] = ORG_ROLES.map(value => ({
   value,
@@ -52,7 +52,7 @@ export function InviteEmailsForm({
   const [orgRole, setOrgRole] = useState<OrgRole>('member');
   const [projectRole, setProjectRole] = useState<ProjectRole>('contributor');
   const invite = useInviteByEmail(scope);
-  const error = useApiError(invite.error);
+  const error = useApiError(invite.error, []);
   const isProject = scope.kind === 'project';
 
   return (
@@ -107,9 +107,9 @@ export function InviteEmailsForm({
       </div>
 
       <div className="flex items-start gap-3 max-sm:flex-col">
-        <Button type="submit" disabled={invite.isPending || emails.length === 0}>
-          {invite.isPending ? 'Sending…' : submitLabel}
-        </Button>
+        <PendingButton type="submit" disabled={emails.length === 0} pending={invite.isPending} pendingLabel="Sending…">
+          {submitLabel}
+        </PendingButton>
         <span className="text-xs text-text-muted">
           Invitations expire in 14 days and can be used once.
           {isProject ? ' Accepting joins the organisation and this project in one step.' : ''}

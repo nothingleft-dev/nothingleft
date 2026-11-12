@@ -21,6 +21,7 @@ import { useApiError } from '@hooks/use-api-error';
 import { useMembers, useRemovalPreview, useRemoveMember } from '@hooks/use-members';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 type IssueChoice = 'reassign' | 'unassign';
 type ViewChoice = 'delete' | 'transfer';
@@ -56,7 +57,7 @@ function RemovalForm({
   const preview = useRemovalPreview(organization.slug, member.username);
   const everyone = useMembers(organization.slug, { limit: 100 });
   const remove = useRemoveMember(organization.slug);
-  const error = useApiError(remove.error ?? preview.error);
+  const error = useApiError(remove.error ?? preview.error, ['reassign_to', 'transfer_views_to']);
   const calendar = useWorkCalendar();
 
   const [issueChoice, setIssueChoice] = useState<IssueChoice | null>(null);
@@ -131,7 +132,9 @@ function RemovalForm({
               ) : null
             }
           >
-            {!hasOpen ? (
+            {!data ? (
+              <Skeleton className="h-3 w-40" />
+            ) : !hasOpen ? (
               <Unchanged>Nothing to reassign</Unchanged>
             ) : (
               <Choice
@@ -178,7 +181,9 @@ function RemovalForm({
               ) : null
             }
           >
-            {!hasViews ? (
+            {!data ? (
+              <Skeleton className="h-3 w-32" />
+            ) : !hasViews ? (
               <Unchanged>Nothing to move</Unchanged>
             ) : (
               <Choice
@@ -205,9 +210,15 @@ function RemovalForm({
         <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
           Cancel
         </Button>
-        <Button variant="destructive" onClick={submit} disabled={!ready || remove.isPending}>
-          {remove.isPending ? 'Removing…' : 'Remove member'}
-        </Button>
+        <PendingButton
+          variant="destructive"
+          onClick={submit}
+          disabled={!ready}
+          pending={remove.isPending}
+          pendingLabel="Removing…"
+        >
+          Remove member
+        </PendingButton>
       </DialogFooter>
     </>
   );

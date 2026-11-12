@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <CreateIssueProvider>
       <ShellShortcuts />
       <div className="flex h-dvh overflow-hidden">
-        <div className="max-md:hidden">
+        <div className="max-shell:hidden">
           <Sidebar collapsed={collapsed} onToggle={toggle} user={user} data={data} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col">

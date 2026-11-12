@@ -14,7 +14,8 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="flex max-w-full flex-wrap items-center gap-1"
+      data-tab-strip
+      className="scroll-fade-x flex max-w-full items-center gap-1 overflow-x-auto"
       onKeyDown={event => {
         const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
         const index = buttons.indexOf(event.target as HTMLButtonElement);

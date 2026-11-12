@@ -3,8 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import type { Route } from 'next';
 import type { CSSProperties, ReactNode } from 'react';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
-import { SectionError, StaleNotice } from '@components/dashboard/section';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
+import { LoadError, StaleNotice } from '@components/query-state';
 import { cn } from '@lib/utils';
 
 export interface Stat {
@@ -121,13 +121,13 @@ export function StatRow({
             <div key={stat.label} className={cell}>
               {figure}
               {label}
-              {known ? stat.below : null}
+              {known ? stat.below : stat.below ? <div aria-hidden className="mt-2 h-1 rounded-full bg-inset" /> : null}
             </div>
           );
         })}
       </div>
       {state === 'failed' && onRetry ? (
-        <SectionError onRetry={onRetry}>These figures could not be loaded.</SectionError>
+        <LoadError onRetry={onRetry}>These figures could not be loaded.</LoadError>
       ) : null}
       {state === 'stale' && onRetry ? (
         <StaleNotice onRetry={onRetry}>These figures could not be refreshed and may be out of date.</StaleNotice>

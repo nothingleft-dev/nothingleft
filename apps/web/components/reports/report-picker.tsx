@@ -1,18 +1,11 @@
 'use client';
 
 import { Fragment, useState, type ReactNode } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { cn } from '@lib/utils';
 
@@ -101,7 +94,7 @@ function Options({
   lead?: ReactNode;
 }) {
   return (
-    <Command>
+    <PickerCommand>
       {searchable ? <CommandInput placeholder="Filter…" /> : null}
       <CommandList className="max-h-[min(60vh,360px)]">
         {loading ? <PickerSkeleton /> : <CommandEmpty>Nothing matches.</CommandEmpty>}
@@ -113,21 +106,21 @@ function Options({
                 {index > 0 || lead ? <CommandSeparator /> : null}
                 <CommandGroup heading={heading || undefined}>
                   {list.map(option => (
-                    <CommandItem
+                    <PickerItem
+                      checked={isSelected(option.value)}
                       key={option.value}
                       value={`${option.label} ${option.value}`}
                       onSelect={() => onSelect(option.value)}
                     >
                       {option.mark}
                       <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                      <Check className={cn('size-icon-sm', isSelected(option.value) ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   ))}
                 </CommandGroup>
               </Fragment>
             ))}
       </CommandList>
-    </Command>
+    </PickerCommand>
   );
 }
 
@@ -190,10 +183,9 @@ export function ReportMultiPicker({
           onSelect={toggle}
           lead={
             <CommandGroup>
-              <CommandItem value={`__clear ${clearLabel}`} onSelect={() => onChange([])}>
+              <PickerItem checked={values.length === 0} value={`__clear ${clearLabel}`} onSelect={() => onChange([])}>
                 <span className="min-w-0 flex-1 truncate">{clearLabel}</span>
-                <Check className={cn('size-icon-sm', values.length === 0 ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             </CommandGroup>
           }
         />

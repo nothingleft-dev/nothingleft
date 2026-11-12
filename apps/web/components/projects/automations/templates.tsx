@@ -12,6 +12,7 @@ import { StatusPicker } from '@components/projects/automations/status-picker';
 import { useAutomationTemplates, useCreateAutomation } from '@hooks/use-automations';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 const isGit = (t: AutomationTemplate) => t.automation.trigger.startsWith('git.');
 
@@ -62,21 +63,23 @@ function TemplateCard({ projectKey, template }: { projectKey: string; template: 
       {template.needs_status && !status ? <NeedsStatus projectKey={projectKey} /> : null}
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
         <StatusPicker projectKey={projectKey} value={status} onChange={setStatus} label={`${template.name}: status`} />
-        <Button
+        <PendingButton
           size="sm"
-          disabled={!status || create.isPending}
+          disabled={!status}
+          pending={create.isPending}
+          pendingLabel="Adding…"
           onClick={() =>
             create.mutate(
               { ...template.automation, name: template.name, action_params: { status: status! } },
               {
                 onSuccess: rule => toast.success(`${rule.name} is on.`),
-                onError: error => toastError(error),
+                onError: error => toastError(`Could not add ${template.name}`, error),
               },
             )
           }
         >
-          {create.isPending ? 'Adding…' : 'Add rule'}
-        </Button>
+          Add rule
+        </PendingButton>
       </div>
     </div>
   );
@@ -103,7 +106,7 @@ export function TemplateOffer({ projectKey, onDone }: { projectKey: string; onDo
         await create.mutateAsync({ ...t.automation, name: t.name, action_params: { status: stateOf(t).status! } });
         made += 1;
       } catch (error) {
-        toast.error(`${t.name}: ${(error as Error).message}`);
+        toastError(`Could not add ${t.name}`, error as Error);
       }
     }
     setBusy(false);
@@ -152,9 +155,15 @@ export function TemplateOffer({ projectKey, onDone }: { projectKey: string; onDo
         </ul>
       )}
       <div className="flex items-center gap-2">
-        <Button size="sm" disabled={!ready || busy} onClick={() => void createSelected()}>
-          {busy ? 'Creating…' : 'Create selected'}
-        </Button>
+        <PendingButton
+          size="sm"
+          disabled={!ready}
+          onClick={() => void createSelected()}
+          pending={busy}
+          pendingLabel="Creating…"
+        >
+          Create selected
+        </PendingButton>
         <Button variant="ghost" size="sm" onClick={onDone} disabled={busy}>
           Not now
         </Button>

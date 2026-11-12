@@ -10,7 +10,9 @@ its own paragraph, and the matching `<key>.action` message is the button label.
 Every email is plain text with an HTML copy generated from it, and every subject ends
 `· Nothing Left`. **Tokens** are the `{placeholders}` the sender fills; a template may use
 any of them and must not need any other. `{name}` is always the recipient's name, `{url}` a
-link into the app. Transactional mail carries no unsubscribe link.
+link into the app. `{count|update|updates}` renders the count with thousands grouped and
+the noun that agrees with it (`1 update`, `1,284 updates`). Transactional mail carries no
+unsubscribe link.
 
 ## Account and security
 
@@ -100,8 +102,8 @@ Opt-in per kind ([notifications.md § Preferences](./notifications.md#preference
 | Key | Subject | Tokens | Purpose |
 |---|---|---|---|
 | `email.notification` | {summary} | `summary`; lines: `email.notification.greeting` (`name`), `.line` (`summary`, `label`, `from`, `to`, `value`, `actor`, `project`, `at`), `.open` (`subject`, `url`), `.footer` (`kinds`, `unsubscribe_url`, `preferences_url`) | An instant email with one change. |
-| `email.notification_many` | {count} updates on {subject} | `count`, `subject`; the same lines | An instant email with several changes to one issue or article. |
-| `email.notification_due` | {count} of your issues need attention | `count`, `subject`; the same lines | An instant email whose changes span two or more issues (`count` is the number of issues), including the due-date producer's batch: due soon and overdue. The subject is not specific to due dates. |
+| `email.notification_many` | {count\|update\|updates} on {subject} | `count`, `subject`; the same lines | An instant email with several changes to one issue or article. |
+| `email.notification_due` | {count\|issue of yours needs\|of your issues need} attention | `count`, `subject`; the same lines | An instant email whose changes span two or more issues (`count` is the number of issues), including the due-date producer's batch: due soon and overdue. The subject is not specific to due dates. |
 | `email.digest.daily` | Your day in {org} | `org`; lines: `email.digest.daily.heading` (`org`), `.project` (`project`), `.kind` (`label`, `count`), `.issue` (`key`, `title`), `.more` (`count`, `url`), `.count` (`label`, `count`, `url`), `.watched` (`count`, `url`), `.footer.daily` (`kinds`, `unsubscribe_url`, `preferences_url`) | The 9am (recipient's local time) daily digest per organisation, unread only, never empty. At most 5 issues are listed per kind line, the rest collapse into `.more`. |
 | `email.digest.weekly` | Your week in {org} | as daily, with `email.digest.weekly.heading` and `.footer.weekly` | The Monday 9am (local) weekly digest. |
 

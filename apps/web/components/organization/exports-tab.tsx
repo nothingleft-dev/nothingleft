@@ -6,9 +6,10 @@ import { formatBytes } from '@nothingleft/format';
 import { ORG_EXPORT_TTL_DAYS, type ExportJob, type ExportStatus, type Organization } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus, type JobTone } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
@@ -18,6 +19,7 @@ import { exportDownloadHref } from '@lib/api/exports';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { formatCount } from '@lib/numbers';
+import { PendingButton } from '@components/pending-button';
 
 const STATUS: Record<ExportStatus, [JobTone, string]> = {
   queued: ['waiting', 'Queued'],
@@ -51,9 +53,9 @@ export function ExportsTab({ organization }: { organization: Organization }) {
         title="Export organisation"
         description={`One .zip with every project, issue, article and attached file, the members and the audit log — wherever the files are stored. It is built in the background and emailed to you when ready, then kept here for ${ORG_EXPORT_TTL_DAYS} days for any Org Admin or the Owner to download.`}
         actions={
-          <Button size="sm" onClick={start} disabled={request.isPending}>
-            {request.isPending ? 'Requesting…' : 'Export organisation'}
-          </Button>
+          <PendingButton size="sm" onClick={start} pending={request.isPending} pendingLabel="Requesting…">
+            Export organisation
+          </PendingButton>
         }
       >
         {request.isError ? <FormAlert title={`The export was not requested. ${request.error.message}`} /> : null}
@@ -77,11 +79,9 @@ export function ExportsTab({ organization }: { organization: Organization }) {
         {exports.isPending ? (
           <ExportsSkeleton />
         ) : exports.isError && !exports.data ? (
-          <FormAlert title="The exports could not be loaded.">
-            <button type="button" onClick={() => void exports.refetch()}>
-              Try again
-            </button>
-          </FormAlert>
+          <LoadError onRetry={() => void exports.refetch()} detail={errorDetail(exports.error)}>
+            The exports could not be loaded.
+          </LoadError>
         ) : jobs.length === 0 ? (
           <EmptyState
             title="No exports yet."

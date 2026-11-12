@@ -7,6 +7,8 @@ import { Eye, EyeOff, FilePlus2, Link2, MoreHorizontal, Pencil, Star, Tag, Trash
 import { toast } from 'sonner';
 import { checkMarkdownSize } from '@nothingleft/markdown';
 import { ARTICLE_HIERARCHY_MAX_DEPTH, type Article, type TagRef } from '@nothingleft/types';
+import { TitleInput } from '@components/title-input';
+import { LoadError, errorDetail } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import {
   DropdownMenu,
@@ -16,8 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
-import { FormAlert } from '@components/auth/form-alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { PersonName } from '@components/former-member-chip';
 import { Kbd } from '@components/kbd';
@@ -46,6 +47,7 @@ import { useShortcut } from '@hooks/use-shortcut';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 export function ArticlePage({ project, slug }: { project: string; slug: string }) {
   const article = useArticle(project, slug);
@@ -68,7 +70,13 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
   useShortcut('e', () => setEditing(true), canEdit && !editing);
 
   if (article.isError && isApiError(article.error) && article.error.isNotFound) notFound();
-  if (article.isError) return <FormAlert title="This article could not be loaded." />;
+  if (article.isError && !article.data) {
+    return (
+      <LoadError onRetry={() => void article.refetch()} detail={errorDetail(article.error)}>
+        This article could not be loaded.
+      </LoadError>
+    );
+  }
   if (article.isPending) return <ArticleSkeleton />;
 
   const data = article.data;
@@ -120,7 +128,15 @@ function Provenance({ article, timeZone }: { article: Article; timeZone?: string
         <IconAction
           label={article.me.starred ? 'Starred — you watch this article' : 'Star (also watches)'}
           pressed={article.me.starred}
-          onClick={() => signal.mutate({ signal: 'star', on: !article.me.starred }, { onError: e => toastError(e) })}
+          onClick={() =>
+            signal.mutate(
+              { signal: 'star', on: !article.me.starred },
+              {
+                onError: e =>
+                  toastError(article.me.starred ? 'Could not unstar the article' : 'Could not star the article', e),
+              },
+            )
+          }
         >
           <Star className={cn(article.me.starred && 'fill-current')} />
         </IconAction>
@@ -141,12 +157,15 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
       { body: { status: 'published' }, optimistic: a => ({ ...a, status: 'published' }) },
       {
         onSuccess: a => toast.success(`Published ${a.title}.`),
-        onError: e => toastError(e),
+        onError: e => toastError(`Could not publish ${article.title}`, e),
       },
     );
 
   const change = (t: TagRef, on: boolean, isNew = false) =>
-    tag.mutate({ tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined }, { onError: e => toastError(e) });
+    tag.mutate(
+      { tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined },
+      { onError: e => toastError(on ? `Could not add ${t.name}` : `Could not remove ${t.name}`, e) },
+    );
 
   return (
     <>
@@ -244,24 +263,21 @@ function ArticleTitle({ article }: { article: Article }) {
       <label htmlFor="article-title" className="sr-only">
         Title
       </label>
-      <input
+      <TitleInput
         id="article-title"
         autoFocus
         value={draft}
-        onChange={e => setDraft(e.target.value)}
+        onValueChange={setDraft}
         onBlur={commit}
+        onEnter={commit}
         onKeyDown={e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          }
           if (e.key === 'Escape') {
             setDraft(null);
             setError(null);
           }
         }}
         aria-invalid={Boolean(error)}
-        className="-mx-1 w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text"
+        className="-mx-1 block w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text [overflow-wrap:anywhere]"
       />
       {error ? <p className="mt-1 text-xs text-danger-fg">{error}</p> : null}
     </div>
@@ -298,7 +314,8 @@ function ArticleBody({ article, onEdit, onHeadings }: ArticleBodyProps) {
       onHeadings={onHeadings}
       onToggleTask={
         article.me.can_edit
-          ? (index, checked) => toggle.mutate({ index, checked }, { onError: e => toastError(e) })
+          ? (index, checked) =>
+              toggle.mutate({ index, checked }, { onError: e => toastError('Could not update the task', e) })
           : undefined
       }
     />
@@ -345,10 +362,16 @@ function BodyEditor({ article, onDone }: { article: Article; onDone: () => void 
         className="[&_.ProseMirror]:min-h-[420px] [&_textarea]:min-h-[420px]"
         footer={
           <>
-            <Button size="sm" onClick={submit} disabled={update.isPending || blocked}>
-              {uploader.busy ? 'Uploading…' : 'Save'}{' '}
-              <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={submit}
+              disabled={blocked}
+              pending={update.isPending || uploader.busy}
+              pendingLabel={uploader.busy ? 'Uploading…' : 'Saving…'}
+              after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+            >
+              Save
+            </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel
             </Button>
@@ -375,7 +398,7 @@ function ArticleMenu({ article }: { article: Article }) {
       { body: { status: 'draft' }, optimistic: a => ({ ...a, status: 'draft' }) },
       {
         onSuccess: a => toast.success(`${a.title} is a draft again.`),
-        onError: e => toastError(e),
+        onError: e => toastError(`Could not make ${article.title} a draft`, e),
       },
     );
 
@@ -430,7 +453,16 @@ function ArticleMenu({ article }: { article: Article }) {
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() =>
-              signal.mutate({ signal: 'watch', on: !article.me.watching }, { onError: e => toastError(e) })
+              signal.mutate(
+                { signal: 'watch', on: !article.me.watching },
+                {
+                  onError: e =>
+                    toastError(
+                      article.me.watching ? 'Could not stop watching the article' : 'Could not watch the article',
+                      e,
+                    ),
+                },
+              )
             }
           >
             {article.me.watching ? <EyeOff /> : <Eye />}

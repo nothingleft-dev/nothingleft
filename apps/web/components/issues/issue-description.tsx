@@ -12,6 +12,7 @@ import { useUploader } from '@hooks/use-attachments';
 import { useToggleIssueTask, useUpdateIssue } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 interface IssueDescriptionProps {
   issue: Issue;
@@ -46,7 +47,8 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
       className="mt-4 max-w-none"
       onToggleTask={
         canEdit
-          ? (index, checked) => toggle.mutate({ index, checked }, { onError: error => toastError(error) })
+          ? (index, checked) =>
+              toggle.mutate({ index, checked }, { onError: error => toastError('Could not update the task', error) })
           : undefined
       }
     />
@@ -93,10 +95,16 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
         uploader={uploader}
         footer={
           <>
-            <Button size="sm" onClick={submit} disabled={update.isPending || blocked}>
-              {uploader.busy ? 'Uploading…' : 'Save'}{' '}
-              <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={submit}
+              disabled={blocked}
+              pending={update.isPending || uploader.busy}
+              pendingLabel={uploader.busy ? 'Uploading…' : 'Saving…'}
+              after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+            >
+              Save
+            </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel
             </Button>
