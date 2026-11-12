@@ -40,9 +40,13 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler) {
   onUnauthorized = handler;
 }
 
+let redirecting = false;
+
 // A full navigation on purpose: it drops every piece of in-memory state the old session owned.
+// Once only: a burst of 401s would otherwise start a navigation each and abort the earlier ones.
 export function redirectToSignIn() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || redirecting) return;
+  redirecting = true;
   const here = window.location.pathname + window.location.search;
   const target = new URL(SIGN_IN_PATH, window.location.origin);
   target.searchParams.set('next', here);

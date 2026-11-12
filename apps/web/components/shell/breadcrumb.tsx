@@ -140,7 +140,9 @@ export function Breadcrumb() {
               title={c.label}
               className={cn(
                 // Ancestors give up their width long before the current page does.
-                'max-w-[16rem] min-w-[5ch] shrink-[1000] truncate text-text-secondary hover:text-text max-sm:hidden',
+                'max-w-[16rem] truncate text-text-secondary hover:text-text max-sm:hidden',
+                // A project key is a few characters already; only names give up width.
+                c.mono ? 'shrink-0' : 'min-w-[5ch] shrink-[1000]',
                 // Narrow top bars keep the parent and the page.
                 i < last - 1 && 'max-lg:hidden',
                 c.mono ? 'font-mono text-xs' : 'font-normal',
