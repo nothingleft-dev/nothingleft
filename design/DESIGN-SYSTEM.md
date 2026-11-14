@@ -460,7 +460,8 @@ column, so the titles after it line up.
 ### Tag
 20px tall, 12px/500, radius 4. In lists: neutral outlined chip. On the issue page and
 in the tag manager: `--c-bg`/`--c-fg` tinted. Displays `name` as typed. Inline `×` on
-hover or keyboard focus only where removal is allowed, and always shown on touch screens.
+hover or keyboard focus only where removal is allowed, laid over the chip's right end so the chip
+never grows; always shown, with its own room, on touch screens.
 
 ### Issue row (32px)
 `[P][T] KEY  Title  sub-progress · tags … · status · due · assignees`
@@ -690,10 +691,11 @@ the create form); it never adds a line, and pasted line breaks become spaces.
 
 **Key-field strip** (option C, owner, 2 Nov 2026): under the tags, one hairline-bordered
 row of cells, label above value: Status, Priority, Type, Assignees, Sprint, Due date. Priority
-and Type wear their letter badge inline before the name. The cells are equal columns that wrap at
-narrow widths, so a wrapped row's dividers line up with the row above and no cell is left with
-a stray divider. Assignees shows the assignee stack (first name, `+N`, the full list in its
-tooltip and picker) so the strip stays one row at desktop width. Their pickers open below the
+and Type wear their letter badge inline before the name. The cells are six, three or two to a row
+by the column's width, so a wrapped row is never one cell beside an empty remainder and its
+dividers line up with the row above. Assignees shows one person as avatar and full name
+(wrapping like Sprint), several as the avatar stack alone with `+N`, the names in its tooltip
+and picker. Their pickers open below the
 cell. Below 1100 px a *More fields ↓* link under the strip jumps
 to the rail.
 
@@ -702,6 +704,9 @@ points, Estimation, Spent time (`+` logs time; shows `of 4h`), then **Custom fie
 Development, then Watchers and Votes. The issue column (max 960 px) and the rail are centred
 together, so at any window width content and fields read as one workspace; below 1100 px the
 rail drops under the issue. Label above value, 13 px, value badge or avatar in the right column.
+Rail editors open below their row, aligned to its right edge, so they never cover the strip. A
+row's action (`+` on Spent time, ⋯ on Development) sits on the label line. A long markdown value
+shows eight lines, fades and offers Show all.
 
 In both, an editable value wears a dotted hairline underline in `--border-strong` as its standing
 cue, and hover adds the `--bg-hover` surface, darkens the rule and shows a small pencil

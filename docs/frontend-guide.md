@@ -565,6 +565,9 @@ Two details worth knowing before touching this code:
 Built in 1b; the visual rules are design § 8b and ui-conventions.md § Issue page. How
 the pieces fit:
 
+- Rail editors open `side="bottom"`, `align="end"` beside the issue (`useRailPopoverAlign`). A raw
+  `<input>` in an editor carries `data-slot="input"` so the shared invalid border and ring apply.
+
 - **Every sidebar field is a `SidebarField`**: label over value, the whole row a
   Popover trigger whose body is one of the `pickers.tsx` Commands. A field saves when
   its picker closes on a choice; Assignees saves once when the popover closes, so
