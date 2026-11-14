@@ -6,12 +6,20 @@ import type { Route } from 'next';
 import { Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/ui/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@components/ui/dialog';
 import { DialogBody } from '@components/dialog-body';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Kbd } from '@components/kbd';
 import {
   DraftChips,
+  DraftError,
   DraftParentChip,
   DraftProjectPicker,
   DraftText,
@@ -36,9 +44,14 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
     routeProject,
     parent,
     onCreated: issue => {
-      toast.success(`Created ${issue.key}.`, {
-        action: { label: 'Open', onClick: () => router.push(issuePath(issue)) },
-      });
+      toast.success(
+        <span>
+          Created <span className="font-mono text-xs">{issue.key}</span>.
+        </span>,
+        {
+          action: { label: 'Open', onClick: () => router.push(issuePath(issue)) },
+        },
+      );
       if (!createMore) onOpenChange(false);
     },
   });
@@ -54,34 +67,47 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 p-0 sm:max-w-2xl" aria-describedby="create-issue-description">
         <DialogHeader className="flex-row items-center gap-2 border-b py-3 pr-12 pl-4 text-left">
-          <DraftProjectPicker draft={draft} />
-          <span className="text-text-muted">/</span>
+          {draft.noWritableProject ? null : (
+            <>
+              <DraftProjectPicker draft={draft} />
+              <span className="text-text-muted">/</span>
+            </>
+          )}
           <DialogTitle className="text-sm font-medium">{draft.parent ? 'New subtask' : 'New issue'}</DialogTitle>
           {draft.parent ? <DraftParentChip draft={draft} /> : null}
           <DialogDescription id="create-issue-description" className="sr-only">
             Only a title is required. Everything else starts at the project&apos;s defaults.
           </DialogDescription>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="ml-auto text-text-secondary"
-                aria-label="Open in full page"
-                disabled={draft.uploader.busy}
-                onClick={openFullPage}
-              >
-                <Maximize2 />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open in full page</TooltipContent>
-          </Tooltip>
+          {draft.noWritableProject ? null : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-auto text-text-secondary"
+                  aria-label="Open in full page"
+                  disabled={draft.uploader.busy}
+                  onClick={openFullPage}
+                >
+                  <Maximize2 />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open in full page</TooltipContent>
+            </Tooltip>
+          )}
         </DialogHeader>
 
         {draft.noWritableProject ? (
-          <div className="p-4">
-            <NoWritableProject />
-          </div>
+          <>
+            <div className="p-4">
+              <NoWritableProject />
+            </div>
+            <div className="flex justify-end border-t px-4 py-3">
+              <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+              </DialogClose>
+            </div>
+          </>
         ) : (
           <form
             noValidate
@@ -108,15 +134,16 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
               ) : null}
             </DialogBody>
 
-            <div className="flex flex-wrap items-center gap-2 border-t px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3">
               <CreateMoreToggle on={createMore} onChange={setCreateMore} />
+              <DraftError draft={draft} />
               <PendingButton
                 type="submit"
                 className="ml-auto gap-2"
                 disabled={!draft.canSubmit}
                 pending={draft.pending || draft.uploader.busy}
                 pendingLabel={draft.pending ? 'Creating…' : 'Uploading…'}
-                after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+                after={<ShortcutHint />}
               >
                 Create issue
               </PendingButton>
@@ -147,4 +174,9 @@ function CreateMoreToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
       Create more
     </button>
   );
+}
+
+/** Drawn in the button's own ink, so it dims with the button rather than vanishing on the disabled fill. */
+export function ShortcutHint() {
+  return <Kbd className="h-4 border-b border-current/35 bg-transparent text-current">⌘↵</Kbd>;
 }
