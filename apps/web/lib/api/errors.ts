@@ -64,7 +64,7 @@ export const isRateLimited = (e: unknown): e is ApiError => isApiError(e) && e.i
 export const RATE_LIMITED_CODE = 'rate_limited';
 
 // The API's `error.internal`, for an answer that is not the envelope (a proxy's error page).
-export const UNKNOWN_FAILURE_MESSAGE = 'Something went wrong on our side. Please try again.';
+export const UNKNOWN_FAILURE_MESSAGE = 'Something went wrong on our side.';
 
 export const RATE_LIMITED_MESSAGE =
   'Too many requests in the last minute; nothing was changed. Try again once the limit lifts.';

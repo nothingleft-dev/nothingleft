@@ -1,5 +1,5 @@
 {
-  "error.internal": "Something went wrong on our side. Please try again.",
+  "error.internal": "Something went wrong on our side.",
   "error.not_found": "The requested resource was not found.",
   "error.validation_failed": "The request is invalid.",
   "error.method_not_allowed": "That method is not allowed here.",
