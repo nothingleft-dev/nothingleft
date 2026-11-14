@@ -4,6 +4,8 @@ import { useCallback, useMemo, useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { z } from 'zod';
 import { splitApiError } from '@hooks/use-api-error';
+import { useRateLimit } from '@hooks/use-rate-limit';
+import { isRateLimited } from '@lib/api/errors';
 
 type Errors<T> = Partial<Record<keyof T & string, string>>;
 
@@ -39,6 +41,7 @@ export function useAuthForm<S extends z.ZodType, R>({
 
   const mutation = useMutation({
     mutationFn: (parsed: z.output<S>) => submit(parsed),
+    meta: { rateLimit: 'inline' },
     ...(onSuccess ? { onSuccess } : {}),
   });
 
@@ -52,6 +55,9 @@ export function useAuthForm<S extends z.ZodType, R>({
       return next;
     });
   }, []);
+
+  const { secondsLeft } = useRateLimit();
+  const rateLimited = isRateLimited(mutation.error);
 
   const { serverSummary, serverFields } = useMemo(() => {
     const rendered = Object.keys(initial as object).filter(k => !hidden.includes(k as keyof Values & string));
@@ -90,8 +96,13 @@ export function useAuthForm<S extends z.ZodType, R>({
     summary:
       Object.keys(localErrors).length > 0
         ? (hidden.map(field => localErrors[field]).find(Boolean) ?? null)
-        : serverSummary,
+        : rateLimited
+          ? 'Too many attempts.'
+          : serverSummary,
     error: mutation.error,
+    rateLimited,
+    /** Submitting again before the limit lifts would only be refused again. */
+    waiting: rateLimited && secondsLeft > 0,
     isPending: mutation.isPending,
     isSuccess: mutation.isSuccess,
     reset: () => {

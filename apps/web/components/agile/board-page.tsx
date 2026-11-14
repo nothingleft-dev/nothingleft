@@ -219,6 +219,7 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
           current={current}
           openIssues={openIssues}
           loading={sprints.isPending}
+          resolving={!data && view.isPending}
           onPick={s => goToSprint(s.state === 'active' ? BOARD_CURRENT_SPRINT : s.slug)}
           onPickOpen={() => goToSprint(BOARD_OPEN_ISSUES)}
         />
@@ -390,6 +391,7 @@ function SprintPicker({
   current,
   openIssues,
   loading,
+  resolving,
   onPick,
   onPickOpen,
 }: {
@@ -397,6 +399,8 @@ function SprintPicker({
   current: Sprint | null;
   openIssues: boolean;
   loading: boolean;
+  /** The board has not said which sprint it shows yet. */
+  resolving: boolean;
   onPick: (sprint: Sprint) => void;
   onPickOpen: () => void;
 }) {
@@ -405,9 +409,13 @@ function SprintPicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" aria-label="Sprint">
-          <span className={cn(!current && !openIssues && 'text-text-secondary')}>
-            {current?.name ?? (openIssues ? OPEN_ISSUES_LABEL : 'No active sprint')}
-          </span>
+          {resolving ? (
+            <Skeleton className="h-3.5 w-24" />
+          ) : (
+            <span className={cn(!current && !openIssues && 'text-text-secondary')}>
+              {current?.name ?? (openIssues ? OPEN_ISSUES_LABEL : 'No active sprint')}
+            </span>
+          )}
           <ChevronDown className="text-text-muted" />
         </Button>
       </PopoverTrigger>
@@ -529,7 +537,7 @@ function BoardGrid({ projectKey, view, sprint, canPlan, today, filtered, onOpen 
     if (!value) return;
     move.mutate(
       { card: from.card, from: from.column, to: to.column, lane: from.lane, field: view.board.column_field, value },
-      { onError: error => toastError(`Could not move ${from.card}`, error) },
+      { onError: error => toastError(`Could not move ${from.card.key}`, error) },
     );
   };
 

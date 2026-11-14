@@ -1,5 +1,6 @@
 'use client';
 
+import { RateLimitWait } from '@components/rate-limit';
 import { SignUpSchema } from '@nothingleft/types';
 import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
@@ -37,7 +38,7 @@ export function SignUpForm() {
 
       <ProviderButtons verb="sign up" />
 
-      {form.summary ? <FormAlert title={form.summary} /> : null}
+      {form.summary ? <FormAlert title={form.summary}>{form.rateLimited ? <RateLimitWait /> : null}</FormAlert> : null}
 
       <form noValidate className="flex flex-col gap-4" onSubmit={form.onSubmit}>
         <Field
@@ -79,6 +80,7 @@ export function SignUpForm() {
           className="mt-1 w-full"
           pending={form.isPending}
           pendingLabel="Creating your account…"
+          disabled={form.waiting}
         >
           Create account
         </PendingButton>

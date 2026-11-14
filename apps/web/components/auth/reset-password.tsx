@@ -1,5 +1,6 @@
 'use client';
 
+import { RateLimitWait } from '@components/rate-limit';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RequestPasswordResetSchema, ResetPasswordSchema } from '@nothingleft/types';
 import { AuthHeading, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
@@ -47,7 +48,7 @@ function RequestLink() {
         lede="We'll email a single-use link. It works for one hour, and using it signs you out everywhere."
       />
 
-      {form.summary ? <FormAlert title={form.summary} /> : null}
+      {form.summary ? <FormAlert title={form.summary}>{form.rateLimited ? <RateLimitWait /> : null}</FormAlert> : null}
 
       <form noValidate className="flex flex-col gap-4" onSubmit={form.onSubmit}>
         <Field
@@ -61,7 +62,13 @@ function RequestLink() {
           error={form.errors.email}
           onChange={e => form.set('email', e.target.value)}
         />
-        <PendingButton type="submit" className="mt-1 w-full" pending={form.isPending} pendingLabel="Sending…">
+        <PendingButton
+          type="submit"
+          className="mt-1 w-full"
+          pending={form.isPending}
+          pendingLabel="Sending…"
+          disabled={form.waiting}
+        >
           Send reset link
         </PendingButton>
       </form>
@@ -109,7 +116,13 @@ function ChooseNewPassword({ token }: { token: string }) {
           below={<PasswordStrength value={form.values.password} />}
           onChange={e => form.set('password', e.target.value)}
         />
-        <PendingButton type="submit" className="mt-1 w-full" pending={form.isPending} pendingLabel="Saving…">
+        <PendingButton
+          type="submit"
+          className="mt-1 w-full"
+          pending={form.isPending}
+          pendingLabel="Saving…"
+          disabled={form.waiting}
+        >
           Save and sign in
         </PendingButton>
       </form>

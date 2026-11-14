@@ -491,8 +491,8 @@ Built in 3.5 (27 Sep 2026); these are the decisions taken building it:
   _New article under this_, _Return to draft_, _Change address_, _Copy link_, _Watch_ and _Delete article_.
 - **Table of contents.** From the body's headings, pinned beside the article from 1280 px wide and only with
   two or more headings; the heading last scrolled past is marked with an ink rule.
-- **Breadcrumb.** The top bar's crumbs continue into the tree: `Projects / Partner Portal / Knowledge base /
-  Payments / Runbooks / Restoring a failed sync`.
+- **Breadcrumb.** The top bar's crumbs continue into the tree; past four crumbs the middle ones fold into one
+  `…` menu: `Projects / Partner Portal / … / Restoring a failed sync`.
 - **New article** asks for the title first, because the address is made from it and a rename never moves
   it; then a starter (Runbook, Decision record, Onboarding guide, Blank) and a place. It is always a draft,
   and opens in the editor. The empty knowledge base offers the same four starters; an Observer reads that
@@ -505,7 +505,8 @@ Built in 3.5 (27 Sep 2026); these are the decisions taken building it:
   parent, who and when last updated, a two-line excerpt and neutral tag chips. `/articles` is the same list
   in one section per project.
 - **The global search box** in the top bar searches issues and articles at once and shows them in two groups
-  with their totals and _See all N_; a group whose vocabulary cannot read the query says so in its place.
+  with their totals and _See all N_. A filter only the other group takes is a quiet note in its place
+  (_Articles have no assignee, so none are shown._); a query neither group can read is an error in both.
 - **Referenced by** sits on the issue page under Links: the articles naming the issue, with _Draft_, parent,
   project key and last update; hidden while there are none.
 

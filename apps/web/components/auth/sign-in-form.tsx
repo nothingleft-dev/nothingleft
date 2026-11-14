@@ -17,6 +17,7 @@ import { isApiError } from '@lib/api/errors';
 import { viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
 import { PendingButton } from '@components/pending-button';
+import { RateLimitWait } from '@components/rate-limit';
 
 export function SignInForm() {
   const params = useSearchParams();
@@ -77,7 +78,9 @@ export function SignInForm() {
 
       {form.summary ? (
         <FormAlert title={form.summary}>
-          {code === 'auth.account_deactivated' ? (
+          {form.rateLimited ? (
+            <RateLimitWait />
+          ) : code === 'auth.account_deactivated' ? (
             <>
               To reactivate it, <EmailUs /> from the address on the account. Your memberships come back as they were.
             </>
@@ -120,7 +123,13 @@ export function SignInForm() {
           }
           onChange={e => form.set('password', e.target.value)}
         />
-        <PendingButton type="submit" className="mt-1 w-full" pending={form.isPending} pendingLabel="Signing in…">
+        <PendingButton
+          type="submit"
+          className="mt-1 w-full"
+          pending={form.isPending}
+          pendingLabel="Signing in…"
+          disabled={form.waiting}
+        >
           Sign in
         </PendingButton>
         <FinePrint>

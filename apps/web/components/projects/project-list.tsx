@@ -64,12 +64,6 @@ export function ProjectList() {
         }
       />
 
-      {projects.isError && !projects.data ? (
-        <LoadError onRetry={() => void projects.refetch()} detail={errorDetail(projects.error)}>
-          Your projects could not be loaded.
-        </LoadError>
-      ) : null}
-
       {session.status === 'signed-in' && !hasOrg ? (
         <EmptyState
           title="You’re not a member of any organisation."
@@ -80,6 +74,10 @@ export function ProjectList() {
             </Button>
           }
         />
+      ) : projects.isError && !projects.data ? (
+        <LoadError onRetry={() => void projects.refetch()} detail={errorDetail(projects.error)}>
+          Your projects could not be loaded.
+        </LoadError>
       ) : projects.isPending ? (
         <div className="grid gap-3 lg:grid-cols-2">
           <Skeleton className="h-36 rounded-md" />

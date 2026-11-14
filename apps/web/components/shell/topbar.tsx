@@ -4,6 +4,7 @@ import { useRef, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@components/ui/button';
 import { Kbd } from '@components/kbd';
+import { Skeleton } from '@components/ui/skeleton';
 import { Breadcrumb } from '@components/shell/breadcrumb';
 import { GlobalSearch, type GlobalSearchHandle } from '@components/shell/global-search';
 import { InboxButton } from '@components/shell/inbox-button';
@@ -27,7 +28,8 @@ export function Topbar({ navigation }: { navigation?: ReactNode }) {
   const focusSearch = useFocusSearch(globalSearch);
   useShortcut('/', focusSearch);
   const pathname = usePathname();
-  const canCreate = useProjectRoles().writable.length > 0 && pathname !== '/new-issue';
+  const roles = useProjectRoles();
+  const canCreate = roles.writable.length > 0 && pathname !== '/new-issue';
   return (
     <header className="flex h-topbar flex-none items-center gap-3 border-b px-page-x max-md:px-page-x-mobile">
       {navigation}
@@ -42,6 +44,9 @@ export function Topbar({ navigation }: { navigation?: ReactNode }) {
           Create issue
           <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">c</Kbd>
         </Button>
+      ) : roles.isPending ? (
+        // Holds the button's place so the search box does not move when the roles arrive.
+        <Skeleton className="h-9 w-[8.5rem] max-md:hidden" />
       ) : null}
 
       <div className="flex items-center gap-1">

@@ -77,6 +77,18 @@ export function RateLimitBanner() {
   );
 }
 
+/** The line an inline form error carries when the limit refused the submit. */
+export function RateLimitWait() {
+  const { secondsLeft } = useRateLimit();
+  return secondsLeft > 0 ? (
+    <>
+      Try again in <Countdown seconds={secondsLeft} />.
+    </>
+  ) : (
+    <>You can try again now.</>
+  );
+}
+
 /** The body of the one toast refused saves share; Retry unlocks at zero. */
 export function RateLimitToastBody({ onRetry }: { onRetry: (() => void) | null }) {
   const { secondsLeft } = useRateLimit();

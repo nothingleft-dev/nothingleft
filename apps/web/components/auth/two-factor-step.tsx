@@ -29,6 +29,7 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
 
   const verify = useMutation({
     mutationFn: (body: TwoFactorSignIn) => signInWithTwoFactor(body).then(r => r.data),
+    meta: { rateLimit: 'inline' },
     onSuccess: onSignedIn,
     onError: error => {
       if (isApiError(error) && error.code === 'two_factor.challenge_expired') onExpired(error.message);

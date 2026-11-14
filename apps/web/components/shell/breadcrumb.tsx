@@ -13,6 +13,8 @@ import { useProject } from '@hooks/use-projects';
 import { queryKeys } from '@lib/query/keys';
 import { isReportName, reportDef } from '@lib/reports/registry';
 import { cn } from '@lib/utils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
+import { Skeleton } from '@components/ui/skeleton';
 
 // Labels for the flat routes in frontend-guide.md § Routes.
 const ROOTS: Record<string, string> = {
@@ -44,7 +46,7 @@ const SECTIONS: Record<string, string> = {
   import: 'Import',
 };
 
-type Crumb = { label: string; href?: Route; mono?: boolean; copy?: boolean };
+type Crumb = { label: string; href?: Route; mono?: boolean; copy?: boolean; loading?: boolean };
 
 function crumbsFor(pathname: string): Crumb[] {
   const [first = 'dashboard', ...rest] = pathname.split('/').filter(Boolean);
@@ -97,7 +99,8 @@ function crumbsFor(pathname: string): Crumb[] {
 function useNamedCrumbs(crumbs: Crumb[]): Crumb[] {
   const keyCrumb = crumbs.find(c => c.mono && c.href?.startsWith('/projects/') && c.href.split('/').length === 3);
   const project = useProject(keyCrumb ? keyCrumb.label : null);
-  if (!keyCrumb || !project.data) return crumbs;
+  if (!keyCrumb || project.isError) return crumbs;
+  if (!project.data) return crumbs.map(c => (c === keyCrumb ? { ...c, loading: true } : c));
   return crumbs.map(c => (c === keyCrumb ? { ...c, label: project.data.name, mono: false } : c));
 }
 
@@ -123,50 +126,95 @@ function useArticleCrumbs(pathname: string, crumbs: Crumb[]): Crumb[] {
   return [...crumbs, ...trail];
 }
 
+// Past four crumbs the middle ones fold into a menu, so the ones kept stay readable.
+const FOLD_AFTER = 4;
+const SHORT_LABEL = 14;
+
+type Shown = { kind: 'crumb'; crumb: Crumb } | { kind: 'fold'; crumbs: Crumb[] };
+
+function fold(crumbs: Crumb[]): Shown[] {
+  const shown = (list: Crumb[]): Shown[] => list.map(crumb => ({ kind: 'crumb', crumb }));
+  if (crumbs.length <= FOLD_AFTER) return shown(crumbs);
+  return [...shown(crumbs.slice(0, 2)), { kind: 'fold', crumbs: crumbs.slice(2, -1) }, ...shown(crumbs.slice(-1))];
+}
+
+function FoldMenu({ crumbs }: { crumbs: Crumb[] }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Show hidden breadcrumbs"
+        className="shrink-0 rounded-sm px-1 text-text-secondary hover:bg-bg-hover hover:text-text max-sm:hidden"
+      >
+        …
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-w-80">
+        {crumbs.map((c, i) =>
+          c.href ? (
+            <DropdownMenuItem key={`${c.label}-${i}`} asChild>
+              <Link href={c.href} className="truncate">
+                {c.label}
+              </Link>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem key={`${c.label}-${i}`} disabled className="truncate">
+              {c.label}
+            </DropdownMenuItem>
+          ),
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function Breadcrumb() {
   const pathname = usePathname();
-  const crumbs = useArticleCrumbs(pathname, useNamedCrumbs(crumbsFor(pathname)));
-  const last = crumbs.length - 1;
+  const shown = fold(useArticleCrumbs(pathname, useNamedCrumbs(crumbsFor(pathname))));
+  const last = shown.length - 1;
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-medium whitespace-nowrap">
-      {crumbs.map((c, i) => (
-        <Fragment key={`${c.label}-${i}`}>
+      {shown.map((item, i) => (
+        <Fragment key={item.kind === 'fold' ? 'fold' : `${item.crumb.label}-${i}`}>
           {i > 0 ? (
             <span className={cn('shrink-0 text-text-muted max-sm:hidden', i < last && 'max-lg:hidden')}>/</span>
           ) : null}
-          {c.href && i !== last ? (
-            <Link
-              href={c.href}
-              title={c.label}
-              className={cn(
-                // Ancestors give up their width long before the current page does.
-                'max-w-[16rem] truncate text-text-secondary hover:text-text max-sm:hidden',
-                // A project key is a few characters already; only names give up width.
-                c.mono ? 'shrink-0' : 'min-w-[5ch] shrink-[1000]',
-                // Narrow top bars keep the parent and the page.
-                i < last - 1 && 'max-lg:hidden',
-                c.mono ? 'font-mono text-xs' : 'font-normal',
-              )}
-            >
-              {c.label}
-            </Link>
+          {item.kind === 'fold' ? (
+            <FoldMenu crumbs={item.crumbs} />
           ) : (
-            <span
-              aria-current={i === last ? 'page' : undefined}
-              title={c.label}
-              className={cn(
-                'min-w-0 truncate',
-                i !== last && 'min-w-[5ch] shrink-[1000] max-sm:hidden',
-                i < last - 1 && 'max-lg:hidden',
-                c.mono && 'font-mono text-xs',
-              )}
-            >
-              {c.label}
-            </span>
+            <CrumbItem crumb={item.crumb} current={i === last} hideBelowLg={i < last - 1} />
           )}
-          {c.copy ? <CopyKey value={c.label} /> : null}
         </Fragment>
       ))}
     </nav>
+  );
+}
+
+function CrumbItem({ crumb: c, current, hideBelowLg }: { crumb: Crumb; current: boolean; hideBelowLg: boolean }) {
+  if (c.loading) {
+    return <Skeleton className={cn('h-3.5 w-24 shrink-0 max-sm:hidden', hideBelowLg && 'max-lg:hidden')} />;
+  }
+  const ancestor = cn(
+    'truncate max-sm:hidden',
+    c.mono ? 'font-mono text-xs' : 'font-normal',
+    // Short labels never shrink; long names give up width before the current page, down to a readable stub.
+    c.mono || c.label.length <= SHORT_LABEL ? 'shrink-0' : 'max-w-[16rem] min-w-[11ch] shrink-[1000]',
+    hideBelowLg && 'max-lg:hidden',
+  );
+  return (
+    <>
+      {c.href && !current ? (
+        <Link href={c.href} title={c.label} className={cn(ancestor, 'text-text-secondary hover:text-text')}>
+          {c.label}
+        </Link>
+      ) : (
+        <span
+          aria-current={current ? 'page' : undefined}
+          title={c.label}
+          className={current ? cn('max-w-64 min-w-0 truncate', c.mono && 'font-mono text-xs') : ancestor}
+        >
+          {c.label}
+        </span>
+      )}
+      {c.copy ? <CopyKey value={c.label} /> : null}
+    </>
   );
 }

@@ -136,6 +136,8 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
               <Group
                 label="Issues"
                 group={result.issues}
+                other={result.articles}
+                q={q}
                 empty="No issue matches."
                 seeAll={
                   result.issues.total > result.issues.items.length ? (
@@ -171,6 +173,8 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
               <Group
                 label="Articles"
                 group={result.articles}
+                other={result.issues}
+                q={q}
                 empty="No article matches."
                 seeAll={
                   result.articles.total > result.articles.items.length ? (
@@ -225,26 +229,42 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
 
 type SearchGroup = GlobalSearchResult['issues'] | GlobalSearchResult['articles'];
 
+// A filter only one group understands (`assignee:` means nothing to articles) is not a mistake in the query.
+function notApplicable(group: SearchGroup, other: SearchGroup, q: string): string | null {
+  const error = group.error;
+  if (!error || other.error || error.code !== 'query.unknown_attribute' || !error.span) return null;
+  return q.slice(error.span.start, error.span.end).replace(/:$/, '').trim() || null;
+}
+
 function Group({
   label,
   group,
+  other,
+  q,
   empty,
   seeAll,
   children,
 }: {
   label: string;
   group: SearchGroup;
+  other: SearchGroup;
+  q: string;
   empty: string;
   seeAll: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const skipped = notApplicable(group, other, q);
   return (
     <div role="group" aria-label={label} className="py-1">
       <div className="flex items-center gap-2 px-3 pt-1 pb-0.5 text-2xs font-medium text-text-muted">
         <span>{label}</span>
         {group.error ? null : <span className="tabular font-normal">{group.total}</span>}
       </div>
-      {group.error ? (
+      {skipped ? (
+        <p className="px-3 py-1.5 text-xs text-text-secondary">
+          {label} have no <span className="font-mono">{skipped}</span>, so none are shown.
+        </p>
+      ) : group.error ? (
         <p className="px-3 py-1.5 text-xs text-danger-fg">{group.error.message}</p>
       ) : group.items.length === 0 ? (
         <p className="px-3 py-1.5 text-xs text-text-secondary">{empty}</p>

@@ -408,10 +408,13 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
   icon with the unread count on an accent pill (in the top bar as well as the sidebar, so
   it survives a collapsed sidebar and phones), theme toggle. The search input is set in mono because it *is* the query language;
   its placeholder shows a real query.
-- **Breadcrumb.** Ancestors give way first: each truncates (full text in its tooltip) down to
-  about five characters before the current page's crumb shrinks at all, and the current crumb is
-  always shown. Below 1024px the trail is the parent and the page; on phones it is the page
-  alone.
+- **Breadcrumb.** Past four crumbs the middle ones fold into one `…` menu, so a trail reads
+  `Projects / Partner Portal / … / Restoring a failed sync`. Short labels never shrink; a long name
+  gives way first, truncating (full text in its tooltip) to about ten characters, and the current
+  crumb is capped at 16rem. A project crumb loading its name is a text skeleton, never the key.
+  Below 1024px the trail is the parent and the page; on phones it is the page alone.
+- **Create issue** keeps its place as a skeleton while the viewer's roles load, so the search box
+  never moves.
 - **Placeholders** ellipsize, never clip under a kbd. Below 1024px the search box and the query
   bar show the short form: the example query alone (`Search · tag: rca`, `assignee: me
   #Unresolved`).
@@ -878,7 +881,9 @@ action that touches only the actor gets a success toast with Undo instead of a d
 **Rate limit**: a `429` is never shown as the server being down. While it lasts, one
 warning banner tops every page with a countdown from `Retry-After`; reads wait for
 it and finish by themselves, so a page keeps what it shows instead of an error. A refused save
-shares one error toast whose Retry unlocks at zero; it is never resent without a click.
+shares one error toast whose Retry unlocks at zero; it is never resent without a click. The
+sign-in, sign-up and reset forms show no toast: their inline alert reads _Too many attempts._ with
+the countdown, and the submit button stays disabled until it ends.
 If the shell itself could not load, a full-page version of the same counts down and
 reloads.
 

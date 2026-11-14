@@ -14,7 +14,9 @@ function createQueryClient(onRateLimited: RateLimitedHandler) {
     mutationCache: new MutationCache({
       onError: (error, variables, _context, mutation) => {
         // Re-running the refused mutation keeps its optimistic update and its invalidations.
-        if (isRateLimited(error)) onRateLimited(error, () => void mutation.execute(variables).catch(() => {}));
+        // A form that shows the limit inline (sign-in, sign-up) opts out with meta.rateLimit = 'inline'.
+        if (isRateLimited(error) && mutation.meta?.rateLimit !== 'inline')
+          onRateLimited(error, () => void mutation.execute(variables).catch(() => {}));
       },
     }),
     defaultOptions: {
