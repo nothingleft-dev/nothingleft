@@ -50,7 +50,7 @@ that row fail rather than adding a new one. Add it to the project first, or chan
 
 ### 2. Do a dry run
 
-Choose **Dry run**. It checks every row exactly as creating the issue would, and creates
+Choose **Dry run** once a column maps to the issue title. It checks every row exactly as creating the issue would, and creates
 nothing. It shows the rows in the file, how many would become issues and how many would fail,
 and for each row that would fail, the row number as your spreadsheet shows it (the header is
 row 1), the column, the reason, and the values that would have worked:
@@ -67,7 +67,8 @@ like; changing a column's field sets the dry run aside until you run it again.
 After a dry run, **Import 172 issues** (with the number the dry run found) starts the import.
 The issues are created in the background, and the page shows how many rows are done; you can
 leave it. Rows that fail are skipped and listed with the reason, the rest are created, and the
-page says how many of each when it is done, with **Open the issues** and the failed rows. To
+page says how many of each when it is done, with **Open the issues** and the failed rows. An
+import that stops early also says how many rows it did not reach. To
 bring in the skipped rows, fix them in the file and import just those rows.
 
 **Recent imports**, under the import, lists the latest imports into the project by anyone:
