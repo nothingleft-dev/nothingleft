@@ -41,7 +41,7 @@ interface BoardSettingsProps {
 const SWIMLANE_SUMMARY: Record<Board['swimlane_by'], (b: Board) => string> = {
   none: () => 'No swimlanes',
   values: b => `Swimlanes by ${b.swimlane_field ?? 'value'}`,
-  issues: b => `Swimlanes by ${b.swimlane_types.join(', ') || 'issue'}`,
+  issues: b => (b.swimlane_types.length ? `Swimlanes by issue: ${b.swimlane_types.join(', ')}` : 'Swimlanes by issue'),
 };
 
 export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettingsProps) {
@@ -91,21 +91,31 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
             {list.map(b => {
               const active = b.slug === selected?.slug;
               return (
-                <li key={b.slug} className={cn('flex h-row items-center gap-2 pr-1', active && 'bg-active')}>
+                <li
+                  key={b.slug}
+                  className={cn(
+                    'relative flex h-row items-center gap-2 pr-1',
+                    active && 'bg-active before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand',
+                  )}
+                >
                   <button
                     type="button"
                     aria-current={active ? 'true' : undefined}
                     onClick={() => select(b.slug)}
-                    className="flex h-full min-w-0 flex-1 items-center gap-3 px-3 text-left hover:bg-hover"
+                    className="grid h-full min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-3 px-3 text-left hover:bg-hover sm:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_15rem]"
                   >
-                    <span className="truncate font-medium">{b.name}</span>
-                    <span className="font-mono text-2xs text-text-muted">{b.slug}</span>
-                    <span className="ml-auto hidden text-xs text-text-secondary sm:inline">
+                    <span className="truncate font-medium" title={b.name}>
+                      {b.name}
+                    </span>
+                    <span className="hidden truncate font-mono text-2xs text-text-muted sm:block" title={b.slug}>
+                      {b.slug}
+                    </span>
+                    <span className="hidden truncate text-xs whitespace-nowrap text-text-secondary sm:block">
                       {plural(b.columns.length, 'column')} · {SWIMLANE_SUMMARY[b.swimlane_by](b)}
                     </span>
                   </button>
                   <Button asChild variant="ghost" size="sm" className="text-text-secondary">
-                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>Open</Link>
+                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>View board</Link>
                   </Button>
                   {canEdit ? (
                     <DropdownMenu>

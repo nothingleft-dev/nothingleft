@@ -128,12 +128,14 @@ export function BoardCard({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+      <div className="flex min-w-0 items-center gap-x-2.5 text-xs">
         <CardAssignees card={card} projectKey={projectKey} canEdit={canEdit && !overlay} />
         <ValueName value={card.priority} label="Priority" dim={card.resolved} />
         <ValueName value={card.type} label="Type" dim={card.resolved} />
+      </div>
+      <div className="flex h-5 items-center gap-2 text-xs">
         <CardDueDate card={card} today={today} canEdit={canEdit && !overlay} />
-        <span className="ml-auto flex items-center gap-2">
+        <span className="ml-auto flex flex-none items-center gap-2">
           {card.development ? <DevelopmentIcon rollup={card.development} /> : null}
           <SubtaskProgress resolved={card.subtasks.resolved} total={card.subtasks.total} />
           <StoryPoints points={card.story_points} />
@@ -155,9 +157,12 @@ export function ValueName({
   return (
     <span
       aria-label={`${label}: ${value.name}`}
-      className={cn('inline-flex min-w-0 items-center gap-1.5 text-text-secondary', dim && 'opacity-55')}
+      className={cn('inline-flex min-w-0 items-center gap-1.5', dim ? 'text-text-muted' : 'text-text-secondary')}
     >
-      <i aria-hidden className={`l-${value.color} inline-block size-2 flex-none rounded-full bg-c-solid`} />
+      <i
+        aria-hidden
+        className={cn(`l-${value.color} inline-block size-2 flex-none rounded-full bg-c-solid`, dim && 'opacity-55')}
+      />
       <span className="truncate">{value.name}</span>
     </span>
   );
@@ -172,6 +177,7 @@ function useMyUsername() {
 function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: string; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>([]);
+  const [chosenAtOpen, setChosenAtOpen] = useState<string[]>([]);
   const people = useProjectAssignees(open ? projectKey : null);
   const me = useMyUsername();
   const patch = usePatchCard();
@@ -219,14 +225,18 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
     );
   };
 
-  const list = [...(people.data ?? [])].sort((a, b) => (a.username === me ? -1 : b.username === me ? 1 : 0));
+  // The people already on the card first, then me; fixed at open so rows do not jump while ticking.
+  const rank = (username: string) => (chosenAtOpen.includes(username) ? 0 : 2) + (username === me ? 0 : 1);
+  const list = [...(people.data ?? [])].sort((a, b) => rank(a.username) - rank(b.username));
 
   return (
     <Popover
       open={open}
       onOpenChange={next => {
-        if (next) setDraft(card.assignees.map(a => a.username));
-        else save(draft);
+        if (next) {
+          setDraft(card.assignees.map(a => a.username));
+          setChosenAtOpen(card.assignees.map(a => a.username));
+        } else save(draft);
         setOpen(next);
       }}
     >
@@ -399,7 +409,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
   return (
     <form
       noValidate
-      className="flex flex-col gap-2 rounded-md border border-border-strong bg-surface p-2"
+      className="flex flex-col gap-2 rounded-md border border-border-strong bg-surface p-2 focus-within:shadow-(--focus-ring)"
       onSubmit={e => {
         e.preventDefault();
         submit();
@@ -419,7 +429,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
         }}
         placeholder="Title, then ↵"
         aria-label="New card title"
-        className="w-full resize-none bg-transparent text-sm text-text placeholder:text-text-muted"
+        className="w-full resize-none bg-transparent px-1 py-0.5 text-sm leading-5 text-text placeholder:text-text-muted focus-visible:shadow-none"
       />
       <div className="flex gap-1">
         <PendingButton

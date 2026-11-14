@@ -165,14 +165,12 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
 
   return (
     <SettingsSection
-      title="Columns"
+      title={`Columns · ${board.name}`}
       description="Left to right. Moving a card to a column sets that value on the issue; WIP limits warn, they never stop a move."
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-sm">
-          <span>
-            <b className="font-semibold">Columns</b> are identified by
-          </span>
+          <span>Columns are identified by</span>
           <FieldPicker value={field} disabled={!canEdit} onPick={f => f !== field && setSwitchTo(f)} />
         </div>
 
@@ -549,7 +547,11 @@ function WipInput({
   const invalid = trimmed !== '' && (parsed === null || parsed < 1 || parsed > BOARD_WIP_MAX);
 
   if (!canEdit) {
-    return <span className="text-sm tabular text-text-secondary">{value ?? 'No'}</span>;
+    return (
+      <span className={cn('text-sm tabular', value === null ? 'text-text-muted' : 'text-text-secondary')}>
+        {value ?? 'None'}
+      </span>
+    );
   }
 
   const commit = () => {
@@ -563,7 +565,7 @@ function WipInput({
       aria-label={label}
       inputMode="numeric"
       value={text}
-      placeholder="No"
+      placeholder="None"
       aria-invalid={invalid}
       title={invalid ? `A whole number from 1 to ${BOARD_WIP_MAX}, or empty for none` : undefined}
       onChange={e => setText(e.target.value)}
