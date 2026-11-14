@@ -33,16 +33,16 @@ export const ROLLUP: Record<GitDevelopmentRollup, { label: string; hue: Hue }> =
 };
 
 export const PR_STATE: Record<GitPullRequestState, { label: string; hue: Hue }> = {
-  open: { label: 'Open', hue: 'green' },
+  open: { label: 'Open', hue: 'gray' },
   draft: { label: 'Draft', hue: 'gray' },
   merged: { label: 'Merged', hue: 'blue' },
   closed: { label: 'Closed', hue: 'red' },
 };
 
 export const CI_STATE: Record<GitCiState, { label: string; hue: Hue }> = {
-  passing: { label: 'CI passing', hue: 'green' },
+  passing: { label: 'CI passing', hue: 'gray' },
   failing: { label: 'CI failing', hue: 'red' },
-  running: { label: 'CI running', hue: 'amber' },
+  running: { label: 'CI running', hue: 'gray' },
   none: { label: 'No checks', hue: 'gray' },
 };
 

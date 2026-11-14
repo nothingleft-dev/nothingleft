@@ -41,7 +41,7 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
   const submit = () => {
     const parsed = LinkPullRequestSchema.safeParse({ url: url.trim() });
     if (!parsed.success) {
-      setError('Paste the full address of the pull request, starting with https://.');
+      setError('Paste the full address of the pull request, starting with “https://”.');
       return;
     }
     link.mutate(parsed.data.url, {
@@ -65,8 +65,8 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
       <DialogHeader>
         <DialogTitle>Link a pull request</DialogTitle>
         <DialogDescription>
-          For a pull request that never names {issueKey}. It must belong to a repository this project can reference: one
-          linked to it in project settings, or one set to match every project.
+          Use this when the pull request does not mention {issueKey}. It must be in a repository linked to this project,
+          or in one set to match every project.
         </DialogDescription>
       </DialogHeader>
       <div className="flex flex-col gap-1.5">

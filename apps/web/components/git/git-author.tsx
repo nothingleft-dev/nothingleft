@@ -9,25 +9,10 @@ import { cn } from '@lib/utils';
 
 const nameOf = (author: GitAuthor) => author.member?.name ?? author.login ?? author.name ?? 'Unknown author';
 
-/** A member when the provider identity maps to one; otherwise the provider's login, marked as such. */
-export function GitAuthorAvatar({
-  author,
-  provider,
-  className = 'size-avatar-sm',
-}: {
-  author: GitAuthor;
-  provider: GitProviderKind;
-  className?: string;
-}) {
+/** A member when the provider identity maps to one; otherwise the provider's login, marked by the name beside it. */
+export function GitAuthorAvatar({ author, className = 'size-avatar-sm' }: { author: GitAuthor; className?: string }) {
   if (author.member) return <MemberAvatar member={author.member} className={className} />;
-  return (
-    <span className="relative inline-flex flex-none">
-      <MemberAvatar member={{ name: nameOf(author), avatar_url: author.avatar_url }} className={className} />
-      <span className="absolute -right-1 -bottom-1 grid size-3 place-items-center rounded-full bg-surface text-text-secondary">
-        <ProviderGlyph provider={provider} className="size-2.5" />
-      </span>
-    </span>
-  );
+  return <MemberAvatar member={{ name: nameOf(author), avatar_url: author.avatar_url }} className={className} />;
 }
 
 export function GitAuthorName({
@@ -64,7 +49,7 @@ export function GitAuthorLine({
 }) {
   return (
     <span className={cn('inline-flex min-w-0 items-center gap-1.5', className)}>
-      <GitAuthorAvatar author={author} provider={provider} className="size-5" />
+      <GitAuthorAvatar author={author} className="size-5" />
       <GitAuthorName author={author} provider={provider} />
     </span>
   );

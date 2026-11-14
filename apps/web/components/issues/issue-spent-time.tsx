@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Timer, Trash2 } from 'lucide-react';
 import { formatDuration } from '@nothingleft/format';
 import type { Issue, MemberRef, WorkItem } from '@nothingleft/types';
 import { LoadError } from '@components/query-state';
@@ -48,6 +48,11 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   const [editing, setEditing] = useState<WorkItem | null>(null);
   const rows = (records.data?.pages ?? []).flatMap(p => p.data);
   const total = records.data?.pages[0]?.meta.pagination?.total ?? rows.length;
+  const slots = badgeSlots(rows);
+  const over =
+    issue.estimate_minutes !== null && issue.spent_minutes > issue.estimate_minutes
+      ? issue.spent_minutes - issue.estimate_minutes
+      : 0;
 
   if (records.isPending) return <SpentTimeSkeleton />;
   if (records.isError) {
@@ -71,12 +76,19 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
       {issue.estimate_minutes !== null ? (
         <span>
           of <Duration minutes={issue.estimate_minutes} calendar={calendar} className="text-text" /> estimated
+          {over > 0 ? (
+            <span className="text-danger-fg">
+              {' · '}
+              <Duration minutes={over} calendar={calendar} /> over
+            </span>
+          ) : null}
         </span>
       ) : null}
       <span className="text-text-muted">{plural(total, 'record')}</span>
       {canLog ? (
-        <Button size="sm" variant="outline" className="ml-auto" onClick={onLogTime}>
-          <Plus /> Add spent time
+        <Button size="sm" variant="outline" className="ml-auto max-sm:size-8 max-sm:px-0" onClick={onLogTime}>
+          <Timer />
+          <span className="max-sm:sr-only">Add spent time</span>
         </Button>
       ) : null}
     </div>
@@ -95,7 +107,7 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
         action={
           canLog ? (
             <Button size="sm" variant="outline" onClick={onLogTime}>
-              <Plus /> Add spent time
+              <Timer /> Add spent time
             </Button>
           ) : null
         }
@@ -112,6 +124,7 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
             key={row.id}
             item={row}
             ownIssue={row.issue === issue.key}
+            slots={slots}
             durationText={formatDuration(row.duration_minutes, calendar)}
             onEdit={() => setEditing(row)}
           />
@@ -145,52 +158,75 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   );
 }
 
+const TYPE_SLOT = '';
+
+/** One column per attribute any row carries, so each attribute's letter sits at the same x on every row. */
+function badgeSlots(rows: WorkItem[]): string[] {
+  const names = new Set<string>();
+  for (const row of rows) for (const a of row.attributes) names.add(a.attribute);
+  return [...(rows.some(r => r.work_type) ? [TYPE_SLOT] : []), ...names];
+}
+
 interface SpentTimeRowProps {
   item: WorkItem;
   ownIssue: boolean;
+  slots: string[];
   durationText: string;
   onEdit: () => void;
 }
 
-function SpentTimeRow({ item, ownIssue, durationText, onEdit }: SpentTimeRowProps) {
+function SpentTimeRow({ item, ownIssue, slots, durationText, onEdit }: SpentTimeRowProps) {
   const onBehalf = item.created_by.username !== item.author.username;
   return (
-    <li className="group/record grid grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3 py-2.5">
-      <MemberAvatar member={item.author} className="mt-0.5 size-6" />
-      <div className="min-w-0">
-        <div className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-text-secondary">
-          <PersonName person={item.author} className="font-medium text-text" />
-          <span>{formatCalendarDate(item.work_date)}</span>
-          {ownIssue ? null : (
-            <Link href={`/issue/${item.issue}` as Route} className="font-mono text-2xs text-text hover:underline">
-              {item.issue}
-            </Link>
-          )}
-          {onBehalf ? (
-            <span className="text-text-muted">
-              logged by <PersonName person={item.created_by} />
-            </span>
-          ) : null}
-        </div>
-        {item.description_md.trim() ? (
-          <Markdown source={item.description_md} variant="comment" className="mt-0.5 max-w-none" />
+    <li className="group/record grid grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3 py-2.5 max-sm:grid-cols-[24px_minmax(0,1fr)]">
+      <MemberAvatar member={item.author} className="mt-0.5 size-6 sm:row-span-2" />
+      <div className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-text-secondary">
+        <PersonName person={item.author} className="font-medium text-text" />
+        <span>{formatCalendarDate(item.work_date)}</span>
+        {ownIssue ? null : (
+          <Link href={`/issue/${item.issue}` as Route} className="font-mono text-2xs text-text hover:underline">
+            {item.issue}
+          </Link>
+        )}
+        {onBehalf ? (
+          <span className="text-text-muted">
+            logged by <PersonName person={item.created_by} />
+          </span>
         ) : null}
       </div>
-      <div className="flex h-6 items-center gap-2">
-        {item.work_type ? (
-          <LetterBadge letter={item.work_type.short_label} label={item.work_type.name} variant="outlined" />
-        ) : null}
-        {item.attributes.map(a => (
-          <LetterBadge
-            key={a.attribute}
-            letter={a.value.short_label}
-            label={`${a.attribute}: ${a.value.name}`}
-            variant="outlined"
-          />
-        ))}
-        <span className="min-w-12 text-right font-mono text-xs font-medium tabular">{durationText}</span>
+      <div className="flex h-6 items-center gap-2 max-sm:col-start-2 max-sm:mt-1 sm:row-span-2">
+        {slots.map(slot => {
+          if (slot === TYPE_SLOT) {
+            return item.work_type ? (
+              <LetterBadge
+                key="type"
+                letter={item.work_type.short_label}
+                label={`Type: ${item.work_type.name}`}
+                variant="outlined"
+              />
+            ) : (
+              <span key="type" aria-hidden className="size-badge-letter flex-none" />
+            );
+          }
+          const value = item.attributes.find(a => a.attribute === slot)?.value;
+          return value ? (
+            <LetterBadge key={slot} letter={value.short_label} label={`${slot}: ${value.name}`} variant="outlined" />
+          ) : (
+            <span key={slot} aria-hidden className="size-badge-letter flex-none" />
+          );
+        })}
+        <span className="text-right font-mono text-xs font-medium whitespace-nowrap tabular max-sm:ml-auto sm:w-20">
+          {durationText}
+        </span>
         <RecordMenu item={item} durationText={durationText} onEdit={onEdit} />
       </div>
+      {item.description_md.trim() ? (
+        <Markdown
+          source={item.description_md}
+          variant="comment"
+          className="col-start-2 mt-0.5 max-w-none sm:row-start-2"
+        />
+      ) : null}
     </li>
   );
 }
@@ -240,9 +276,9 @@ function RecordMenu({ item, durationText, onEdit }: { item: WorkItem; durationTe
         }}
       >
         <p>
-          <span className="font-mono text-text">{durationText}</span> on {formatCalendarDate(item.work_date)} by{' '}
-          <span className="font-medium text-text">{item.author.name}</span> leaves {item.issue}&apos;s spent time. It
-          cannot be restored; the history keeps a line saying it was removed.
+          Remove <span className="font-medium text-text">{item.author.name}</span>&apos;s{' '}
+          <span className="font-mono text-text">{durationText}</span> on {formatCalendarDate(item.work_date)} from{' '}
+          {item.issue}? It cannot be restored; the history keeps a line saying it was removed.
         </p>
       </ConfirmDialog>
     </>

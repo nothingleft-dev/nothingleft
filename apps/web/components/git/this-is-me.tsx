@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { GitAuthor, GitProviderKind } from '@nothingleft/types';
 import { useClaimGitIdentity } from '@hooks/use-git';
@@ -9,6 +8,7 @@ import { useOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { providerLabel } from '@lib/git/words';
 import { toastError } from '@components/toast-error';
+import { TextButton } from '@components/text-button';
 
 const DISMISSED_KEY = 'nothingleft:git-this-is-me-dismissed';
 
@@ -73,10 +73,8 @@ export function ThisIsMe({
   if (author.member || !plausible || hidden) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-sm bg-inset pr-0.5 pl-1.5 text-2xs text-text-secondary">
-      <button
-        type="button"
-        className="font-medium text-text hover:underline"
+    <span className="inline-flex items-center gap-2 text-2xs text-text-secondary">
+      <TextButton
         disabled={claim.isPending}
         onClick={() =>
           claim.mutate(
@@ -92,18 +90,15 @@ export function ThisIsMe({
         }
       >
         This is me
-      </button>
-      <button
-        type="button"
-        aria-label="Not me"
-        className="grid size-4 place-items-center rounded-xs text-text-muted hover:bg-hover hover:text-text"
+      </TextButton>
+      <TextButton
         onClick={() => {
           dismiss(id);
           setHidden(true);
         }}
       >
-        <X className="size-3" />
-      </button>
+        Not me
+      </TextButton>
     </span>
   );
 }

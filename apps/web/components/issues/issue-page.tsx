@@ -158,6 +158,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
           panel: (
             <DevelopmentPanel
               issueKey={data.key}
+              issueTitle={data.title}
               projectKey={data.project.key}
               canLink={canEdit}
               canAdminProject={role === 'project_admin'}

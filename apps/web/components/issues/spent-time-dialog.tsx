@@ -503,7 +503,7 @@ function RecordRow({ row, mode, index, removable, problems, onChange, onRemove, 
               aria-invalid={dateProblem || undefined}
               aria-describedby={dateProblem ? noteId : undefined}
               className={cn(
-                'justify-start font-normal',
+                'h-control justify-start font-normal',
                 dateProblem && 'border-danger-fg',
                 !(mode === 'single' ? row.date : row.from) && 'text-text-muted',
               )}
@@ -603,7 +603,7 @@ function AuthorField({ author, editable, people, loading, error, onChange }: Aut
               aria-expanded={open}
               aria-labelledby={`${id}-label`}
               aria-invalid={error ? true : undefined}
-              className={cn('justify-start font-normal', error && 'border-danger-fg')}
+              className={cn('h-control justify-start font-normal', error && 'border-danger-fg')}
             >
               {face}
               <ChevronsUpDown className="ml-auto text-text-muted" />
@@ -690,7 +690,7 @@ function WorkTypeField({
             aria-labelledby={`${id}-label`}
             aria-invalid={error ? true : undefined}
             className={cn(
-              'justify-start font-normal',
+              'h-control justify-start font-normal',
               error && 'border-danger-fg',
               !value && !loading && 'text-text-muted',
             )}

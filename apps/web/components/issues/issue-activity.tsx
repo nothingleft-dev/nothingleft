@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import type { Route } from 'next';
 import type { WorkCalendar } from '@nothingleft/format';
 import {
@@ -45,6 +46,8 @@ const TABS = [
 ] as const;
 export type ActivityTab = (typeof TABS)[number]['value'];
 type Tab = ActivityTab;
+
+const UNTOUCHED_MS = 60_000;
 
 const COMMENT_KINDS: readonly IssueActivityKind[] = ['commented', 'comment_edited', 'comment_deleted'];
 const HISTORY_KINDS = ISSUE_ACTIVITY_KINDS.filter(kind => !COMMENT_KINDS.includes(kind));
@@ -222,12 +225,16 @@ export function IssueActivitySection({
     />
   ) : null;
   const calendar = useWorkCalendar();
+  // A title-only issue nobody has touched has one entry; sizing its skeleton to that keeps what follows still.
+  const untouched =
+    issue.comment_count === 0 && Date.parse(issue.updated_at) - Date.parse(issue.created_at) < UNTOUCHED_MS;
+  const skeletonRows = untouched ? 1 : 3;
   const tabs = TABS.filter(t => (t.value !== 'time' || time.enabled) && (t.value !== 'development' || development));
 
   return (
     <section className="mt-8" aria-label="Activity">
       <div className="flex h-control items-center gap-3 border-b">
-        <h2 className="flex-none text-sm font-semibold">Activity</h2>
+        <h2 className="flex-none text-sm font-semibold max-md:sr-only">Activity</h2>
         <Tabs
           size="section"
           ariaLabel="Activity"
@@ -249,7 +256,12 @@ export function IssueActivitySection({
       </div>
 
       {tab === 'comments' ? (
-        <CommentsTab {...context} canComment={canComment} after={composer} />
+        <CommentsTab
+          {...context}
+          canComment={canComment}
+          after={composer}
+          skeletonRows={Math.min(Math.max(issue.comment_count, 1), 3)}
+        />
       ) : tab === 'development' ? (
         development?.panel
       ) : tab === 'time' ? (
@@ -262,7 +274,13 @@ export function IssueActivitySection({
           timeZone={timeZone}
         />
       ) : (
-        <ActivityTab key={tab} {...context} history={tab === 'history'} after={tab === 'all' ? composer : null} />
+        <ActivityTab
+          key={tab}
+          {...context}
+          history={tab === 'history'}
+          after={tab === 'all' ? composer : null}
+          skeletonRows={skeletonRows}
+        />
       )}
     </section>
   );
@@ -274,9 +292,17 @@ interface TabContext {
   timeZone?: string;
   /** Rendered under the list once it has loaded (the composer), so it never jumps below an arriving list. */
   after?: ReactNode;
+  skeletonRows: number;
 }
 
-function ActivityTab({ issueKey, projectKey, timeZone, history, after }: TabContext & { history: boolean }) {
+function ActivityTab({
+  issueKey,
+  projectKey,
+  timeZone,
+  history,
+  after,
+  skeletonRows,
+}: TabContext & { history: boolean }) {
   const activity = useIssueActivity(issueKey, history ? 'history' : 'all', history ? HISTORY_KINDS : undefined);
   const calendar = useWorkCalendar();
 
@@ -298,12 +324,12 @@ function ActivityTab({ issueKey, projectKey, timeZone, history, after }: TabCont
     return groupByBurst(groupBySave(rows));
   }, [activity.data]);
 
-  if (activity.isPending) return <ActivitySkeleton />;
+  if (activity.isPending) return <ActivitySkeleton rows={skeletonRows} composer={Boolean(after)} />;
   if (activity.isError) {
     return (
       <div className="mt-3">
         <LoadError onRetry={() => void activity.refetch()} detail={activity.error.message}>
-          The history could not be loaded.
+          {history ? 'The history could not be loaded.' : 'The activity could not be loaded.'}
         </LoadError>
         {after}
       </div>
@@ -342,11 +368,18 @@ function ActivityTab({ issueKey, projectKey, timeZone, history, after }: TabCont
   );
 }
 
-function CommentsTab({ issueKey, projectKey, timeZone, canComment, after }: TabContext & { canComment: boolean }) {
+function CommentsTab({
+  issueKey,
+  projectKey,
+  timeZone,
+  canComment,
+  after,
+  skeletonRows,
+}: TabContext & { canComment: boolean }) {
   const comments = useComments({ issue: issueKey });
   const rows = (comments.data?.pages ?? []).flatMap(p => p.data);
 
-  if (comments.isPending) return <ActivitySkeleton />;
+  if (comments.isPending) return <ActivitySkeleton rows={skeletonRows} composer={Boolean(after)} />;
   if (comments.isError) {
     return (
       <div className="mt-3">
@@ -403,7 +436,7 @@ function Connector({ last }: { last: boolean }) {
   return last ? null : <span aria-hidden className="absolute top-11 -bottom-3 left-[15px] w-px bg-border" />;
 }
 
-interface CommentEntryProps extends TabContext {
+interface CommentEntryProps extends Omit<TabContext, 'skeletonRows'> {
   comment: ThreadComment;
   last: boolean;
   /** Field changes saved in the same go, drawn in a bordered block under the text. */
@@ -415,7 +448,8 @@ function CommentEntry({ comment, last, issueKey, projectKey, timeZone, children 
   const pending = comment.id < 0;
   return (
     <li
-      className={cn('group/comment relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 py-3', pending && 'opacity-60')}
+      aria-busy={pending || undefined}
+      className={cn('group/comment relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 py-3', pending && 'is-stale')}
     >
       <Connector last={last} />
       <MemberAvatar member={comment.author} className="size-avatar-lg" />
@@ -444,7 +478,7 @@ function CommentEntry({ comment, last, issueKey, projectKey, timeZone, children 
   );
 }
 
-interface ActivityEntryProps extends TabContext {
+interface ActivityEntryProps extends Omit<TabContext, 'skeletonRows'> {
   entry: Entry;
   last: boolean;
   calendar: WorkCalendar;
@@ -464,10 +498,17 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
   const git = entry.rows.filter(r => GIT_KINDS.includes(r.kind));
   const automated = entry.rows.find(r => r.automation)?.automation ?? null;
   const touchedDescription = entry.rows.some(r => r.field === 'description');
+  const descriptionOnly =
+    touchedDescription &&
+    changes.length === 0 &&
+    relations.length === 0 &&
+    time.length === 0 &&
+    git.length === 0 &&
+    !automated;
 
   const details =
     changes.length > 0 || relations.length > 0 || time.length > 0 || git.length > 0 || touchedDescription ? (
-      <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+      <dl className="mt-1 grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs sm:grid-cols-[7rem_minmax(0,1fr)]">
         {changes.map(change => {
           const custom = change.field!.startsWith(CUSTOM) ? change.field!.slice(CUSTOM.length) : null;
           const field = custom ? fieldOf(custom) : undefined;
@@ -492,9 +533,15 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
             </div>
           );
         })}
-        {relations.map(row => (
-          <RelationLine key={row.id} row={row} />
-        ))}
+        {(['tagged', 'untagged'] as const).map(kind => {
+          const names = relations.filter(r => r.kind === kind).map(r => tagName(r));
+          return names.length > 0 ? <TagLine key={kind} added={kind === 'tagged'} names={names} /> : null;
+        })}
+        {relations
+          .filter(r => r.kind !== 'tagged' && r.kind !== 'untagged')
+          .map(row => (
+            <RelationLine key={row.id} row={row} />
+          ))}
         {time.map(row => (
           <TimeLine key={row.id} row={row} calendar={calendar} nameOf={nameOf} />
         ))}
@@ -507,7 +554,7 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
             <dd className="min-w-0 text-text-secondary [overflow-wrap:anywhere]">{automated.cause}</dd>
           </div>
         ) : null}
-        {touchedDescription ? (
+        {touchedDescription && !descriptionOnly ? (
           <div className="contents">
             <dt className="text-text-muted">Description</dt>
             <dd className="text-text-secondary">updated</dd>
@@ -537,7 +584,7 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
           ? fileVerb
           : entry.rows.length === 1 && first.kind === 'sprint_changed'
             ? sprintVerb(first)
-            : touchedDescription && changes.length === 0 && relations.length === 0
+            : descriptionOnly
               ? 'updated the description'
               : 'updated';
 
@@ -561,7 +608,11 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
               </Link>
             </>
           ) : (
-            <span>{verb}</span>
+            <span className="inline-flex items-center gap-1.5">
+              {lifecycle?.kind === 'deleted' ? <Trash2 aria-hidden className="size-3.5 text-text-muted" /> : null}
+              {lifecycle?.kind === 'restored' ? <RotateCcw aria-hidden className="size-3.5 text-text-muted" /> : null}
+              {verb}
+            </span>
           )}
           <RelativeTime value={entry.at} timeZone={context.timeZone} />
         </div>
@@ -747,19 +798,32 @@ function RelationLine({ row }: { row: IssueActivity }) {
       </>
     );
   } else {
-    const tag = (row.kind === 'tagged' ? added : removed) ?? {};
-    label = 'Tags';
-    value = (
-      <>
-        {row.kind === 'tagged' ? 'added' : 'removed'} <b className="font-medium text-text">{String(tag.name ?? '')}</b>
-      </>
-    );
+    return <TagLine added={row.kind === 'tagged'} names={[tagName(row)]} />;
   }
 
   return (
     <div className="contents">
       <dt className="text-text-muted">{label}</dt>
       <dd className="min-w-0 text-text-secondary [overflow-wrap:anywhere]">{value}</dd>
+    </div>
+  );
+}
+
+const tagName = (row: IssueActivity) => String(snap(row.kind === 'tagged' ? row.new_value : row.old_value)?.name ?? '');
+
+function TagLine({ added, names }: { added: boolean; names: string[] }) {
+  return (
+    <div className="contents">
+      <dt className="text-text-muted">Tags</dt>
+      <dd className="min-w-0 text-text-secondary [overflow-wrap:anywhere]">
+        {added ? 'added' : 'removed'}{' '}
+        {names.map((name, i) => (
+          <span key={`${name}-${i}`}>
+            {i > 0 ? ', ' : null}
+            <b className="font-medium text-text">{name}</b>
+          </span>
+        ))}
+      </dd>
     </div>
   );
 }
@@ -864,18 +928,31 @@ function TimeLine({ row, calendar, nameOf }: { row: IssueActivity; calendar: Wor
   );
 }
 
-function ActivitySkeleton() {
+function ActivitySkeleton({ rows, composer }: { rows: number; composer: boolean }) {
   return (
     <div className="flex flex-col" aria-hidden>
-      {Array.from({ length: 3 }, (_, i) => (
+      {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="grid grid-cols-[32px_minmax(0,1fr)] gap-3 py-3">
           <Skeleton className="size-8 rounded-full" />
-          <div className="flex flex-col gap-2 pt-2">
-            <Skeleton className="h-3 w-56" />
-            <Skeleton className="h-3 w-40" />
+          <div className="flex h-8 items-center">
+            <Skeleton className={cn('h-3', i % 2 ? 'w-40' : 'w-56')} />
           </div>
         </div>
       ))}
+      {composer ? (
+        <div className="mt-4 grid grid-cols-[32px_minmax(0,1fr)] gap-3">
+          <Skeleton className="mt-1 size-8 rounded-full" />
+          <div className="flex h-[204px] flex-col rounded-md border">
+            <div className="h-[38px] border-b" />
+            <div className="flex flex-1 items-start px-3 pt-3">
+              <Skeleton className="h-3 w-72 max-w-full" />
+            </div>
+            <div className="flex h-12 items-center px-2">
+              <Skeleton className="h-8 w-32" />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

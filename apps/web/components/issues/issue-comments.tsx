@@ -34,8 +34,26 @@ import { isApiError } from '@lib/api/errors';
 import { formatDateTimeWithZone } from '@lib/datetime';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
+import { FormAlert } from '@components/auth/form-alert';
 
 const SUBMIT_KBD = 'h-4 border-transparent bg-ink-fg/15 text-ink-fg/80';
+const EXCERPT_LENGTH = 80;
+
+/** The comment's first line as plain words, so a delete names which comment it removes. */
+function excerptOf(markdown: string): string {
+  const line =
+    markdown
+      .split('\n')
+      .map(l => l.replace(/^\s*(?:[#>*+-]|\d+\.|\[[ xX]\])+\s*/, '').trim())
+      .find(l => l !== '' && !l.startsWith('```')) ?? '';
+  const plain = line
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`~]+/g, '')
+    .trim();
+  if (plain.length <= EXCERPT_LENGTH) return plain;
+  const cut = plain.slice(0, EXCERPT_LENGTH);
+  return `${cut.slice(0, cut.lastIndexOf(' ') > 0 ? cut.lastIndexOf(' ') : EXCERPT_LENGTH).replace(/[\s,.;:]+$/, '')}…`;
+}
 
 interface CommentHeaderProps {
   comment: ThreadComment;
@@ -158,6 +176,11 @@ export function CommentMenu({ scope, subject, comment, onEdit }: CommentMenuProp
           })
         }
       >
+        {excerptOf(comment.body_md) ? (
+          <blockquote className="border-l-2 border-border-strong pl-3 text-text [overflow-wrap:anywhere]">
+            {excerptOf(comment.body_md)}
+          </blockquote>
+        ) : null}
         <p>
           The comment by <span className="font-medium text-text">{comment.author.name}</span> disappears from {subject}{' '}
           for everyone, and cannot be restored.{' '}
@@ -274,7 +297,7 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
         },
         onError: e => {
           setText(body);
-          setError(isApiError(e) ? e.message : 'The comment could not be posted.');
+          setError(isApiError(e) ? e.message : 'Check your connection.');
         },
       },
     );
@@ -320,7 +343,11 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
           }
         />
         <MarkdownSizeNote size={size} />
-        {error ? <p className="text-xs text-danger-fg">{error}</p> : null}
+        {error ? (
+          <FormAlert title="The comment was not posted.">
+            {error} Your text is still here, so you can post it again.
+          </FormAlert>
+        ) : null}
       </div>
     </div>
   );
