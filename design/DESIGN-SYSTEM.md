@@ -564,7 +564,7 @@ three equal actions.
 ### Load error
 A read that failed with nothing loaded: the inline alert (§ 9, danger tint and icon) with the
 sentence _"The members could not be loaded."_, the server's reason under it when there is one,
-and an outline small **Try again** button on the right. Never the dashed empty-state frame,
+and an outline small **Try again** button on the right. Never the empty-state frame,
 never an empty list, never `0` (a failed figure is `–`). A failed refresh keeps what loaded
 under a one-line warning-ink notice with the same button. Code: `components/query-state.tsx`
 (`LoadError`, `StaleNotice`, `QueryState`).
