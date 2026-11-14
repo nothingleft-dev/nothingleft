@@ -3,6 +3,7 @@
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@components/ui/button';
+import { cn } from '@lib/utils';
 
 interface StepPanelProps {
   eyebrow: string;
@@ -10,9 +11,11 @@ interface StepPanelProps {
   lede: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Keeps the footer in view on a step taller than the screen; only for a footer that holds the step's action. */
+  stickyFooter?: boolean;
 }
 
-export function StepPanel({ eyebrow, title, lede, children, footer }: StepPanelProps) {
+export function StepPanel({ eyebrow, title, lede, children, footer, stickyFooter }: StepPanelProps) {
   return (
     <div className="flex flex-col gap-7">
       <header className="flex flex-col gap-2.5">
@@ -25,7 +28,16 @@ export function StepPanel({ eyebrow, title, lede, children, footer }: StepPanelP
 
       {children}
 
-      {footer ? <div className="flex flex-wrap items-center gap-3 border-t pt-6">{footer}</div> : null}
+      {footer ? (
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-3 border-t pt-6',
+            stickyFooter && 'sticky bottom-0 z-10 -mb-4 bg-surface pt-5 pb-4 max-lg:-mb-6 max-lg:pb-6',
+          )}
+        >
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }

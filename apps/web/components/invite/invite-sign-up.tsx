@@ -18,6 +18,7 @@ import { signUp } from '@lib/api/auth';
 import { viewerTimeZone } from '@lib/datetime';
 import { queryKeys } from '@lib/query/keys';
 import { PendingButton } from '@components/pending-button';
+import { RateLimitWait } from '@components/rate-limit';
 
 interface InviteSignUpProps {
   token: string;
@@ -54,7 +55,7 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
   return (
     <StepPanel
       eyebrow={`Step 1 of ${stepCount}`}
-      title={`Join ${preview.organization.name}`}
+      title="Join your team"
       lede="Create an account to accept your invitation."
       footer={
         <p className="text-xs text-text-secondary">
@@ -68,7 +69,7 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
 
       <ProviderButtons verb="sign up" next={`/invite/${token}`} />
 
-      {form.summary ? <FormAlert title={form.summary} /> : null}
+      {form.summary ? <FormAlert title={form.summary}>{form.rateLimited ? <RateLimitWait /> : null}</FormAlert> : null}
 
       <form
         noValidate
@@ -92,7 +93,9 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-text-secondary">Email</span>
             <div className="flex h-control items-center gap-2 rounded-md border bg-inset px-3 text-text-secondary">
-              <span className="min-w-0 flex-1 truncate">{fixedEmail}</span>
+              <span className="min-w-0 flex-1 truncate" title={fixedEmail}>
+                {fixedEmail}
+              </span>
               <span
                 className="flex items-center gap-1 text-2xs text-success-fg"
                 title="The invitation was sent to this address, so it counts as proven"
@@ -100,7 +103,7 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
                 <Check className="size-3" strokeWidth={3} /> verified
               </span>
             </div>
-            <p className="text-xs text-text-muted">
+            <p className="text-xs text-text-secondary">
               This invitation was sent to this address, so your account starts confirmed.
             </p>
           </div>
@@ -133,7 +136,13 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
           onChange={e => form.set('password', e.target.value)}
         />
 
-        <PendingButton type="submit" className="mt-1" pending={form.isPending} pendingLabel="Creating your account…">
+        <PendingButton
+          type="submit"
+          className="mt-1 h-auto max-w-full self-start py-2 whitespace-normal"
+          pending={form.isPending}
+          pendingLabel="Creating your account…"
+          disabled={form.waiting}
+        >
           {`Join ${preview.organization.name}`}
         </PendingButton>
       </form>

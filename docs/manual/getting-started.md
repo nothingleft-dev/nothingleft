@@ -15,8 +15,8 @@ On **Create your account**, choose **Google** or **GitHub**, or fill in your **F
 - **Google or GitHub** sign-ups are verified by the provider, so you carry straight on.
 - **Email and password** sign-ups must confirm the address first. We email you a link that
   works for 24 hours. Until you open it, the next steps show **Confirm your email first**,
-  with **Check verification** and **Resend email**. An unverified account cannot create or
-  join an organisation. If you mistyped the address, sign up again with the right one.
+  with **I’ve confirmed it** and **Resend email**. You can finish your profile meanwhile; an
+  unverified account cannot create or join an organisation. If you mistyped the address, sign up again with the right one.
 
 The rail on the left names the four steps that follow; **Back** returns to an earlier one.
 
@@ -105,7 +105,7 @@ invited you and the role you will get.
 ### You already have an account
 
 1. Open the link and sign in if you are not already.
-2. A card asks **Join Acme Corporation?** and names the project, who invited you and your
+2. **Review your invitation** shows a card that names the organisation, the project, who invited you and your
    role. Choose **Accept** or **Decline**. Nothing happens to your account until you accept,
    and a share link needs a confirmed email address first.
 3. The confirmation has a button into the project. If you had no username in this

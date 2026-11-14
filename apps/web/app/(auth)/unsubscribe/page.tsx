@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: 'Unsubscribe', robots: { index: false
 
 export default function Page() {
   return (
-    <AuthSplit>
+    <AuthSplit panel="none">
       <Unsubscribe />
     </AuthSplit>
   );

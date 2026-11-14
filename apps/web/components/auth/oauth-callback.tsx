@@ -56,8 +56,11 @@ export function OAuthCallback({ provider: raw }: { provider: string }) {
     return (
       <Failed
         title="Sign-in cancelled"
-        lede={`${label} did not share your account, so nothing was created.`}
-        alert={denied === 'access_denied' ? null : `${label} reported: ${denied}`}
+        lede={
+          denied === 'access_denied'
+            ? `${label} did not share your account, so nothing was created.`
+            : `${label} stopped the sign-in (${denied}), so nothing was created.`
+        }
       />
     );
   }
@@ -98,8 +101,11 @@ export function OAuthCallback({ provider: raw }: { provider: string }) {
     return (
       <Failed
         title="Sign-in did not finish"
-        lede={`${label} signed you in, but Nothing Left could not complete it.`}
-        alert={isApiError(complete.error) ? complete.error.message : 'Could not reach the server. Try again.'}
+        lede={
+          isApiError(complete.error)
+            ? complete.error.message
+            : `${label} signed you in, but the server could not be reached. Start again from the sign-in page.`
+        }
       />
     );
   }
@@ -116,11 +122,10 @@ export function OAuthCallback({ provider: raw }: { provider: string }) {
   );
 }
 
-function Failed({ title, lede, alert }: { title: string; lede: string; alert?: string | null }) {
+function Failed({ title, lede }: { title: string; lede: string }) {
   return (
     <div className="flex flex-col gap-6">
       <AuthHeading title={title} lede={lede} />
-      {alert ? <FormAlert title={alert} /> : null}
       <div className="flex flex-col gap-2">
         <Button asChild className="w-full">
           <Link href="/sign-in">Back to sign in</Link>

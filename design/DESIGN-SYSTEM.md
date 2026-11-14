@@ -725,8 +725,8 @@ at `/welcome` (decided 11 Oct 2026).
 
 ### The form column
 
-400 px of content, vertically centred. Wordmark top-left, Docs / Self-host top-right,
-licence line in the footer. Order inside: heading (22 px) → one-line lede → alert, if
+400 px of content, anchored near the top (a fixed offset under the header), so an alert or the two-factor step never moves the title. Wordmark top-left, Docs / Self-host top-right,
+licence line in the footer. Order inside: heading (26/600, the same H1 as onboarding) → one-line lede → alert, if
 any → fields → primary button, full width → fine print → the swap link.
 
 **No browser-native validation anywhere.** No `required`, no `minLength`, no
@@ -761,14 +761,14 @@ The accent appears exactly once per illustration. That is the same rule the app 
 | View | What it says / does |
 |---|---|
 | Sign in | Email + password, plus provider buttons. Wrong credentials → one inline alert above the fields, both kept, and it names the lockout rule (5 attempts, 15 min) with a link to reset. |
-| Create account | Name, work email, password. Panel is `BoardArt`. Below the password: a four-segment **advisory** strength meter and one requirement line, "At least 8 characters". The meter stays neutral unless the password is genuinely weak, because the only rules the API refuses on are length and the breach list — a red bar for "no symbols" would be a lie about what happens on submit. |
+| Create account | Name, work email, password. Panel is `BoardArt`. Below the password: a four-segment **advisory** strength meter the width of the field and one line under it: "At least 8 characters", then "At least 8 characters · 5 to go", then the strength and its tip. The meter stays neutral unless the password is genuinely weak, because the only rules the API refuses on are length and the breach list — a red bar for "no symbols" would be a lie about what happens on submit. |
 | Check your inbox | Mail icon, the address in the lede, 24-hour expiry, `Resend email · 42s` cooldown, and a primary button that continues into the app: verifying gates invites, not usage. |
 | Verify result | Success and failure are two states of the same route, since the link is what carries the token. |
 | Reset | Email → "Send reset link", then a success state on the same route. Copy states single-use, one hour, signs out everywhere, and that the answer is identical whether or not the account exists. |
 | New password | Reached with `?token=`. Same strength meter. Copy says the link works once. |
 | Two-factor | Six mono cells, auto-advance; error under the cells says codes rotate every 30 s. Link to recovery codes. Password sign-in only. |
 | Invite landing (Path A) | The invite card *first*: org mark, org · project, inviter, role chip. Email pre-filled and marked `verified` when the invite was emailed. Primary button names the org: "Join Acme Corporation". **Rendered in the § 8d frame, not this split.** |
-| Accept (Path B) | Signed-in user sees the card and two buttons, Accept / Decline; copy explains why nothing is automatic. **§ 8d frame.** |
+| Accept (Path B) | Signed-in user sees the card and two buttons, Accept / Decline; the H1 is "Join your team" / "Review your invitation"; the card carries the organisation's name, and the primary button names it. **§ 8d frame.** |
 
 Provider buttons are outlined ink with the provider glyph in currentColor — no brand
 colours. The primary action is the ink button, full width. **The accent never fills a

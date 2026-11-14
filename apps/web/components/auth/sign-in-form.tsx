@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SignInSchema, type Me, type TwoFactorChallenge } from '@nothingleft/types';
-import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
+import { AlertLink, AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -86,11 +86,11 @@ export function SignInForm() {
             </>
           ) : code === 'auth.account_locked' ? (
             <>
-              Wait, then try again - or <TextLink href="/reset-password">reset your password</TextLink>.
+              Wait, then try again – or <AlertLink href="/reset-password">reset your password</AlertLink>.
             </>
           ) : code === 'auth.invalid_credentials' ? (
             <>
-              Check both fields, or <TextLink href="/reset-password">reset your password</TextLink>. Five failed
+              Check both fields, or <AlertLink href="/reset-password">reset your password</AlertLink>. Five failed
               attempts pause sign-in for fifteen minutes.
             </>
           ) : null}
@@ -117,7 +117,7 @@ export function SignInForm() {
           value={form.values.password}
           error={form.errors.password}
           trailing={
-            <TextLink href="/reset-password" quiet className="text-xs">
+            <TextLink href="/reset-password" arrow={false} className="text-xs">
               Forgot?
             </TextLink>
           }

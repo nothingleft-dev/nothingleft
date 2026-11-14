@@ -78,6 +78,7 @@ export function OrganizationStep({ user }: { user: Me }) {
         <Field
           label="Organisation ID"
           placeholder="acme-corporation"
+          className="font-mono"
           hint="A unique ID for your workspace. Use lowercase letters, numbers and hyphens."
           value={derived}
           error={local.problems['slug'] ?? error.fields['slug']}

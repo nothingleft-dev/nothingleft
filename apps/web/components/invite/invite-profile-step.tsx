@@ -17,11 +17,12 @@ import { PendingButton } from '@components/pending-button';
 interface InviteProfileStepProps {
   user: Me;
   accepted: AcceptedInvitation;
+  projectName: string | null;
   stepNumber: number;
   stepCount: number;
 }
 
-export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: InviteProfileStepProps) {
+export function InviteProfileStep({ user, accepted, projectName, stepNumber, stepCount }: InviteProfileStepProps) {
   const router = useRouter();
   const { organization, project_key } = accepted;
   const current = organization.membership.username;
@@ -55,7 +56,7 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
       lede="One last look at how you appear to everyone else here. All of it can be changed later."
       footer={
         <PendingButton type="submit" form="invite-profile" pending={isPending} pendingLabel="Saving…">
-          {project_key ? `Go to ${project_key}` : 'Go to your projects'}
+          {project_key ? `Open ${projectName ?? project_key}` : 'Go to your projects'}
         </PendingButton>
       }
     >
@@ -86,8 +87,7 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
 
         <Field
           label={`Your username in ${organization.name}`}
-          className="font-mono"
-          hint="Letters, numbers, dots, hyphens and underscores. Mentions use it — @jordan.rivera — and it is yours in this organisation only."
+          hint={`Mentions use @${username.trim() || current}. Letters, numbers, dots, hyphens and underscores; it is yours in this organisation only.`}
           value={username}
           error={memberError.fields['username']}
           onChange={e => setUsername(e.target.value)}

@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { EmptyState } from '@components/empty-state';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PageTitle } from '@components/page-title';
@@ -15,7 +14,6 @@ import { useLanding } from '@hooks/use-landing';
 import { useOrganizations, useSwitchOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { OrganizationMark } from '@components/organization/organization-mark';
-import { cn } from '@lib/utils';
 import { plural } from '@lib/numbers';
 
 /**
@@ -67,7 +65,7 @@ function OrganisationSwitcher({ preferred }: { preferred: string | null }) {
       <div>
         <PageTitle>Where to</PageTitle>
         <p className="mt-1 text-text-secondary">
-          You belong to several organisations. Pick the one to work in; the switcher in the sidebar changes it any time.
+          You belong to several organisations. Choose one to work in; the switcher in the sidebar changes it any time.
         </p>
       </div>
       <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
@@ -84,16 +82,14 @@ function OrganisationSwitcher({ preferred }: { preferred: string | null }) {
                 <OrganizationMark organization={org} />
                 <span className="flex min-w-0 flex-1 flex-col leading-4">
                   <span className="truncate font-medium">{org.name}</span>
-                  <span className="text-2xs text-text-muted">
-                    {plural(org.seats.used, 'member')}
-                    {isPreferred ? ' · most recently used' : ''}
-                  </span>
+                  <span className="text-2xs text-text-secondary">{plural(org.seats.used, 'member')}</span>
                 </span>
                 {isPreferred ? (
-                  <Check className="size-icon-sm text-text-secondary" />
-                ) : (
-                  <ArrowRight className="size-icon-sm text-text-muted" />
-                )}
+                  <span className="flex-none rounded-sm bg-inset px-1.5 text-2xs leading-5 font-medium text-text-secondary">
+                    Last used
+                  </span>
+                ) : null}
+                <ArrowRight className="size-icon-sm flex-none text-text-secondary" />
               </button>
             </li>
           );
@@ -110,34 +106,41 @@ function NoOrganisation() {
 
   return (
     <div className="flex max-w-lg flex-col gap-5">
-      <EmptyState
-        title="You’re not a member of any organisation."
-        description="Every membership you had has been removed. Create an organisation of your own, or paste an invitation link somebody sent you."
-        action={
-          <Button asChild>
-            <Link href={'/welcome/organization' as Route}>Create an organisation</Link>
-          </Button>
-        }
-      />
-      <form
-        noValidate
-        className="flex flex-col gap-3"
-        onSubmit={event => {
-          event.preventDefault();
-          if (token) router.push(`/invite/${encodeURIComponent(token)}` as Route);
-        }}
-      >
-        <Field
-          label="Invitation link"
-          placeholder="https://work.nothingleft.dev/invite/…"
-          value={link}
-          onChange={e => setLink(e.target.value)}
-          hint="The whole link, or just the part after /invite/."
-        />
-        <Button type="submit" variant="outline" className={cn('self-start')} disabled={token === ''}>
-          Open the invitation
+      <div>
+        <PageTitle>Join or create an organisation</PageTitle>
+        <p className="mt-1 text-text-secondary">
+          You are not a member of any organisation. Start one of your own, or open an invitation somebody sent you.
+        </p>
+      </div>
+      <div className="flex flex-col gap-5 rounded-md border p-4">
+        <Button asChild className="self-start">
+          <Link href={'/welcome/organization' as Route}>Create an organisation</Link>
         </Button>
-      </form>
+        <div className="flex items-center gap-3 text-2xs text-text-secondary">
+          <span className="h-px flex-1 bg-border" />
+          or
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <form
+          noValidate
+          className="flex flex-col gap-3"
+          onSubmit={event => {
+            event.preventDefault();
+            if (token) router.push(`/invite/${encodeURIComponent(token)}` as Route);
+          }}
+        >
+          <Field
+            label="Invitation link"
+            placeholder="https://work.nothingleft.dev/invite/…"
+            value={link}
+            onChange={e => setLink(e.target.value)}
+            hint="The whole link, or just the part after /invite/."
+          />
+          <Button type="submit" variant="outline" className="self-start" disabled={token === ''}>
+            Open the invitation
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

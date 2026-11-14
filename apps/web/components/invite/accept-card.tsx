@@ -26,7 +26,7 @@ export function AcceptCard({ preview, user, onAccept, onDecline, isPending, erro
   return (
     <StepPanel
       eyebrow="Step 1 of 2"
-      title={`Join ${preview.organization.name}?`}
+      title="Review your invitation"
       lede={`You are signed in as ${user.email}. Nothing happens to your account until you accept.`}
       footer={
         <>
@@ -50,15 +50,10 @@ export function AcceptCard({ preview, user, onAccept, onDecline, isPending, erro
       {blocked ? (
         <VerifyGate
           user={user}
-          reason="This is a share link, which proves nothing about who is opening it, so the address has to be confirmed before you can join."
+          reason="A share link can be forwarded, so the address has to be confirmed before you can join."
         />
       ) : null}
       {parsed.summary ? <FormAlert title={parsed.summary} /> : null}
-
-      <p className="text-xs leading-5 text-text-muted">
-        The step is explicit on purpose. Share links get pasted into group chats, and opening one out of curiosity
-        should not make you a member of somebody’s organisation.
-      </p>
     </StepPanel>
   );
 }

@@ -7,8 +7,7 @@ import type { Route } from 'next';
 import type { AcceptedInvitation, Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { FormAlert } from '@components/auth/form-alert';
-import { FlowShell } from '@components/onboarding/flow-shell';
+import { FlowFrame, FlowShell } from '@components/onboarding/flow-shell';
 import { StepPanel } from '@components/onboarding/step-panel';
 import type { FlowStep } from '@components/onboarding/step-rail';
 import { VerifyGate } from '@components/onboarding/verify-gate';
@@ -57,7 +56,7 @@ const JOINED_STEP: FlowStep = {
 };
 
 const INTRO_NEW = 'Join your team’s existing workspace.';
-const INTRO_EXISTING = 'Review your invitation. Your other workspaces will stay the same.';
+const INTRO_EXISTING = 'Joining adds a workspace; your other workspaces stay as they are.';
 
 export function InviteFlow({ token }: { token: string }) {
   const session = useSession();
@@ -88,13 +87,22 @@ export function InviteFlow({ token }: { token: string }) {
 
   if (session.status === 'loading' || preview.isPending) {
     return (
-      <FlowShell steps={[REVIEW_STEP, JOINED_STEP]} current={0} intro={INTRO_EXISTING} email={user?.email ?? null}>
+      <FlowShell
+        steps={[REVIEW_STEP, JOINED_STEP]}
+        current={0}
+        intro={INTRO_EXISTING}
+        email={session.status === 'loading' ? undefined : (user?.email ?? null)}
+      >
         <PanelSkeleton />
       </FlowShell>
     );
   }
 
-  if (preview.isError) return <InvitationUnusable error={preview.error} />;
+  if (preview.isError) {
+    return (
+      <InvitationUnusable error={preview.error} email={user?.email ?? null} onRetry={() => void preview.refetch()} />
+    );
+  }
 
   const data = preview.data;
   const steps: FlowStep[] = auto
@@ -120,9 +128,9 @@ export function InviteFlow({ token }: { token: string }) {
         title="Invitation declined"
         lede={`Nothing was shared with ${data.organization.name}, and you are not a member of it.`}
       >
-        <p className="text-xs leading-5 text-text-muted">
-          An invitation sent to your address is used up by declining it, so this link will not work again. If that was a
-          mistake, ask whoever invited you to send another.
+        <p className="text-sm leading-6 text-text-secondary">
+          Declining used up this invitation, so the link will not work again. If that was a mistake, ask the person who
+          invited you to send another.
         </p>
         <div className="flex gap-2">
           <Button asChild>
@@ -160,9 +168,15 @@ export function InviteFlow({ token }: { token: string }) {
     return shell(
       steps.length - 1,
       auto ? (
-        <InviteProfileStep user={user} accepted={accepted} stepNumber={steps.length} stepCount={steps.length} />
+        <InviteProfileStep
+          user={user}
+          accepted={accepted}
+          projectName={data.project?.name ?? null}
+          stepNumber={steps.length}
+          stepCount={steps.length}
+        />
       ) : (
-        <Joined accepted={accepted} />
+        <Joined accepted={accepted} projectName={data.project?.name ?? null} />
       ),
     );
   }
@@ -172,7 +186,7 @@ export function InviteFlow({ token }: { token: string }) {
   if (data.already_member) {
     return shell(
       1,
-      <AlreadyMember user={user} organizationName={data.organization.name} projectKey={data.project?.key ?? null} />,
+      <AlreadyMember user={user} organizationName={data.organization.name} project={data.project ?? null} />,
     );
   }
 
@@ -189,7 +203,7 @@ export function InviteFlow({ token }: { token: string }) {
   );
 }
 
-function Joined({ accepted }: { accepted: AcceptedInvitation }) {
+function Joined({ accepted, projectName }: { accepted: AcceptedInvitation; projectName: string | null }) {
   const { organization, project_key } = accepted;
 
   return (
@@ -198,21 +212,21 @@ function Joined({ accepted }: { accepted: AcceptedInvitation }) {
       title={`You’re in ${organization.name}`}
       lede={
         project_key
-          ? `You joined the organisation and ${project_key} in one step, and you are now working in ${organization.name}.`
+          ? `You joined the organisation and ${projectName ?? 'its project'} in one step, and you are now working in ${organization.name}.`
           : `You joined the organisation, and you are now working in ${organization.name}.`
       }
       footer={
         <Button asChild>
           <Link href={(project_key ? `/projects/${project_key}` : '/projects') as Route}>
-            {project_key ? `Go to ${project_key}` : 'Go to your projects'}
+            {project_key ? `Open ${projectName ?? project_key}` : 'Go to your projects'}
           </Link>
         </Button>
       }
     >
-      <p className="text-xs leading-5 text-text-muted">
+      <p className="text-sm leading-6 text-text-secondary">
         People here will mention you as{' '}
-        <span className="font-mono text-text-secondary">@{organization.membership.username}</span>. It was generated
-        from your address; change it whenever you like in the organisation’s member list.
+        <span className="font-medium text-text">@{organization.membership.username}</span>. It was made from your
+        address; change it whenever you like in the organisation’s member list.
       </p>
     </StepPanel>
   );
@@ -221,11 +235,11 @@ function Joined({ accepted }: { accepted: AcceptedInvitation }) {
 function AlreadyMember({
   user,
   organizationName,
-  projectKey,
+  project,
 }: {
   user: Me;
   organizationName: string;
-  projectKey: string | null;
+  project: { key: string; name: string } | null;
 }) {
   return (
     <StepPanel
@@ -234,41 +248,54 @@ function AlreadyMember({
       lede={`This link grants what ${user.email} already has, so nothing changed.`}
     >
       <Button asChild>
-        <Link href={(projectKey ? `/projects/${projectKey}` : '/dashboard') as Route}>
-          {projectKey ? `Go to ${projectKey}` : 'Go to your dashboard'}
+        <Link href={(project ? `/projects/${project.key}` : '/dashboard') as Route}>
+          {project ? `Open ${project.name}` : 'Go to your dashboard'}
         </Link>
       </Button>
     </StepPanel>
   );
 }
 
-const GONE_MESSAGE =
-  'Links can be revoked, can expire, and can run out of uses. Ask whoever sent it for a fresh one — it takes them a moment.';
+const GONE_REASON: Record<string, string> = {
+  'invitation.expired': 'It expired before it was used.',
+  'invitation.revoked': 'The person who sent it withdrew it.',
+  'invitation.exhausted': 'It has been used as many times as it allows.',
+};
 
-function InvitationUnusable({ error }: { error: unknown }) {
-  const gone = isApiError(error) && error.status === 410;
-  const message = isApiError(error) ? error.message : 'The server could not be reached.';
+function InvitationUnusable({ error, email, onRetry }: { error: unknown; email: string | null; onRetry: () => void }) {
+  const reached = isApiError(error);
+  const reason = reached ? (GONE_REASON[error.code] ?? 'The link is incomplete, or it was never issued.') : null;
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-app px-page-x-mobile">
-      <div className="flex w-full max-w-[420px] flex-col gap-5">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-xl font-semibold tracking-tight">
-            {gone ? 'This invitation is no longer open' : 'That invitation link did not work'}
-          </h1>
-          <p className="text-text-secondary">{GONE_MESSAGE}</p>
-        </header>
-        <FormAlert title={message} />
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/sign-up">Create an account</Link>
-          </Button>
+    <FlowFrame email={email}>
+      <main className="flex flex-1 justify-center px-6 pt-[clamp(2rem,8vh,4.5rem)] pb-10 max-lg:px-page-x-mobile max-lg:pt-10">
+        <div className="comfortable-form flex w-full max-w-[440px] flex-col gap-6">
+          <header className="flex flex-col gap-2.5">
+            <h1 className="text-2xl font-semibold tracking-[-0.01em]">
+              {!reached
+                ? 'The invitation could not be loaded'
+                : error.status === 410
+                  ? 'This invitation is no longer open'
+                  : 'That invitation link did not work'}
+            </h1>
+            <p className="text-md leading-6 text-text-secondary">
+              {reason
+                ? `${reason} Ask the person who invited you for a new link.`
+                : 'The server could not be reached. Nothing was changed; check the connection and try again.'}
+            </p>
+          </header>
+          <div className="flex flex-wrap gap-2">
+            {reason ? (
+              <Button asChild>
+                <Link href={email ? '/' : '/sign-in'}>{email ? 'Back to your work' : 'Go to sign in'}</Link>
+              </Button>
+            ) : (
+              <Button onClick={onRetry}>Try again</Button>
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </FlowFrame>
   );
 }
 

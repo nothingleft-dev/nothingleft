@@ -13,8 +13,10 @@ import { OrganizationStep } from '@components/onboarding/organization-step';
 import { ProjectStep } from '@components/onboarding/project-step';
 import { InviteStep } from '@components/onboarding/invite-step';
 import { useOrganization } from '@hooks/use-organizations';
+import { useProject } from '@hooks/use-projects';
 import { useSession } from '@hooks/use-session';
 import { queryKeys } from '@lib/query/keys';
+import { cn } from '@lib/utils';
 
 export type WelcomeStepId = 'profile' | 'organization' | 'project' | 'invite';
 
@@ -27,6 +29,7 @@ export function WelcomeFlow({ step }: { step: WelcomeStepId }) {
   const user = session.status === 'signed-in' ? session.user : null;
   const slug = user?.current_organization_slug ?? null;
   const organization = useOrganization(step === 'invite' ? slug : null);
+  const project = useProject(step === 'invite' ? projectKey : null);
 
   // Creating the organisation switches the session into it, so the slug only appears
   // once Me has been refetched. Judging the step before that lands would bounce the
@@ -62,33 +65,59 @@ export function WelcomeFlow({ step }: { step: WelcomeStepId }) {
   return (
     <FlowShell steps={WELCOME_STEPS} current={INDEX[step]} email={user?.email ?? null} intro={WELCOME_INTRO}>
       {misplaced ? (
-        <StepSkeleton />
+        <StepSkeleton fields={2} />
       ) : step === 'profile' && user ? (
         <ProfileStep user={user} />
       ) : step === 'organization' && user ? (
         <OrganizationStep user={user} />
       ) : step === 'project' ? (
         <ProjectStep />
-      ) : organization.data && projectKey ? (
-        <InviteStep organization={organization.data} projectKey={projectKey} />
+      ) : organization.data && project.data ? (
+        <InviteStep organization={organization.data} project={project.data} />
       ) : (
-        <StepSkeleton />
+        <StepSkeleton fields={step === 'invite' ? 'invite' : 2} />
       )}
     </FlowShell>
   );
 }
 
-function StepSkeleton() {
+function SkeletonField({ className }: { className?: string }) {
   return (
-    <div className="flex flex-col gap-6" role="status" aria-label="Loading">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-4 w-full max-w-[420px]" />
+    <div className={cn('flex flex-col gap-2', className)}>
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-11 w-full" />
+    </div>
+  );
+}
+
+function StepSkeleton({ fields }: { fields: number | 'invite' }) {
+  return (
+    <div className="flex flex-col gap-7" role="status" aria-label="Loading">
+      <div className="flex flex-col gap-2.5">
+        <Skeleton className="h-4 w-20 max-lg:hidden" />
+        <Skeleton className="h-8 w-72 max-w-full" />
+        <Skeleton className="h-5 w-full max-w-[420px]" />
       </div>
-      <Skeleton className="h-control w-full" />
-      <Skeleton className="h-control w-full" />
-      <Skeleton className="h-9 w-40" />
+      {fields === 'invite' ? (
+        <>
+          <SkeletonField />
+          <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+            <SkeletonField />
+            <SkeletonField />
+          </div>
+          <Skeleton className="h-10 w-40" />
+          <div className="flex flex-col gap-3 border-t pt-7">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-16 w-full rounded-md" />
+          </div>
+        </>
+      ) : (
+        Array.from({ length: fields }, (_, i) => <SkeletonField key={i} />)
+      )}
+      <div className="flex gap-3 border-t pt-5">
+        <Skeleton className="h-10 w-20" />
+        <Skeleton className="h-10 w-40" />
+      </div>
     </div>
   );
 }

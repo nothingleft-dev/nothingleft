@@ -39,18 +39,17 @@ export function ProfileStep({ user }: { user: Me }) {
       title="Check your details"
       lede="Confirm your name and choose the time zone used to display dates and times."
       footer={
-        <PendingButton
-          type="submit"
-          form="profile-step"
-          disabled={blocked}
-          pending={update.isPending}
-          pendingLabel="Saving…"
-        >
+        <PendingButton type="submit" form="profile-step" pending={update.isPending} pendingLabel="Saving…">
           Save and continue
         </PendingButton>
       }
     >
-      {blocked ? <VerifyGate user={user} /> : null}
+      {blocked ? (
+        <VerifyGate
+          user={user}
+          reason="You can finish your profile now; the address needs confirming before the organisation step."
+        />
+      ) : null}
 
       {error.summary ? <FormAlert title={error.summary} /> : null}
 

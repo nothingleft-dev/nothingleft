@@ -3,7 +3,7 @@
 import { RateLimitWait } from '@components/rate-limit';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { RequestPasswordResetSchema, ResetPasswordSchema } from '@nothingleft/types';
-import { AuthHeading, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
+import { AlertLink, AuthHeading, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PasswordStrength } from '@components/auth/password-strength';
@@ -100,7 +100,7 @@ function ChooseNewPassword({ token }: { token: string }) {
 
       {form.summary ? (
         <FormAlert title={form.summary}>
-          Reset links last one hour and work once. <TextLink href="/reset-password">Request a new one</TextLink>.
+          Reset links last one hour and work once. <AlertLink href="/reset-password">Request a new one</AlertLink>.
         </FormAlert>
       ) : null}
 

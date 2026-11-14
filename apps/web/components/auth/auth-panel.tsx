@@ -11,7 +11,7 @@ interface Stat {
 const PANELS: Record<PanelVariant, { headline: string; body: string; stats: [Stat, Stat] }> = {
   default: {
     headline: 'Everything still open, in one place.',
-    body: 'Issues, boards, time and reports - and the same API behind all of it, so an agent on MCP can do anything a person can.',
+    body: 'Issues, boards, time and reports – and the same API behind all of it, so an agent on MCP can do anything a person can.',
     stats: [
       { value: '9', word: 'Reports', caption: 'Burndown, Gantt & time' },
       { value: '∞', word: 'Views', caption: 'Saved, shared & personal' },
@@ -50,17 +50,16 @@ export function AuthPanel({ variant = 'default' }: { variant?: PanelVariant }) {
       <div className="flex flex-1 items-center justify-center py-6">
         <Art />
       </div>
-      <div className="ap-stats">
+      <dl className="mb-6 flex gap-11 border-t border-panel-line pt-5">
         {stats.map(stat => (
-          <div key={stat.word} className="ap-stat">
-            <b>
-              {stat.value}
-              <em>{stat.word}</em>
-            </b>
-            <span>{stat.caption}</span>
+          <div key={stat.word} className="flex flex-col gap-1">
+            <dt className="order-2 text-2xs text-panel-ink-muted">{stat.caption}</dt>
+            <dd className="text-xl font-semibold tracking-tight text-panel-ink tabular">
+              {stat.value} {stat.word}
+            </dd>
           </div>
         ))}
-      </div>
+      </dl>
       <div className="flex max-w-[560px] flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-panel-ink">{headline}</h2>
         <p className="text-panel-ink-muted">{body}</p>

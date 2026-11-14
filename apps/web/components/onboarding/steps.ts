@@ -5,7 +5,7 @@ export const WELCOME_STEPS: readonly FlowStep[] = [
   {
     id: 'profile',
     title: 'Your profile',
-    body: 'Confirm your name and time zone.',
+    body: 'Your name and time zone.',
     icon: UserRound,
   },
   {
@@ -17,13 +17,13 @@ export const WELCOME_STEPS: readonly FlowStep[] = [
   {
     id: 'project',
     title: 'First project',
-    body: 'Create a place to track work.',
+    body: 'Where your team tracks work.',
     icon: SquareKanban,
   },
   {
     id: 'invite',
     title: 'Invite people',
-    body: 'Add teammates, or skip for now.',
+    body: 'Add teammates or skip.',
     icon: UserPlus,
   },
 ];

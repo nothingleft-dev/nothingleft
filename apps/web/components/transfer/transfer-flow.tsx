@@ -46,7 +46,12 @@ export function TransferFlow({ token }: { token: string }) {
   const here = `/transfer/${token}`;
 
   const shell = (current: number, children: ReactNode) => (
-    <FlowShell steps={STEPS} current={current} intro={INTRO} email={user?.email ?? null}>
+    <FlowShell
+      steps={STEPS}
+      current={current}
+      intro={INTRO}
+      email={session.status === 'loading' ? undefined : (user?.email ?? null)}
+    >
       {children}
     </FlowShell>
   );
@@ -137,10 +142,12 @@ export function TransferFlow({ token }: { token: string }) {
 function TransferCard({ transfer }: { transfer: OwnershipTransfer }) {
   return (
     <div className="flex flex-col gap-4 rounded-md border bg-surface p-4">
-      <div className="flex items-center gap-3">
-        <OrganizationMark organization={transfer.organization} className="size-10 rounded-md" />
+      <div className="flex items-start gap-3">
+        <OrganizationMark organization={transfer.organization} className="size-8 rounded-md" />
         <div className="flex min-w-0 flex-col">
-          <p className="truncate font-medium">{transfer.organization.name}</p>
+          <p className="line-clamp-2 font-medium" title={transfer.organization.name}>
+            {transfer.organization.name}
+          </p>
           <p className="truncate font-mono text-xs text-text-secondary">{transfer.organization.slug}</p>
         </div>
       </div>
@@ -148,14 +155,24 @@ function TransferCard({ transfer }: { transfer: OwnershipTransfer }) {
         <dt className="text-text-secondary">From</dt>
         <dd className="flex min-w-0 items-center gap-2">
           <MemberAvatar member={transfer.from} />
-          <PersonName person={transfer.from} className="text-text" />
-          <span className="text-text-secondary">· Owner</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <PersonName person={transfer.from} className="text-text" />
+            <span aria-hidden className="text-text-muted">
+              ·
+            </span>
+            <span className="flex-none text-text-secondary">Owner</span>
+          </span>
         </dd>
         <dt className="text-text-secondary">To</dt>
         <dd className="flex min-w-0 items-center gap-2">
           <MemberAvatar member={transfer.to} />
-          <PersonName person={transfer.to} className="text-text" />
-          <span className="text-text-secondary">· you</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <PersonName person={transfer.to} className="text-text" />
+            <span aria-hidden className="text-text-muted">
+              ·
+            </span>
+            <span className="flex-none text-text-secondary">you</span>
+          </span>
         </dd>
         <dt className="text-text-secondary">Expires</dt>
         <dd className="text-text">{formatDate(transfer.expires_at)}</dd>
@@ -188,7 +205,7 @@ function Accepted({ organization, previous }: { organization: Organization; prev
       }
     >
       <div className="flex items-center gap-3 rounded-md border bg-surface p-4">
-        <OrganizationMark organization={organization} className="size-10 rounded-md" />
+        <OrganizationMark organization={organization} className="size-8 rounded-md" />
         <div className="flex min-w-0 flex-col">
           <p className="truncate font-medium">{organization.name}</p>
           <p className="text-xs text-text-secondary">Owner</p>

@@ -42,7 +42,7 @@ export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
         <div className="flex flex-col gap-1">
           <p className="font-medium">Confirm your email first</p>
           <p className="text-sm leading-6 text-text-secondary">
-            We sent a link to <span className="text-text-secondary">{user.email}</span>. It works for 24 hours.{' '}
+            We sent a link to <span className="font-medium text-text">{user.email}</span>. It works for 24 hours.{' '}
             {reason ?? 'Confirm your email to create your organisation.'}
           </p>
         </div>
@@ -58,12 +58,13 @@ export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <PendingButton
           type="button"
+          variant="outline"
           size="sm"
           onClick={() => recheck.mutate()}
           pending={recheck.isPending}
           pendingLabel="Checking…"
         >
-          Check verification
+          I’ve confirmed it
         </PendingButton>
         <Button
           type="button"
@@ -72,7 +73,13 @@ export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
           disabled={cooldown > 0 || resend.isPending}
           onClick={() => resend.mutate()}
         >
-          {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend email'}
+          {cooldown > 0 ? (
+            <>
+              Resend in <span className="tabular">{cooldown}s</span>
+            </>
+          ) : (
+            'Resend email'
+          )}
         </Button>
       </div>
     </div>
