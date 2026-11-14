@@ -28,7 +28,13 @@ export function SavedViewNavItem({ view }: { view: SavedView }) {
           <span className="size-1.5 rounded-full bg-text-muted" />
         </span>
       )}
-      trailing={count.data !== undefined ? <NavCount value={count.data} /> : null}
+      trailing={
+        count.data !== undefined ? (
+          <span title={view.project ? `${count.data} in ${view.project.key}` : `${count.data} across your projects`}>
+            <NavCount value={count.data} />
+          </span>
+        ) : null
+      }
     />
   );
 }

@@ -91,7 +91,13 @@ function ViewTab({
           !
         </span>
       ) : count.data !== undefined ? (
-        <span className="font-normal tabular text-text-secondary">{count.data}</span>
+        // A project's list counts each view inside that project, so the number can differ from the sidebar's.
+        <span
+          className="font-normal tabular text-text-secondary"
+          title={scope ? `${count.data} in ${scope}` : `${count.data} across your projects`}
+        >
+          {count.data}
+        </span>
       ) : null}
       {active && modified ? (
         <span className="text-text-secondary" title="Query changed since the view was saved">
