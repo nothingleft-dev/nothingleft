@@ -1373,6 +1373,13 @@
   color: var(--text-secondary);
 }
 
+/* A shortcut hint drawn for the filled button's ink would vanish on the disabled grey; it takes the button's ink. */
+[data-slot='button']:is(:disabled, [aria-disabled='true']):not([data-pending]) kbd {
+  color: inherit;
+  background: transparent;
+  border-color: currentColor;
+}
+
 [data-slot='button']:disabled {
   pointer-events: auto;
   cursor: not-allowed;
