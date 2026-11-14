@@ -64,10 +64,14 @@ export function InboxPreview() {
                 <li key={entryId(group)} className="border-b border-border-subtle last:border-b-0">
                   <Link
                     href={group.path as Route}
-                    onClick={event => {
-                      if (unreadHere) mark.mutate({ how: 'entry', group });
-                      openLink(event, org, group.path);
-                    }}
+                    onClick={event =>
+                      openLink(
+                        event,
+                        org,
+                        group.path,
+                        unreadHere ? () => mark.mutate({ how: 'entry', group }) : undefined,
+                      )
+                    }
                     className="grid grid-cols-[8px_minmax(0,1fr)_auto] items-start gap-x-2 rounded-sm px-2 py-1.5 hover:bg-hover"
                   >
                     <span className={cn('mt-1.5 size-2 rounded-full', unreadHere ? 'bg-brand' : 'bg-transparent')} />

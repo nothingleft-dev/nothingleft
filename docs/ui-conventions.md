@@ -573,16 +573,13 @@ As built in 6a (web half, 27 Sep 2026; the owner's choices marked):
   `GET /v1/notifications/unread-count`, polled at 30 s like every list, and drop at once when
   something is marked read.
 - **One row per entry**, flat and hairline-separated: the unread dot (accent), the key (or an
-  article or sprint icon), the title (medium while anything is unread, secondary once read), a
-  count chip when the entry holds more than one notification, then the newest summary on a
+  article or sprint icon), the title (medium while anything is unread, secondary once read), a count chip, which also expands the entry, when it holds more than one notification, then the newest summary on a
   second line. Right: the project — prefixed with the organisation only for someone in more
-  than one — and the relative time with its absolute tooltip. A chevron expands the entry in
-  place to its lines (avatar, or a calendar mark for *Due tomorrow* / *Overdue*, which have no
+  than one — and the relative time with its absolute tooltip. The chip expands the entry in place to its lines (avatar, or a calendar mark for *Due tomorrow* / *Overdue*, which have no
   actor; the overdue mark is `--danger-fg`); *Show all N* pages the rest through the subject's
   own list. A former member keeps the *Former member* chip after the sentence.
 - **Opening marks read** (owner): clicking a line marks that notification read; clicking the
-  entry's title marks the whole entry. A hover button (always shown on phones) does the same
-  without leaving. An entry from another organisation switches the session there first.
+  entry's title marks the whole entry. A tick at the row's end (muted until hovered) does the same without leaving. An entry from another organisation switches the session there first.
 - **Filters** are the report pickers: *Kind* (several; the kinds as people say them, grouped
   by area, with sprints and articles one choice each and reactions left out until something
   produces them), *Project* (grouped by organisation), *Organisation* (only for someone in more
@@ -591,8 +588,9 @@ As built in 6a (web half, 27 Sep 2026; the owner's choices marked):
   matching read* and marks only that.
 - **States**: skeleton rows; an empty inbox that says what arrives here and links to Settings →
   Notifications; a filter with no result naming it (*No notifications for mentions in Partner
-  Portal.*) with a button per filter to drop it; *Nothing unread* under the unread filter; *You
-  are up to date* above a fully read list; an inline error with *Try again*.
+  Portal.*) with a button per filter to drop it; *Nothing unread* under the unread filter; the
+  header count reads *N of M unread* under a filter; an inline error with *Try again*. Filters run
+  Organisation, Project, Kind, Show, each reading *All* by default.
 - **Dashboard**: My work's rail shows the newest five entries with *Mark all read* (owner).
 - **No `g` shortcut for the inbox** (owner, 27 Sep 2026).
 

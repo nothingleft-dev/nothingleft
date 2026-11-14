@@ -58,7 +58,7 @@ from.
 Open it from **Inbox** in the sidebar or the inbox icon at the top of every page.
 
 - **One entry per issue.** Twelve changes to ACME-12 are one entry with twelve lines, newest
-  first, not twelve rows. The arrow beside an entry opens its lines in place; **Show all**
+  first, not twelve rows. The count beside an entry's title opens its lines in place; **Show all**
   lists every one when there are more than ten. Articles are entries too, and a sprint starting
   or finishing is an entry of its own.
 - **Opening marks read.** Click a line to go to what it is about and mark that notification
@@ -66,7 +66,7 @@ Open it from **Inbox** in the sidebar or the inbox icon at the top of every page
   entry from another organisation switches you into that organisation first.
 - **Filter** by kind (only mentions, say), by project, by organisation when you belong to more
   than one, or to what is unread. The address keeps your filters, so a bookmark reopens them.
-- **Mark read** one notification or a whole entry with the tick that appears on hover, or
+- **Mark read** one notification or a whole entry with the tick at the end of an unread entry or line, or
   everything at once with **Mark all read**. With a kind, project or organisation chosen it
   reads **Mark all matching read** and marks only what matches.
 - The number in the header counts **entries** with anything unread. Your dashboard shows the
