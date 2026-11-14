@@ -5,13 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import type { SavedView } from '@nothingleft/types';
 import { NavCount, NavItem } from '@components/shell/nav-item';
 import { useIssueCount } from '@hooks/use-issue-search';
+import { viewSortText } from '@lib/issue-list/saved-views';
 import { writeListState } from '@lib/issue-list/url-state';
 import { cn } from '@lib/utils';
 
 /** A project view opens inside its project; anything else on the cross-project list. */
 export function savedViewHref(view: SavedView): Route {
   const base = view.project ? `/projects/${view.project.key}/issues` : '/issues';
-  const sort = view.sort.map(s => `${s.attribute} ${s.direction}`).join(', ');
+  const sort = viewSortText(view);
   return `${base}${writeListState({ q: view.query, view: view.name, group: 'status', sort })}` as Route;
 }
 

@@ -273,7 +273,7 @@ export function QueryBar({
             role="listbox"
             // Mouse down would blur the input and close the list before the click lands.
             onMouseDown={event => event.preventDefault()}
-            className="absolute inset-x-[-1px] top-full z-40 mt-1 max-h-[min(420px,60vh)] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover"
+            className="absolute top-full left-[-1px] z-40 mt-1 max-h-[min(420px,60vh)] w-[min(560px,calc(100%+2px))] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover"
           >
             {groups.map(group => (
               <div key={group.kind}>
@@ -297,13 +297,15 @@ export function QueryBar({
                     onMouseEnter={() => setActive(index)}
                     onClick={() => apply(item)}
                     className={cn(
-                      'grid h-[30px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-3',
+                      'flex h-[30px] items-center gap-6 px-3',
                       (index === active || (active === -1 && index === 0)) && 'bg-hover',
                     )}
                   >
-                    <span className={cn('truncate text-text', monoText)}>{item.label}</span>
-                    {item.description ? (
-                      <span className="truncate text-2xs text-text-muted">{item.description}</span>
+                    <span className={cn('min-w-0 truncate text-text', monoText)}>{item.label}</span>
+                    {item.description && item.kind !== 'recent_search' && item.kind !== 'saved_search' ? (
+                      <span className="ml-auto flex-none truncate text-2xs text-text-secondary">
+                        {item.description}
+                      </span>
                     ) : null}
                   </div>
                 ))}
@@ -311,7 +313,7 @@ export function QueryBar({
             ))}
             <div className="mt-1 flex items-center gap-3 border-t px-3 pt-1.5 pb-0.5 text-2xs text-text-muted">
               <span>
-                Press <Kbd className="h-4 min-w-4 text-[10px]">⇥</Kbd> to complete the first item
+                <Kbd className="h-4 min-w-4 text-[10px]">⇥</Kbd> completes the first item
               </span>
               <span>
                 <Kbd className="h-4 min-w-4 text-[10px]">↵</Kbd> runs the search

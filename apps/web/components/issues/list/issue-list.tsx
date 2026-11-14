@@ -4,11 +4,12 @@ import { ArchivedNotice } from '@components/projects/archived-notice';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { IssueListItem, SavedView } from '@nothingleft/types';
-import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
+import { LoadError, StaleNotice, errorDetail, notFoundOn404 } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { useCreateIssueDialog } from '@components/issues/create-issue-provider';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
+import { Kbd } from '@components/kbd';
 import { PageTitle } from '@components/page-title';
 import { BulkBar } from '@components/issues/list/bulk-bar';
 import { IssueTable, IssueTableSkeleton } from '@components/issues/list/issue-table';
@@ -31,6 +32,7 @@ import { isGroupable } from '@components/custom-fields/field-types';
 import { useCustomColumns } from '@hooks/use-custom-columns';
 import { todayCalendarDate } from '@lib/datetime';
 import { toastError } from '@components/toast-error';
+import { viewReference, viewSortText as sortText } from '@lib/issue-list/saved-views';
 
 interface IssueListProps {
   /** Scope every request to one project. */
@@ -40,11 +42,11 @@ interface IssueListProps {
   title?: string;
   /** Saved-view tabs belong on the issue lists, not the fixed ones. */
   views?: boolean;
+  /** What a fixed list says when its base query finds nothing and nothing is typed. */
+  empty?: { title: string; description: string };
 }
 
-const sortText = (view: SavedView) => view.sort.map(s => `${s.attribute} ${s.direction}`).join(', ');
-
-export function IssueList({ project, base = '', title, views: withViews = true }: IssueListProps) {
+export function IssueList({ project, base = '', title, views: withViews = true, empty }: IssueListProps) {
   const { state, navigate, wantsFocus } = useListUrlState();
   const session = useSession();
   const timeZone = session.status === 'signed-in' ? session.user.timezone : undefined;
@@ -129,7 +131,14 @@ export function IssueList({ project, base = '', title, views: withViews = true }
     key: string,
     body: Parameters<typeof update.mutate>[0]['body'],
     optimistic: (i: IssueListItem) => IssueListItem,
-  ) => update.mutate({ key, body, optimistic }, { onError: error => toastError(`Could not update ${key}`, error) });
+  ): void =>
+    update.mutate(
+      { key, body, optimistic },
+      {
+        onError: error =>
+          toastError(`Could not update ${key}`, error, { retry: () => onUpdate(key, body, optimistic) }),
+      },
+    );
 
   const exportCsv = (): void =>
     exporter.mutate(
@@ -138,6 +147,9 @@ export function IssueList({ project, base = '', title, views: withViews = true }
     );
 
   const projectEmpty = project !== undefined && projectQuery.data && total === 0 && fullQuery === '';
+  const loading = search.isPending && !search.data;
+  const hasTabs = withViews && views.length > 0;
+  const scopeName = project ? (projectQuery.data?.name ?? project) : 'your projects';
 
   return (
     <div className="flex flex-col gap-4">
@@ -159,57 +171,65 @@ export function IssueList({ project, base = '', title, views: withViews = true }
         saveLabel={activeView && modified && activeView.can_edit ? 'Save as new view' : 'Save view'}
       />
 
-      {withViews && (views.length > 0 || savedViews.isPending) ? (
-        <ViewTabs
-          views={views}
-          active={activeView}
-          project={project}
-          onSelect={selectView}
-          onAction={onViewAction}
-          modified={modified}
+      {loading || rows.length > 0 || hasTabs ? (
+        <ListToolbar
+          controls={loading || rows.length > 0}
+          tabs={
+            hasTabs ? (
+              <ViewTabs
+                views={views}
+                active={activeView}
+                project={project}
+                onSelect={selectView}
+                onAction={onViewAction}
+                modified={modified}
+              />
+            ) : null
+          }
+          total={total}
+          loading={loading}
+          group={state.group}
+          onGroup={group => navigate({ group }, 'replace')}
+          columns={columns}
+          onColumns={setColumns}
+          columnsFromView={fromView}
+          columnDefs={defs}
+          groupFields={groupFields}
+          onExport={exportCsv}
+          exporting={exporter.isPending}
+          importHref={project && roles.canAdmin(project) ? `/projects/${project}/import` : undefined}
         />
       ) : null}
 
-      <ListToolbar
-        total={total}
-        group={state.group}
-        onGroup={group => navigate({ group }, 'replace')}
-        columns={columns}
-        onColumns={setColumns}
-        columnsFromView={fromView}
-        columnDefs={defs}
-        groupFields={groupFields}
-        onExport={exportCsv}
-        exporting={exporter.isPending}
-        importHref={project && roles.canAdmin(project) ? `/projects/${project}/import` : undefined}
-      />
+      {search.isError && !problem && search.data ? (
+        <StaleNotice onRetry={() => void search.refetch()}>
+          The list could not be refreshed. It shows what loaded last.
+        </StaleNotice>
+      ) : null}
 
-      {search.isPending && !search.data ? (
-        <IssueTableSkeleton columns={shown} />
-      ) : search.isError && !problem ? (
+      {loading ? (
+        <IssueTableSkeleton columns={shown} grouped={groupBy !== undefined} />
+      ) : search.isError && !problem && !search.data ? (
         <LoadError onRetry={() => void search.refetch()} detail={errorDetail(search.error)}>
           The list could not be loaded.
         </LoadError>
-      ) : problem && !search.data ? (
-        <EmptyState
-          title="Fix the query to see results."
-          description="The message above names the part at fault. Valid values, where there are any, are one click away."
-        />
-      ) : projectEmpty ? (
+      ) : problem && !search.data ? null : projectEmpty ? (
         <FirstProjectEmptyState
           projectKey={project}
           projectName={projectQuery.data.name}
           canCreate={roles.canEdit(project)}
           canImport={roles.canAdmin(project)}
         />
+      ) : total === 0 && empty && !state.q ? (
+        <EmptyState title={empty.title} description={empty.description} />
       ) : total === 0 ? (
         <EmptyState
           title={fullQuery ? 'No issues match this search.' : 'No issues yet.'}
           description={
             fullQuery
-              ? `Nothing in ${project ?? 'your projects'} matches ${state.q || base}. Widen the search or clear it.`
+              ? `Nothing in ${scopeName} matches “${state.q || base}”. Widen the search or clear it.`
               : roles.writable.length > 0
-                ? 'Create the first one, or press c from anywhere.'
+                ? 'Issues you and your team create in your projects appear here.'
                 : 'Issues people create in your projects will appear here.'
           }
           action={
@@ -219,10 +239,12 @@ export function IssueList({ project, base = '', title, views: withViews = true }
               </Button>
             ) : roles.writable.length > 0 ? (
               <Button
+                variant="outline"
                 size="sm"
+                className="gap-2"
                 onClick={() => openCreateIssue(project && roles.canEdit(project) ? { project } : undefined)}
               >
-                Create issue
+                Create issue <Kbd className="h-4 max-md:hidden">c</Kbd>
               </Button>
             ) : undefined
           }
@@ -269,7 +291,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={open => (open ? null : setDeleting(null))}
-        title={`Delete the view ${deleting?.name ?? ''}?`}
+        title={`Delete the view “${deleting?.name ?? ''}”?`}
         confirmLabel="Delete view"
         pendingLabel="Deleting…"
         pending={deleteView.isPending}
@@ -291,8 +313,8 @@ export function IssueList({ project, base = '', title, views: withViews = true }
             : deleting?.visibility === 'project'
               ? `Everyone in ${deleting.project?.name ?? 'the project'} loses this tab.`
               : 'Everyone in the organisation loses this tab.'}{' '}
-          Any search that still names it as <code className="font-mono">#{`{${deleting?.name ?? ''}}`}</code> will
-          report it as unknown.
+          Any search that still names it as <code className="font-mono">{viewReference(deleting?.name ?? '')}</code>{' '}
+          will report it as unknown.
         </p>
       </ConfirmDialog>
     </div>

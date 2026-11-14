@@ -21,6 +21,7 @@ import { useProjectRoles } from '@hooks/use-project-roles';
 import { useCreateSavedView, useUpdateSavedView } from '@hooks/use-saved-views';
 import type { ColumnId } from '@lib/issue-list/columns';
 import { PendingButton } from '@components/pending-button';
+import { viewReference } from '@lib/issue-list/saved-views';
 
 interface SaveViewDialogProps {
   open: boolean;
@@ -41,7 +42,7 @@ const VISIBILITY: ChoiceOption<SavedViewVisibility>[] = [
   {
     value: 'project',
     label: 'Everyone in a project',
-    hint: 'Every member of that project can use it and reference it as #{Name}.',
+    hint: 'Every member of that project sees it as a tab and can use it in a query.',
   },
   { value: 'org', label: 'Everyone in the organisation', hint: 'Every member of every project can use it.' },
 ];
@@ -113,9 +114,14 @@ function SaveViewForm({
       <DialogHeader>
         <DialogTitle>{existing ? `Edit view ${existing.name}` : 'Save this search as a view'}</DialogTitle>
         <DialogDescription>
-          {existing
-            ? 'The query stays as it is; use the tab menu to save a new query into it.'
-            : 'A view is a named search. Pin it as a tab, or reference it in any query as #{Name}.'}
+          {existing ? (
+            'The query stays as it is; use the tab menu to save a new query into it.'
+          ) : (
+            <>
+              A view is a named search. It shows as a tab, and any query can use it as{' '}
+              <code className="font-mono text-xs">{viewReference(name.trim() || 'Blocking bugs')}</code>.
+            </>
+          )}
         </DialogDescription>
       </DialogHeader>
 
@@ -137,14 +143,14 @@ function SaveViewForm({
           onChange={e => setName(e.target.value)}
           placeholder="Blocking bugs"
           error={error.fields['name']}
-          hint="No braces. Names are not case-sensitive."
+          hint="Case does not matter. Curly braces are not allowed."
         />
         {existing ? null : (
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text-secondary">Query</span>
             <code className="block rounded-md border bg-inset px-3 py-2 font-mono text-xs text-text-secondary [overflow-wrap:anywhere]">
               {query || '(everything)'}
-              {sort ? <span className="text-text-muted"> · sort {sort}</span> : null}
+              {sort ? ` sort by: ${sort}` : null}
             </code>
             {error.fields['query'] ? <p className="text-xs text-danger-fg">{error.fields['query']}</p> : null}
           </div>

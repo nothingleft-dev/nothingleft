@@ -33,7 +33,7 @@ export interface ColumnDef {
 
 export const COLUMNS: readonly ColumnDef[] = [
   { id: 'project', label: 'Project', width: '56px', csv: 'project' },
-  { id: 'status', label: 'Status', width: '150px', csv: 'status', sort: 'status' },
+  { id: 'status', label: 'Status', width: '168px', csv: 'status', sort: 'status' },
   { id: 'assignee', label: 'Assignee', width: '140px', csv: 'assignees' },
   { id: 'due', label: 'Due', width: '84px', csv: 'due_date', sort: '{due date}' },
   { id: 'start', label: 'Start', width: '84px', csv: 'start_date', sort: '{start date}' },

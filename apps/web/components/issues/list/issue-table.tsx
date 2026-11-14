@@ -203,7 +203,7 @@ export function IssueTable({
       ref={outerRef}
       role="grid"
       aria-rowcount={total}
-      className={cn('relative', wide && !phone && 'overflow-x-auto', stale && 'is-stale')}
+      className={cn('relative', wide && !phone && 'scroll-fade-x overflow-x-auto', stale && 'is-stale')}
     >
       <div style={wide && !phone ? { minWidth } : undefined}>
         {phone ? null : (
@@ -343,48 +343,84 @@ export function IssueTable({
           onClick={onLoadMore}
           progress={`Showing ${rows.length} of ${total}`}
         />
-      ) : (
-        <p className="py-5 text-center text-xs text-text-secondary">
-          Showing {rows.length} of {total}
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }
 
-export function IssueTableSkeleton({ columns, rows = 12 }: { columns: readonly ColumnDef[]; rows?: number }) {
-  const template = gridTemplate(columns);
+const PHONE_TEMPLATE = 'minmax(64px,auto) minmax(0,1fr) 7rem';
+
+/** Shaped like the table it stands in for: header, a group band per run of rows, cells aligned as the real ones. */
+export function IssueTableSkeleton({ columns, grouped }: { columns: readonly ColumnDef[]; grouped: boolean }) {
+  const phone = usePhone();
+  const template = phone ? PHONE_TEMPLATE : gridTemplate(columns);
+  const runs = grouped ? [5, 7] : [12];
   return (
     <div aria-hidden className="flex flex-col">
-      <div
-        style={{ gridTemplateColumns: template }}
-        className="grid h-row-dense items-center gap-2 border-b px-2 max-md:hidden"
-      >
-        <span />
-        <Skeleton className="h-2.5 w-3" />
-        <Skeleton className="h-2.5 w-3" />
-        <Skeleton className="h-2.5 w-8" />
-        <Skeleton className="h-2.5 w-10" />
-        {columns.map(c => (
-          <Skeleton key={c.id} className="h-2.5 w-12" />
-        ))}
-      </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <div
-          key={i}
-          style={{ gridTemplateColumns: template }}
-          className="grid h-row items-center gap-2 border-b border-border-subtle px-2 max-md:grid-cols-[64px_1fr_100px]"
-        >
-          <span className="max-md:hidden" />
-          <Skeleton className="size-badge-letter rounded-xs max-md:hidden" />
-          <Skeleton className="size-badge-letter rounded-xs max-md:hidden" />
-          <Skeleton className="h-3 w-14" />
-          <Skeleton className="h-3" style={{ width: `${40 + ((i * 23) % 50)}%` }} />
+      {phone ? null : (
+        <div style={{ gridTemplateColumns: template }} className="grid h-row-dense items-center gap-2 border-b px-2">
+          <span />
+          <Skeleton className="h-2.5 w-2" />
+          <Skeleton className="h-2.5 w-2" />
+          <Skeleton className="h-2.5 w-6" />
+          <Skeleton className="h-2.5 w-8" />
           {columns.map(c => (
-            <Skeleton key={c.id} className={cn('h-3 w-16', c.id !== 'status' && 'max-md:hidden')} />
+            <span key={c.id} className={cn('flex', c.align === 'right' && 'justify-end')}>
+              <Skeleton className="h-2.5 w-10" />
+            </span>
           ))}
+        </div>
+      )}
+      {runs.map((count, run) => (
+        <div key={run}>
+          {grouped ? (
+            <div className="pt-3">
+              <div className="flex h-8 items-center gap-2 rounded-sm bg-app px-2">
+                <Skeleton className="size-3 rounded-full" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ) : null}
+          {Array.from({ length: count }, (_, row) => {
+            const i = run * 5 + row;
+            return (
+              <div
+                key={i}
+                style={{ gridTemplateColumns: template }}
+                className="grid h-row items-center gap-2 border-b border-border-subtle px-2 max-md:px-1"
+              >
+                {phone ? null : (
+                  <>
+                    <span />
+                    <Skeleton className="size-badge-letter rounded-xs" />
+                    <Skeleton className="size-badge-letter rounded-xs" />
+                  </>
+                )}
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3" style={{ width: `${40 + ((i * 23) % 50)}%` }} />
+                {phone ? (
+                  <StatusSkeleton />
+                ) : (
+                  columns.map(c => (
+                    <span key={c.id} className={cn('flex min-w-0', c.align === 'right' && 'justify-end')}>
+                      {c.id === 'status' ? <StatusSkeleton /> : <Skeleton className="h-3 w-16" />}
+                    </span>
+                  ))
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
+  );
+}
+
+function StatusSkeleton() {
+  return (
+    <span className="flex items-center gap-2">
+      <Skeleton className="size-2 rounded-full" />
+      <Skeleton className="h-3 w-16" />
+    </span>
   );
 }

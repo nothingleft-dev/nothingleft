@@ -31,7 +31,7 @@ export function GroupHeader({ group, groupBy, category, loaded, collapsed, onTog
         onClick={onToggle}
         aria-expanded={!collapsed}
         className={cn(
-          'flex h-8 w-full items-center gap-2 rounded-sm bg-app px-2 text-left text-xs font-medium text-text-secondary hover:text-text',
+          'flex h-8 w-full items-center gap-2 rounded-sm bg-app px-2 text-left text-xs font-medium text-text-secondary hover:bg-hover hover:text-text',
           overdue && 'text-danger-fg hover:text-danger-fg',
         )}
       >

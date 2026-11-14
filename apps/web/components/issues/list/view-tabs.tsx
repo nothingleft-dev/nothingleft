@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, TriangleAlert } from 'lucide-react';
 import type { SavedView } from '@nothingleft/types';
 import {
   DropdownMenu,
@@ -87,9 +87,7 @@ function ViewTab({
     >
       <span className="max-w-[24ch] truncate">{view.name}</span>
       {count.isError ? (
-        <span className="text-text-secondary" title="This view's query no longer runs">
-          !
-        </span>
+        <TriangleAlert aria-label="Its query no longer runs" className="size-3.5 text-warning-fg" />
       ) : count.data !== undefined ? (
         // A project's list counts each view inside that project, so the number can differ from the sidebar's.
         <span
@@ -115,6 +113,12 @@ function ViewTab({
           <span className="font-mono">{view.query || '(everything)'}</span>
           <br />
           {owner}
+          {count.isError ? (
+            <>
+              <br />
+              This view’s query no longer runs. Open it to see why.
+            </>
+          ) : null}
         </TooltipContent>
       </Tooltip>
       {active && view.can_edit ? (

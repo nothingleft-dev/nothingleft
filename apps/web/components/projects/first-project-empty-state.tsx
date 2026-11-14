@@ -25,7 +25,7 @@ export function FirstProjectEmptyState({ projectKey, projectName, canCreate, can
     <section aria-label="Get started" className="flex flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">{projectName} has no issues yet.</h2>
-        <p className="text-text-secondary">Three ways to put the first one in. No demo data: what you see is yours.</p>
+        <p className="text-text-secondary">Three ways to put the first one in.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         <Card
@@ -35,7 +35,7 @@ export function FirstProjectEmptyState({ projectKey, projectName, canCreate, can
           action={
             canCreate ? (
               <Button onClick={() => openCreateIssue()} className="gap-2">
-                Create issue <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">c</Kbd>
+                Create issue <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80 max-md:hidden">c</Kbd>
               </Button>
             ) : (
               <p className="text-xs text-text-muted">You observe this project; a Contributor creates the first one.</p>
