@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from 'lucide-react';
 import type { GitConnectionSecret } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import {
@@ -28,12 +29,14 @@ const GITHUB_EVENTS = [
 function Value({ label, value, what }: { label: string; value: string; what: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <span className="text-xs font-medium text-text-secondary">{label}</span>
-      <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-sm border bg-inset px-2 py-1.5 font-mono text-xs">
+      <span className="text-sm font-medium text-text-secondary">{label}</span>
+      <div className="flex items-start gap-2">
+        <code className="min-h-8 min-w-0 flex-1 rounded-sm border bg-inset px-2 py-1.5 font-mono text-xs [overflow-wrap:anywhere]">
           {value}
         </code>
-        <CopyButton value={value} what={what} />
+        <span className="flex-none">
+          <CopyButton value={value} what={what} />
+        </span>
       </div>
     </div>
   );
@@ -77,13 +80,20 @@ export function SecretDialog({
                 <Value label="Secret" value={connection.webhook_secret} what="Secret" />
               ) : null}
               {connection.provider === 'github' ? (
-                <div className="flex flex-col gap-1.5 text-xs text-text-secondary">
-                  <p>
+                <div className="flex flex-col gap-2 text-sm text-text-secondary">
+                  <p className="text-pretty">
                     In the repository’s <span className="text-text">Settings → Webhooks → Add webhook</span>: content
-                    type <code className="font-mono text-text">application/json</code>, and under{' '}
+                    type <code className="font-mono text-xs text-text">application/json</code>, and under{' '}
                     <span className="text-text">Let me select individual events</span>:
                   </p>
-                  <p className="text-text">{GITHUB_EVENTS.join(' · ')}</p>
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-text max-sm:grid-cols-1">
+                    {GITHUB_EVENTS.map(event => (
+                      <li key={event} className="flex items-center gap-1.5">
+                        <Check aria-hidden className="size-3.5 flex-none text-text-secondary" />
+                        {event}
+                      </li>
+                    ))}
+                  </ul>
                   {rotated ? (
                     <p>
                       Paste the new secret into every webhook that used the old one; until then their deliveries fail.

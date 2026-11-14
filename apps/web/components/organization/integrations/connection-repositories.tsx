@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Lock, MoreHorizontal, Plus, RefreshCw, Search, Webhook } from 'lucide-react';
+import { Copy, Lock, MoreHorizontal, Plus, RefreshCw, ScrollText, Search, Webhook } from 'lucide-react';
 import { toast } from 'sonner';
-import type { GitConnection, GitRepository } from '@nothingleft/types';
+import type { GitConnection, GitRepository, GitWebhookStatus } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
-import { Skeleton } from '@components/ui/skeleton';
+import { TableSkeleton } from '@components/skeletons';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
@@ -21,17 +21,30 @@ import { ProviderGlyph } from '@components/git/provider-glyph';
 import {
   GIT_PAGE,
   useGitRepositories,
+  useRefreshGitConnection,
   useLinkRepositoryTo,
   useRehookGitRepository,
   useResyncGitRepository,
 } from '@hooks/use-git';
 import { useDebounced } from '@hooks/use-debounced';
-import { ProjectMark, ProjectMarkByKey } from '@components/projects/project-mark';
+import { ProjectMark } from '@components/projects/project-mark';
+import { PendingButton } from '@components/pending-button';
+import { providerLabel } from '@lib/git/words';
 import { useProjects } from '@hooks/use-projects';
-import { WEBHOOK_STATUS } from '@lib/git/words';
+import type { Hue } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+
+// Healthy is the resting state: a hollow dot in neutral ink. Only a problem wears colour.
+const WEBHOOK: Record<GitWebhookStatus, { label: string; hue: Hue }> = {
+  active: { label: 'Active', hue: 'gray' },
+  failing: { label: 'Failing', hue: 'red' },
+  missing: { label: 'Missing', hue: 'amber' },
+  not_applicable: { label: 'Via the app', hue: 'gray' },
+};
+
+const COLUMNS = ['', 'w-44', 'w-36', 'w-32', 'w-12'] as const;
 
 export function ConnectionRepositories({
   slug,
@@ -50,12 +63,15 @@ export function ConnectionRepositories({
     ...(query ? { q: query } : {}),
     offset,
   });
+  const refresh = useRefreshGitConnection(slug);
   const rows = repositories.data?.data ?? [];
   const total = repositories.data?.meta.pagination?.total ?? rows.length;
+  const nothingToSearch = !q && !query && repositories.data !== undefined && total === 0;
+  const provider = providerLabel(connection.provider);
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative max-w-xs">
+      <div className={cn('relative max-w-xs', nothingToSearch && 'hidden')}>
         <Search aria-hidden className="absolute top-1/2 left-2.5 size-icon-sm -translate-y-1/2 text-text-muted" />
         <Input
           value={q}
@@ -75,15 +91,41 @@ export function ConnectionRepositories({
         <LoadError onRetry={() => void repositories.refetch()} detail={errorDetail(repositories.error)}>
           The repositories could not be loaded.
         </LoadError>
+      ) : rows.length === 0 && query ? (
+        <EmptyState
+          title={`No repository matches “${query}”.`}
+          description="Clear the search to see every repository."
+        />
       ) : rows.length === 0 ? (
         <EmptyState
-          title={query ? `No repository matches “${query}”.` : 'This connection sees no repositories yet.'}
+          title="This connection sees no repositories yet."
           description={
-            query
-              ? 'Clear the search to see every repository.'
-              : connection.auth_kind === 'manual'
-                ? 'A repository appears once its first webhook delivery arrives, or with a token, on Refresh.'
-                : 'Refresh asks the provider again; check which repositories the installation or token may read.'
+            connection.auth_kind === 'manual'
+              ? connection.has_token
+                ? 'A repository appears once its first webhook delivery arrives, or when you re-sync.'
+                : 'A repository appears once its first webhook delivery arrives. Add the webhook with the payload URL above.'
+              : 'Re-sync asks the provider again; check which repositories the installation or token may read.'
+          }
+          action={
+            <div className="flex flex-wrap gap-2">
+              {connection.webhook_url ? <CopyUrlButton url={connection.webhook_url} /> : null}
+              {connection.auth_kind !== 'manual' || connection.has_token ? (
+                <PendingButton
+                  variant="outline"
+                  size="sm"
+                  pending={refresh.isPending}
+                  pendingLabel="Re-syncing…"
+                  onClick={() =>
+                    refresh.mutate(connection.name, {
+                      onSuccess: () => toast.success(`${connection.account.login} was re-read from ${provider}.`),
+                      onError: error => toastError(`Could not re-sync ${connection.account.login}`, error),
+                    })
+                  }
+                >
+                  <RefreshCw /> Re-sync now
+                </PendingButton>
+              ) : null}
+            </div>
           }
         />
       ) : (
@@ -92,10 +134,10 @@ export function ConnectionRepositories({
             <thead className="bg-app text-left text-2xs text-text-secondary">
               <tr>
                 <th className="h-7 px-3 font-medium">Repository</th>
-                <th className="w-44 px-3 font-medium">Linked to</th>
-                <th className="w-44 px-3 font-medium">Webhook</th>
-                <th className="w-28 px-3 font-medium">Last event</th>
-                <th className="w-12 px-3" aria-label="Actions" />
+                <th className={cn('px-3 font-medium', COLUMNS[1])}>Linked to</th>
+                <th className={cn('px-3 font-medium', COLUMNS[2])}>Webhook</th>
+                <th className={cn('px-3 font-medium', COLUMNS[3])}>Last event</th>
+                <th className={cn('px-3', COLUMNS[4])} aria-label="Actions" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
@@ -149,7 +191,7 @@ function RepositoryRow({
 }) {
   const resync = useResyncGitRepository(slug);
   const rehook = useRehookGitRepository(slug);
-  const webhook = WEBHOOK_STATUS[repository.webhook_status];
+  const webhook = WEBHOOK[repository.webhook_status];
   const dim = repository.removed || repository.is_archived;
 
   return (
@@ -175,30 +217,45 @@ function RepositoryRow({
       </td>
       <td className="px-3">
         {repository.projects.length > 0 ? (
-          <span className="flex flex-wrap gap-1">
+          <span className="flex flex-wrap items-center gap-1">
             {repository.projects.map(key => (
               <Link
                 key={key}
                 href={`/projects/${key}/settings?tab=repositories` as Route}
-                className="inline-flex h-5 items-center gap-1 rounded-sm border px-1 font-mono text-2xs text-text-secondary hover:border-border-strong hover:text-text"
+                aria-label={`${key} repository settings`}
+                className="inline-flex h-5 items-center rounded-sm border px-1 font-mono text-2xs leading-4 text-text-secondary hover:border-border-strong hover:text-text"
               >
-                <ProjectMarkByKey projectKey={key} />
                 {key}
               </Link>
             ))}
-            {repository.match_all_projects ? <span className="text-2xs text-text-muted">· every project</span> : null}
+            {repository.match_all_projects ? (
+              <span className="inline-flex h-5 items-center text-2xs leading-4 text-text-secondary">
+                · every project
+              </span>
+            ) : null}
           </span>
         ) : repository.removed ? (
-          <span className="text-xs text-text-muted">--</span>
+          <span className="text-xs text-text-muted">—</span>
         ) : (
           <LinkToProject repository={repository} />
         )}
       </td>
       <td className="px-3">
         {repository.projects.length === 0 && repository.webhook_status === 'missing' ? (
-          <span className="text-xs text-text-muted">Not needed until linked</span>
+          <span className="text-xs text-text-muted" title="Not needed until the repository is linked">
+            —
+          </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs',
+              webhook.hue === 'red'
+                ? 'text-danger-fg'
+                : webhook.hue === 'amber'
+                  ? 'text-warning-fg'
+                  : 'text-text-secondary',
+            )}
+          >
             <HueDot hue={webhook.hue} />
             {webhook.label}
             {repository.webhook_last_status_code !== null ? (
@@ -208,7 +265,9 @@ function RepositoryRow({
                     {repository.webhook_last_status_code}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>The provider’s HTTP status on its last delivery</TooltipContent>
+                <TooltipContent side="top" sideOffset={8}>
+                  The provider’s HTTP status on its last delivery
+                </TooltipContent>
               </Tooltip>
             ) : null}
           </span>
@@ -233,7 +292,7 @@ function RepositoryRow({
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="min-w-60">
             <DropdownMenuItem
               disabled={repository.removed || resync.isPending}
               onSelect={() =>
@@ -265,7 +324,7 @@ function RepositoryRow({
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onSelect={onDeliveries}>
-              <Search /> Deliveries for this repository
+              <ScrollText /> Show deliveries
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -309,7 +368,7 @@ function LinkToProject({ repository }: { repository: GitRepository }) {
               >
                 <ProjectMark project={project} size="xs" />
                 <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                <span className="font-mono text-2xs text-text-muted">{project.key}</span>
+                <span className="font-mono text-2xs text-text-secondary">{project.key}</span>
               </CommandItem>
             ))}
           </CommandList>
@@ -319,17 +378,30 @@ function LinkToProject({ repository }: { repository: GitRepository }) {
   );
 }
 
+function CopyUrlButton({ url }: { url: string }) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={async () => {
+        await navigator.clipboard.writeText(url);
+        toast.success('Payload URL copied.');
+      }}
+    >
+      <Copy /> Copy payload URL
+    </Button>
+  );
+}
+
 function RepositoriesSkeleton() {
   return (
-    <div className="divide-y divide-border-subtle rounded-md border" role="status" aria-label="Loading repositories">
-      {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className="flex h-11 items-center gap-6 px-3">
-          <Skeleton className="h-3 w-48" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="ml-auto h-3 w-14" />
-        </div>
-      ))}
+    <div className="overflow-x-auto" role="status" aria-label="Loading repositories">
+      <TableSkeleton
+        className="min-w-[820px]"
+        rows={4}
+        rowClassName="h-11"
+        columns={COLUMNS.map(className => (className ? { className } : {}))}
+      />
     </div>
   );
 }

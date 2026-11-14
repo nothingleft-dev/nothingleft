@@ -24,6 +24,7 @@ import {
   useScheduleDeletion,
 } from '@hooks/use-organization-lifecycle';
 import { formatDate } from '@lib/datetime';
+import { plural } from '@lib/numbers';
 import { PendingButton } from '@components/pending-button';
 
 type DangerConfirm = 'transfer' | 'delete';
@@ -134,6 +135,13 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
           </Button>
         </div>
       )}
+      {!scheduled && candidates.length > 0 ? (
+        <p className="-mt-1 text-sm text-text-secondary">
+          {chosen
+            ? `${chosen.name} gets an email to accept or decline.`
+            : `Choose a member to ${transfer ? 'make a new offer' : 'transfer ownership'}.`}
+        </p>
+      ) : null}
       {!scheduled && !members.isPending && candidates.length === 0 ? (
         <p className="text-sm text-text-secondary">
           Nobody can receive it yet: the new Owner has to be an active member with a verified email address. Invite
@@ -174,12 +182,12 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
           }
         >
           <ul className="flex list-disc flex-col gap-1.5 pl-5">
-            <li>{chosen.name} gets an email with a link to accept or decline, valid for 7 days.</li>
+            <li>{chosen.name} gets an email to accept or decline, valid for 7 days.</li>
+            <li>If they accept, they become the Owner and you stay an Org Admin.</li>
             <li>
-              When they accept, they become the Owner and you stay an Org Admin. If they decline, nothing changes.
-            </li>
-            <li>
-              {transfer ? `This replaces the offer to ${transfer.to.name}.` : 'You can cancel the offer until then.'}
+              {transfer
+                ? `This replaces the offer to ${transfer.to.name}.`
+                : 'You can cancel the offer until they answer.'}
             </li>
           </ul>
         </StepUpDialog>
@@ -206,14 +214,14 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
     >
       {cancelError.summary ? <FormAlert title={cancelError.summary} /> : null}
       {deletion ? (
-        <div className="flex items-center gap-4 rounded-md border border-danger-fg/25 bg-danger-bg px-4 py-3 text-danger-fg max-sm:flex-col max-sm:items-start">
+        <div className="flex items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <p className="font-medium">
-              {organization.name} will be deleted on {formatDate(deletion.deletes_at)}
+              {organization.name} will be deleted {daysUntil(deletion.deletes_at)}, on {formatDate(deletion.deletes_at)}
+              .
             </p>
-            <p className="text-xs leading-5">
-              Scheduled {formatDate(deletion.scheduled_at)}. Everyone can keep working until then; every member sees a
-              banner with the date.
+            <p className="text-sm text-text-secondary">
+              Scheduled {formatDate(deletion.scheduled_at)}. Everyone can keep working until then.
             </p>
           </div>
           <PendingButton
@@ -229,14 +237,11 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
           </PendingButton>
         </div>
       ) : (
-        <div className="flex items-center gap-4 rounded-md border border-danger-fg/25 px-4 py-3 max-sm:flex-col max-sm:items-start">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p className="font-medium">Delete {organization.name}</p>
-            <p className="text-sm text-text-secondary">
-              Projects, issues, comments, articles and files go after {ORG_DELETION_GRACE_DAYS} days. Members’ accounts
-              are unaffected.
-            </p>
-          </div>
+        <div className="flex items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-start">
+          <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+            Projects, issues, comments, articles and files go after {ORG_DELETION_GRACE_DAYS} days. Members’ accounts
+            are unaffected.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -291,16 +296,23 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
       >
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
           <li>
-            In {ORG_DELETION_GRACE_DAYS} days its projects, issues, comments, articles and files are deleted, and nobody
-            can open it any more. Files in your own connected bucket are never touched.
+            In {ORG_DELETION_GRACE_DAYS} days everything in it is deleted, except files in your own connected bucket.
           </li>
+          <li>Until then everyone keeps working, and you can cancel at any time.</li>
+          <li>Org Admins get an email now, a reminder the day before, and one when it is done.</li>
           <li>
-            Until then everyone can keep working and sees a banner with the date. You can cancel at any time; you, and
-            every Org Admin, get an email now, a reminder the day before, and another when it is done.
+            A pending ownership offer is cancelled, and the address{' '}
+            <code className="rounded-xs bg-inset px-1 font-mono text-xs text-text">{slug}</code> is never reused.
           </li>
-          <li>A pending ownership transfer is cancelled. The address {slug} stays reserved and is never reused.</li>
         </ul>
       </StepUpDialog>
     </SettingsSection>
   );
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function daysUntil(at: string): string {
+  const days = Math.max(0, Math.ceil((Date.parse(at) - Date.now()) / DAY));
+  return days === 0 ? 'today' : `in ${plural(days, 'day')}`;
 }

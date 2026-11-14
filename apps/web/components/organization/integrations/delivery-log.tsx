@@ -22,7 +22,8 @@ import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
 
-const TONE: Record<GitEventStatus, JobTone> = { pending: 'waiting', done: 'done', ignored: 'idle', failed: 'failed' };
+// Done is the resting state, so it stays neutral; only waiting and failing wear colour.
+const TONE: Record<GitEventStatus, JobTone> = { pending: 'moving', done: 'waiting', ignored: 'idle', failed: 'failed' };
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -62,6 +63,7 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
   });
   const rows = events.data?.data ?? [];
   const total = events.data?.meta.pagination?.total ?? rows.length;
+  const failed = events.isError && !events.data;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -72,31 +74,33 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
           {repository ? ` for ${repository}` : ''} in the last 7 days, and what was done with it.
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-wrap items-center gap-3 border-b px-5 py-2.5">
-        <Segmented
-          ariaLabel="Delivery status"
-          value={filter}
-          options={FILTERS}
-          onChange={next => {
-            setFilter(next);
-            setOffset(0);
-          }}
-        />
-        {connection.redelivery_url ? (
-          <a
-            href={connection.redelivery_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="ml-auto inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text hover:underline"
-          >
-            Not here? Redeliver from {providerLabel(connection.provider)} <ExternalLink className="size-3" />
-          </a>
-        ) : null}
-      </div>
+      {failed ? null : (
+        <div className="flex flex-wrap items-center gap-3 border-b px-5 py-2.5">
+          <Segmented
+            ariaLabel="Delivery status"
+            value={filter}
+            options={FILTERS}
+            onChange={next => {
+              setFilter(next);
+              setOffset(0);
+            }}
+          />
+          {connection.redelivery_url ? (
+            <a
+              href={connection.redelivery_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="ml-auto inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text hover:underline"
+            >
+              Not here? Redeliver from {providerLabel(connection.provider)} <ExternalLink className="size-3" />
+            </a>
+          ) : null}
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {events.isPending ? (
           <LogSkeleton />
-        ) : events.isError && !events.data ? (
+        ) : failed ? (
           <div className="p-5">
             <LoadError onRetry={() => void events.refetch()} detail={errorDetail(events.error)}>
               The delivery log could not be loaded.
@@ -170,27 +174,33 @@ function EventRow({ slug, event }: { slug: string; event: GitWebhookEvent }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
-        className="grid w-full grid-cols-[14px_92px_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-2 text-left hover:bg-hover"
+        className="grid w-full grid-cols-[14px_92px_minmax(0,1fr)_auto] items-start gap-x-3 px-5 py-2 text-left hover:bg-hover"
       >
-        <ChevronRight
-          aria-hidden
-          className={cn('size-3.5 text-text-muted transition-transform', open && 'rotate-90')}
-        />
-        <JobStatus tone={TONE[event.status]} label={EVENT_STATUS[event.status]} className="text-xs" />
+        <span className="flex h-5 items-center">
+          <ChevronRight
+            aria-hidden
+            className={cn('size-3.5 text-text-muted transition-transform', open && 'rotate-90')}
+          />
+        </span>
+        <JobStatus tone={TONE[event.status]} label={EVENT_STATUS[event.status]} className="text-xs leading-5" />
         <span className="flex min-w-0 flex-col">
-          <span className="flex min-w-0 items-center gap-2 text-sm">
+          <span className="flex min-w-0 items-center gap-2 text-sm leading-5">
             <span className="font-mono text-xs">{event.event}</span>
             {event.repository ? <span className="truncate text-text-secondary">{event.repository}</span> : null}
           </span>
           {reason ? (
             <span
-              className={cn('truncate text-xs', event.status === 'failed' ? 'text-danger-fg' : 'text-text-secondary')}
+              className={cn(
+                'text-xs',
+                open ? 'text-pretty' : 'truncate',
+                event.status === 'failed' ? 'text-danger-fg' : 'text-text-secondary',
+              )}
             >
               {reason}
             </span>
           ) : null}
         </span>
-        <RelativeTime value={event.received_at} className="text-xs whitespace-nowrap" />
+        <RelativeTime value={event.received_at} className="text-xs leading-5 whitespace-nowrap" />
       </button>
       {open ? <EventDetail slug={slug} event={event} /> : null}
     </li>

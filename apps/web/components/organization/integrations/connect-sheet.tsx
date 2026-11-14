@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { CircleCheck } from 'lucide-react';
 import {
   CreateGitConnectionSchema,
   type CreateGitConnection,
@@ -143,8 +144,8 @@ function ConnectForm({
         </SheetTitle>
         <SheetDescription>
           {manual
-            ? `You add a webhook to each repository yourself. A token is optional: with one, the server also reads a ${provider.pull_request_word}’s commits and recent history.`
-            : `A group or project access token with the api scope, from someone with the Maintainer role: the server adds a webhook to each repository you link. The token is never shown again.`}
+            ? `Add a webhook to each repository yourself. With an optional token, the server also reads a ${provider.pull_request_word}’s commits.`
+            : 'The server adds a webhook to each repository you link. The token is never shown again.'}
         </SheetDescription>
       </SheetHeader>
 
@@ -155,7 +156,6 @@ function ConnectForm({
           id="git-base-url"
           label="Address"
           value={baseUrl}
-          placeholder={provider.default_base_url}
           help={`Leave empty for ${provider.default_base_url}. A self-managed ${label} needs a publicly trusted certificate.`}
           error={errors.base_url}
           onChange={value => {
@@ -196,15 +196,19 @@ function ConnectForm({
         />
 
         {checked ? (
-          <div className="flex flex-col gap-1 rounded-md border px-3 py-2.5 text-sm" role="status">
-            <span className="flex items-center gap-2 font-medium">
-              <ProviderGlyph provider={checked.provider} />
-              {checked.account.login}
-            </span>
-            <span className="text-xs text-text-secondary">
-              Sees {formatCount(checked.repository_count)}{' '}
-              {checked.repository_count === 1 ? 'repository' : 'repositories'}
-              {checked.token_expires_at ? ` · the token expires ${formatDate(checked.token_expires_at)}` : ''}.
+          <div className="flex gap-2.5 rounded-md border px-3 py-2.5 text-sm" role="status">
+            <CircleCheck aria-hidden className="mt-0.5 size-icon-sm flex-none text-success-fg" />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">Token works</span>
+              <span className="flex min-w-0 items-center gap-1.5 text-text-secondary">
+                <ProviderGlyph provider={checked.provider} className="flex-none" />
+                <span className="truncate">{checked.account.login}</span>
+              </span>
+              <span className="text-xs text-text-secondary">
+                Sees {formatCount(checked.repository_count)}{' '}
+                {checked.repository_count === 1 ? 'repository' : 'repositories'}
+                {checked.token_expires_at ? ` · the token expires ${formatDate(checked.token_expires_at)}` : ''}.
+              </span>
             </span>
           </div>
         ) : null}
@@ -227,7 +231,7 @@ function ConnectForm({
         </Button>
         {token.trim() && !checked ? (
           <PendingButton type="submit" disabled={pending} pending={check.isPending} pendingLabel="Checking…">
-            Check
+            Check token
           </PendingButton>
         ) : (
           <PendingButton
