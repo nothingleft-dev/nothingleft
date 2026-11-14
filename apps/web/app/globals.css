@@ -1452,6 +1452,18 @@
 }
 
 [data-slot='dialog-overlay'],
+/* Menu items: the solid danger red read at 3.8:1 in dark, and half-opacity disabled items fell further; the
+   -fg ink and muted text carry the same meaning at legible contrast. */
+[data-slot='dropdown-menu-item'][data-variant='destructive'],
+[data-slot='dropdown-menu-item'][data-variant='destructive'] svg {
+  color: var(--danger-fg) !important;
+}
+
+[data-slot^='dropdown-menu-'][data-disabled] {
+  opacity: 1;
+  color: var(--text-muted);
+}
+
 /* A sheet opened by mouse takes focus for its keyboard users; that is not a reason to ring the whole panel. */
 [data-slot='sheet-content']:focus-visible {
   box-shadow: var(--shadow-dialog);

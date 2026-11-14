@@ -64,7 +64,7 @@ export function MemberPicker({ people, value, onChange, placeholder, label, load
               >
                 <MemberAvatar member={person} />
                 <span className="min-w-0 flex-1 truncate">{person.name}</span>
-                <span className="truncate font-mono text-2xs text-text-muted">@{person.username}</span>
+                <span className="truncate font-mono text-2xs text-text-secondary">@{person.username}</span>
               </PickerItem>
             ))}
           </CommandList>

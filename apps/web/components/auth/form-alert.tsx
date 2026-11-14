@@ -30,8 +30,10 @@ export function FormAlert({
       role={danger ? 'alert' : 'status'}
       className={cn(
         'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border px-3 py-2.5',
-        danger && 'border-danger-fg/25 bg-danger-bg text-danger-fg',
-        tone === 'warning' && 'border-warning-fg/25 bg-warning-bg text-warning-fg',
+        // Half the palette tint over the surface: the full tint read as a slab in dark mode; the -fg ink keeps its contrast.
+        danger && 'border-danger-fg/25 bg-[color-mix(in_oklab,var(--danger-bg)_50%,var(--bg-surface))] text-danger-fg',
+        tone === 'warning' &&
+          'border-warning-fg/25 bg-[color-mix(in_oklab,var(--warning-bg)_50%,var(--bg-surface))] text-warning-fg',
         tone === 'success' && 'border-success-fg/25 bg-success-fg/10 text-success-fg',
       )}
     >

@@ -95,7 +95,7 @@ export const LINK_SOURCE: Record<GitLinkSource, string> = {
 };
 
 export const HEALTH: Record<GitConnectionHealth, { label: string; hue: Hue }> = {
-  active: { label: 'Active', hue: 'green' },
+  active: { label: 'Active', hue: 'gray' },
   failing: { label: 'Failing', hue: 'red' },
   token_expired: { label: 'Token expired', hue: 'red' },
   expiring: { label: 'Token expiring', hue: 'amber' },
@@ -116,7 +116,7 @@ export const CONNECTION_REASON: Record<GitConnectionError, string> = {
 };
 
 export const WEBHOOK_STATUS: Record<GitWebhookStatus, { label: string; hue: Hue }> = {
-  active: { label: 'Webhook active', hue: 'green' },
+  active: { label: 'Webhook active', hue: 'gray' },
   failing: { label: 'Webhook failing', hue: 'red' },
   missing: { label: 'Webhook missing', hue: 'amber' },
   not_applicable: { label: 'Delivered by the app', hue: 'gray' },
