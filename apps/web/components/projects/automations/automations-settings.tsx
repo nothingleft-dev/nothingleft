@@ -230,12 +230,17 @@ function RunsLine({ rule }: { rule: Automation }) {
   );
 }
 
-function MissingFlag() {
+/** `compact` is the icon alone, for the matrix's status cell, where the words would spill into Runs. */
+function MissingFlag({ compact = false }: { compact?: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex cursor-help items-center gap-1 text-2xs font-medium text-warning-fg">
-          <AlertTriangle className="size-3" aria-hidden /> Status missing
+        <span
+          aria-label={compact ? 'Status missing' : undefined}
+          className="inline-flex flex-none cursor-help items-center gap-1 text-2xs font-medium text-warning-fg"
+        >
+          <AlertTriangle className={compact ? 'size-icon-sm' : 'size-3'} aria-hidden />
+          {compact ? null : 'Status missing'}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs">
@@ -310,7 +315,7 @@ function GitMatrix({
                       label={`${label}: status`}
                       onChange={status => pick(trigger, rule, status)}
                     />
-                    {rule?.status_missing ? <MissingFlag /> : null}
+                    {rule?.status_missing ? <MissingFlag compact /> : null}
                   </span>
                 </td>
                 <td className="px-3 text-xs text-text-secondary">

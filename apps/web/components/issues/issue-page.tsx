@@ -1,5 +1,6 @@
 'use client';
 
+import { ArchivedNotice } from '@components/projects/archived-notice';
 import { useEffect, useRef, useState } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import type { Route } from 'next';
@@ -165,8 +166,10 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
       <div className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center">
         <div className="min-w-0">
           {archived ? (
-            <div role="status" className="mb-4 rounded-md bg-inset px-3 py-2 text-xs text-text-secondary">
-              {data.project.name} is archived, so this issue is read-only. Starring, voting and watching still work.
+            <div className="mb-4">
+              <ArchivedNotice>
+                {data.project.name} is archived, so this issue is read-only. Starring, voting and watching still work.
+              </ArchivedNotice>
             </div>
           ) : null}
 

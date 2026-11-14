@@ -1,10 +1,12 @@
 'use client';
 
+import { ArchivedNotice } from '@components/projects/archived-notice';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { IssueListItem, SavedView } from '@nothingleft/types';
 import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { Button } from '@components/ui/button';
+import { useCreateIssueDialog } from '@components/issues/create-issue-provider';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
 import { PageTitle } from '@components/page-title';
@@ -48,6 +50,7 @@ export function IssueList({ project, base = '', title, views: withViews = true }
   const timeZone = session.status === 'signed-in' ? session.user.timezone : undefined;
   const today = todayCalendarDate(timeZone);
   const roles = useProjectRoles();
+  const { openCreateIssue } = useCreateIssueDialog();
   const projectQuery = useProject(project ?? null);
   useRecordProjectVisit(project ?? null);
   notFoundOn404(projectQuery.error);
@@ -139,6 +142,12 @@ export function IssueList({ project, base = '', title, views: withViews = true }
   return (
     <div className="flex flex-col gap-4">
       {title ? <PageTitle>{title}</PageTitle> : null}
+      {projectQuery.data?.is_archived ? (
+        <ArchivedNotice>
+          {projectQuery.data.name} is archived, so its issues are read-only. A Project Admin can restore it from the
+          project’s settings.
+        </ArchivedNotice>
+      ) : null}
 
       <QueryBar
         value={state.q}
@@ -199,12 +208,21 @@ export function IssueList({ project, base = '', title, views: withViews = true }
           description={
             fullQuery
               ? `Nothing in ${project ?? 'your projects'} matches ${state.q || base}. Widen the search or clear it.`
-              : 'Press c to create the first one.'
+              : roles.writable.length > 0
+                ? 'Create the first one, or press c from anywhere.'
+                : 'Issues people create in your projects will appear here.'
           }
           action={
             state.q ? (
               <Button variant="outline" size="sm" onClick={() => commit('')}>
                 Clear the search
+              </Button>
+            ) : roles.writable.length > 0 ? (
+              <Button
+                size="sm"
+                onClick={() => openCreateIssue(project && roles.canEdit(project) ? { project } : undefined)}
+              >
+                Create issue
               </Button>
             ) : undefined
           }
