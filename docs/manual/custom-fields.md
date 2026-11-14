@@ -45,8 +45,8 @@ A field has:
 
 A project can have up to **50 active fields**. Archived fields do not count.
 
-The Fields tab lists the fields in the order issues show them, with each one's slug, type,
-the types it applies to and how many issues hold a value, and counts the active ones against
+The Fields tab lists the fields in the order issues show them, with each one's slug, type (and,
+for a select, how many options), the types it applies to and how many issues hold a value, and counts the active ones against
 the 50; at the limit, _New field_ is disabled until you archive or delete one. Drag a field's
 grip, or press **Alt + ↑/↓** on it, to reorder. Click a field's name to change it: the same
 dialog as _New field_, with the type and slug shown but fixed, and _Archive_ and _Delete_ at
@@ -140,8 +140,8 @@ more columns than fit, the list scrolls sideways.
 - **Archiving an option** keeps it on the issues that have it, but it can no longer be
   chosen.
 - **Deleting an option** that some issues use asks where to move them - another option -
-  and records the change in each issue's history. To keep those values instead, archive the
-  option.
+  and records the change in each issue's history. The same dialog offers _Archive instead_,
+  which keeps those values.
 - **Archiving a field** hides it from issues and pickers and stops changes to it, but keeps
   every value, and you can still search by it. Unarchive it to bring it back.
 - **Deleting a field** asks for confirmation, naming how many issues hold a value, and
@@ -165,7 +165,7 @@ In **Project settings → Time tracking**:
   _Billable_ with _Yes_ and _No_, say - each with its values and a one-letter badge. Select an
   attribute in the table to change its values beside it. When someone logs time, they pick a
   value for each beside _Type_, and the Spent time tab shows each value's letter next to the
-  work type's. Deleting a value that time entries use asks where to move them; deleting an
+  work type's. Deleting a value that time entries use asks where to move them, or archive it instead; deleting an
   attribute removes it from every entry. Work item attributes are not searched.
 
 A field chosen as the Estimation or Spent time cannot be archived; deleting it returns the

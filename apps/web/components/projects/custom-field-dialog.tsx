@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { ChevronsUpDown, GripVertical, X } from 'lucide-react';
+import { ChevronsUpDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { customFieldSlug, isCustomFieldSlug } from '@nothingleft/format';
 import {
@@ -33,6 +33,7 @@ import { DialogBody } from '@components/dialog-body';
 import { LabelColorPicker } from '@components/label-color-picker';
 import { TypeBadge } from '@components/issues/value-marks';
 import { DeleteValueDialog } from '@components/projects/schema-values';
+import { InlineRename, MarkFrame, ReorderGrip, RowChip, markButtonClass } from '@components/projects/value-row';
 import { FieldValue } from '@components/custom-fields/field-value';
 import { FieldEditor } from '@components/custom-fields/field-editors';
 import {
@@ -72,7 +73,11 @@ const OPTION_COLORS: readonly LabelColor[] = [
 ];
 
 const inputClass =
-  'h-control w-full rounded-md border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg disabled:bg-inset disabled:text-text-secondary';
+  'h-control w-full rounded-md border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg';
+
+// Pickers sit at an input's height and inset, on the same fill and edge, so a column of fields lines up.
+const triggerClass =
+  'w-full justify-start border-border-strong bg-surface px-3 font-normal has-[>svg]:px-3 dark:bg-surface';
 
 interface CustomFieldDialogProps {
   projectKey: string;
@@ -94,11 +99,14 @@ export function CustomFieldDialog({ projectKey, field, onClose }: CustomFieldDia
 function Row({
   label,
   hint,
+  error,
   htmlFor,
   children,
 }: {
   label: string;
   hint?: ReactNode;
+  /** Takes the hint's place while it shows: the two would say the same thing twice. */
+  error?: string | null;
   htmlFor?: string;
   children: ReactNode;
 }) {
@@ -108,9 +116,14 @@ function Row({
         {label}
       </label>
       {children}
-      {hint ? <div className="text-xs text-text-secondary">{hint}</div> : null}
+      {error ? <FieldError message={error} /> : hint ? <div className="text-xs text-text-secondary">{hint}</div> : null}
     </div>
   );
+}
+
+/** A value that can no longer change, shown as text at a control's height rather than as a disabled input. */
+function Fixed({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn('flex h-control min-w-0 items-center gap-2 text-sm', className)}>{children}</span>;
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -131,7 +144,15 @@ interface DraftOption {
 }
 
 function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
-  const ids = { name: useId(), slug: useId(), empty: useId(), min: useId(), max: useId(), decimals: useId() };
+  const ids = {
+    name: useId(),
+    slug: useId(),
+    empty: useId(),
+    min: useId(),
+    max: useId(),
+    decimals: useId(),
+    range: useId(),
+  };
   const editing = field !== undefined;
   const [name, setName] = useState(field?.name ?? '');
   const [type, setType] = useState<CustomFieldType | null>(field?.type ?? null);
@@ -171,14 +192,27 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
     ...(hasRange(type ?? 'text') && parseNumber(max) !== undefined ? { max: parseNumber(max) } : {}),
     ...(type === 'number' && parseNumber(decimals) !== undefined ? { decimals: parseNumber(decimals) } : {}),
   };
-  const configProblem = Object.values(config).some(v => v !== undefined && !Number.isFinite(v))
-    ? 'Minimum, maximum and decimals must be numbers.'
-    : config.min !== undefined && config.max !== undefined && config.min > config.max
-      ? 'The minimum is above the maximum.'
-      : config.decimals !== undefined &&
-          (!Number.isInteger(config.decimals) || config.decimals < 0 || config.decimals > CUSTOM_FIELD_DECIMALS_MAX)
-        ? `Decimals is a whole number from 0 to ${CUSTOM_FIELD_DECIMALS_MAX}.`
-        : null;
+  const notNumber = (v: number | undefined) => v !== undefined && !Number.isFinite(v);
+  const rangeInverted = config.min !== undefined && config.max !== undefined && config.min > config.max;
+  const decimalsWrong =
+    config.decimals !== undefined &&
+    (notNumber(config.decimals) ||
+      !Number.isInteger(config.decimals) ||
+      config.decimals < 0 ||
+      config.decimals > CUSTOM_FIELD_DECIMALS_MAX);
+  const invalid = {
+    min: notNumber(config.min) || rangeInverted,
+    max: notNumber(config.max) || rangeInverted,
+    decimals: decimalsWrong,
+  };
+  const configProblem =
+    notNumber(config.min) || notNumber(config.max)
+      ? 'Minimum and maximum must be numbers.'
+      : rangeInverted
+        ? 'The minimum is above the maximum.'
+        : decimalsWrong
+          ? `Decimals is a whole number from 0 to ${CUSTOM_FIELD_DECIMALS_MAX}.`
+          : null;
 
   // The default picker edits a field shaped like the one being made.
   const shape: CustomField | null = type
@@ -267,7 +301,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         {error.summary ? <FormAlert title={error.summary} /> : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Row label="Name" htmlFor={ids.name}>
+          <Row label="Name" htmlFor={ids.name} error={error.fields['name']}>
             <input
               id={ids.name}
               autoFocus
@@ -277,41 +311,55 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
               aria-invalid={Boolean(error.fields['name'])}
               className={inputClass}
             />
-            <FieldError message={error.fields['name']} />
           </Row>
-          <Row label="Type" hint={editing ? 'The type never changes once the field exists.' : undefined}>
-            <TypePicker value={type} disabled={editing} onChange={setType} />
+          <Row label="Type" hint={editing ? 'Fixed once the field exists.' : undefined}>
+            {editing ? (
+              <Fixed>
+                {(() => {
+                  const meta = FIELD_TYPE_META[field.type];
+                  return (
+                    <>
+                      <meta.icon className="size-icon flex-none text-text-secondary" />
+                      {meta.label}
+                    </>
+                  );
+                })()}
+              </Fixed>
+            ) : (
+              <TypePicker value={type} onChange={setType} />
+            )}
           </Row>
         </div>
 
-        <Row
-          label="Slug"
-          htmlFor={ids.slug}
-          hint={
-            editing
-              ? 'The name search uses. It never changes.'
-              : 'The name search uses: lower-case letters, digits and hyphens. Made from the name unless you choose one, and fixed once created.'
-          }
-        >
-          <input
-            id={ids.slug}
-            value={editing ? field.slug : slug}
-            disabled={editing}
-            onChange={e => setSlug(e.target.value.toLowerCase())}
-            onBlur={() => setSlugLeft(true)}
-            placeholder={generatedSlug ?? 'severity'}
-            aria-invalid={Boolean((slugLeft && slugProblem) || error.fields['slug'])}
-            className={cn(inputClass, 'font-mono text-xs')}
-          />
-          <FieldError message={(slugLeft ? slugProblem : null) ?? error.fields['slug']} />
-        </Row>
+        {editing ? (
+          <Row label="Slug" hint="The name search uses. Fixed once the field exists.">
+            <Fixed className="font-mono text-xs">{field.slug}</Fixed>
+          </Row>
+        ) : (
+          <Row
+            label="Slug"
+            htmlFor={ids.slug}
+            error={(slugLeft ? slugProblem : null) ?? error.fields['slug']}
+            hint="The name search uses: lower-case letters, digits and hyphens. Made from the name unless you choose one, and fixed once created."
+          >
+            <input
+              id={ids.slug}
+              value={slug}
+              onChange={e => setSlug(e.target.value.toLowerCase())}
+              onBlur={() => setSlugLeft(true)}
+              placeholder={generatedSlug ?? 'severity'}
+              aria-invalid={Boolean((slugLeft && slugProblem) || error.fields['slug'])}
+              className={cn(inputClass, 'font-mono text-xs')}
+            />
+          </Row>
+        )}
 
         <Row
           label="Applies to"
+          error={error.fields['applies_to']}
           hint={appliesTo.length === 0 ? 'Every issue type. Narrow it so the field does not clutter the others.' : null}
         >
           <AppliesToPicker projectKey={projectKey} value={appliesTo} onChange={setAppliesTo} />
-          <FieldError message={error.fields['applies_to']} />
         </Row>
 
         {type && hasOptions(type) ? (
@@ -343,7 +391,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         ) : null}
 
         {type && hasRange(type) ? (
-          <div className={cn('grid gap-4', type === 'number' ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Row label="Minimum" htmlFor={ids.min}>
               <input
                 id={ids.min}
@@ -351,6 +399,8 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 value={min}
                 onChange={e => setMin(e.target.value)}
                 placeholder="None"
+                aria-invalid={invalid.min || undefined}
+                aria-describedby={invalid.min ? ids.range : undefined}
                 className={cn(inputClass, 'font-mono text-xs')}
               />
             </Row>
@@ -361,37 +411,51 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 value={max}
                 onChange={e => setMax(e.target.value)}
                 placeholder="None"
+                aria-invalid={invalid.max || undefined}
+                aria-describedby={invalid.max ? ids.range : undefined}
                 className={cn(inputClass, 'font-mono text-xs')}
               />
             </Row>
             {type === 'number' ? (
-              <Row label="Decimals" htmlFor={ids.decimals}>
+              <Row label="Decimals" htmlFor={ids.decimals} hint="Digits after the point. Empty allows any.">
                 <input
                   id={ids.decimals}
                   inputMode="numeric"
                   value={decimals}
                   onChange={e => setDecimals(e.target.value)}
                   placeholder="Any"
+                  aria-invalid={invalid.decimals || undefined}
+                  aria-describedby={invalid.decimals ? ids.range : undefined}
                   className={cn(inputClass, 'font-mono text-xs')}
                 />
               </Row>
             ) : null}
-            <div className="sm:col-span-full">
-              <FieldError message={configProblem ?? error.fields['config']} />
-            </div>
+            {(configProblem ?? error.fields['config']) ? (
+              <p id={ids.range} role="alert" className="text-xs text-danger-fg sm:col-span-full">
+                {configProblem ?? error.fields['config']}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Row label="Default" hint="Filled in on every new issue that does not set the field.">
+          <Row
+            label="Default"
+            error={error.fields['default_value']}
+            hint="Filled in on every new issue that does not set the field."
+          >
             {shape ? (
               <DefaultPicker field={shape} projectKey={projectKey} value={defaultValue} onChange={setDefaultValue} />
             ) : (
-              <p className="flex h-control items-center text-sm text-text-muted">Choose a type first.</p>
+              <p className="flex h-control items-center text-sm text-text-secondary">Choose a type first.</p>
             )}
-            <FieldError message={error.fields['default_value']} />
           </Row>
-          <Row label="Empty label" htmlFor={ids.empty} hint="What an issue shows when the field has no value.">
+          <Row
+            label="Empty label"
+            htmlFor={ids.empty}
+            error={error.fields['empty_label']}
+            hint="What an issue shows when the field has no value."
+          >
             <input
               id={ids.empty}
               value={emptyLabel}
@@ -399,7 +463,6 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
               placeholder={emptyLabelOf({ name: name.trim() || 'value', empty_label: null })}
               className={inputClass}
             />
-            <FieldError message={error.fields['empty_label']} />
           </Row>
         </div>
 
@@ -546,15 +609,7 @@ function ArchiveButton({ projectKey, field, onDone }: { projectKey: string; fiel
   );
 }
 
-function TypePicker({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: CustomFieldType | null;
-  disabled: boolean;
-  onChange: (type: CustomFieldType) => void;
-}) {
+function TypePicker({ value, onChange }: { value: CustomFieldType | null; onChange: (type: CustomFieldType) => void }) {
   const [open, setOpen] = useState(false);
   const meta = value ? FIELD_TYPE_META[value] : null;
   return (
@@ -563,10 +618,11 @@ function TypePicker({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           role="combobox"
           aria-label="Type"
-          disabled={disabled}
-          className="justify-start font-normal disabled:opacity-100 disabled:bg-inset"
+          aria-expanded={open}
+          className={triggerClass}
         >
           {meta ? (
             <>
@@ -574,12 +630,12 @@ function TypePicker({
               {meta.label}
             </>
           ) : (
-            <span className="text-text-muted">Choose a type</span>
+            <span className="text-text-secondary">Choose a type</span>
           )}
-          {disabled ? null : <ChevronsUpDown className="ml-auto text-text-muted" />}
+          <ChevronsUpDown className="ml-auto text-text-secondary" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[320px] p-0">
+      <PopoverContent align="end" className="w-(--radix-popover-trigger-width) min-w-64 p-0">
         <PickerCommand>
           <CommandInput placeholder="Find a type" />
           <CommandList className="max-h-[360px]">
@@ -603,7 +659,7 @@ function TypePicker({
                       <m.icon className="mt-0.5 text-text-secondary" />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span>{m.label}</span>
-                        <span className="text-xs text-text-muted">{m.hint}</span>
+                        <span className="text-xs text-text-secondary">{m.hint}</span>
                       </span>
                     </PickerItem>
                   );
@@ -635,9 +691,11 @@ function AppliesToPicker({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           role="combobox"
           aria-label="Applies to"
-          className="h-auto min-h-(--control) justify-start py-1 font-normal"
+          aria-expanded={open}
+          className={cn(triggerClass, 'h-auto min-h-(--control) py-1')}
         >
           {value.length === 0 ? (
             <span>All types</span>
@@ -654,7 +712,7 @@ function AppliesToPicker({
               })}
             </span>
           )}
-          <ChevronsUpDown className="ml-auto text-text-muted" />
+          <ChevronsUpDown className="ml-auto text-text-secondary" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
@@ -717,8 +775,12 @@ function DefaultPicker({
     );
   }
 
+  if (hasOptions(field.type) && field.options.length === 0) {
+    return <p className="flex h-control items-center text-sm text-text-secondary">Add options first.</p>;
+  }
+
   const preview = (() => {
-    if (empty) return <span className="text-text-muted">No default</span>;
+    if (empty) return <span className="text-text-secondary">No default</span>;
     switch (field.type) {
       case 'select':
         return (
@@ -789,15 +851,11 @@ function DefaultPicker({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             aria-label="Default"
-            disabled={(field.type === 'select' || field.type === 'multi_select') && field.options.length === 0}
-            className="min-w-0 flex-1 justify-start overflow-hidden font-normal"
+            className={cn(triggerClass, 'min-w-0 flex-1 overflow-hidden')}
           >
-            {(field.type === 'select' || field.type === 'multi_select') && field.options.length === 0 ? (
-              <span className="text-text-muted">Add options first</span>
-            ) : (
-              preview
-            )}
+            {preview}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className={cn('p-0', field.type === 'markdown' ? 'w-[520px]' : 'w-[284px]')}>
@@ -890,36 +948,24 @@ function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: Opti
                   : undefined
               }
               className={cn(
-                'flex h-row items-center gap-2 px-2',
-                dragging === option.name && 'opacity-50',
+                'flex min-h-row items-center gap-2 px-2',
+                dragging === option.name && 'bg-inset',
                 over === index && dragging !== option.name && 'bg-selected',
                 option.is_archived && 'text-text-secondary',
               )}
             >
-              <button
-                type="button"
-                draggable
-                aria-label={`Reorder ${option.name}. Alt and the arrow keys move it.`}
-                title="Drag to reorder · Alt+↑/↓"
-                onDragStart={e => {
-                  e.dataTransfer.effectAllowed = 'move';
-                  e.dataTransfer.setData('text/plain', option.name);
-                  setDragging(option.name);
-                }}
+              <ReorderGrip
+                name={option.name}
+                onDragStart={() => setDragging(option.name)}
                 onDragEnd={() => {
                   setDragging(null);
                   setOver(null);
                 }}
-                className="grid size-6 cursor-grab place-items-center rounded-sm text-text-muted hover:bg-hover hover:text-text active:cursor-grabbing"
-              >
-                <GripVertical className="size-3.5" />
-              </button>
+              />
               <OptionColor option={option} onChange={color => onChange(option.name, { color })} />
-              <OptionName name={option.name} onRename={n => onChange(option.name, { name: n })} />
-              <span className="ml-auto flex items-center gap-1">
-                {option.is_archived ? (
-                  <span className="rounded-xs bg-inset px-1.5 text-2xs leading-5 text-text-secondary">Archived</span>
-                ) : null}
+              <InlineRename name={option.name} canEdit onRename={n => onChange(option.name, { name: n })} />
+              <span className="ml-auto flex flex-none items-center gap-1">
+                {option.is_archived ? <RowChip className="mr-1">Archived</RowChip> : null}
                 <Button
                   type="button"
                   variant="ghost"
@@ -976,12 +1022,19 @@ function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange
           type="button"
           aria-label={`Colour for ${option.name}`}
           title="Change colour"
-          className={cn(
-            `l-${option.color}`,
-            'grid size-5 place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg hover:ring-2 hover:ring-border-strong',
-          )}
+          className={markButtonClass}
         >
-          a
+          <MarkFrame>
+            <span
+              aria-hidden
+              className={cn(
+                `l-${option.color}`,
+                'grid size-badge-letter place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg',
+              )}
+            >
+              a
+            </span>
+          </MarkFrame>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-3">
@@ -994,44 +1047,6 @@ function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange
         />
       </PopoverContent>
     </Popover>
-  );
-}
-
-function OptionName({ name, onRename }: { name: string; onRename: (name: string) => void }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  if (draft === null) {
-    return (
-      <button
-        type="button"
-        title="Click to rename"
-        onClick={() => setDraft(name)}
-        className="min-w-0 truncate rounded-sm px-1 text-left text-sm hover:bg-hover"
-      >
-        {name}
-      </button>
-    );
-  }
-  const commit = () => {
-    const next = draft.trim();
-    setDraft(null);
-    if (next && next !== name) onRename(next);
-  };
-  return (
-    <input
-      autoFocus
-      aria-label={`Rename ${name}`}
-      value={draft}
-      onChange={e => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          commit();
-        }
-        if (e.key === 'Escape') setDraft(null);
-      }}
-      className="h-control-sm min-w-0 rounded-sm border border-border-strong bg-surface px-1 text-sm text-text"
-    />
   );
 }
 
@@ -1086,6 +1101,27 @@ function SavedOptions({ projectKey, field }: { projectKey: string; field: Custom
           name={deleting.name}
           message={deleting.message}
           targets={deleting.targets}
+          markOf={name => {
+            const option = field.options.find(o => o.name === name);
+            return option ? (
+              <span
+                aria-hidden
+                className={cn(
+                  `l-${option.color}`,
+                  'grid size-badge-letter flex-none place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg',
+                )}
+              >
+                a
+              </span>
+            ) : null;
+          }}
+          onArchive={() => {
+            updateOption.mutate(
+              { slug: field.slug, name: deleting.name, body: { is_archived: true } },
+              { onSuccess: ok, onError: fail },
+            );
+            setDeleting(null);
+          }}
           pending={deleteOption.isPending}
           onCancel={() => setDeleting(null)}
           onConfirm={target => onDelete(deleting.name, target)}

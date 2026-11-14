@@ -8,13 +8,15 @@ import type { Project } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { PageHeader } from '@components/page-header';
 import { Tabs } from '@components/tabs';
-import { RowsSkeleton, SettingsSkeleton } from '@components/skeletons';
+import { RowsSkeleton } from '@components/skeletons';
+import { Skeleton } from '@components/ui/skeleton';
 import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { SettingsSection } from '@components/settings/section';
 import { InviteEmailsForm } from '@components/invitations/invite-emails-form';
 import { ShareLinks } from '@components/invitations/share-links';
-import { ProjectGeneralForm } from '@components/projects/project-dialog';
+import { ProjectGeneralForm } from '@components/projects/project-general';
+import { ReadOnlyNotice } from '@components/projects/read-only-notice';
 import { ProjectPeople } from '@components/projects/project-people';
 import { SchemaValues } from '@components/projects/schema-values';
 import { DeletedIssues } from '@components/projects/deleted-issues';
@@ -57,6 +59,9 @@ const SCHEMA_TABS: Partial<Record<Tab, SchemaTable>> = {
 
 const ADMIN_ONLY: readonly Tab[] = ['deleted', 'invites'];
 
+// The tabs that say once, above everything, why nothing in them can change; the others say it in their own place.
+const NOTICE_TABS: readonly Tab[] = ['statuses', 'priorities', 'types', 'fields', 'time-tracking', 'boards'];
+
 const isTab = (value: string | null): value is Tab => TABS.some(t => t.value === value);
 
 export function ProjectSettings({ projectKey }: { projectKey: string }) {
@@ -70,7 +75,7 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
   const organization = useOrganization(slug);
   const repositories = useProjectRepositories(projectKey, requested === 'automations');
 
-  if (project.isPending) return <SettingsSkeleton />;
+  if (project.isPending) return <ProjectSettingsSkeleton />;
   if (!project.data) {
     notFoundOn404(project.error);
     return (
@@ -108,18 +113,19 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
       </div>
 
       <div className="flex flex-col gap-5">
+        {!canEdit && NOTICE_TABS.includes(tab) ? <ReadOnlyNotice>{readOnlyReason}</ReadOnlyNotice> : null}
+
         {tab === 'general' ? (
-          <>
+          <div className="flex max-w-xl flex-col gap-5">
+            {canEdit ? null : <ReadOnlyNotice>{readOnlyReason}</ReadOnlyNotice>}
             <SettingsSection title="Identity" description="What this project is called and how its issues are keyed.">
               <ProjectGeneralForm project={project.data} canEdit={canEdit} />
             </SettingsSection>
             {isAdmin ? <ArchiveSection project={project.data} /> : null}
-          </>
+          </div>
         ) : null}
 
-        {tab === 'fields' ? (
-          <CustomFieldsSettings projectKey={projectKey} canEdit={canEdit} readOnlyReason={readOnlyReason} />
-        ) : null}
+        {tab === 'fields' ? <CustomFieldsSettings projectKey={projectKey} canEdit={canEdit} /> : null}
 
         {tab === 'time-tracking' ? (
           <>
@@ -129,7 +135,7 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
         ) : null}
 
         {schemaTable === 'work-types' ? (
-          <WorkItemAttributes projectKey={projectKey} canEdit={canEdit} readOnlyReason={readOnlyReason} />
+          <WorkItemAttributes projectKey={projectKey} canEdit={canEdit} />
         ) : schemaTable ? (
           <SchemaValues key={schemaTable} projectKey={projectKey} table={schemaTable} canEdit={canEdit} />
         ) : null}
@@ -249,5 +255,51 @@ function ArchiveSection({ project }: { project: Project }) {
         <p>It leaves the sidebar and the active project list. Unarchiving puts it back, whole.</p>
       </ConfirmDialog>
     </SettingsSection>
+  );
+}
+
+/** The page before the project loads: its title, the tab strip and the General form at their real sizes. */
+function ProjectSettingsSkeleton() {
+  return (
+    <div className="flex flex-col gap-5" role="status" aria-label="Loading">
+      <div className="flex flex-col gap-2">
+        <div className="flex min-h-10 items-center gap-4">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-3.5 w-8" />
+        </div>
+        <div className="flex h-11 items-center gap-6 overflow-hidden border-b px-3">
+          {[52, 60, 62, 40, 40, 92, 48, 88, 84, 50, 46, 96].map((width, i) => (
+            <Skeleton key={i} className="h-3.5 flex-none" style={{ width }} />
+          ))}
+        </div>
+      </div>
+      <div className="flex max-w-xl flex-col gap-4" aria-hidden>
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-3.5 w-80 max-w-full" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[0, 1].map(i => (
+            <div key={i} className="flex flex-col gap-2">
+              <Skeleton className="h-3.5 w-12" />
+              <Skeleton className="h-control w-full rounded-md" />
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3.5 w-24" />
+          <Skeleton className="h-24 w-full rounded-md" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3.5 w-14" />
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from({ length: 14 }, (_, i) => (
+              <Skeleton key={i} className="size-6 rounded-sm" />
+            ))}
+          </div>
+        </div>
+        <Skeleton className="h-9 w-32 rounded-md" />
+      </div>
+    </div>
   );
 }

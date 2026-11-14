@@ -104,6 +104,17 @@ export const useUpdateSchemaValue = <T extends SchemaTable>(projectKey: string, 
     },
   );
 
+// Not optimistic: a refused rename keeps its editor open, which a row renamed ahead of the answer would remount.
+export const useRenameSchemaValue = <T extends SchemaTable>(projectKey: string, table: T) =>
+  useSchemaMutation(
+    projectKey,
+    table,
+    ({ name, to }: { name: string; to: string }) =>
+      updateSchemaValue(projectKey, table, name, { name: to } as SchemaTables[T]['update']).then(r => r.data),
+    undefined,
+    (rows, { name }, renamed) => rows.map(r => (r.name === name ? renamed : r)),
+  );
+
 export const useDeleteSchemaValue = <T extends SchemaTable>(projectKey: string, table: T) =>
   useSchemaMutation(
     projectKey,

@@ -442,7 +442,9 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
 18×18, 11px/600. **Filled** in the value's label colour for statuses, priorities and
 types; **neutral outlined** for work types, which have no colour. Always with a `title` tooltip naming the value. Used wherever a row must show
 priority and type in ≤ 44px: lists, link lists, inbox. Board cards show a dot and the name
-instead: a card has the width, and letters there read as noise.
+instead: a card has the width, and letters there read as noise. In a settings list the badge
+(or an option's colour swatch) sits in one 24 px frame with a chevron: the button that opens its
+colour and letter.
 
 ### Status pill
 Dot (8px; gray hollow for backlog, gray solid for unstarted, amber for started, green

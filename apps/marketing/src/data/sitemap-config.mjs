@@ -30,7 +30,7 @@ export const SITEMAP_PAGES = {
   '/docs/members': { lastmod: '2026-11-14T19:15:00+05:30' },
   '/docs/limits-and-billing': { lastmod: '2026-11-10T12:00:00+05:30' },
   '/docs/issues': { lastmod: '2026-11-10T12:00:00+05:30' },
-  '/docs/custom-fields': { lastmod: '2026-11-12T10:17:15+05:30' },
+  '/docs/custom-fields': { lastmod: '2026-11-14T19:25:00+05:30' },
   '/docs/search': { lastmod: '2026-11-12T10:17:15+05:30' },
   '/docs/agile': { lastmod: '2026-10-14T08:37:50+05:30' },
   '/docs/reports': { lastmod: '2026-11-14T13:49:00+05:30' },

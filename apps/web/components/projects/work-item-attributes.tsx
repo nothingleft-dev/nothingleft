@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type KeyboardEvent } from 'react';
-import { GripVertical, MoreHorizontal, Plus } from 'lucide-react';
+import { MoreHorizontal, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { WORK_ITEM_ATTRIBUTES_MAX, type WorkItemAttribute, type WorkItemAttributeValue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -29,7 +29,9 @@ import { ConfirmDialog } from '@components/confirm-dialog';
 import { LetterBadge } from '@components/letter-badge';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
-import { DeleteValueDialog, SchemaValues } from '@components/projects/schema-values';
+import { DeleteValueDialog, LetterForm, SchemaValues } from '@components/projects/schema-values';
+import { InlineRename, MarkFrame, ReorderGrip, RowChip, markButtonClass } from '@components/projects/value-row';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { useApiError } from '@hooks/use-api-error';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import {
@@ -48,21 +50,24 @@ import { PendingButton } from '@components/pending-button';
 
 const WORK_TYPE = '\u0000work-type';
 
-const summary = (names: readonly string[]) =>
-  names.length === 0
-    ? 'No values yet'
-    : names.length <= 2
-      ? names.join(', ')
-      : `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
+function ValuesSummary({ names }: { names: readonly string[] }) {
+  if (names.length === 0) return <span className="truncate text-text-secondary">No values yet</span>;
+  const rest = names.length - 2;
+  return (
+    <span className="flex min-w-0 items-center gap-1 text-text-secondary">
+      <span className="truncate">{names.slice(0, 2).join(', ')}</span>
+      {rest > 0 ? <span className="flex-none whitespace-nowrap">+{rest} more</span> : null}
+    </span>
+  );
+}
 
 interface WorkItemAttributesProps {
   projectKey: string;
   canEdit: boolean;
-  readOnlyReason: string;
 }
 
 /** Work type (built in) and the project's own attributes: a table, and the chosen one's values beside it. */
-export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: WorkItemAttributesProps) {
+export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesProps) {
   const attributes = useWorkItemAttributes(projectKey);
   const workTypes = useSchemaValues(projectKey, 'work-types');
   const update = useUpdateWorkItemAttribute(projectKey);
@@ -88,9 +93,15 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
 
   const rowClass = (active: boolean) =>
     cn(
-      'grid h-row cursor-pointer grid-cols-[24px_minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-2 px-2 text-sm hover:bg-hover',
-      active && 'bg-selected hover:bg-selected',
+      'relative grid h-row cursor-pointer grid-cols-[24px_minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-2 px-2 text-sm hover:bg-hover',
+      active && 'bg-active before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand hover:bg-active',
     );
+
+  const addButton = (
+    <Button size="sm" variant="outline" disabled={atCap} onClick={() => setAdding(true)}>
+      <Plus /> Add attribute
+    </Button>
+  );
 
   return (
     <SettingsSection
@@ -98,15 +109,30 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
       description="What someone picks when they log time. Work type is built in; add your own, such as Billable, each with its values and a one-letter badge. Attributes are not searched."
       actions={
         canEdit ? (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={atCap}
-            onClick={() => setAdding(true)}
-            title={atCap ? `${WORK_ITEM_ATTRIBUTES_MAX} attributes is the limit.` : undefined}
-          >
-            <Plus /> Add attribute
-          </Button>
+          <>
+            <span
+              aria-hidden={attributes.data ? undefined : true}
+              className={cn(
+                'text-xs tabular',
+                atCap ? 'font-medium text-warning-fg' : 'text-text-secondary',
+                !attributes.data && 'invisible',
+              )}
+            >
+              {rows.length} of {WORK_ITEM_ATTRIBUTES_MAX}
+            </span>
+            {atCap ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>{addButton}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {WORK_ITEM_ATTRIBUTES_MAX} attributes is the limit. Delete one to add another.
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              addButton
+            )}
+          </>
         ) : null
       }
     >
@@ -114,7 +140,7 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
         <div className="flex flex-col rounded-md border" role="table" aria-label="Work item attributes">
           <div
             role="row"
-            className="grid h-row-dense grid-cols-[24px_minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-2 border-b px-2 text-2xs font-medium text-text-muted"
+            className="grid h-row-dense grid-cols-[24px_minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-2 border-b px-2 text-2xs font-medium text-text-secondary"
           >
             <span />
             <span role="columnheader">Attribute</span>
@@ -130,11 +156,9 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
             <span />
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate">Work type</span>
-              <span className="rounded-xs border px-1.5 text-2xs leading-5 text-text-secondary">Built in</span>
+              <RowChip>Built in</RowChip>
             </span>
-            <span className="truncate text-text-secondary">
-              {summary((workTypes.data ?? []).filter(t => !t.is_archived).map(t => t.name))}
-            </span>
+            <ValuesSummary names={(workTypes.data ?? []).filter(t => !t.is_archived).map(t => t.name)} />
           </div>
           {attributes.isPending ? (
             <div className="p-2">
@@ -172,43 +196,28 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
                 className={cn(
                   rowClass(selected === attribute.name),
                   'border-t border-border-subtle',
-                  dragging === attribute.name && 'opacity-50',
+                  dragging === attribute.name && 'bg-inset',
                   over === index && dragging !== attribute.name && 'bg-selected',
                   attribute.is_archived && 'text-text-secondary',
                 )}
               >
                 {canEdit ? (
-                  <button
-                    type="button"
-                    draggable
-                    aria-label={`Reorder ${attribute.name}. Alt and the arrow keys move it.`}
-                    title="Drag to reorder · Alt+↑/↓"
-                    onClick={e => e.stopPropagation()}
-                    onDragStart={e => {
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', attribute.name);
-                      setDragging(attribute.name);
-                    }}
+                  <ReorderGrip
+                    name={attribute.name}
+                    onDragStart={() => setDragging(attribute.name)}
                     onDragEnd={() => {
                       setDragging(null);
                       setOver(null);
                     }}
-                    className="grid size-6 cursor-grab place-items-center rounded-sm text-text-muted hover:bg-hover hover:text-text active:cursor-grabbing"
-                  >
-                    <GripVertical className="size-3.5" />
-                  </button>
+                  />
                 ) : (
                   <span />
                 )}
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate">{attribute.name}</span>
-                  {attribute.is_archived ? (
-                    <span className="rounded-xs bg-inset px-1.5 text-2xs leading-5 text-text-secondary">Archived</span>
-                  ) : null}
+                  {attribute.is_archived ? <RowChip>Archived</RowChip> : null}
                 </span>
-                <span className="truncate text-text-secondary">
-                  {summary(attribute.values.filter(v => !v.is_archived).map(v => v.name))}
-                </span>
+                <ValuesSummary names={attribute.values.filter(v => !v.is_archived).map(v => v.name)} />
               </div>
             ))
           )}
@@ -237,8 +246,6 @@ export function WorkItemAttributes({ projectKey, canEdit, readOnlyReason }: Work
           )}
         </div>
       </div>
-
-      {!canEdit ? <p className="text-xs text-text-muted">{readOnlyReason}</p> : null}
 
       {adding ? (
         <AddAttributeDialog
@@ -342,19 +349,19 @@ function AttributePanel({
                 if (e.key === 'Enter') commitRename();
                 if (e.key === 'Escape') setRenaming(null);
               }}
-              className="h-control-sm rounded-sm border border-border-strong bg-surface px-1 font-medium text-text"
+              className="h-control-sm rounded-sm border border-border-strong bg-surface px-1 font-semibold text-text"
             />
           ) : canEdit ? (
             <button
               type="button"
               title="Click to rename"
               onClick={() => setRenaming(attribute.name)}
-              className="-ml-1 truncate rounded-sm px-1 text-left font-medium hover:bg-hover"
+              className="-ml-1 truncate rounded-sm px-1 text-left font-semibold hover:bg-hover"
             >
               {attribute.name}
             </button>
           ) : (
-            <h3 className="font-medium">{attribute.name}</h3>
+            <h3 className="font-semibold">{attribute.name}</h3>
           )}
           <p className="text-sm text-text-secondary">
             {attribute.is_archived
@@ -395,7 +402,9 @@ function AttributePanel({
         aria-label={`${attribute.name} values`}
       >
         {values.length === 0 ? (
-          <li className="px-3 py-2 text-sm text-text-secondary">No values yet. Add the first below.</li>
+          <li className="flex h-row items-center px-3 text-sm text-text-secondary">
+            {canEdit ? 'No values yet. Add the first below.' : 'No values yet.'}
+          </li>
         ) : null}
         {values.map((value, index) => (
           <li
@@ -420,38 +429,28 @@ function AttributePanel({
                 : undefined
             }
             className={cn(
-              'flex h-row items-center gap-2 px-2',
-              dragging === value.name && 'opacity-50',
+              'flex min-h-row items-center gap-2 px-2',
+              dragging === value.name && 'bg-inset',
               value.is_archived && 'text-text-secondary',
             )}
           >
             {canEdit ? (
-              <button
-                type="button"
-                draggable
-                aria-label={`Reorder ${value.name}. Alt and the arrow keys move it.`}
-                title="Drag to reorder · Alt+↑/↓"
-                onDragStart={e => {
-                  e.dataTransfer.effectAllowed = 'move';
-                  e.dataTransfer.setData('text/plain', value.name);
-                  setDragging(value.name);
-                }}
+              <ReorderGrip
+                name={value.name}
+                onDragStart={() => setDragging(value.name)}
                 onDragEnd={() => setDragging(null)}
-                className="grid size-6 cursor-grab place-items-center rounded-sm text-text-muted hover:bg-hover hover:text-text active:cursor-grabbing"
-              >
-                <GripVertical className="size-3.5" />
-              </button>
+              />
             ) : null}
             <ValueLetter
               value={value}
               canEdit={canEdit}
               onChange={short_label => patchValue(value.name, { short_label })}
             />
-            <ValueName name={value.name} canEdit={canEdit} onRename={name => patchValue(value.name, { name })} />
-            <span className="ml-auto flex items-center gap-2">
-              {value.is_archived ? (
-                <span className="rounded-xs bg-inset px-1.5 text-2xs leading-5 text-text-secondary">Archived</span>
-              ) : null}
+            <InlineRename name={value.name} canEdit={canEdit} onRename={name => patchValue(value.name, { name })} />
+            <span className="ml-auto flex flex-none items-center gap-2">
+              <span className="flex w-16 justify-start max-sm:w-auto">
+                {value.is_archived ? <RowChip>Archived</RowChip> : null}
+              </span>
               {canEdit ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -472,13 +471,13 @@ function AttributePanel({
                       <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem disabled={index === 0} onSelect={() => moveValue(value.name, index - 1)}>
-                          Up <span className="ml-auto text-2xs text-text-muted">Alt ↑</span>
+                          Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           disabled={index === values.length - 1}
                           onSelect={() => moveValue(value.name, index + 1)}
                         >
-                          Down <span className="ml-auto text-2xs text-text-muted">Alt ↓</span>
+                          Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
@@ -548,6 +547,14 @@ function AttributePanel({
           message={deleting.message}
           targets={deleting.targets}
           movedNoun="time entries"
+          markOf={name => {
+            const v = values.find(x => x.name === name);
+            return v ? <LetterBadge letter={v.short_label} label={v.name} variant="outlined" /> : null;
+          }}
+          onArchive={() => {
+            patchValue(deleting.name, { is_archived: true });
+            setDeleting(null);
+          }}
           pending={deleteValue.isPending}
           onCancel={() => setDeleting(null)}
           onConfirm={target => onDeleteValue(deleting.name, target)}
@@ -569,7 +576,7 @@ function ValueLetter({
   const [open, setOpen] = useState(false);
   const [letter, setLetter] = useState(value.short_label);
   const badge = <LetterBadge letter={value.short_label} label={value.name} variant="outlined" />;
-  if (!canEdit) return <span className="grid h-6 place-items-center px-1">{badge}</span>;
+  if (!canEdit) return <span className="grid h-6 flex-none place-items-center px-1">{badge}</span>;
   return (
     <Popover
       open={open}
@@ -579,78 +586,22 @@ function ValueLetter({
       }}
     >
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Letter for ${value.name}`}
-          title="Change letter"
-          className="grid h-6 place-items-center rounded-sm border border-transparent px-1 hover:border-border hover:bg-hover"
-        >
-          {badge}
+        <button type="button" aria-label={`Letter for ${value.name}`} title="Change letter" className={markButtonClass}>
+          <MarkFrame>{badge}</MarkFrame>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-3">
-        <form
-          noValidate
-          className="flex items-end gap-2"
-          onSubmit={e => {
-            e.preventDefault();
-            const next = letter.trim();
-            if (next.length === 1 && next !== value.short_label) onChange(next);
+        <LetterForm
+          autoFocus
+          value={letter}
+          onChange={setLetter}
+          onSubmit={next => {
+            if (next !== value.short_label) onChange(next);
             setOpen(false);
           }}
-        >
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-text-secondary">
-            Letter
-            <input
-              autoFocus
-              value={letter}
-              onChange={e => setLetter(e.target.value.slice(-1))}
-              className="h-control w-12 rounded-md border border-border-strong bg-surface text-center font-mono text-sm text-text"
-            />
-          </label>
-          <Button type="submit" size="sm" variant="outline" disabled={letter.trim().length !== 1}>
-            Set letter
-          </Button>
-        </form>
+        />
       </PopoverContent>
     </Popover>
-  );
-}
-
-function ValueName({ name, canEdit, onRename }: { name: string; canEdit: boolean; onRename: (name: string) => void }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  if (draft === null) {
-    return canEdit ? (
-      <button
-        type="button"
-        title="Click to rename"
-        onClick={() => setDraft(name)}
-        className="min-w-0 truncate rounded-sm px-1 text-left text-sm hover:bg-hover"
-      >
-        {name}
-      </button>
-    ) : (
-      <span className="min-w-0 truncate px-1 text-sm">{name}</span>
-    );
-  }
-  const commit = () => {
-    const next = draft.trim();
-    setDraft(null);
-    if (next && next !== name) onRename(next);
-  };
-  return (
-    <input
-      autoFocus
-      aria-label={`Rename ${name}`}
-      value={draft}
-      onChange={e => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => {
-        if (e.key === 'Enter') commit();
-        if (e.key === 'Escape') setDraft(null);
-      }}
-      className="h-control-sm min-w-0 rounded-sm border border-border-strong bg-surface px-1 text-sm text-text"
-    />
   );
 }
 

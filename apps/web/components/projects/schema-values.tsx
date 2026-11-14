@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type KeyboardEvent } from 'react';
-import { ChevronDown, GripVertical, MoreHorizontal } from 'lucide-react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { ChevronDown, ChevronsUpDown, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { STATUS_CATEGORIES, type LabelColor, type StatusCategory } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -33,9 +33,11 @@ import { LabelColorPicker } from '@components/label-color-picker';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { ValueCommand } from '@components/issues/pickers';
+import { InlineRename, MarkFrame, ReorderGrip, RowChip, markButtonClass } from '@components/projects/value-row';
 import {
   useCreateSchemaValue,
   useDeleteSchemaValue,
+  useRenameSchemaValue,
   useSchemaValues,
   useUpdateSchemaValue,
 } from '@hooks/use-project-schema';
@@ -114,6 +116,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
   const copy = { ...COPY[table], ...heading };
   const values = useSchemaValues(projectKey, table);
   const update = useUpdateSchemaValue(projectKey, table);
+  const rename = useRenameSchemaValue(projectKey, table);
   const remove = useDeleteSchemaValue(projectKey, table);
   const [dragging, setDragging] = useState<string | null>(null);
   const [markOpen, setMarkOpen] = useState<string | null>(null);
@@ -123,6 +126,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
   );
 
   const rows = ((values.data ?? []) as AnyValue[]).toSorted((a, b) => a.position - b.position);
+  const byName = new Map(rows.map(r => [r.name, r]));
 
   const patch = (name: string, body: AnyUpdate) =>
     update.mutate({ name, body } as never, { onError: error => toastError(`Could not update ${name}`, error) });
@@ -155,16 +159,23 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
     move(name, index + (event.key === 'ArrowUp' ? -1 : 1));
   };
 
+  const addForm = <AddValue projectKey={projectKey} table={table} placeholder={copy.placeholder} />;
+
   return (
     <SettingsSection title={copy.title} description={copy.description}>
       {values.isPending ? (
-        <RowsSkeleton rows={5} />
+        <RowsSkeleton rows={5} columns={['badge', 'title', 'meta']} />
       ) : values.isError && !values.data ? (
         <LoadError onRetry={() => void values.refetch()} detail={errorDetail(values.error)}>
           {`The ${copy.noun} list could not be loaded.`}
         </LoadError>
       ) : rows.length === 0 ? (
-        <EmptyState title={`No ${copy.noun} yet.`} description={canEdit ? 'Add the first one below.' : undefined} />
+        <EmptyState
+          title={`No ${copy.noun} yet.`}
+          description={canEdit ? 'Add the first one.' : 'A Project Admin can add them.'}
+          action={canEdit ? addForm : undefined}
+          className="[&>div]:w-full"
+        />
       ) : (
         <ol className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label={copy.title}>
           {rows.map((row, index) => (
@@ -190,30 +201,21 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
                   : undefined
               }
               className={cn(
-                'flex h-row items-center gap-2 px-2',
-                dragging === row.name && 'opacity-50',
+                'flex min-h-row items-center gap-2 px-2',
+                dragging === row.name && 'bg-inset',
                 overIndex === index && dragging !== row.name && 'bg-selected',
+                row.is_archived && 'text-text-secondary',
               )}
             >
               {canEdit ? (
-                <button
-                  type="button"
-                  draggable
-                  aria-label={`Reorder ${row.name}. Alt and the arrow keys move it.`}
-                  title="Drag to reorder · Alt+↑/↓"
-                  onDragStart={e => {
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', row.name);
-                    setDragging(row.name);
-                  }}
+                <ReorderGrip
+                  name={row.name}
+                  onDragStart={() => setDragging(row.name)}
                   onDragEnd={() => {
                     setDragging(null);
                     setOverIndex(null);
                   }}
-                  className="grid size-6 cursor-grab place-items-center rounded-sm text-text-muted hover:bg-hover hover:text-text active:cursor-grabbing"
-                >
-                  <GripVertical className="size-3.5" />
-                </button>
+                />
               ) : null}
 
               <ValueMark
@@ -223,22 +225,28 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
                 onOpenChange={o => setMarkOpen(o ? row.name : null)}
                 onChange={body => patch(row.name, body)}
               />
-              <ValueName name={row.name} canEdit={canEdit} onRename={name => patch(row.name, { name })} />
+              <InlineRename
+                name={row.name}
+                canEdit={canEdit}
+                onRename={to => rename.mutateAsync({ name: row.name, to })}
+              />
 
-              <span className="ml-auto flex items-center gap-2">
-                {row.category ? (
-                  <CategoryLabel
-                    category={row.category}
-                    canEdit={canEdit}
-                    onChange={c => patch(row.name, { category: c })}
-                  />
+              <span className="ml-auto flex flex-none items-center gap-2">
+                {table === 'statuses' ? (
+                  <span className="flex w-28 justify-end max-sm:w-auto">
+                    {row.category ? (
+                      <CategoryLabel
+                        category={row.category}
+                        canEdit={canEdit}
+                        label={`${row.name} category`}
+                        onChange={c => patch(row.name, { category: c })}
+                      />
+                    ) : null}
+                  </span>
                 ) : null}
-                {row.is_default ? (
-                  <span className="rounded-xs border px-1.5 text-2xs leading-5 text-text-secondary">Default</span>
-                ) : null}
-                {row.is_archived ? (
-                  <span className="rounded-xs bg-inset px-1.5 text-2xs leading-5 text-text-secondary">Archived</span>
-                ) : null}
+                <span className="flex w-16 justify-start max-sm:w-auto">
+                  {row.is_default ? <RowChip>Default</RowChip> : row.is_archived ? <RowChip>Archived</RowChip> : null}
+                </span>
                 {canEdit ? (
                   <RowMenu
                     row={row}
@@ -256,8 +264,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
         </ol>
       )}
 
-      {canEdit ? <AddValue projectKey={projectKey} table={table} placeholder={copy.placeholder} /> : null}
-      {!canEdit ? <p className="text-xs text-text-muted">Only a Project Admin can change these.</p> : null}
+      {canEdit && rows.length > 0 ? addForm : null}
 
       {deleting ? (
         <DeleteValueDialog
@@ -265,12 +272,26 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
           name={deleting.name}
           message={deleting.message}
           targets={deleting.targets}
+          markOf={name => {
+            const row = byName.get(name);
+            return row ? <PlainMark row={row} /> : null;
+          }}
           pending={remove.isPending}
           onCancel={() => setDeleting(null)}
           onConfirm={target => onDelete(deleting.name, target)}
         />
       ) : null}
     </SettingsSection>
+  );
+}
+
+// Work types carry no colour: a neutral outlined letter.
+function PlainMark({ row }: { row: AnyValue }) {
+  if (!row.short_label) return null;
+  return row.color ? (
+    <LetterBadge letter={row.short_label} label={row.name} swatch={row.color} />
+  ) : (
+    <LetterBadge letter={row.short_label} label={row.name} variant="outlined" />
   );
 }
 
@@ -291,14 +312,12 @@ function ValueMark({
   if (!row.short_label) return null;
   const noun = row.color ? 'Colour and letter' : 'Letter';
 
-  // Work types carry no colour: a neutral outlined letter.
-  const mark = row.color ? (
-    <LetterBadge letter={row.short_label} label={row.name} swatch={row.color} />
-  ) : (
-    <LetterBadge letter={row.short_label} label={row.name} variant="outlined" />
-  );
-
-  if (!canEdit) return <span className="grid h-6 place-items-center px-1">{mark}</span>;
+  if (!canEdit)
+    return (
+      <span className="grid h-6 flex-none place-items-center px-1">
+        <PlainMark row={row} />
+      </span>
+    );
 
   return (
     <Popover
@@ -313,101 +332,111 @@ function ValueMark({
           type="button"
           aria-label={`${noun} for ${row.name}`}
           title={`Change ${noun.toLowerCase()}`}
-          className="flex h-6 items-center gap-0.5 rounded-sm border border-transparent pr-0.5 pl-1 text-text-muted hover:border-border hover:bg-hover hover:text-text data-[state=open]:border-border"
+          className={markButtonClass}
         >
-          {mark}
-          <ChevronDown className="size-3" />
+          <MarkFrame>
+            <PlainMark row={row} />
+          </MarkFrame>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3">
         {row.color ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-text-secondary">Colour</span>
+            <span className="text-sm font-medium text-text-secondary">Colour</span>
             <LabelColorPicker value={row.color} onChange={color => onChange({ color })} />
           </div>
         ) : null}
-        <form
-          noValidate
-          className="flex items-end gap-2"
-          onSubmit={e => {
-            e.preventDefault();
-            const next = letter.trim();
-            if (next.length === 1 && next !== row.short_label) onChange({ short_label: next });
+        <LetterForm
+          value={letter}
+          onChange={setLetter}
+          onSubmit={next => {
+            if (next !== row.short_label) onChange({ short_label: next });
           }}
-        >
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-text-secondary">
-            Letter
-            <input
-              value={letter}
-              onChange={e => setLetter(e.target.value.slice(-1))}
-              className="h-control w-12 rounded-md border border-border-strong bg-surface text-center font-mono text-sm text-text"
-            />
-          </label>
-          <Button type="submit" size="sm" variant="outline" disabled={letter.trim().length !== 1}>
-            Set letter
-          </Button>
-        </form>
+        />
       </PopoverContent>
     </Popover>
   );
 }
 
-function ValueName({ name, canEdit, onRename }: { name: string; canEdit: boolean; onRename: (name: string) => void }) {
-  const [draft, setDraft] = useState<string | null>(null);
-
-  if (draft === null) {
-    return canEdit ? (
-      <button
-        type="button"
-        title="Click to rename"
-        onClick={() => setDraft(name)}
-        className="min-w-0 truncate rounded-sm px-1 text-left text-sm hover:bg-hover"
-      >
-        {name}
-      </button>
-    ) : (
-      <span className="min-w-0 truncate px-1 text-sm">{name}</span>
-    );
-  }
-
-  const commit = () => {
-    const next = draft.trim();
-    setDraft(null);
-    if (next && next !== name) onRename(next);
-  };
-
+/** The one-letter badge editor, shared by every value list. */
+export function LetterForm({
+  value,
+  onChange,
+  onSubmit,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (letter: string) => void;
+  onSubmit: (letter: string) => void;
+  autoFocus?: boolean;
+}) {
   return (
-    <input
-      autoFocus
-      aria-label={`Rename ${name}`}
-      value={draft}
-      onChange={e => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => {
-        if (e.key === 'Enter') commit();
-        if (e.key === 'Escape') setDraft(null);
+    <form
+      noValidate
+      className="flex items-end gap-2"
+      onSubmit={e => {
+        e.preventDefault();
+        const next = value.trim();
+        if (next.length === 1) onSubmit(next);
       }}
-      className="h-control-sm min-w-0 rounded-sm border border-border-strong bg-surface px-1 text-sm text-text"
-    />
+    >
+      <label className="flex flex-col gap-1.5 text-sm font-medium text-text-secondary">
+        Letter
+        <input
+          autoFocus={autoFocus}
+          value={value}
+          onChange={e => onChange(e.target.value.slice(-1))}
+          className="h-control w-12 rounded-md border border-border-strong bg-surface text-center font-mono text-sm text-text"
+        />
+      </label>
+      <Button type="submit" size="sm" variant="outline" disabled={value.trim().length !== 1}>
+        Set letter
+      </Button>
+    </form>
   );
 }
 
 function CategoryLabel({
   category,
   canEdit,
+  label,
   onChange,
+  variant = 'row',
 }: {
   category: StatusCategory;
   canEdit: boolean;
+  label: string;
   onChange: (category: StatusCategory) => void;
+  /** `field` is the add form's picker: a bordered control at input height. */
+  variant?: 'row' | 'field';
 }) {
-  if (!canEdit) return <span className="text-xs text-text-secondary">{CATEGORY_LABELS[category]}</span>;
+  if (!canEdit) return <span className="px-2 text-xs text-text-secondary">{CATEGORY_LABELS[category]}</span>;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="xs" className="font-normal text-text-secondary" aria-label="Category">
-          {CATEGORY_LABELS[category]}
-        </Button>
+        {variant === 'field' ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`${label}: ${CATEGORY_LABELS[category]}`}
+            className="h-control w-32 justify-between bg-surface font-normal dark:bg-surface"
+          >
+            {CATEGORY_LABELS[category]}
+            <ChevronsUpDown className="text-text-secondary" />
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            aria-label={`${label}: ${CATEGORY_LABELS[category]}`}
+            className="font-normal text-text-secondary"
+          >
+            {CATEGORY_LABELS[category]}
+            <ChevronDown className="text-text-muted" />
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup value={category} onValueChange={v => onChange(v as StatusCategory)}>
@@ -460,10 +489,10 @@ function RowMenu({ row, first, last, onMove, onPatch, onDelete, onEditMark }: Ro
           <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuItem disabled={first} onSelect={() => onMove(-1)}>
-              Up <span className="ml-auto text-2xs text-text-muted">Alt ↑</span>
+              Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
             </DropdownMenuItem>
             <DropdownMenuItem disabled={last} onSelect={() => onMove(1)}>
-              Down <span className="ml-auto text-2xs text-text-muted">Alt ↓</span>
+              Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -485,7 +514,7 @@ function AddValue({ projectKey, table, placeholder }: { projectKey: string; tabl
   return (
     <form
       noValidate
-      className="flex flex-col gap-1.5"
+      className="flex w-full flex-col gap-1.5"
       onSubmit={e => {
         e.preventDefault();
         const trimmed = name.trim();
@@ -504,29 +533,56 @@ function AddValue({ projectKey, table, placeholder }: { projectKey: string; tabl
         <input
           aria-label={placeholder}
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={e => {
+            setName(e.target.value);
+            setError(null);
+          }}
           placeholder={placeholder}
-          aria-invalid={Boolean(error)}
-          className="h-control min-w-0 flex-1 rounded-md border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-text-muted sm:max-w-xs"
+          aria-invalid={error ? true : undefined}
+          className="h-control min-w-0 flex-1 rounded-md border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg max-sm:basis-full sm:max-w-xs"
         />
-        {table === 'statuses' ? <CategoryLabel category={category} canEdit onChange={setCategory} /> : null}
-        <Button type="submit" variant="outline" size="sm" disabled={!name.trim() || create.isPending}>
+        {table === 'statuses' ? (
+          <CategoryLabel
+            category={category}
+            canEdit
+            variant="field"
+            label="New status category"
+            onChange={setCategory}
+          />
+        ) : null}
+        <PendingButton
+          type="submit"
+          variant="outline"
+          size="sm"
+          className="h-control"
+          disabled={!name.trim()}
+          pending={create.isPending}
+          pendingLabel="Adding…"
+        >
           Add
-        </Button>
+        </PendingButton>
       </div>
-      {error ? <p className="text-xs text-danger-fg">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-xs text-danger-fg">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }
 
 export interface DeleteValueDialogProps {
   name: string;
-  /** Present once the API answered `config.in_use`: the count, and where the issues may go. */
+  /** Present once the API answered that the value is in use: the count, and where its uses may go. */
   message?: string;
   targets?: readonly string[];
+  /** The badge beside each target in the picker. */
+  markOf?: (name: string) => ReactNode;
   pending: boolean;
   onCancel: () => void;
   onConfirm: (target?: string) => void;
+  /** Offered beside the delete once the value is in use, where archiving keeps it on what has it. */
+  onArchive?: () => void;
   /** What moves when the value goes: `issues`, or `time entries` for a work item attribute. */
   movedNoun?: string;
 }
@@ -535,9 +591,11 @@ export function DeleteValueDialog({
   name,
   message,
   targets,
+  markOf,
   pending,
   onCancel,
   onConfirm,
+  onArchive,
   movedNoun = 'issues',
 }: DeleteValueDialogProps) {
   const [target, setTarget] = useState<string | null>(null);
@@ -556,18 +614,32 @@ export function DeleteValueDialog({
         </DialogHeader>
         {mustMove ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-text-secondary">Move its {movedNoun} to</span>
+            <span className="text-sm font-medium text-text-secondary">Move its {movedNoun} to</span>
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="justify-start font-normal">
-                  {target ?? <span className="text-text-muted">Choose where they go</span>}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="justify-start border-border-strong bg-surface font-normal dark:bg-surface"
+                >
+                  {target ? (
+                    <>
+                      {markOf?.(target)}
+                      <span className="truncate">{target}</span>
+                    </>
+                  ) : (
+                    <span className="text-text-secondary">Choose where they go</span>
+                  )}
+                  <ChevronsUpDown className="ml-auto text-text-secondary" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
                 <ValueCommand
                   placeholder="Find a value"
                   selected={target}
-                  options={targets.map(t => ({ name: t }))}
+                  options={targets.map(t => ({ name: t, mark: markOf?.(t) }))}
                   onSelect={t => {
                     setTarget(t);
                     setOpen(false);
@@ -581,6 +653,11 @@ export function DeleteValueDialog({
           </div>
         ) : null}
         <DialogFooter>
+          {mustMove && onArchive ? (
+            <Button variant="outline" disabled={pending} onClick={onArchive} className="sm:mr-auto">
+              Archive instead
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>

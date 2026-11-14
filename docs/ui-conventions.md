@@ -296,7 +296,9 @@ Statuses, priorities, types and work types share one list: drag the grip or pres
 `Alt + ↑/↓` to reorder, click the name to rename, click the badge for colour and
 letter, and the row menu for *Make default*, *Archive* and *Delete*. Deleting a value
 issues still use asks where to move them, offering only the values that can receive
-them.
+them. Renaming a value to a name already in use keeps the editor open with the reason under
+it. Anyone who cannot change the lists sees the values and one line saying why, never
+disabled controls.
 
 ## Comment editor
 
