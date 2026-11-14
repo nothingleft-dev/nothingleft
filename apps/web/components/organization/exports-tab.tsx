@@ -26,7 +26,7 @@ const STATUS: Record<ExportStatus, [JobTone, string]> = {
   running: ['moving', 'Building'],
   completed: ['done', 'Ready'],
   failed: ['failed', 'Failed'],
-  expired: ['gone', 'Expired'],
+  expired: ['idle', 'Expired'],
 };
 
 const files = (n: number) => `${formatCount(n)} ${n === 1 ? 'file' : 'files'}`;
@@ -51,7 +51,7 @@ export function ExportsTab({ organization }: { organization: Organization }) {
     <>
       <SettingsSection
         title="Export organisation"
-        description={`One .zip with every project, issue, article and attached file, the members and the audit log — wherever the files are stored. It is built in the background and emailed to you when ready, then kept here for ${ORG_EXPORT_TTL_DAYS} days for any Org Admin or the Owner to download.`}
+        description={`One .zip with every project, issue, article and attached file, the members and the audit log — wherever the files are stored. It is built in the background and emailed to you when ready, then kept here for ${ORG_EXPORT_TTL_DAYS} days for any Org Admin or the Owner to download. Not included: the trash, private saved views, notifications, personal settings and secrets.`}
         actions={
           <PendingButton size="sm" onClick={start} pending={request.isPending} pendingLabel="Requesting…">
             Export organisation
@@ -67,15 +67,13 @@ export function ExportsTab({ organization }: { organization: Organization }) {
           </p>
         ) : pending && !request.isPending ? (
           <p className="text-sm text-text-secondary" role="status">
-            An export is being built. This page checks on it every few seconds, and the email goes out when it is ready.
+            An export is being built. Asking again shows this one; this page checks on it every few seconds, and the
+            email goes out when it is ready.
           </p>
         ) : null}
       </SettingsSection>
 
-      <SettingsSection
-        title="Recent exports"
-        description="Not included: the trash, private saved views, notifications, personal settings and secrets."
-      >
+      <SettingsSection title="Recent exports">
         {exports.isPending ? (
           <ExportsSkeleton />
         ) : exports.isError && !exports.data ? (
@@ -89,18 +87,8 @@ export function ExportsTab({ organization }: { organization: Organization }) {
           />
         ) : (
           <div className="overflow-x-auto rounded-md border">
-            <table className="w-full min-w-[940px] table-fixed text-sm">
-              <thead className="bg-app text-left text-2xs text-text-secondary">
-                <tr>
-                  <th className="h-7 w-28 px-3 font-medium">Status</th>
-                  <th className="px-3 font-medium">Requested by</th>
-                  <th className="w-32 px-3 font-medium">Requested</th>
-                  <th className="w-24 px-3 text-right font-medium">Size</th>
-                  <th className="w-40 px-3 font-medium">Files</th>
-                  <th className="w-36 px-3 font-medium">Download until</th>
-                  <th className="w-28 px-3" aria-label="Actions" />
-                </tr>
-              </thead>
+            <table className={TABLE}>
+              <ExportsHead />
               <tbody className="divide-y divide-border-subtle">
                 {jobs.map(job => (
                   <ExportRow key={job.id} job={job} />
@@ -178,19 +166,57 @@ function ExportRow({ job }: { job: ExportJob }) {
   );
 }
 
+const TABLE = 'w-full min-w-[940px] table-fixed text-sm';
+
+function ExportsHead() {
+  return (
+    <thead className="bg-app text-left text-2xs text-text-secondary">
+      <tr>
+        <th className="h-7 w-28 px-3 font-medium">Status</th>
+        <th className="px-3 font-medium">Requested by</th>
+        <th className="w-32 px-3 font-medium">Requested</th>
+        <th className="w-24 px-3 text-right font-medium">Size</th>
+        <th className="w-40 px-3 font-medium">Files</th>
+        <th className="w-36 px-3 font-medium">Download until</th>
+        <th className="w-28 px-3" aria-label="Actions" />
+      </tr>
+    </thead>
+  );
+}
+
 function ExportsSkeleton() {
   return (
-    <div className="divide-y divide-border-subtle rounded-md border" role="status" aria-label="Loading exports">
-      {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-6 px-3">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="ml-auto h-3 w-14" />
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-6 w-20" />
-        </div>
-      ))}
+    <div className="overflow-x-auto rounded-md border" role="status" aria-label="Loading exports">
+      <table className={TABLE} aria-hidden>
+        <ExportsHead />
+        <tbody className="divide-y divide-border-subtle">
+          {Array.from({ length: 3 }, (_, i) => (
+            <tr key={i} className="h-row">
+              <td className="px-3">
+                <Skeleton className="h-3 w-16" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-28" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-20" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="ml-auto h-3 w-12" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-16" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-20" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="ml-auto h-6 w-20" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

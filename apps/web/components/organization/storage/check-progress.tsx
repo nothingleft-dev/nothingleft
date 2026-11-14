@@ -93,7 +93,7 @@ export function CheckProgress({ states, failure }: CheckProgressProps) {
                     <span className="sr-only">— {STATE_LABELS[state]}</span>
                   </span>
                   {state === 'failed' && failure ? (
-                    <p className="ml-7.5 text-xs leading-5 text-danger-fg">{failure}</p>
+                    <p className="ml-7.5 text-xs leading-5 text-pretty text-text">{failure}</p>
                   ) : null}
                 </li>
               );

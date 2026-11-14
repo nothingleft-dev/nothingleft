@@ -15,7 +15,16 @@ import { plural } from '@lib/numbers';
 
 const count = (n: number) => `${plural(n, 'file')}`;
 
-export function MigrationPanel({ slug, overview }: { slug: string; overview: StorageOverview }) {
+/** `quiet` while the key form above is open, so the page has one primary action. */
+export function MigrationPanel({
+  slug,
+  overview,
+  quiet = false,
+}: {
+  slug: string;
+  overview: StorageOverview;
+  quiet?: boolean;
+}) {
   const connection = overview.connection;
   const start = useStartMigration(slug);
   if (!connection) return null;
@@ -34,7 +43,7 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
       description={
         running
           ? 'Each file is copied, checked, and only then removed from the built-in storage, so every file keeps opening throughout. You can leave this page; it carries on.'
-          : 'New files already go to your bucket. Files uploaded before it was connected stay in the built-in storage until they are moved.'
+          : undefined
       }
     >
       {running || migration.state === 'failed' || (migration.state === 'done' && migration.total_files > 0) ? (
@@ -52,12 +61,14 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
           action={
             verified ? (
               <Button type="button" variant="outline" size="sm" onClick={move} disabled={start.isPending}>
-                Retry
+                Try again
               </Button>
             ) : undefined
           }
         >
-          <p>The files moved so far are safe, and every file keeps opening. Retry to carry on from where it stopped.</p>
+          <p>
+            The files moved so far are safe, and every file keeps opening. Try again to carry on from where it stopped.
+          </p>
         </FormAlert>
       ) : null}
 
@@ -67,7 +78,7 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
           action={
             verified ? (
               <Button type="button" variant="outline" size="sm" onClick={move} disabled={start.isPending}>
-                Retry
+                Try again
               </Button>
             ) : undefined
           }
@@ -76,7 +87,7 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
             {migration.error ? describeCheckError(migration.error, connection).message : 'The bucket refused a file.'}{' '}
             Every file keeps opening from wherever it is now.
           </p>
-          {verified ? null : <p>Update the key first; Retry carries on from where it stopped.</p>}
+          {verified ? null : <p>Update the key first; the move then carries on from where it stopped.</p>}
         </FormAlert>
       ) : null}
 
@@ -92,6 +103,7 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
           <div className="flex flex-wrap items-center gap-3">
             <PendingButton
               size="sm"
+              variant={quiet ? 'outline' : 'default'}
               onClick={move}
               disabled={!verified}
               pending={start.isPending}
@@ -105,7 +117,9 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
             </span>
           </div>
         ) : (
-          <p className="text-sm text-text-secondary">Every file is in {connection.bucket}. Nothing is left to move.</p>
+          <p className="text-sm text-text-secondary">
+            Every file is in <span className="font-mono">{connection.bucket}</span>. Nothing is left to move.
+          </p>
         )
       ) : null}
     </SettingsSection>
@@ -115,9 +129,9 @@ export function MigrationPanel({ slug, overview }: { slug: string; overview: Sto
 function Progress({ files, bytes, done }: { files: [number, number]; bytes: [number, number]; done: boolean }) {
   const ratio = bytes[1] > 0 ? bytes[0] / bytes[1] : files[1] > 0 ? files[0] / files[1] : done ? 1 : 0;
   return (
-    <div className="flex max-w-2xl flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <Meter ratio={ratio} label="Files moved" className="h-1.5" />
-      <div className="flex flex-wrap justify-between gap-x-6 gap-y-1 font-mono text-xs tabular text-text-secondary">
+      <div className="flex flex-wrap justify-between gap-x-6 gap-y-1 text-xs tabular text-text-secondary">
         <span>
           <span className="text-text">{files[0]}</span> of {files[1]} files
         </span>

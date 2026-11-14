@@ -43,7 +43,7 @@ export const SITEMAP_PAGES = {
   '/docs/notifications': { lastmod: '2026-11-14T23:26:00+05:30' },
   '/docs/tags': { lastmod: '2026-11-14T19:15:00+05:30' },
   '/docs/import-export': { lastmod: '2026-11-15T00:17:00+05:30' },
-  '/docs/storage': { lastmod: '2026-10-13T11:11:10+05:30' },
+  '/docs/storage': { lastmod: '2026-11-15T00:23:00+05:30' },
   '/docs/self-hosting': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/self-hosting-aws': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/keyboard-shortcuts': { lastmod: '2026-10-13T11:11:10+05:30' },

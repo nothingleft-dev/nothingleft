@@ -32,7 +32,7 @@ export function validateDraft(draft: ConnectionDraft, { rotating }: { rotating: 
   const customEndpoint = env.byoAllowAnyEndpoint && draft.endpoint.trim() !== '';
   if (!rotating && !customEndpoint) {
     if (draft.provider === 'r2' && !shape.account_id.safeParse(draft.account_id.trim().toLowerCase()).success) {
-      errors.account_id = 'Paste the 32-character account ID from the R2 overview page in the Cloudflare dashboard.';
+      errors.account_id = 'Paste the 32-character account ID.';
     }
     if (draft.provider === 's3' && !shape.region.safeParse(draft.region).success) {
       errors.region = 'Choose the region the bucket was created in.';
@@ -43,7 +43,7 @@ export function validateDraft(draft: ConnectionDraft, { rotating }: { rotating: 
   }
   if (!BucketNameSchema.safeParse(draft.bucket.trim()).success) {
     errors.bucket =
-      'Bucket names are 3 to 63 lowercase letters, digits, dots and hyphens, starting and ending with a letter or digit.';
+      'Bucket names are 3 to 63 lowercase letters, digits, dots and hyphens, with a letter or digit at each end.';
   }
   if (draft.access_key_id.trim() === '') errors.access_key_id = 'Paste the access key ID.';
   if (draft.secret_access_key === '') errors.secret_access_key = 'Paste the secret access key.';
@@ -197,10 +197,10 @@ function RegionPicker({ value, onChange, error }: { value: string; onChange: (v:
             {value ? (
               <span className="flex min-w-0 items-baseline gap-2">
                 <span className="truncate">{regionName(value)}</span>
-                <span className="font-mono text-xs text-text-muted">{value}</span>
+                <span className="font-mono text-xs text-text-secondary">{value}</span>
               </span>
             ) : (
-              <span className="text-text-muted">Choose a region</span>
+              <span className="text-text-secondary">Choose a region</span>
             )}
             <ChevronsUpDown className="size-icon-sm shrink-0 text-text-muted" />
           </Button>
@@ -224,7 +224,7 @@ function RegionPicker({ value, onChange, error }: { value: string; onChange: (v:
                   }}
                 >
                   <span className="min-w-0 flex-1 truncate">{r.name}</span>
-                  <span className="font-mono text-2xs text-text-muted">{r.code}</span>
+                  <span className="font-mono text-2xs text-text-secondary">{r.code}</span>
                 </PickerItem>
               ))}
             </CommandList>

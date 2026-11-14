@@ -9,11 +9,17 @@ import type { Me, Organization, StorageOverview } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { LoadError } from '@components/query-state';
 import { SettingsSection } from '@components/settings/section';
-import { ByoFailingBanner } from '@components/attachments/byo-failing-banner';
+import { FormAlert } from '@components/auth/form-alert';
+import { Skeleton } from '@components/ui/skeleton';
 import { ByoWizard, entryStep, isWizardStep, type WizardStep } from '@components/organization/storage/byo-wizard';
 import { ConnectionPanel, DisconnectDialog, EarlierBuckets } from '@components/organization/storage/connection-panel';
 import { MigrationPanel } from '@components/organization/storage/migration-panel';
-import { FilesSkeleton, StorageFiles, type FilesFilter } from '@components/organization/storage/storage-files';
+import {
+  FILES_DESCRIPTION,
+  FilesSkeleton,
+  StorageFiles,
+  type FilesFilter,
+} from '@components/organization/storage/storage-files';
 import { StorageUsage, StorageUsageSkeleton } from '@components/organization/storage/storage-usage';
 import { useStartMigration, useStorageOverview } from '@hooks/use-organization-storage';
 import { queryKeys } from '@lib/query/keys';
@@ -66,7 +72,28 @@ export function StorageTab({ organization, user }: { organization: Organization;
     return (
       <div className="flex flex-col gap-6">
         <StorageUsageSkeleton />
-        <FilesSkeleton />
+        <div className="flex items-start gap-4 border-b pb-5" aria-hidden>
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 [&>*]:flex [&>*]:h-5 [&>*]:items-center">
+            <div>
+              <Skeleton className="h-3.5 w-40" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-full max-w-3xl" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-52 flex-none max-sm:hidden" />
+        </div>
+        <SettingsSection title="Files" description={FILES_DESCRIPTION}>
+          <div className="flex flex-wrap gap-2" aria-hidden>
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-8 w-52" />
+          </div>
+          <FilesSkeleton />
+        </SettingsSection>
       </div>
     );
   }
@@ -86,13 +113,16 @@ export function StorageTab({ organization, user }: { organization: Organization;
 
   return (
     <div className="flex flex-col gap-6">
-      {mode.kind === 'connected' ? (
-        <ByoFailingBanner
-          storage={organization.storage}
-          bucket={connection?.bucket}
-          canFix
-          withAction={!mode.updating}
-        />
+      {mode.kind === 'connected' && connection?.status === 'failed' ? (
+        <FormAlert
+          title={
+            <>
+              <span className="font-mono">{connection.bucket}</span> refused its key.
+            </>
+          }
+        >
+          Files there cannot be opened and uploads are paused until a working key for the same bucket is saved.
+        </FormAlert>
       ) : null}
       <StorageUsage overview={data} />
 
@@ -124,7 +154,7 @@ export function StorageTab({ organization, user }: { organization: Organization;
             onReopened={() => setParams({ confirm: null })}
             timeZone={user.timezone}
           />
-          <MigrationPanel slug={slug} overview={data} />
+          <MigrationPanel slug={slug} overview={data} quiet={mode.updating} />
         </>
       ) : mode.kind === 'unfinished' && connection ? (
         <SettingsSection
@@ -178,6 +208,7 @@ export function StorageTab({ organization, user }: { organization: Organization;
           onFilterChange={onFilterChange}
           byo={organization.storage.bring_your_own}
           bucket={connection?.bucket ?? null}
+          ownBucket={connection !== null || data.bring_your_own.files > 0 || data.earlier_buckets.length > 0}
           timeZone={user.timezone}
         />
       )}

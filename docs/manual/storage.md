@@ -75,7 +75,7 @@ From that moment new files go to your bucket, while the files you already had st
 were and keep working. Choose **Move files** to copy them across. The screen shows how many have
 moved; you can leave it running. Each file is copied, checked, and only then removed from
 Nothing Left's storage, so every file keeps opening throughout. If the move stops - a network
-problem, a permission removed halfway - choose **Retry** and it carries on from where it
+problem, a permission removed halfway - choose **Try again** and it carries on from where it
 stopped.
 
 ## When the key stops working

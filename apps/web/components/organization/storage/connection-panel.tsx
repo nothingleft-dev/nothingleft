@@ -56,11 +56,6 @@ export function ConnectionPanel({
   return (
     <SettingsSection
       title="Your own bucket"
-      description={
-        failing
-          ? 'The bucket refused its key. Files there show as unavailable and uploads are paused until a working key for the same bucket is saved.'
-          : 'Every new file is stored here, and nothing in it counts against a limit.'
-      }
       actions={
         updating ? null : (
           <>
@@ -79,10 +74,16 @@ export function ConnectionPanel({
         )
       }
     >
-      <dl className="grid max-w-3xl gap-x-8 gap-y-0 text-sm sm:grid-cols-2">
+      <dl className="grid gap-x-10 text-sm lg:grid-cols-2">
         <Row term="Status">
           <span className={cn('inline-flex items-center gap-2', failing ? 'text-danger-fg' : 'text-text')}>
-            <span aria-hidden className={cn('size-2 rounded-full', failing ? 'bg-danger-fg' : 'c-green bg-c-solid')} />
+            <span
+              aria-hidden
+              className={cn(
+                'size-2 flex-none rounded-full',
+                failing ? 'bg-danger-fg' : 'shadow-[inset_0_0_0_1.5px_var(--text-secondary)]',
+              )}
+            />
             {failing ? 'Refusing its key' : 'Connected'}
           </span>
         </Row>
@@ -96,7 +97,9 @@ export function ConnectionPanel({
           </span>
         </Row>
         <Row term="Access key ID">
-          <span className="truncate font-mono text-xs">{connection.access_key_id}</span>
+          <span className="truncate font-mono text-xs" title={connection.access_key_id}>
+            {connection.access_key_id}
+          </span>
         </Row>
         <Row term="Secret">
           <span className="font-mono text-xs tracking-widest text-text-secondary" aria-label="Hidden">
@@ -111,14 +114,14 @@ export function ConnectionPanel({
               <PersonName person={connection.created_by} />
             </span>
           ) : (
-            '--'
+            <Empty />
           )}
         </Row>
         <Row term="Last checked">
           {connection.checked_at ? (
             <RelativeTime value={connection.checked_at} timeZone={timeZone} className="text-text" />
           ) : (
-            '--'
+            <Empty />
           )}
         </Row>
       </dl>
@@ -144,12 +147,14 @@ export function ConnectionPanel({
 
 function Row({ term, children }: { term: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-baseline justify-between gap-4 border-b border-border-subtle py-2">
-      <dt className="flex-none text-text-secondary">{term}</dt>
-      <dd className="flex min-w-0 justify-end text-right">{children}</dd>
+    <div className="grid min-w-0 grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-4 border-b border-border-subtle py-2">
+      <dt className="text-text-secondary">{term}</dt>
+      <dd className="flex min-w-0">{children}</dd>
     </div>
   );
 }
+
+const Empty = () => <span className="text-text-muted">—</span>;
 
 function UpdateKeyForm({
   slug,
@@ -183,8 +188,9 @@ function UpdateKeyForm({
       <div className="flex flex-col gap-0.5">
         <h3 className="font-medium">Update the key</h3>
         <p className="text-sm text-text-secondary">
-          A new key for {connection.bucket}, with the same permissions. It is checked with a test file before it
-          replaces the old one, so a typo changes nothing. Changing to a different bucket means disconnecting first.
+          A new key for <span className="font-mono">{connection.bucket}</span>, with the same permissions. It is checked
+          with a test file before it replaces the old one, so a typo changes nothing. Changing to a different bucket
+          means disconnecting first.
         </p>
       </div>
       {refusal ? (
@@ -293,29 +299,21 @@ export function DisconnectDialog({ slug, overview, connection, user, open, onOpe
     >
       {everVerified ? (
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
-          <li>The key is forgotten.</li>
           <li>
-            <span className="font-medium text-text">Your files stay in {bucket}</span> — nothing there is deleted — but{' '}
-            {held.files > 0 ? `its ${files(held.files)} (${formatBytes(held.bytes)})` : 'they'} no longer open here.
-            They are listed as files in an earlier bucket.
-          </li>
-          <li>
-            <span className="font-medium text-text">
-              Connect the same bucket again — same account or region, same name — and they open again.
-            </span>{' '}
-            A bucket with the same name in a different account is a different bucket: connecting it does not bring the
-            earlier files back.
+            The key is forgotten. Nothing in <span className="font-mono whitespace-nowrap">{bucket}</span> is deleted,
+            but {held.files > 0 ? `its ${files(held.files)} (${formatBytes(held.bytes)})` : 'its files'} stop opening
+            here until the same bucket, in the same account, is connected again.
           </li>
           <li>
             New uploads use the built-in storage, and the {formatBytes(overview.platform.limit_bytes)} limit applies
-            again. {formatBytes(overview.platform.bytes)} is in it now.
+            again, with {formatBytes(overview.platform.bytes)} in it now.
           </li>
-          <li>Every admin of the organisation gets an email saying so.</li>
+          <li>Every admin of the organisation is emailed.</li>
         </ul>
       ) : (
         <p>
-          The key is forgotten. Nothing was ever stored in {bucket}, and uploads keep using the built-in storage. You
-          can start again at any time.
+          The key is forgotten. Nothing was ever stored in <span className="font-mono">{bucket}</span>, and uploads keep
+          using the built-in storage. You can start again at any time.
         </p>
       )}
     </StepUpDialog>
@@ -327,12 +325,12 @@ export function EarlierBuckets({ buckets }: { buckets: StorageOverview['earlier_
   return (
     <ul className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Earlier buckets">
       {buckets.map(b => (
-        <li key={b.bucket} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-3.5 py-2.5 text-sm">
-          <span className="text-text">
-            {files(b.files)} in <span className="font-mono">{b.bucket}</span> from an earlier connection
+        <li key={b.bucket} className="flex items-baseline gap-4 px-3.5 py-2.5 text-sm">
+          <span className="min-w-0 flex-1 text-pretty">
+            {files(b.files)} in <span className="font-mono break-all">{b.bucket}</span> from an earlier connection.{' '}
+            <span className="text-text-secondary">Connect it again to open {b.files === 1 ? 'it' : 'them'}.</span>
           </span>
-          <span className="text-text-secondary">— connect it again to open them.</span>
-          <span className="ml-auto font-mono text-xs tabular text-text-secondary">{formatBytes(b.bytes)}</span>
+          <span className="flex-none tabular text-text-secondary">{formatBytes(b.bytes)}</span>
         </li>
       ))}
     </ul>

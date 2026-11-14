@@ -43,7 +43,12 @@ export function StorageUsage({ overview }: { overview: StorageOverview }) {
           )}
         </div>
         {verified ? null : (
-          <Meter ratio={platform.bytes / platform.limit_bytes} quota label="Built-in storage used" className="h-1.5" />
+          <Meter
+            ratio={platform.bytes / platform.limit_bytes}
+            quota={platform.level !== 'ok'}
+            label="Built-in storage used"
+            className="h-1.5"
+          />
         )}
         <p className="text-xs text-text-secondary">
           {verified
@@ -52,7 +57,9 @@ export function StorageUsage({ overview }: { overview: StorageOverview }) {
               : 'Every file is in your own bucket. Avatars stay in the built-in storage and never count.'
             : platform.level === 'full'
               ? 'New uploads are refused until there is room. Delete files below, or connect your own bucket.'
-              : 'Everything attached to an issue, a comment, spent time or an article counts. Avatars never do.'}
+              : platform.level === 'critical'
+                ? 'Almost full. Delete files below, or connect your own bucket.'
+                : 'Everything attached to an issue, a comment, spent time or an article counts. Avatars never do.'}
         </p>
       </div>
 
@@ -85,16 +92,28 @@ export function StorageUsage({ overview }: { overview: StorageOverview }) {
   );
 }
 
+const STAT_LABELS = ['Built-in storage', 'Your own bucket', 'Unclaimed uploads', 'Awaiting purge'];
+
 export function StorageUsageSkeleton() {
   return (
     <div className="flex flex-col gap-4" role="status" aria-label="Loading storage usage">
-      <Skeleton className="h-7 w-56" />
-      <Skeleton className="h-1.5 w-full" />
-      <div className="grid grid-cols-4 gap-4 border-y py-3 max-sm:grid-cols-2">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-2">
-            <Skeleton className="h-5 w-20" />
-            <Skeleton className="h-3 w-24" />
+      <div className="flex flex-col gap-2">
+        <div className="flex h-7 items-center justify-between gap-4">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-3 w-8" />
+        </div>
+        <Skeleton className="h-1.5 w-full" />
+        <div className="flex h-5 items-center">
+          <Skeleton className="h-3 w-96 max-w-full" />
+        </div>
+      </div>
+      <StatRow state="loading" stats={STAT_LABELS.map(label => ({ label, value: '' }))} />
+      <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+        {[0, 1].map(i => (
+          <div key={i} className="flex flex-col gap-1.5 py-0.5">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
           </div>
         ))}
       </div>
