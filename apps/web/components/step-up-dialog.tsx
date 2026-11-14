@@ -97,8 +97,8 @@ export function StepUpDialog({
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-md">
-        <form noValidate onSubmit={onSubmit} className="flex flex-col gap-5">
-          <DialogHeader>
+        <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
+          <DialogHeader className="gap-3">
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription asChild>
               <div className="flex flex-col gap-2 text-sm leading-5 text-text-secondary">{children}</div>

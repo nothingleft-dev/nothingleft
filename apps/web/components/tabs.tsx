@@ -22,10 +22,13 @@ interface TabsProps<T extends string> {
 /** A single row that scrolls sideways under an edge fade, keeping the selected tab in view. */
 export function TabStrip({
   selected,
+  count,
   className,
   children,
 }: {
   selected: string;
+  /** How many tabs there are, so a tab that arrives after the first render is scrolled to as well. */
+  count?: number;
   className?: string;
   children: ReactNode;
 }) {
@@ -40,7 +43,7 @@ export function TabStrip({
     const end = start + tab.offsetWidth;
     if (start < box.scrollLeft) box.scrollLeft = start - 24;
     else if (end > box.scrollLeft + box.clientWidth) box.scrollLeft = end - box.clientWidth + 24;
-  }, [selected]);
+  }, [selected, count]);
 
   return (
     <div ref={scroller} data-tab-strip className={cn('scroll-fade-x relative flex min-w-0 overflow-x-auto', className)}>
@@ -79,7 +82,11 @@ export function Tabs<T extends string>({
   };
 
   const strip = (
-    <TabStrip selected={value} className={cn('-mb-px self-stretch', size === 'section' && className)}>
+    <TabStrip
+      selected={value}
+      count={options.length}
+      className={cn('-mb-px self-stretch', size === 'section' && className)}
+    >
       <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} className="flex items-stretch gap-1">
         {options.map(o => {
           const selected = o.value === value;

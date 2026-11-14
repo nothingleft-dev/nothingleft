@@ -127,6 +127,8 @@ function PreferenceRow({
           label={`Email for ${copy.label}`}
           hideLabel
           className="w-44 max-sm:w-full"
+          align="end"
+          quietValue="off"
           value={preference.email}
           options={options}
           onChange={onChange}

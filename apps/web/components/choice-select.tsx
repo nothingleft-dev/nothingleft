@@ -25,6 +25,10 @@ interface ChoiceSelectProps<T extends string> {
   showHint?: boolean;
   /** For a row that names the choice itself: the label stays for screen readers only. */
   hideLabel?: boolean;
+  /** `end` for a picker at the end of a row, so its list opens over its own column. */
+  align?: 'start' | 'end';
+  /** The value that means "nothing" (Off): shown in secondary ink in the trigger. */
+  quietValue?: T;
   className?: string;
 }
 
@@ -38,6 +42,8 @@ export function ChoiceSelect<T extends string>({
   disabled,
   showHint,
   hideLabel,
+  align = 'start',
+  quietValue,
   className,
 }: ChoiceSelectProps<T>) {
   const id = useId();
@@ -62,14 +68,16 @@ export function ChoiceSelect<T extends string>({
           >
             <span className="flex min-w-0 items-center gap-2">
               {selected?.mark}
-              <span className="truncate">{selected?.label ?? 'Choose a role'}</span>
+              <span className={cn('truncate', value === quietValue && 'text-text-secondary')}>
+                {selected?.label ?? 'Choose a role'}
+              </span>
             </span>
             <ChevronsUpDown className="size-icon-sm shrink-0 text-text-muted" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
           className="w-(--radix-popover-trigger-width) min-w-[min(280px,calc(100vw-32px))] max-w-[calc(100vw-32px)] p-0"
-          align="start"
+          align={align}
         >
           <PickerCommand>
             <CommandList>
