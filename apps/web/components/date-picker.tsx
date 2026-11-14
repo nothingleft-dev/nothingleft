@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { formatCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 
-const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = [
   'January',
   'February',
