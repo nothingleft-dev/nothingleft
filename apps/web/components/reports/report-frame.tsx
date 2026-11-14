@@ -94,10 +94,10 @@ export function ReportFrame<D extends FramedReport>({
 
   const pick = (field: string, value: string) => (pickValue ? pickValue(field, value) : state.set({ [field]: value }));
 
-  const exportCsv = () =>
+  const exportCsv = (): void =>
     exporter.mutate(
       { name: state.name, query: state.query },
-      { onError: e => toastError('Could not export the report', e) },
+      { onError: e => toastError('Could not export the report', e, { retry: exportCsv }) },
     );
 
   // The Gantt's CSV still lists the issues missing dates when there is nothing to draw.
@@ -141,12 +141,12 @@ export function ReportFrame<D extends FramedReport>({
             pendingLabel={
               <>
                 <Download className="size-3.5 animate-pulse" />
-                Preparing the file…
+                <span className="max-sm:sr-only">Preparing the file…</span>
               </>
             }
           >
             <Download className="size-3.5" />
-            Export CSV
+            <span className="max-sm:sr-only">Export CSV</span>
           </PendingButton>
         }
       />

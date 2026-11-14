@@ -131,10 +131,10 @@ export function IssueList({ project, base = '', title, views: withViews = true }
     optimistic: (i: IssueListItem) => IssueListItem,
   ) => update.mutate({ key, body, optimistic }, { onError: error => toastError(`Could not update ${key}`, error) });
 
-  const exportCsv = () =>
+  const exportCsv = (): void =>
     exporter.mutate(
       { q: fullQuery, project, sort: state.sort, columns: csvColumnsFor(columns, defs) },
-      { onError: error => toastError('Could not export the issues', error) },
+      { onError: error => toastError('Could not export the issues', error, { retry: exportCsv }) },
     );
 
   const projectEmpty = project !== undefined && projectQuery.data && total === 0 && fullQuery === '';
