@@ -214,6 +214,13 @@ export function IssueActivitySection({
 }: IssueActivitySectionProps) {
   const tab: Tab = (chosen === 'time' && !time.enabled) || (chosen === 'development' && !development) ? 'all' : chosen;
   const context = { issueKey: issue.key, projectKey: issue.project.key, timeZone };
+  const composer = canComment ? (
+    <CommentComposer
+      scope={{ issue: issue.key }}
+      projectKey={issue.project.key}
+      onLogTime={time.enabled && time.canLog ? time.onLogTime : undefined}
+    />
+  ) : null;
   const calendar = useWorkCalendar();
   const tabs = TABS.filter(t => (t.value !== 'time' || time.enabled) && (t.value !== 'development' || development));
 
@@ -242,7 +249,7 @@ export function IssueActivitySection({
       </div>
 
       {tab === 'comments' ? (
-        <CommentsTab {...context} canComment={canComment} />
+        <CommentsTab {...context} canComment={canComment} after={composer} />
       ) : tab === 'development' ? (
         development?.panel
       ) : tab === 'time' ? (
@@ -255,16 +262,8 @@ export function IssueActivitySection({
           timeZone={timeZone}
         />
       ) : (
-        <ActivityTab key={tab} {...context} history={tab === 'history'} />
+        <ActivityTab key={tab} {...context} history={tab === 'history'} after={tab === 'all' ? composer : null} />
       )}
-
-      {canComment && (tab === 'all' || tab === 'comments') ? (
-        <CommentComposer
-          scope={{ issue: issue.key }}
-          projectKey={issue.project.key}
-          onLogTime={time.enabled && time.canLog ? time.onLogTime : undefined}
-        />
-      ) : null}
     </section>
   );
 }
@@ -273,9 +272,11 @@ interface TabContext {
   issueKey: string;
   projectKey: string;
   timeZone?: string;
+  /** Rendered under the list once it has loaded (the composer), so it never jumps below an arriving list. */
+  after?: ReactNode;
 }
 
-function ActivityTab({ issueKey, projectKey, timeZone, history }: TabContext & { history: boolean }) {
+function ActivityTab({ issueKey, projectKey, timeZone, history, after }: TabContext & { history: boolean }) {
   const activity = useIssueActivity(issueKey, history ? 'history' : 'all', history ? HISTORY_KINDS : undefined);
   const calendar = useWorkCalendar();
 
@@ -304,6 +305,7 @@ function ActivityTab({ issueKey, projectKey, timeZone, history }: TabContext & {
         <LoadError onRetry={() => void activity.refetch()} detail={activity.error.message}>
           The history could not be loaded.
         </LoadError>
+        {after}
       </div>
     );
   }
@@ -335,11 +337,12 @@ function ActivityTab({ issueKey, projectKey, timeZone, history }: TabContext & {
           Show later changes
         </LoadMore>
       ) : null}
+      {after}
     </>
   );
 }
 
-function CommentsTab({ issueKey, projectKey, timeZone, canComment }: TabContext & { canComment: boolean }) {
+function CommentsTab({ issueKey, projectKey, timeZone, canComment, after }: TabContext & { canComment: boolean }) {
   const comments = useComments({ issue: issueKey });
   const rows = (comments.data?.pages ?? []).flatMap(p => p.data);
 
@@ -350,16 +353,20 @@ function CommentsTab({ issueKey, projectKey, timeZone, canComment }: TabContext 
         <LoadError onRetry={() => void comments.refetch()} detail={comments.error.message}>
           The comments could not be loaded.
         </LoadError>
+        {after}
       </div>
     );
   }
   if (rows.length === 0) {
     return (
-      <EmptyState
-        className="mt-3"
-        title="No comments yet."
-        description={canComment ? 'Start the conversation below.' : 'Comments people add will appear here.'}
-      />
+      <>
+        <EmptyState
+          className="mt-3"
+          title="No comments yet."
+          description={canComment ? 'Start the conversation below.' : 'Comments people add will appear here.'}
+        />
+        {after}
+      </>
     );
   }
 
@@ -387,6 +394,7 @@ function CommentsTab({ issueKey, projectKey, timeZone, canComment }: TabContext 
           Show later comments
         </LoadMore>
       ) : null}
+      {after}
     </>
   );
 }

@@ -9,9 +9,9 @@ interface Person {
   avatar_url?: string | null;
 }
 
-// Shrinks before the name does, and never past its own box.
+// Never cut: a chip clipped to its first letter reads as a stray glyph, so the name gives way instead.
 const chipClass =
-  'inline-block h-4.5 min-w-0 shrink-[4] truncate rounded-xs border px-1.5 text-2xs leading-4 font-normal whitespace-nowrap text-text-secondary';
+  'inline-block h-4.5 shrink-0 rounded-xs border px-1.5 text-2xs leading-4 font-normal whitespace-nowrap text-text-secondary';
 
 export function FormerMemberChip({ className }: { className?: string }) {
   return <span className={cn(chipClass, className)}>Former member</span>;
@@ -57,7 +57,7 @@ export function PersonName({
       {avatar ? (
         <MemberAvatar member={{ ...person, avatar_url: person.avatar_url ?? null }} className="size-5 flex-none" />
       ) : null}
-      <span className={cn('truncate', deactivatedInk(person))}>{label}</span>
+      <span className={cn('min-w-0 truncate', deactivatedInk(person))}>{label}</span>
       {!chip ? null : person.deactivated ? <InactiveChip /> : person.former_member ? <FormerMemberChip /> : null}
     </span>
   );

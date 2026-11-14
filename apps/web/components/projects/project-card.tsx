@@ -1,3 +1,4 @@
+import { markdownPlainText } from '@nothingleft/markdown';
 import Link from 'next/link';
 import type { Route } from 'next';
 import type { Project } from '@nothingleft/types';
@@ -32,7 +33,9 @@ export function ProjectCard({ project, actions }: { project: Project; actions?: 
       </div>
 
       {project.description_md ? (
-        <p className="line-clamp-2 text-xs leading-5 text-text-secondary">{project.description_md}</p>
+        <p className="line-clamp-2 text-xs leading-5 text-text-secondary">
+          {markdownPlainText(project.description_md)}
+        </p>
       ) : (
         <p className="text-xs text-text-muted">No description</p>
       )}

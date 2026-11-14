@@ -165,17 +165,11 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
   );
 }
 
+// One line, the height of the empty state most issues end on, so Activity below does not move when it settles.
 function LinksSkeleton() {
   return (
-    <div className="flex flex-col" aria-hidden>
-      {Array.from({ length: 2 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-2 border-b border-border-subtle px-2">
-          <Skeleton className="size-4 rounded-sm" />
-          <Skeleton className="size-4.5 rounded-xs" />
-          <Skeleton className="h-3 w-14" />
-          <Skeleton className="h-3" style={{ width: `${30 + i * 18}%` }} />
-        </div>
-      ))}
+    <div className="py-3" aria-hidden>
+      <Skeleton className="h-4 w-1/2" />
     </div>
   );
 }

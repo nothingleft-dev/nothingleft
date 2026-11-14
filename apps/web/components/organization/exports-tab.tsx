@@ -89,7 +89,7 @@ export function ExportsTab({ organization }: { organization: Organization }) {
           />
         ) : (
           <div className="overflow-x-auto rounded-md border">
-            <table className="w-full min-w-[760px] table-fixed text-sm">
+            <table className="w-full min-w-[940px] table-fixed text-sm">
               <thead className="bg-app text-left text-2xs text-text-secondary">
                 <tr>
                   <th className="h-7 w-28 px-3 font-medium">Status</th>
@@ -140,7 +140,7 @@ function ExportRow({ job }: { job: ExportJob }) {
       <td className="px-3 whitespace-nowrap">
         <RelativeTime value={job.created_at} className="text-text-secondary" />
       </td>
-      <td className="px-3 text-right font-mono text-xs tabular text-text-secondary">
+      <td className="px-3 text-right tabular text-text-secondary">
         {job.size_bytes !== null ? formatBytes(job.size_bytes) : <span className="text-text-muted">—</span>}
       </td>
       <td className="px-3 text-text-secondary tabular">

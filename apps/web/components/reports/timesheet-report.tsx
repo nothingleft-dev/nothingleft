@@ -142,7 +142,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 key={day.date}
                 data-day={day.date}
                 className={cn(
-                  'h-11 min-w-16 border-b px-1 text-center text-2xs font-normal text-text-muted',
+                  'h-11 min-w-16 border-b px-2.5 text-right text-2xs font-normal text-text-muted',
                   !day.working_day && 'bg-app text-text-disabled',
                   day.date === today && 'text-text',
                 )}
@@ -153,7 +153,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 </span>
               </th>
             ))}
-            <th className="sticky right-0 z-10 h-11 min-w-20 border-b border-l bg-surface px-3 text-right text-xs font-semibold">
+            <th className="sticky right-0 z-10 h-11 min-w-20 border-b border-l bg-surface px-2.5 text-right text-xs font-semibold">
               Total
             </th>
           </tr>
@@ -174,22 +174,20 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 return (
                   <td
                     key={day.date}
-                    className={cn(
-                      'h-row border-b border-border-subtle p-0.5 text-center',
-                      !day.working_day && 'bg-app',
-                    )}
+                    className={cn('h-row border-b border-border-subtle p-0.5 text-right', !day.working_day && 'bg-app')}
                   >
                     {minutes > 0 ? (
                       <DrillCell
                         drill={{ member: row.member, from: day.date, to: day.date, minutes }}
                         scope={scope}
                         calendar={calendar}
+                        align="end"
                       />
                     ) : null}
                   </td>
                 );
               })}
-              <td className="sticky right-0 z-10 h-row border-b border-l border-border-subtle bg-surface p-0.5 text-right font-semibold">
+              <td className="sticky right-0 z-10 h-row border-b border-l border-border-subtle bg-surface p-0.5 text-right font-medium">
                 {row.total > 0 && period ? (
                   <DrillCell
                     drill={{ member: row.member, from: period.from, to: period.to, minutes: row.total }}
@@ -210,12 +208,12 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
             {data.day_totals.map((minutes, i) => (
               <td
                 key={data.days[i]!.date}
-                className={cn('h-row text-center font-semibold', !data.days[i]!.working_day && 'bg-app')}
+                className={cn('h-row px-2.5 text-right font-medium', !data.days[i]!.working_day && 'bg-app')}
               >
                 {minutes > 0 ? <Duration minutes={minutes} calendar={calendar} /> : null}
               </td>
             ))}
-            <td className="sticky right-0 z-10 h-row border-l bg-surface px-3 text-right font-semibold">
+            <td className="sticky right-0 z-10 h-row border-l bg-surface px-2.5 text-right font-semibold">
               <Duration minutes={data.total} calendar={calendar} />
             </td>
           </tr>

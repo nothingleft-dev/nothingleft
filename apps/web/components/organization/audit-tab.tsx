@@ -12,12 +12,18 @@ import { RowsSkeleton } from '@components/skeletons';
 import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { DatePicker } from '@components/date-picker';
-import { ACTIVITY_LABELS, activityDetail, activityLabel } from '@components/organization/activity-labels';
+import {
+  ACTIVITY_LABELS,
+  activityDetail,
+  activityLabel,
+  isSystemActivity,
+  systemSentence,
+} from '@components/organization/activity-labels';
+import { ActivityAvatar } from '@components/organization/activity-avatar';
 import { PersonName } from '@components/former-member-chip';
 import { useActivity, useActivityExport } from '@hooks/use-activity';
 import { useMembers } from '@hooks/use-members';
 import type { ActivityFilters } from '@lib/api/activity';
-import { MemberAvatar } from '@components/issues/member-avatar';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
 import { LoadMore } from '@components/text-button';
@@ -102,16 +108,22 @@ export function AuditTab({ organization }: { organization: Organization }) {
               const detail = activityDetail(row);
               return (
                 <li key={row.id} className="flex items-center gap-3 px-3 py-2">
-                  <MemberAvatar member={row.actor ?? { name: '-', avatar_url: null }} initialsClassName="text-[10px]" />
+                  <ActivityAvatar row={row} />
 
                   <div className="flex min-w-0 flex-1 flex-col leading-5">
                     <span className="truncate">
-                      {row.actor ? (
-                        <PersonName person={row.actor} className="max-w-full align-bottom font-medium" />
+                      {isSystemActivity(row) ? (
+                        systemSentence(row)
                       ) : (
-                        <span className="font-medium">Somebody no longer here</span>
-                      )}{' '}
-                      {activityLabel(row)}
+                        <>
+                          {row.actor ? (
+                            <PersonName person={row.actor} className="max-w-full align-bottom font-medium" />
+                          ) : (
+                            <span className="font-medium">Somebody no longer here</span>
+                          )}{' '}
+                          {activityLabel(row)}
+                        </>
+                      )}
                     </span>
                     {detail ? <span className="truncate font-mono text-xs text-text-muted">{detail}</span> : null}
                   </div>

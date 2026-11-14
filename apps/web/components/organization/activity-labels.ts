@@ -56,6 +56,14 @@ const asText = (value: unknown): string | null => {
   return pairs.length > 0 ? pairs.join(' · ') : null;
 };
 
+/** Events the system records with no person behind them; their label reads as a sentence on its own. */
+export const isSystemActivity = (row: OrgActivity) => row.actor === null && row.kind === 'git_connection_error';
+
+export const systemSentence = (row: OrgActivity) => {
+  const label = ACTIVITY_LABELS[row.kind];
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
 export function activityDetail(row: OrgActivity): string | null {
   const from = asText(row.old_value);
   const to = asText(row.new_value);

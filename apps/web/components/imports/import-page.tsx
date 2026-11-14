@@ -52,7 +52,11 @@ export function ImportPage({ projectKey }: { projectKey: string }) {
               ? `${project.data.name} is archived, so nothing can be imported into it.`
               : `Importing into ${project.data.name} needs a Project Admin.`
           }
-          description="Ask one of its Project Admins, or an Org Admin, to import the file."
+          description={
+            project.data.is_archived
+              ? 'A Project Admin can restore it from the project’s settings, then import the file.'
+              : 'Ask one of its Project Admins, or an Org Admin, to import the file.'
+          }
           action={
             <Button asChild variant="outline" size="sm">
               <Link href={`/projects/${projectKey}/issues` as Route}>Back to the issues</Link>

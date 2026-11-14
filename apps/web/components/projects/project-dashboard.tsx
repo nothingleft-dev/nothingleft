@@ -1,5 +1,6 @@
 'use client';
 
+import { Markdown } from '@components/markdown/markdown';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Settings } from 'lucide-react';
@@ -102,7 +103,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
         <ProjectMark project={data} />
         <div className="flex min-w-0 flex-col gap-1">
           {data.description_md ? (
-            <p className="max-w-prose text-text-secondary">{data.description_md}</p>
+            <Markdown source={data.description_md} variant="comment" className="max-w-prose text-text-secondary" />
           ) : (
             <p className="text-text-muted">No description</p>
           )}

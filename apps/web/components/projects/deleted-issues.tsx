@@ -45,13 +45,13 @@ export function DeletedIssues({ projectKey, canRestore }: { projectKey: string; 
         <EmptyState title="Nothing has been deleted in the last 14 days." />
       ) : (
         <div className="overflow-x-auto rounded-md border">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[640px] table-fixed text-sm">
             <thead className="bg-app text-left text-2xs font-medium text-text-secondary">
               <tr>
                 <th className="h-7 px-3 font-medium">Issue</th>
-                <th className="px-3 font-medium">Deleted</th>
-                <th className="px-3 font-medium">Restorable until</th>
-                <th className="px-3" aria-label="Actions" />
+                <th className="w-48 px-3 font-medium">Deleted</th>
+                <th className="w-36 px-3 font-medium">Restorable until</th>
+                <th className="w-28 px-3" aria-label="Actions" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">

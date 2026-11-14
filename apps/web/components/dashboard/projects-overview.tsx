@@ -17,7 +17,14 @@ import { StatusStrip } from '@components/dashboard/status-strip';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { ProjectMark } from '@components/projects/project-mark';
 import { SeatBanner } from '@components/invitations/seat-notice';
-import { ACTIVITY_LABELS, activitySubject, projectJoin } from '@components/organization/activity-labels';
+import {
+  ACTIVITY_LABELS,
+  activitySubject,
+  isSystemActivity,
+  projectJoin,
+  systemSentence,
+} from '@components/organization/activity-labels';
+import { ActivityAvatar } from '@components/organization/activity-avatar';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
 import { PersonName } from '@components/former-member-chip';
@@ -274,14 +281,20 @@ function ActivityRow({ row }: { row: OrgActivity }) {
   const join = projectJoin(row);
   return (
     <li className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 border-b border-border-subtle px-2 py-1.5 text-xs text-text-secondary">
-      <MemberAvatar member={row.actor ?? { name: '-', avatar_url: null }} className="size-5" />
+      <ActivityAvatar row={row} className="size-5" />
       <span className="min-w-0">
-        {row.actor ? (
-          <PersonName person={row.actor} className="max-w-full align-bottom font-medium text-text" />
+        {isSystemActivity(row) ? (
+          <span className="text-text">{systemSentence(row)}</span>
         ) : (
-          <b className="font-medium text-text">Somebody no longer here</b>
-        )}{' '}
-        {join === 'self' ? 'joined' : join === 'other' ? 'added' : ACTIVITY_LABELS[row.kind]}
+          <>
+            {row.actor ? (
+              <PersonName person={row.actor} className="max-w-full align-bottom font-medium text-text" />
+            ) : (
+              <b className="font-medium text-text">Somebody no longer here</b>
+            )}{' '}
+            {join === 'self' ? 'joined' : join === 'other' ? 'added' : ACTIVITY_LABELS[row.kind]}
+          </>
+        )}
         {subject.text ? <span className="text-text"> {subject.text}</span> : null}
         {subject.projectKey ? (
           <>
@@ -326,15 +339,16 @@ function ProjectFiguresCard({
     <article className="flex min-w-0 flex-col gap-3 rounded-md border bg-surface px-4 py-3">
       <div className="flex items-center gap-2">
         <ProjectMark project={project} size="md" />
-        <Link href={base as Route} className="truncate font-semibold hover:underline">
+        {/* The title gives way first: the lead's name and an Inactive chip stay whole. */}
+        <Link href={base as Route} className="min-w-0 truncate font-semibold hover:underline">
           {project.name}
         </Link>
-        <span className="font-mono text-xs text-text-muted">{project.key}</span>
+        <span className="shrink-0 font-mono text-xs text-text-muted">{project.key}</span>
         {project.is_archived ? (
-          <span className="rounded-sm bg-inset px-1.5 py-0.5 text-2xs text-text-secondary">Archived</span>
+          <span className="shrink-0 rounded-sm bg-inset px-1.5 py-0.5 text-2xs text-text-secondary">Archived</span>
         ) : null}
         {project.lead ? (
-          <span className="ml-auto flex min-w-0 items-center gap-1.5 text-xs text-text-muted">
+          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs text-text-muted">
             <MemberAvatar member={project.lead} className="size-4" />
             <PersonName person={project.lead} />
           </span>
