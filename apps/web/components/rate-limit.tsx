@@ -71,9 +71,19 @@ export function RateLimitBanner() {
       <Timer className="mt-0.5 size-icon-sm flex-none" />
       <p className="flex-1 text-xs leading-5">
         <span className="font-medium">You’ve hit the request limit{perMinute ? ` of ${perMinute} a minute` : ''}.</span>{' '}
-        Everything is saved; the app catches up in <Countdown seconds={secondsLeft} />.
+        Pages reload by themselves in <Countdown seconds={secondsLeft} />; a change you make before then is not saved.
       </p>
     </div>
+  );
+}
+
+/** The line a load error carries while the limit lasts. */
+export function RateLimitReload() {
+  const { secondsLeft } = useRateLimit();
+  return (
+    <>
+      Loads again by itself in <Countdown seconds={secondsLeft} />.
+    </>
   );
 }
 

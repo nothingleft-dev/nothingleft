@@ -3,7 +3,8 @@
 import { useRef } from 'react';
 import { toast } from 'sonner';
 import { AVATAR_MAX_BYTES, AVATAR_MIME_TYPES, type Me } from '@nothingleft/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@components/ui/avatar';
+import { Avatar, AvatarFallback } from '@components/ui/avatar';
+import { AvatarImage } from '@components/avatar-image';
 import { Button } from '@components/ui/button';
 import { useRemoveAvatar, useUploadAvatar } from '@hooks/use-me';
 import { initialsOf } from '@lib/initials';

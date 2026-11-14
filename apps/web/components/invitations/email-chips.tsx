@@ -108,7 +108,7 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
           onPaste={onPaste}
           onBlur={() => commit(draft)}
           placeholder={value.length === 0 ? 'jordan@company.com, sam@company.com' : full ? '' : 'Add another'}
-          className="h-6 min-w-[180px] flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
+          className="h-6 min-w-[180px] flex-1 bg-transparent pl-1 text-sm text-text outline-none placeholder:text-text-muted focus-visible:shadow-none"
         />
       </div>
 

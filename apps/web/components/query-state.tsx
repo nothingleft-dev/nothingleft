@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Button } from '@components/ui/button';
 import { FormAlert } from '@components/auth/form-alert';
+import { RateLimitReload } from '@components/rate-limit';
+import { useRateLimit } from '@hooks/use-rate-limit';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 
@@ -34,6 +36,15 @@ export function LoadError({
   detail?: ReactNode;
   onRetry?: () => void;
 }) {
+  const { secondsLeft } = useRateLimit();
+  // Under the request limit a retry would only be refused again; refused reads reload by themselves when it lifts.
+  if (secondsLeft > 0) {
+    return (
+      <FormAlert tone="warning" title={children}>
+        <RateLimitReload />
+      </FormAlert>
+    );
+  }
   return (
     <FormAlert title={children} action={onRetry ? <RetryButton onRetry={onRetry} /> : undefined}>
       {detail}

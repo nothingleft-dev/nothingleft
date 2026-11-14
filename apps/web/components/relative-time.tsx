@@ -19,13 +19,16 @@ export function RelativeTime({ value, timeZone, className }: RelativeTimeProps) 
     return () => window.clearInterval(id);
   }, []);
 
-  const iso = value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+  const at = value instanceof Date ? value : new Date(value);
+  const iso = at.toISOString();
+  // Everything shown here already happened; a server clock ahead of the viewer's must not read as the future.
+  const shown = Math.min(at.getTime(), now);
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <time dateTime={iso} className={cn('text-text-muted', className)}>
-          {formatRelative(value, now, timeZone)}
+          {formatRelative(shown, now, timeZone)}
         </time>
       </TooltipTrigger>
       <TooltipContent>{formatDateTimeWithZone(value, timeZone)}</TooltipContent>

@@ -205,7 +205,7 @@ function CreateTokenDialog({
         </form>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <PendingButton

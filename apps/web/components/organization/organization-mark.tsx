@@ -1,5 +1,6 @@
 import type { Organization } from '@nothingleft/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@components/ui/avatar';
+import { Avatar, AvatarFallback } from '@components/ui/avatar';
+import { AvatarImage } from '@components/avatar-image';
 import { initialsOf } from '@lib/initials';
 import { cn } from '@lib/utils';
 

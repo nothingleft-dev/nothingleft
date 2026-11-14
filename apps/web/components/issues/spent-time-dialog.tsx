@@ -25,7 +25,14 @@ import { Button } from '@components/ui/button';
 import { Duration } from '@components/duration';
 import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
 import { PickerCommand, PickerItem } from '@components/picker';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@components/ui/dialog';
 import { DialogBody } from '@components/dialog-body';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';
@@ -411,7 +418,10 @@ function SpentTimeForm({
         </div>
       </DialogBody>
 
-      <div className="flex gap-2">
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
         <PendingButton
           type="submit"
           pending={pending || uploader.busy}
@@ -420,10 +430,7 @@ function SpentTimeForm({
         >
           Save
         </PendingButton>
-        <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

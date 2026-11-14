@@ -1,7 +1,12 @@
 import { Avatar, Style } from '@dicebear/core';
 import blobs from '@dicebear/styles/blobs.json' with { type: 'json' };
 import initials from '@dicebear/styles/initials.json' with { type: 'json' };
-import { AVATAR_INITIALS_TEXT, AVATAR_PASTEL_BACKGROUNDS, GRAVATAR_PROBE_TIMEOUT_MS } from '@config/constants';
+import {
+  AVATAR_INITIALS_TEXT,
+  AVATAR_PASTEL_BACKGROUNDS,
+  GRAVATAR_PROBE_TIMEOUT_MS,
+  PERSON_MARK_VERSION,
+} from '@config/constants';
 import { PROJECT_MARK_COLORS } from '@config/project-mark-colors';
 import { PALETTE_HUES, type AvatarMimeType, type PaletteHue } from '@nothingleft/types';
 
@@ -26,14 +31,19 @@ function styleFor(
   color?: PaletteHue,
 ): { style: Style; options: Record<string, unknown> } {
   switch (kind) {
+    // The default variant overlays a blended, half-opacity copy of the letters, unreadable at avatar size.
     case 'person':
       return {
         style: initialsStyle,
-        options: { backgroundColor: hex(AVATAR_PASTEL_BACKGROUNDS), textColor: hex([AVATAR_INITIALS_TEXT]) },
+        options: {
+          backgroundColor: hex(AVATAR_PASTEL_BACKGROUNDS),
+          textColor: hex([AVATAR_INITIALS_TEXT]),
+          initialsVariant: ['alt'],
+          fontWeight: 600,
+        },
       };
     case 'project': {
       const { background, text } = PROJECT_MARK_COLORS[color ?? defaultProjectColor(seed)];
-      // The default variant overlays a blended, half-opacity copy of the letters, unreadable at sidebar size.
       return {
         style: initialsStyle,
         options: { backgroundColor: [background], textColor: [text], initialsVariant: ['alt'], fontWeight: 600 },
@@ -60,7 +70,7 @@ export function avatarMarks(apiBaseUrl: string): AvatarMarks {
   const url = (kind: AvatarKind, seed: string) =>
     `${apiBaseUrl.replace(/\/$/, '')}/avatars/${kind}?seed=${encodeURIComponent(seed)}`;
   return {
-    person: name => url('person', name),
+    person: name => `${url('person', name)}&v=${PERSON_MARK_VERSION}`,
     // Seeded by the key, so a rename keeps the mark and a key change moves it with the issue keys.
     project: (key, color) => `${url('project', key)}&color=${color}`,
     organization: name => url('organization', name),

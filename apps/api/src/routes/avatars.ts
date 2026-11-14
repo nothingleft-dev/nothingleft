@@ -8,6 +8,8 @@ const AvatarParams = z.object({ kind: z.enum(AVATAR_KINDS) });
 const AvatarQuery = z.object({
   seed: z.string().min(1).max(AVATAR_SEED_MAX_LENGTH),
   color: z.enum(PALETTE_HUES).optional(),
+  // Only varies the URL, so a cached mark is fetched again when its rendering changes.
+  v: z.coerce.number().int().min(1).optional(),
 });
 
 // Anonymous like any image an <img> loads; the seed is already in the URL the API handed out.

@@ -10,7 +10,8 @@ import {
   type UserTheme,
   UpdateMeSchema,
 } from '@nothingleft/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@components/ui/avatar';
+import { Avatar, AvatarFallback } from '@components/ui/avatar';
+import { AvatarImage } from '@components/avatar-image';
 import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';

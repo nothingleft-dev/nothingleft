@@ -220,7 +220,8 @@ Person avatars do not carry the theme's neutrals. A wall of identical grey circl
 than a wall of faintly different ones, and colour that identifies a person is not the
 deviation-signalling colour rule 1 is about — it never competes with a priority badge
 or an overdue date for meaning. The set is deliberately pale enough to read on both
-themes without swapping, and the fixed dark text clears 15:1 on every one of the five.
+themes without swapping, and the fixed dark text clears 15:1 on every one of the five. The
+letters are weight 600 in the style's plain `alt` variant, as on project marks below.
 
 **Projects** use the same `initials` style on the project's own `avatar_color`, the hue
 picked in project settings, seeded by the project key:
@@ -311,6 +312,10 @@ category as a 4 px left edge — the board card's dot, stretched — hatched whe
 
 - Tabular figures (`tnum`) on every number that sits in a column or a stat.
 - No all-caps labels, no letterspaced eyebrows. Section titles are sentence case.
+- A field label is 14/500 in `--text-secondary`, above its control; the text beside a checkbox
+  or radio is 14/400 in ink. A group heading inside a section (_Issues_ and _Comments_ in
+  notification settings, _Watching_ and _Fields_ in the issue rail) is 14/600 in ink with 24 px
+  above it and 8 px below, never lighter than the rows under it.
 - Line length ≤ 80 characters in prose (descriptions, comments, KB articles): cap the
   markdown column at 72ch.
 - Fonts load from Google Fonts with `display=swap`; the `system-ui` stack is the
@@ -343,7 +348,11 @@ scrim, popovers and menus on `--bg-raised` with `--shadow-popover`; both radius 
 carrying the edge. A dialog is anchored 12 % of the viewport from the top, not centred, so its
 title stays put while its content grows or shrinks. When it is taller than the viewport, its
 header and footer stay in view and only its body scrolls. A popover never runs past the
-viewport (8 px gutter) and gives up height from its list, never from its search box. A list cut
+viewport (8 px gutter) and gives up height from its list, never from its search box. A dialog
+keeps a 16 px gutter at any width. Its footer is right-aligned: an outline _Cancel_, then the one
+primary (or danger) action, 8 px apart; a destructive secondary action sits alone at the left.
+An inline editor (description, comment, article) is the exception: its primary comes first,
+left-aligned under the text, then _Cancel_. A list cut
 off at its edge fades out over its last 24 px until its end is reached; a list that fits never
 fades.
 
@@ -880,7 +889,8 @@ action that touches only the actor gets a success toast with Undo instead of a d
 
 **Rate limit**: a `429` is never shown as the server being down. While it lasts, one
 warning banner tops every page with a countdown from `Retry-After`; reads wait for
-it and finish by themselves, so a page keeps what it shows instead of an error. A refused save
+it and finish by themselves, so a page keeps what it shows instead of an error; a read with
+nothing loaded yet shows its load notice in the warning tone with the countdown and no _Try again_. A refused save
 shares one error toast whose Retry unlocks at zero; it is never resent without a click. The
 sign-in, sign-up and reset forms show no toast: their inline alert reads _Too many attempts._ with
 the countdown, and the submit button stays disabled until it ends.

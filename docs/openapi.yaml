@@ -57,6 +57,11 @@ paths:
           required: false
           description: Projects only, ignored otherwise. The project's `avatar_color`; without it the key picks one.
           schema: { $ref: '#/components/schemas/PaletteHue' }
+        - name: v
+          in: query
+          required: false
+          description: The mark's rendering version. It does not change the image; a new value makes browsers fetch it again.
+          schema: { type: integer, minimum: 1 }
       responses:
         '200':
           description: The mark.

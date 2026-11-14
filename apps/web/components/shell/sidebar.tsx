@@ -19,7 +19,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { Route } from 'next';
 import type { Me } from '@nothingleft/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@components/ui/avatar';
+import { Avatar, AvatarFallback } from '@components/ui/avatar';
+import { AvatarImage } from '@components/avatar-image';
 import { Button } from '@components/ui/button';
 import {
   DropdownMenu,

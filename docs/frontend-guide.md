@@ -160,6 +160,7 @@ apps/web/
 │   ├── pending-button.tsx    PendingButton (a Button that is running: `pending` + `pendingLabel`, width held, own fill) and PendingLabel
 │   ├── toast-error.tsx       toastError(title, error): the title names the failed action, the API message is the detail; 429 goes to the shared rate-limit toast
 │   ├── query-state.tsx       QueryState, LoadError, StaleNotice, RetryButton (see Loading states)
+│   ├── avatar-image.tsx      AvatarImage: the primitive's image, handing over to the fallback when a loaded image later fails
 │   ├── job-status.tsx        a background job's state as a dot and a word (imports, exports)
 │   ├── avatar-picker.tsx     the upload / remove pair, shared by settings and onboarding
 │   ├── site-scripts.tsx      third-party tags for every page, env-gated (see Page metadata)
@@ -1171,6 +1172,8 @@ Failures go through `components/query-state.tsx`. `QueryState` branches pending 
 skeleton) → failed with nothing loaded (`LoadError` with Try again) → failed refresh
 (`StaleNotice` above the data) → empty (your `EmptyState`) → data. Writing it by hand is fine,
 but the order is the same: never test `data ?? []` for emptiness before testing for a failure.
+While the request limit lasts, `LoadError` turns into a warning with the countdown and no Try
+again; the provider reloads refused reads when it lifts.
 A project-scoped page calls `notFoundOn404(query.error)` before rendering its load error, so a
 missing or denied project shows the in-shell 404 (`app/(app)/not-found.tsx`), not a 500-style
 alert.

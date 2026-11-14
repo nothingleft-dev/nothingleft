@@ -1467,6 +1467,16 @@
   box-shadow: var(--shadow-dialog);
 }
 
+/* A wide dialog keeps a 16px gutter on a tablet instead of running edge to edge. */
+[data-slot='dialog-content'] {
+  width: calc(100% - 2rem);
+}
+
+/* The hover fill measured about 1.1:1 on the page, so loading shapes barely read; one step up does. */
+[data-slot='skeleton'] {
+  background: var(--bg-active);
+}
+
 [data-slot='dialog-content']:focus-visible {
   box-shadow: var(--shadow-dialog);
 }
