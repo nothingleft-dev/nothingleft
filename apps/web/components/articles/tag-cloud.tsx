@@ -47,7 +47,7 @@ export function TagCloud({ project, tags, loading, activeQuery }: TagCloudProps)
               )}
             >
               {tag.name}
-              <span className="tabular text-text-muted">{tag.article_count}</span>
+              <span className={cn('tabular', on ? 'text-text-secondary' : 'text-text-muted')}>{tag.article_count}</span>
             </Link>
           </li>
         );

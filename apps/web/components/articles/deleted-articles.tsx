@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation';
 import { FileText, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadError } from '@components/query-state';
-import { Button } from '@components/ui/button';
+import { PendingButton } from '@components/pending-button';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { RelativeTime } from '@components/relative-time';
 import { ArticleRowsSkeleton, articlePath } from '@components/articles/article-row';
 import { useDeletedArticles, useRestoreArticle } from '@hooks/use-articles';
 import { useSession } from '@hooks/use-session';
 import { isApiError } from '@lib/api/errors';
-import { formatDateTime } from '@lib/datetime';
+import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 
 export function DeletedArticles({ project }: { project: string }) {
   const router = useRouter();
@@ -39,7 +40,7 @@ export function DeletedArticles({ project }: { project: string }) {
       <PageHeader title="Deleted articles" />
       <p className="max-w-[72ch] text-sm text-text-secondary">
         Deleted articles can be restored for 14 days, with whatever was deleted along with them. After that they are
-        removed for good, with their comments and files. You see the ones you could restore.
+        removed for good, with their comments and files. Only articles you can restore are listed.
       </p>
       {deleted.isPending ? (
         <ArticleRowsSkeleton rows={3} />
@@ -56,24 +57,35 @@ export function DeletedArticles({ project }: { project: string }) {
               <div className="flex items-center gap-3">
                 <FileText className="size-icon-sm flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate font-medium">{node.title}</span>
-                {node.deleted_at ? (
-                  <span className="text-xs text-text-secondary">
-                    Deleted <RelativeTime value={node.deleted_at} timeZone={timeZone} />
-                  </span>
-                ) : null}
-                {node.restorable_until ? (
-                  <span className="text-xs text-text-muted max-md:hidden">
-                    until {formatDateTime(node.restorable_until, timeZone)}
-                  </span>
-                ) : null}
-                <Button
+                <span className="flex flex-none items-center gap-1 text-xs text-text-secondary">
+                  {node.deleted_at ? (
+                    <span>
+                      Deleted{' '}
+                      <RelativeTime value={node.deleted_at} timeZone={timeZone} className="text-text-secondary" />
+                    </span>
+                  ) : null}
+                  {node.restorable_until ? (
+                    <span className="max-md:hidden">
+                      <span className="text-text-muted">· </span>
+                      restorable until{' '}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <time dateTime={node.restorable_until}>{formatDate(node.restorable_until, timeZone)}</time>
+                        </TooltipTrigger>
+                        <TooltipContent>{formatDateTimeWithZone(node.restorable_until, timeZone)}</TooltipContent>
+                      </Tooltip>
+                    </span>
+                  ) : null}
+                </span>
+                <PendingButton
                   size="sm"
                   variant="outline"
-                  disabled={restore.isPending && restore.variables === node.slug}
+                  pending={restore.isPending && restore.variables === node.slug}
+                  pendingLabel="Restoring…"
                   onClick={() => onRestore(node.slug)}
                 >
                   <RotateCcw /> Restore
-                </Button>
+                </PendingButton>
               </div>
               {refusals[node.slug] ? (
                 <p role="alert" className="pl-7 text-xs text-danger-fg">

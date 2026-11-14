@@ -8,6 +8,7 @@ import { Skeleton } from '@components/ui/skeleton';
 import { DraftMark } from '@components/articles/draft-mark';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
+import { cn } from '@lib/utils';
 
 export const articlePath = (article: { project: { key: string }; slug: string }) =>
   `/projects/${article.project.key}/articles/${article.slug}` as Route;
@@ -24,7 +25,7 @@ export function ArticleRow({ article, showProject = false, showExcerpt = true, t
     <li className="group/article relative flex gap-3 px-3 py-2.5 hover:bg-hover">
       <FileText className="mt-0.5 size-icon-sm flex-none text-text-muted" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
           <Link
             href={articlePath(article)}
             className="min-w-0 truncate font-medium text-text after:absolute after:inset-0 hover:underline"
@@ -35,16 +36,18 @@ export function ArticleRow({ article, showProject = false, showExcerpt = true, t
           {article.starred ? (
             <Star aria-label="Starred" className="size-3.5 flex-none fill-current text-brand-text" />
           ) : null}
-          {showProject ? <span className="font-mono text-2xs text-text-muted">{article.project.key}</span> : null}
-          {article.parent ? <span className="truncate text-xs text-text-muted">in {article.parent.title}</span> : null}
-          <span className="ml-auto flex flex-none items-center gap-1 text-xs text-text-secondary">
-            <PersonName person={article.updated_by} />
-            <RelativeTime value={article.updated_at} timeZone={timeZone} className="relative" />
-          </span>
+          {showProject ? (
+            <span className="flex-none font-mono text-2xs text-text-muted">{article.project.key}</span>
+          ) : null}
+          {article.parent ? (
+            <span className="min-w-[8ch] shrink-[4] truncate text-xs text-text-muted">in {article.parent.title}</span>
+          ) : null}
+          <Updated article={article} timeZone={timeZone} className="ml-auto pl-2 max-sm:hidden" />
         </div>
         {showExcerpt && article.excerpt ? (
           <p className="line-clamp-2 max-w-[90ch] text-xs leading-5 text-text-secondary">{article.excerpt}</p>
         ) : null}
+        <Updated article={article} timeZone={timeZone} className="sm:hidden" />
         {article.tags.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {article.tags.map(t => (
@@ -59,6 +62,23 @@ export function ArticleRow({ article, showProject = false, showExcerpt = true, t
         ) : null}
       </div>
     </li>
+  );
+}
+
+function Updated({
+  article,
+  timeZone,
+  className,
+}: {
+  article: ArticleSummary;
+  timeZone?: string | undefined;
+  className: string;
+}) {
+  return (
+    <span className={cn('flex flex-none items-center gap-1 text-xs text-text-secondary', className)}>
+      <PersonName person={article.updated_by} />
+      <RelativeTime value={article.updated_at} timeZone={timeZone} className="relative" />
+    </span>
   );
 }
 

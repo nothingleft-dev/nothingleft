@@ -129,7 +129,7 @@ function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean;
           aria-current={onHome ? 'page' : undefined}
           className={cn(
             'flex h-control min-w-0 flex-1 items-center gap-2 rounded-sm px-2 font-medium text-text-secondary hover:bg-hover hover:text-text',
-            onHome && 'bg-active text-text',
+            onHome && 'text-text',
           )}
         >
           <BookOpen className="size-icon-sm flex-none" />
@@ -216,7 +216,14 @@ function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean;
         >
           <Trash2 className="size-3.5 flex-none" />
           <span className="flex-1">Deleted articles</span>
-          <span className="tabular text-xs text-text-muted">{deleted.data!.length}</span>
+          <span
+            className={cn(
+              'tabular text-xs',
+              search.get('view') === 'deleted' && pathname === home ? 'text-text-secondary' : 'text-text-muted',
+            )}
+          >
+            {deleted.data!.length}
+          </span>
         </Link>
       ) : null}
     </nav>

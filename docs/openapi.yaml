@@ -8598,7 +8598,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         published_at: { type: [string, 'null'], format: date-time }
-        excerpt: { type: string, description: 'Plain text: the passage matching the free text, else the start of the body.' }
+        excerpt: { type: string, description: 'Plain text from the body''s prose (headings, tables and code left out): the passage matching the free text, else the start.' }
         starred: { type: boolean }
     ArticleSummaryListEnvelope:
       allOf:

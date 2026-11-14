@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import type { ArticleSummary } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
+import { Skeleton } from '@components/ui/skeleton';
 import { LoadError, errorDetail } from '@components/query-state';
 import { EmptyState } from '@components/empty-state';
 import { QueryBar, type QueryProblem } from '@components/issues/list/query-bar';
@@ -15,7 +16,7 @@ import { isApiError } from '@lib/api/errors';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { LoadMore } from '@components/text-button';
 
-export const ARTICLE_QUERY_PLACEHOLDER = 'Search articles · tag: rca status: draft updated: {minus 30d} .. Today';
+export const ARTICLE_QUERY_PLACEHOLDER = 'Search articles, or try tag: rca';
 const RECENT_SORT = 'updated desc';
 
 interface ArticleResultsProps {
@@ -70,16 +71,31 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
       />
 
       {search.isPending && !search.data ? (
-        <ArticleRowsSkeleton />
+        <div className="flex flex-col gap-2" role="status" aria-label="Loading">
+          <p className="text-xs text-text-secondary">{q ? 'Searching…' : 'Recently updated'}</p>
+          {grouped ? (
+            [3, 2].map(rows => (
+              <Fragment key={rows}>
+                <div className="mt-2 flex h-5 items-center gap-2" aria-hidden>
+                  <Skeleton className="size-5 rounded-xs" />
+                  <Skeleton className="h-3.5 w-32" />
+                </div>
+                <ArticleRowsSkeleton rows={rows} />
+              </Fragment>
+            ))
+          ) : (
+            <ArticleRowsSkeleton />
+          )}
+        </div>
       ) : search.isError && !problem ? (
-        <LoadError onRetry={() => void search.refetch()} detail={errorDetail(search.error)}>
-          The articles could not be loaded.
-        </LoadError>
+        <div className="flex flex-col gap-2">
+          {q ? null : <p className="text-xs text-text-secondary">Recently updated</p>}
+          <LoadError onRetry={() => void search.refetch()} detail={errorDetail(search.error)}>
+            {q ? 'The search could not be run.' : 'The recent articles could not be loaded.'}
+          </LoadError>
+        </div>
       ) : problem && !search.data ? (
-        <EmptyState
-          title="Fix the query to see results."
-          description="The message above names the part at fault. Valid values, where there are any, are one click away."
-        />
+        <p className="text-xs text-text-secondary">Fix the query to see results.</p>
       ) : rows.length === 0 ? (
         !q && whenEmpty ? (
           whenEmpty
@@ -124,7 +140,10 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
                     {group.name}
                   </Link>
                   <span className="font-mono text-2xs text-text-muted">{group.key}</span>
-                  <span className="tabular text-xs text-text-muted">{group.rows.length}</span>
+                  <span className="text-xs text-text-muted">
+                    · <span className="tabular">{group.rows.length}</span>{' '}
+                    {group.rows.length === 1 ? 'article' : 'articles'}
+                  </span>
                 </div>
               ) : null}
               <ul className="divide-y divide-border-subtle rounded-md border">

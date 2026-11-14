@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { notFound, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import { Eye, EyeOff, FilePlus2, Link2, MoreHorizontal, Pencil, Star, Tag, Trash2, Undo2, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
@@ -69,12 +70,16 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
 
   useShortcut('e', () => setEditing(true), canEdit && !editing);
 
-  if (article.isError && isApiError(article.error) && article.error.isNotFound) notFound();
+  if (article.isError && isApiError(article.error) && article.error.isNotFound) {
+    return <ArticleNotFound project={project} slug={slug} />;
+  }
   if (article.isError && !article.data) {
     return (
-      <LoadError onRetry={() => void article.refetch()} detail={errorDetail(article.error)}>
-        This article could not be loaded.
-      </LoadError>
+      <div className="max-w-[900px]">
+        <LoadError onRetry={() => void article.refetch()} detail={errorDetail(article.error)}>
+          This article could not be loaded.
+        </LoadError>
+      </div>
     );
   }
   if (article.isPending) return <ArticleSkeleton />;
@@ -83,7 +88,7 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
-      <div className="grid items-start gap-10 min-[1280px]:grid-cols-[minmax(0,1fr)_220px]">
+      <div className={cn('grid items-start gap-10', !editing && PAGE_COLUMNS)}>
         <article className="min-w-0 max-w-[900px]">
           <Provenance article={data} timeZone={timeZone} />
           <ArticleHeading article={data} onEdit={() => setEditing(true)} editing={editing} />
@@ -100,9 +105,11 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
           )}
           <ArticleComments article={data} timeZone={timeZone} />
         </article>
-        <aside className="self-stretch max-[1279px]:hidden">
-          {editing ? null : <ArticleToc headings={headings} />}
-        </aside>
+        {editing ? null : (
+          <aside className="self-stretch max-[1279px]:hidden">
+            <ArticleToc headings={headings} />
+          </aside>
+        )}
       </div>
     </MarkdownAttachments>
   );
@@ -111,20 +118,22 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
 function Provenance({ article, timeZone }: { article: Article; timeZone?: string | undefined }) {
   const signal = useArticleSignal(article.project.key, article.slug);
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
-      <span>
-        Last updated by <PersonName person={article.updated_by} className="font-medium text-text" />{' '}
-        <RelativeTime value={article.updated_at} timeZone={timeZone} />
-      </span>
-      {article.created_by.username !== article.updated_by.username ? (
-        <>
-          <span className="text-text-muted">·</span>
-          <span>
-            Written by <PersonName person={article.created_by} className="font-medium text-text" />
-          </span>
-        </>
-      ) : null}
-      <span className="ml-auto flex gap-1">
+    <div className="mb-3 flex items-center gap-3 text-xs text-text-secondary">
+      <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+        <span>
+          Last updated by <PersonName person={article.updated_by} className="font-medium text-text" />{' '}
+          <RelativeTime value={article.updated_at} timeZone={timeZone} />
+        </span>
+        {article.created_by.username !== article.updated_by.username ? (
+          <>
+            <span className="text-text-muted max-sm:hidden">·</span>
+            <span>
+              Written by <PersonName person={article.created_by} className="font-medium text-text" />
+            </span>
+          </>
+        ) : null}
+      </p>
+      <span className="flex flex-none gap-1">
         <IconAction
           label={article.me.starred ? 'Starred — you watch this article' : 'Star (also watches)'}
           pressed={article.me.starred}
@@ -172,7 +181,6 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
       <div className="flex items-start gap-4">
         <ArticleTitle article={article} />
         <div className="mt-0.5 flex flex-none items-center gap-0.5">
-          {article.status === 'draft' ? <DraftMark className="mr-1.5" /> : null}
           {article.me.can_edit && !editing ? (
             <IconAction label="Edit article" shortcut="e" onClick={onEdit}>
               <Pencil />
@@ -213,6 +221,10 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
 
 const titleClass = 'flex-1 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]';
 
+function TitleDraftMark({ article }: { article: Article }) {
+  return article.status === 'draft' ? <DraftMark className="ml-2 align-middle" /> : null;
+}
+
 function ArticleTitle({ article }: { article: Article }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -233,9 +245,13 @@ function ArticleTitle({ article }: { article: Article }) {
           </TooltipTrigger>
           <TooltipContent>Click to rename · the address stays the same</TooltipContent>
         </Tooltip>
+        <TitleDraftMark article={article} />
       </h1>
     ) : (
-      <h1 className={titleClass}>{article.title}</h1>
+      <h1 className={titleClass}>
+        {article.title}
+        <TitleDraftMark article={article} />
+      </h1>
     );
   }
 
@@ -521,19 +537,50 @@ function IconAction({ label, shortcut, pressed, onClick, children }: IconActionP
   );
 }
 
+function ArticleNotFound({ project, slug }: { project: string; slug: string }) {
+  const { projectName } = useKnowledgeBase();
+  return (
+    <div className="flex max-w-lg flex-col items-start gap-3 pt-12">
+      <p className="font-mono text-2xs text-text-muted">404</p>
+      <h1 className="text-xl font-semibold tracking-tight">No article at this address</h1>
+      <p className="text-pretty text-text-secondary">
+        There is no article <span className="font-mono text-sm text-text">{slug}</span>
+        {projectName ? ` in ${projectName}` : ''} that you can open. The address may have changed, or the article was
+        deleted or is a draft.
+      </p>
+      <Button asChild variant="outline">
+        <Link href={`/projects/${project}/articles` as Route}>Back to the knowledge base</Link>
+      </Button>
+    </div>
+  );
+}
+
+const PAGE_COLUMNS = 'min-[1280px]:grid-cols-[minmax(0,1fr)_220px]';
+
 export function ArticleSkeleton() {
   return (
-    <div className="flex max-w-[900px] flex-col gap-4" role="status" aria-label="Loading">
-      <Skeleton className="h-3 w-72" />
-      <Skeleton className="h-8 w-2/3" />
-      <Skeleton className="h-5 w-40" />
-      <div className="mt-3 flex flex-col gap-2">
-        <Skeleton className="h-4 w-full max-w-[72ch]" />
-        <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
-        <Skeleton className="h-4 w-4/6 max-w-[64ch]" />
-        <Skeleton className="mt-3 h-5 w-48" />
-        <Skeleton className="h-4 w-full max-w-[72ch]" />
-        <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
+    <div className={cn('grid items-start gap-10', PAGE_COLUMNS)} role="status" aria-label="Loading">
+      <div className="flex min-w-0 max-w-[900px] flex-col">
+        <div className="mb-3 flex h-control items-center gap-3">
+          <Skeleton className="h-3 w-64 max-w-[60%]" />
+          <Skeleton className="ml-auto size-6 rounded-sm" />
+          <Skeleton className="size-6 rounded-sm" />
+        </div>
+        <Skeleton className="h-7 w-2/3" />
+        <div className="mt-3 flex gap-1.5">
+          <Skeleton className="h-5 w-14 rounded-sm" />
+          <Skeleton className="h-5 w-20 rounded-sm" />
+          <Skeleton className="h-5 w-10 rounded-sm" />
+        </div>
+        <div className="mt-6 flex flex-col gap-2.5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-full max-w-[72ch]" />
+          <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
+          <Skeleton className="h-4 w-4/6 max-w-[64ch]" />
+          <Skeleton className="mt-4 h-5 w-48" />
+          <Skeleton className="h-4 w-full max-w-[72ch]" />
+          <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
+        </div>
       </div>
     </div>
   );

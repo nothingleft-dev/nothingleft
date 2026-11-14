@@ -505,7 +505,7 @@ Built in 3.5 (27 Sep 2026); these are the decisions taken building it:
 - **Search** is the issue query bar with the article vocabulary: mono, autocomplete on pause, values
   underlined when wrong with the valid ones one click away. Results are rows with the title, _Draft_, star,
   parent, who and when last updated, a two-line excerpt and neutral tag chips. `/articles` is the same list
-  in one section per project.
+  in one section per project. An excerpt is the body's prose: headings, tables and code are left out.
 - **The global search box** in the top bar searches issues and articles at once and shows them in two groups
   with their totals and _See all N_. A filter only the other group takes is a quiet note in its place
   (_Articles have no assignee, so none are shown._); a query neither group can read is an error in both.

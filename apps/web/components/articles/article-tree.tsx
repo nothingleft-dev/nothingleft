@@ -286,37 +286,42 @@ function TreeRow({
           <span className={cn('truncate', node.status === 'draft' && 'text-text-secondary')}>{node.title}</span>
           {node.status === 'draft' ? <DraftMark /> : null}
         </Link>
-        {canCreate ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={`New article under ${node.title}`}
-                onClick={onCreateChild}
-                className="grid size-5 flex-none place-items-center rounded-xs text-text-muted reveal group-hover/row:opacity-100 hover:bg-active hover:text-text"
-              >
-                <Plus className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">New article under this one</TooltipContent>
-          </Tooltip>
-        ) : null}
-        {canMove ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                ref={setActivatorNodeRef}
-                {...listeners}
-                {...attributes}
-                aria-label={`Move ${node.title}`}
-                className="grid size-5 flex-none cursor-grab place-items-center rounded-xs text-text-muted reveal group-hover/row:opacity-100 hover:bg-active hover:text-text active:cursor-grabbing"
-              >
-                <GripVertical className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Drag to move · Alt + arrows on a focused title</TooltipContent>
-          </Tooltip>
+        {canCreate || canMove ? (
+          // Laid over the title's end on hover, so the title uses the whole row at rest.
+          <span className="flex flex-none items-center bg-inherit reveal group-hover/row:opacity-100 [@media(hover:hover)]:absolute [@media(hover:hover)]:inset-y-0 [@media(hover:hover)]:right-1 [@media(hover:hover)]:pl-1">
+            {canCreate ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`New article under ${node.title}`}
+                    onClick={onCreateChild}
+                    className="grid size-5 flex-none place-items-center rounded-xs text-text-muted hover:bg-active hover:text-text"
+                  >
+                    <Plus className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">New article under this one</TooltipContent>
+              </Tooltip>
+            ) : null}
+            {canMove ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    ref={setActivatorNodeRef}
+                    {...listeners}
+                    {...attributes}
+                    aria-label={`Move ${node.title}`}
+                    className="grid size-5 flex-none cursor-grab place-items-center rounded-xs text-text-muted hover:bg-active hover:text-text active:cursor-grabbing"
+                  >
+                    <GripVertical className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Drag to move · Alt + arrows on a focused title</TooltipContent>
+              </Tooltip>
+            ) : null}
+          </span>
         ) : null}
       </div>
       {refusal ? (

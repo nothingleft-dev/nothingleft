@@ -41,7 +41,9 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
   const [askChildren, setAskChildren] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const withChildren = article.child_count > 0 || askChildren;
-  const into = article.parent ? article.parent.title : 'the top level';
+  const movedUp = article.parent
+    ? `They move up one level, under ${article.parent.title}, in the same order.`
+    : 'They move up to the top level, in the same order.';
 
   const close = (next: boolean) => {
     if (!next) {
@@ -90,7 +92,7 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Delete {article.title}?</DialogTitle>
+          <DialogTitle>Delete “{article.title}”?</DialogTitle>
           <DialogDescription asChild>
             <div className="flex flex-col gap-2 text-xs leading-5 text-text-secondary">
               <p>
@@ -118,7 +120,7 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
                 value="move_up"
                 on={children === 'move_up'}
                 title="Move them up"
-                detail={`They take its place under ${into}, in the same order.`}
+                detail={movedUp}
               />
               <Choice
                 id={`${id}-delete`}
