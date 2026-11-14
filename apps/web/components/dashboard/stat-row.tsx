@@ -103,7 +103,7 @@ export function StatRow({
           );
           const cell = cn(
             'flex flex-col gap-0.5 border-r py-3 pr-4 pl-4 last:border-r-0',
-            'max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(n+3)]:border-t',
+            'max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(n+3)]:border-t max-sm:[&:last-child:nth-child(odd)]:col-span-2',
             inset ? 'max-sm:[&:nth-child(2n+1)]:pl-3' : 'max-sm:[&:nth-child(2n+1)]:pl-0',
             i === 0 && (inset ? 'pl-3' : 'pl-0'),
           );
@@ -144,7 +144,7 @@ export function statRowState(query: { isPending: boolean; isError: boolean; data
 
 export function weekDelta(delta: number): NonNullable<Stat['delta']> {
   return {
-    text: `${delta > 0 ? '+' : delta === 0 ? '±' : ''}${delta} vs last week`,
+    text: `${delta > 0 ? '+' : delta === 0 ? '±' : '−'}${Math.abs(delta)} vs last week`,
     good: delta === 0 ? null : delta > 0,
   };
 }

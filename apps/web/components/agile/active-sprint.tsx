@@ -7,7 +7,7 @@ import { Skeleton } from '@components/ui/skeleton';
 import { Markdown } from '@components/markdown/markdown';
 import { Meter } from '@components/dashboard/meter';
 import { StatusDistribution } from '@components/dashboard/status-strip';
-import { DaysLeft, SprintDates } from '@components/agile/sprint-dates';
+import { DaysLeft, SprintDates, sprintDatesLabel } from '@components/agile/sprint-dates';
 
 export const boardHref = (projectKey: string) => `/projects/${projectKey}/board` as Route;
 export const backlogHref = (projectKey: string) => `/projects/${projectKey}/backlog` as Route;
@@ -24,7 +24,7 @@ export function ActiveSprintRow({ sprint }: { sprint: Sprint }) {
         </Link>
         <DaysLeft days={sprint.days_left} className="ml-auto" />
       </div>
-      <StatusDistribution statuses={sprint.progress.by_status} />
+      <StatusDistribution statuses={sprint.progress.by_status} tooltipSide="bottom" />
       <p className="text-2xs text-text-secondary">
         You: <b className="font-medium tabular text-text">{mine.resolved_issues}</b> of{' '}
         <b className="font-medium tabular text-text">{mine.issues}</b> resolved
@@ -51,18 +51,25 @@ export function ActiveSprintRowsSkeleton({ rows = 2 }: { rows?: number }) {
   );
 }
 
-/** The project card's sprint line: name, dates, days left above the strip. */
+const thisYearSuffix = ` ${new Date().getFullYear()}`;
+
+/** The project card's sprint line: name, dates, days left above the strip; the name gives way first. */
 export function ActiveSprintLine({ sprint }: { sprint: Sprint }) {
+  const dates = sprintDatesLabel(sprint);
   return (
     <div>
       <div className="flex items-baseline gap-2">
         <Link href={boardHref(sprint.project.key)} className="min-w-0 truncate font-medium hover:underline">
           {sprint.name}
         </Link>
-        <SprintDates sprint={sprint} className="text-xs" />
-        <DaysLeft days={sprint.days_left} className="ml-auto" />
+        <span className="shrink-0 text-xs whitespace-nowrap tabular text-text-secondary">
+          {dates.endsWith(thisYearSuffix) && dates.match(/\d{4}/g)?.length === 1
+            ? dates.slice(0, -thisYearSuffix.length)
+            : dates}
+        </span>
+        <DaysLeft days={sprint.days_left} className="ml-auto shrink-0" />
       </div>
-      <StatusDistribution statuses={sprint.progress.by_status} className="mt-2" />
+      <StatusDistribution statuses={sprint.progress.by_status} tooltipSide="bottom" className="mt-2" />
     </div>
   );
 }

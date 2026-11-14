@@ -8,18 +8,20 @@ import { IssueKey } from '@components/issue-key';
 import { CompactIssueRow, CompactRowsSkeleton } from '@components/dashboard/compact-issue-row';
 import { Meter } from '@components/dashboard/meter';
 import { Section, SectionEmpty } from '@components/dashboard/section';
-import { LoadError, StaleNotice } from '@components/query-state';
+import { Kbd } from '@components/kbd';
+import { LoadError, StaleNotice, errorDetail } from '@components/query-state';
 import { StatRow, statRowState, type Stat } from '@components/dashboard/stat-row';
 import { ActiveSprintRow, ActiveSprintRowsSkeleton, backlogHref } from '@components/agile/active-sprint';
 import { InboxPreview } from '@components/notifications/inbox-preview';
 import { useIssueFigures, useIssueSlice } from '@hooks/use-issue-search';
+import { useInboxPreview } from '@hooks/use-notifications';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useRecentlyViewed } from '@hooks/use-recently-viewed';
 import { useSession } from '@hooks/use-session';
 import { useActiveSprints } from '@hooks/use-sprints';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { DUE_GROUP_QUERY, DUE_TODAY, MY_OPEN, OVERDUE, listHref } from '@lib/issue-list/links';
-import { todayCalendarDate } from '@lib/datetime';
+import { formatTime, todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { plural } from '@lib/numbers';
 
@@ -30,6 +32,16 @@ const STARRED_QUERY = '#Star sort by: updated desc';
 const ROWS_SHOWN = 10;
 const ROWS_PER_GROUP_MIN = 3;
 const STARRED_SHOWN = 12;
+
+interface Read {
+  data: unknown;
+  isError: boolean;
+  error: unknown;
+  dataUpdatedAt: number;
+  refetch: () => unknown;
+}
+
+const staleRead = (q: Read) => q.isError && q.data !== undefined;
 
 export function MyWork() {
   const session = useSession();
@@ -45,6 +57,10 @@ export function MyWork() {
   const starred = useIssueSlice({ q: STARRED_QUERY, limit: STARRED_SHOWN });
   const recent = useRecentlyViewed();
   const sprints = useActiveSprints();
+  const inbox = useInboxPreview();
+  const reads: Read[] = [figures, logged, assigned, starred, sprints, inbox];
+  const nothingLoaded = reads.every(q => q.isError && q.data === undefined);
+  const stale = reads.filter(staleRead);
   const mySprints = (sprints.data ?? []).filter(s => s.progress.mine.issues > 0);
 
   const perProject = figures.data ?? [];
@@ -70,7 +86,17 @@ export function MyWork() {
       unit: `of ${formatDuration(weekMinutes, hours)}`,
       unitHint: `Your organisation’s work week: ${calendar.workweekDays} days of ${formatDuration(calendar.workdayMinutes, hours)}`,
       href: '/timesheets' as Route,
-      below: <Meter ratio={weekMinutes ? loggedMinutes / weekMinutes : 0} label="Logged this week" className="mt-2" />,
+      delta:
+        weekMinutes > 0 && loggedMinutes > weekMinutes
+          ? { text: `${formatDuration(loggedMinutes - weekMinutes, hours)} over`, good: null }
+          : null,
+      below: (
+        <Meter
+          ratio={weekMinutes ? loggedMinutes / weekMinutes : 0}
+          label="Logged this week"
+          className="mt-2 bg-border"
+        />
+      ),
     },
   ];
   const statState = [statRowState(figures), statRowState(logged)];
@@ -85,73 +111,96 @@ export function MyWork() {
   const groups = assigned.data?.meta.groups ?? [];
   const assignedRows = assigned.data?.data ?? [];
   const assignedTotal = assigned.data?.meta.pagination?.total ?? 0;
+  const starredTotal = starred.data?.meta.pagination?.total ?? starred.data?.data.length ?? 0;
   const canCreate = roles.writable.length > 0;
   const backlogProject = roles.writable.length === 1 ? roles.writable[0]! : null;
+  const viewer = roles.org?.membership.username;
+
+  if (nothingLoaded) {
+    return (
+      <div className="flex flex-col gap-6">
+        <LoadError onRetry={() => reads.forEach(q => void q.refetch())} detail={errorDetail(figures.error)}>
+          My work could not be loaded.
+        </LoadError>
+        <StatRow stats={stats} state="failed" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <StatRow
-        stats={stats}
-        state={rowState}
-        onRetry={() => {
-          void figures.refetch();
-          void logged.refetch();
-        }}
-      />
+      {stale.length > 0 ? (
+        <StaleNotice onRetry={() => stale.forEach(q => void q.refetch())} className="-mt-2 self-start text-xs">
+          My work could not be refreshed. Showing what loaded at{' '}
+          {formatTime(Math.min(...stale.map(q => q.dataUpdatedAt)), user?.timezone)}.
+        </StaleNotice>
+      ) : null}
+      <div className="flex flex-col gap-3">
+        <StatRow stats={stats} state={rowState} />
+        {rowState === 'failed' ? (
+          <LoadError
+            onRetry={() => {
+              void figures.refetch();
+              void logged.refetch();
+            }}
+            detail={errorDetail(figures.error ?? logged.error)}
+          >
+            These figures could not be loaded.
+          </LoadError>
+        ) : null}
+      </div>
 
       <div className="grid items-start gap-8 min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]">
         <div className="flex min-w-0 flex-col gap-8">
           <Section
             title="Assigned to me"
-            count={assigned.data ? assignedTotal : undefined}
-            action={{ label: 'View all assigned issues', href: listHref(ASSIGNED_QUERY, { group: 'due' }) }}
+            count={assignedTotal > 0 ? assignedTotal : undefined}
+            stale={staleRead(assigned)}
+            action={
+              assignedTotal > 0
+                ? { label: 'View all assigned issues', href: listHref(ASSIGNED_QUERY, { group: 'due' }) }
+                : undefined
+            }
           >
             {assigned.isPending ? (
               <CompactRowsSkeleton rows={6} />
             ) : assigned.isError && !assigned.data ? (
-              <LoadError onRetry={() => void assigned.refetch()}>Your assignments could not be loaded.</LoadError>
+              <LoadError onRetry={() => void assigned.refetch()} detail={errorDetail(assigned.error)}>
+                Your assignments could not be loaded.
+              </LoadError>
             ) : assignedTotal === 0 ? (
               <SectionEmpty>
                 Nothing is assigned to you. <Link href={'/issues' as Route}>Browse the issue list</Link>
                 {canCreate ? (
                   <>
                     {' '}
-                    or press <kbd>c</kbd> to create one.
+                    or press <Kbd className="mx-0.5 align-[1px]">c</Kbd> to create one.
                   </>
                 ) : (
                   '.'
                 )}
               </SectionEmpty>
             ) : (
-              <>
-                {assigned.isError ? (
-                  <StaleNotice className="px-2" onRetry={() => void assigned.refetch()}>
-                    Your assignments could not be refreshed and may be out of date.
-                  </StaleNotice>
-                ) : null}
-                <AssignedGroups groups={groups} rows={assignedRows} today={today} />
-              </>
+              <AssignedGroups groups={groups} rows={assignedRows} today={today} viewer={viewer} />
             )}
           </Section>
 
           <Section
             title="Starred"
-            count={starred.data ? starred.data.meta.pagination?.total : undefined}
-            action={{ label: 'View all starred', href: '/starred' as Route }}
+            count={starredTotal > 0 ? starredTotal : undefined}
+            stale={staleRead(starred)}
+            action={starredTotal > 0 ? { label: 'View all starred', href: '/starred' as Route } : undefined}
           >
             {starred.isPending ? (
               <CompactRowsSkeleton rows={3} />
             ) : starred.isError && !starred.data ? (
-              <LoadError onRetry={() => void starred.refetch()}>Your starred issues could not be loaded.</LoadError>
+              <LoadError onRetry={() => void starred.refetch()} detail={errorDetail(starred.error)}>
+                Your starred issues could not be loaded.
+              </LoadError>
             ) : (starred.data?.data.length ?? 0) === 0 ? (
               <SectionEmpty>Star an issue from its page and it stays within reach here.</SectionEmpty>
             ) : (
               <div className="flex flex-col">
-                {starred.isError ? (
-                  <StaleNotice className="px-2" onRetry={() => void starred.refetch()}>
-                    Your starred issues could not be refreshed and may be out of date.
-                  </StaleNotice>
-                ) : null}
                 {starred.data!.data.map(issue => (
                   <CompactIssueRow key={issue.key} issue={issue} today={today} />
                 ))}
@@ -162,11 +211,17 @@ export function MyWork() {
 
         <aside className="flex min-w-0 flex-col gap-8 max-[1199px]:grid max-[1199px]:grid-cols-2 max-[1199px]:gap-6 max-md:grid-cols-1">
           <InboxPreview />
-          <Section title="Active sprints" count={sprints.data ? mySprints.length : undefined}>
+          <Section
+            title="Active sprints"
+            count={mySprints.length > 0 ? mySprints.length : undefined}
+            stale={staleRead(sprints)}
+          >
             {sprints.isPending ? (
               <ActiveSprintRowsSkeleton />
             ) : sprints.isError && !sprints.data ? (
-              <LoadError onRetry={() => void sprints.refetch()}>Sprints could not be loaded.</LoadError>
+              <LoadError onRetry={() => void sprints.refetch()} detail={errorDetail(sprints.error)}>
+                Sprints could not be loaded.
+              </LoadError>
             ) : mySprints.length === 0 ? (
               <SectionEmpty>
                 None of your issues is in an active sprint.{' '}
@@ -178,13 +233,6 @@ export function MyWork() {
               </SectionEmpty>
             ) : (
               <ul className="flex flex-col">
-                {sprints.isError ? (
-                  <li>
-                    <StaleNotice className="px-2" onRetry={() => void sprints.refetch()}>
-                      Sprints could not be refreshed and may be out of date.
-                    </StaleNotice>
-                  </li>
-                ) : null}
                 {mySprints.map(sprint => (
                   <ActiveSprintRow key={`${sprint.project.key}/${sprint.slug}`} sprint={sprint} />
                 ))}
@@ -193,6 +241,7 @@ export function MyWork() {
           </Section>
           <Section
             title="Recently viewed"
+            count={recent.items.length > 0 ? recent.items.length : undefined}
             action={recent.items.length > 0 ? { label: 'Clear', onClick: recent.clear } : undefined}
           >
             {recent.items.length === 0 ? (
@@ -205,7 +254,7 @@ export function MyWork() {
                       href={`/issue/${item.key}` as Route}
                       className="grid h-row-dense grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-sm border-b border-border-subtle px-2 hover:bg-hover"
                     >
-                      <IssueKey issueKey={item.key} />
+                      <IssueKey issueKey={item.key} column />
                       <span className="truncate text-xs">{item.title}</span>
                     </Link>
                   </li>
@@ -248,10 +297,12 @@ function AssignedGroups({
   groups,
   rows,
   today,
+  viewer,
 }: {
   groups: readonly IssueGroup[];
   rows: readonly IssueListItem[];
   today: string;
+  viewer: string | undefined;
 }) {
   const byGroup = groups.map(group => rows.filter(r => (r.group ?? null) === group.value));
   const counts = allocateRows(
@@ -277,7 +328,13 @@ function AssignedGroups({
               <span className="font-normal tabular text-text-muted">{group.count}</span>
             </div>
             {shown.map(issue => (
-              <CompactIssueRow key={issue.key} issue={issue} today={today} />
+              <CompactIssueRow
+                key={issue.key}
+                issue={issue}
+                today={today}
+                viewer={viewer}
+                showDue={bucket !== 'today' && bucket !== 'none'}
+              />
             ))}
             {hidden > 0 ? (
               <Link

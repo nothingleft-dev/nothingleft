@@ -14,14 +14,19 @@ import { cn } from '@lib/utils';
 interface CompactIssueRowProps {
   issue: IssueListItem;
   today: string;
+  /** The viewer, left out of the assignees where every row is theirs. */
+  viewer?: string;
+  /** Off where the group heading already names the date (Today, No due date). */
+  showDue?: boolean;
 }
 
 /**
  * DESIGN-SYSTEM § 7 Issue row: `[P][T] KEY Title … status · due · assignees`, hairline-separated.
  * Narrow screens wrap status and assignees onto a second line rather than drop them.
  */
-export function CompactIssueRow({ issue, today }: CompactIssueRowProps) {
+export function CompactIssueRow({ issue, today, viewer, showDue = true }: CompactIssueRowProps) {
   const resolved = RESOLVED_STATUS_CATEGORIES.includes(issue.status.category);
+  const assignees = viewer ? issue.assignees.filter(a => a.username !== viewer) : issue.assignees;
   return (
     <Link
       href={issuePath(issue)}
@@ -35,19 +40,21 @@ export function CompactIssueRow({ issue, today }: CompactIssueRowProps) {
       </span>
       <StatusPill
         status={issue.status}
-        className="min-w-0 max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:justify-self-start"
+        className="w-32 min-w-0 max-md:col-span-2 max-md:col-start-2 max-md:row-start-2 max-md:justify-self-start"
       />
-      <DueDate
-        value={issue.due_date}
-        today={today}
-        resolved={resolved}
-        className="min-w-[60px] text-right max-md:col-start-4 max-md:row-start-1"
-      />
-      <AssigneeStack
-        assignees={issue.assignees}
-        withName={false}
-        className="max-md:col-start-4 max-md:row-start-2 max-md:justify-self-end"
-      />
+      {showDue ? (
+        <DueDate
+          value={issue.due_date}
+          today={today}
+          resolved={resolved}
+          className="min-w-[60px] text-right max-md:col-start-4 max-md:row-start-1"
+        />
+      ) : (
+        <span aria-hidden className="w-[60px] max-md:col-start-4 max-md:row-start-1" />
+      )}
+      <span className="flex w-14 justify-end max-md:col-start-4 max-md:row-start-2 max-md:w-auto">
+        {viewer && assignees.length === 0 ? null : <AssigneeStack assignees={assignees} withName={false} />}
+      </span>
     </Link>
   );
 }

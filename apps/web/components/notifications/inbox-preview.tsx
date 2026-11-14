@@ -19,23 +19,21 @@ export function InboxPreview() {
   const mark = useMarkRead();
   const openLink = useOpenNotification();
   const unreadCount = unread.data?.count ?? 0;
+  const markAllRead = () =>
+    mark.mutate(
+      { how: 'all', filter: {} },
+      { onError: error => toastError('Could not mark everything read', error, { retry: markAllRead }) },
+    );
 
   return (
     <Section
       title="Inbox"
       count={unread.data && unreadCount > 0 ? `${unreadCount} unread` : undefined}
-      action={
-        unreadCount > 0
-          ? {
-              label: 'Mark all read',
-              onClick: () =>
-                mark.mutate(
-                  { how: 'all', filter: {} },
-                  { onError: error => toastError('Could not mark everything read', error) },
-                ),
-            }
-          : { label: 'Open inbox', href: '/inbox' as Route }
-      }
+      stale={preview.isError && preview.data !== undefined}
+      action={[
+        ...(unreadCount > 0 ? [{ label: 'Mark all read', onClick: markAllRead }] : []),
+        { label: 'Open inbox', href: '/inbox' as Route },
+      ]}
     >
       <QueryState
         query={preview}
@@ -50,8 +48,6 @@ export function InboxPreview() {
           </div>
         }
         error="Your inbox could not be loaded."
-        stale="Your inbox could not be refreshed and may be out of date."
-        staleClassName="px-2"
         isEmpty={entries => entries.length === 0}
         empty={
           <SectionEmpty>
@@ -65,7 +61,7 @@ export function InboxPreview() {
               const unreadHere = group.unread_count > 0;
               const org = group.subject.organization.slug;
               return (
-                <li key={entryId(group)} className="border-b border-border-subtle">
+                <li key={entryId(group)} className="border-b border-border-subtle last:border-b-0">
                   <Link
                     href={group.path as Route}
                     onClick={event => {
@@ -91,14 +87,6 @@ export function InboxPreview() {
                 </li>
               );
             })}
-            <li>
-              <Link
-                href={'/inbox' as Route}
-                className="block px-2 py-1.5 text-xs text-text-secondary hover:text-text hover:underline"
-              >
-                Open inbox
-              </Link>
-            </li>
           </ul>
         )}
       </QueryState>
