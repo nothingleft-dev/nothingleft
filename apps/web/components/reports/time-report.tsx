@@ -118,7 +118,8 @@ export function TimeReport() {
         <>
           <PeriodPicker
             value={{ period: state.params.get('period'), from: state.params.get('from'), to: state.params.get('to') }}
-            resolved={result.data?.scope.period ?? null}
+            resolved={result.isPlaceholderData ? null : (result.data?.scope.period ?? null)}
+            pending={result.isPending || result.isPlaceholderData}
             onChange={v => state.set({ ...v })}
           />
           <ReportPicker

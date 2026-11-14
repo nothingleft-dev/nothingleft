@@ -1,22 +1,22 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import type { WorkCalendar } from '@nothingleft/format';
-import type { MemberRef, TimesheetReport as Timesheet } from '@nothingleft/types';
+import { formatDuration, type WorkCalendar } from '@nothingleft/format';
+import type { MemberRef, ReportScope, TimesheetReport as Timesheet } from '@nothingleft/types';
 import { RetryButton } from '@components/query-state';
-import { RowsSkeleton } from '@components/skeletons';
+import { Skeleton } from '@components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Duration } from '@components/duration';
 import { IssueKey } from '@components/issue-key';
 import { LetterBadge } from '@components/letter-badge';
 import { PersonName } from '@components/former-member-chip';
 import { MemberAvatar } from '@components/issues/member-avatar';
-import { PeriodPicker } from '@components/reports/period-picker';
+import { PeriodPicker, PERIOD_PRESETS } from '@components/reports/period-picker';
 import { ReportFrame } from '@components/reports/report-frame';
 import { ReportMultiPicker } from '@components/reports/report-picker';
-import { PersonMark, plural, scopeText } from '@components/reports/report-bits';
+import { plural } from '@components/reports/report-bits';
 import { useReportState, type ReportState } from '@components/reports/report-state';
 import { useMembers } from '@hooks/use-members';
 import { useReport, useTimesheetWorkItems } from '@hooks/use-reports';
@@ -38,6 +38,14 @@ const calendarOf = (data: Timesheet): WorkCalendar => ({
   workweekDays: data.calendar.workweek_days,
 });
 
+// This year always exceeds the timesheet's 62-day limit, so it is neither offered nor suggested.
+const PRESETS = PERIOD_PRESETS.filter(p => p !== 'This year');
+const WIDER = ['This month'];
+
+const PickerAvatar = ({ name, avatarUrl }: { name: string; avatarUrl: string | null }) => (
+  <MemberAvatar member={{ name, avatar_url: avatarUrl }} className="size-5 flex-none" />
+);
+
 function PeoplePicker({ state }: { state: ReportState }) {
   const session = useSession();
   const slug = session.status === 'signed-in' ? session.user.current_organization_slug : null;
@@ -49,14 +57,16 @@ function PeoplePicker({ state }: { state: ReportState }) {
     {
       value: 'me',
       label: 'Me',
-      ...(me ? { mark: <PersonMark name={me.name} avatarUrl={me.avatar_url} nobody={false} small /> } : {}),
+      ...(me ? { mark: <PickerAvatar name={me.name} avatarUrl={me.avatar_url} /> } : {}),
     },
-    ...(members.data ?? []).map(m => ({
-      value: m.username,
-      label: m.name,
-      group: 'People',
-      mark: <PersonMark name={m.name} avatarUrl={m.avatar_url} nobody={false} small />,
-    })),
+    ...(members.data ?? [])
+      .filter(m => m.email === null || m.email !== me?.email)
+      .map(m => ({
+        value: m.username,
+        label: m.name,
+        group: 'People',
+        mark: <PickerAvatar name={m.name} avatarUrl={m.avatar_url} />,
+      })),
   ];
   return (
     <ReportMultiPicker
@@ -75,6 +85,14 @@ function PeoplePicker({ state }: { state: ReportState }) {
   );
 }
 
+/** `Nimbus Live, Nimbus Mobile · saved view Bugs only`: what the figures cover, the chips already say how. */
+function scopeNames(scope: ReportScope) {
+  const names = scope.projects.map(p => p.name);
+  const where =
+    names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more projects`;
+  return [where, scope.view ? `saved view ${scope.view}` : null].filter(Boolean).join(' · ');
+}
+
 export function TimesheetReport() {
   const state = useReportState('timesheet');
   const result = useReport('timesheet', state.query);
@@ -84,11 +102,14 @@ export function TimesheetReport() {
       state={state}
       result={result}
       scope={{ query: true, projects: true }}
+      widerPeriods={WIDER}
       controls={
         <>
           <PeriodPicker
             value={{ period: state.params.get('period'), from: state.params.get('from'), to: state.params.get('to') }}
-            resolved={result.data?.scope.period ?? null}
+            resolved={result.isPlaceholderData ? null : (result.data?.scope.period ?? null)}
+            pending={result.isPending || result.isPlaceholderData}
+            presets={PRESETS}
             onChange={v => state.set({ ...v })}
           />
           <PeoplePicker state={state} />
@@ -96,12 +117,23 @@ export function TimesheetReport() {
       }
       skeleton="sheet"
       summary={d => (
-        <>
-          <Duration minutes={d.total} calendar={calendarOf(d)} className="text-text" /> logged by{' '}
-          {plural(d.rows.length, 'person', 'people')}
-          {d.scope.period ? ` ${formatCalendarRange(d.scope.period.from, d.scope.period.to)}` : ''} on issues{' '}
-          {scopeText(d.scope, Boolean(state.get('projects')))}.
-        </>
+        <span className="flex max-w-[90ch] flex-wrap gap-x-1.5">
+          <Duration minutes={d.total} calendar={calendarOf(d)} className="font-medium text-text" />
+          <span aria-hidden>·</span>
+          <span>{plural(d.rows.length, 'person', 'people')}</span>
+          {d.scope.period ? (
+            <>
+              <span aria-hidden>·</span>
+              <span>{formatCalendarRange(d.scope.period.from, d.scope.period.to)}</span>
+            </>
+          ) : null}
+          {scopeNames(d.scope) ? (
+            <>
+              <span aria-hidden>·</span>
+              <span>{scopeNames(d.scope)}</span>
+            </>
+          ) : null}
+        </span>
       )}
     >
       {d => <TimesheetGrid data={d} scope={state.query} />}
@@ -116,25 +148,107 @@ interface Drill {
   minutes: number;
 }
 
+// JetBrains Mono's advance is 0.6em; at the table's 14px every character of a duration is 8.4px wide.
+const MONO_CHAR_PX = 8.4;
+const CELL_INSET_PX = 28;
+const PERSON_PX = 256;
+const MIN_DAY_PX = 72;
+const MIN_TOTAL_PX = 128;
+
+const widthFor = (minutesList: readonly number[], calendar: WorkCalendar, floor: number) => {
+  const chars = Math.max(0, ...minutesList.map(m => (m > 0 ? formatDuration(m, calendar).length : 2)));
+  return Math.max(floor, Math.ceil(chars * MONO_CHAR_PX) + CELL_INSET_PX);
+};
+
+function useScrollEdges() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const start = el.scrollLeft > 0;
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setEdges(prev => (prev.start === start && prev.end === end ? prev : { start, end }));
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measure]);
+  return { ref, edges, measure };
+}
+
+const CORNER = 'z-30 bg-surface';
+const EDGE_START =
+  "after:pointer-events-none after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-linear-to-r after:from-[color-mix(in_oklab,var(--text)_10%,transparent)] after:to-transparent after:content-['']";
+const EDGE_END =
+  "before:pointer-events-none before:absolute before:inset-y-0 before:-left-2 before:w-2 before:bg-linear-to-l before:from-[color-mix(in_oklab,var(--text)_10%,transparent)] before:to-transparent before:content-['']";
+
+function scrollToToday(el: HTMLElement, today: string) {
+  const days = [...el.querySelectorAll<HTMLElement>('thead [data-day]')];
+  const column = days.find(th => th.dataset.day === today);
+  if (!column) return;
+  const origin = el.getBoundingClientRect().left - el.scrollLeft;
+  const startOf = (th: HTMLElement) => th.getBoundingClientRect().left - origin;
+  const person = el.querySelector<HTMLElement>('thead th')?.offsetWidth ?? 0;
+  const total = el.querySelector<HTMLElement>('thead th:last-child')?.offsetWidth ?? 0;
+  const want = startOf(column) + column.offsetWidth * 2 - (el.clientWidth - total);
+  const starts = days.map(th => startOf(th) - person);
+  const todayAtStart = startOf(column) - person;
+  el.scrollLeft = want <= 0 ? 0 : Math.min(starts.find(s => s >= want) ?? want, todayAtStart);
+}
+
 function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery }) {
   const calendar = calendarOf(data);
   const today = todayCalendarDate();
   const period = data.scope.period;
-  const scroller = useRef<HTMLDivElement>(null);
+  const { ref: scroller, edges, measure } = useScrollEdges();
 
-  // A month opens on today's end of it, where the time is being logged.
-  useEffect(() => {
+  const dayPx = widthFor([...data.day_totals, ...data.rows.flatMap(r => r.minutes)], calendar, MIN_DAY_PX);
+  const totalPx = widthFor([data.total, ...data.rows.map(r => r.total)], calendar, MIN_TOTAL_PX);
+  const minWidth = PERSON_PX + data.days.length * dayPx + totalPx;
+
+  // A long period opens on today and the day after, with whole columns showing beside the sticky Person column.
+  // Keyed on the dates, not the response, so a refetch never moves a grid the reader has scrolled.
+  const span = `${data.days[0]?.date}..${data.days.at(-1)?.date}`;
+  useLayoutEffect(() => {
     const el = scroller.current;
-    const column = el?.querySelector<HTMLElement>(`[data-day="${today}"]`);
-    if (el && column) el.scrollLeft = Math.max(0, column.offsetLeft + column.offsetWidth * 2 - el.clientWidth + 96);
-  }, [today, data.days]);
+    if (el && span) scrollToToday(el, today);
+    measure();
+  }, [today, span, scroller, measure]);
+
+  const startEdge = cn('sticky left-0 border-r', edges.start && EDGE_START);
+  const endEdge = cn('sticky right-0 border-l', edges.end && EDGE_END);
 
   return (
-    <div ref={scroller} className="overflow-x-auto rounded-md border">
-      <table className="w-full border-separate border-spacing-0 text-sm whitespace-nowrap tabular">
+    <div
+      ref={scroller}
+      onScroll={measure}
+      className="max-h-[max(22rem,calc(100dvh-17rem))] scroll-pt-11 scroll-pb-9 scroll-pl-64 overflow-auto overscroll-x-contain rounded-md border max-sm:scroll-pl-32"
+      style={{ scrollPaddingRight: totalPx }}
+    >
+      <table
+        className="w-full table-fixed border-separate border-spacing-0 text-sm whitespace-nowrap"
+        style={{ minWidth }}
+      >
+        <colgroup>
+          <col className="w-64 max-sm:w-32" />
+          {data.days.map(day => (
+            <col key={day.date} />
+          ))}
+          <col style={{ width: totalPx }} />
+        </colgroup>
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 h-11 min-w-52 border-b bg-surface px-3 text-left text-xs font-normal text-text-muted">
+            <th
+              className={cn(
+                startEdge,
+                CORNER,
+                'top-0 h-11 border-b px-3 text-left text-xs font-normal text-text-secondary',
+              )}
+            >
               Person
             </th>
             {data.days.map(day => (
@@ -142,8 +256,8 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 key={day.date}
                 data-day={day.date}
                 className={cn(
-                  'h-11 min-w-16 border-b px-2.5 text-right text-2xs font-normal text-text-muted',
-                  !day.working_day && 'bg-app',
+                  'sticky top-0 z-20 h-11 border-b px-2.5 text-right text-2xs font-normal text-text-secondary tabular',
+                  day.working_day ? 'bg-surface' : 'bg-app',
                   day.date === today && 'text-text',
                 )}
               >
@@ -153,20 +267,24 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 </span>
               </th>
             ))}
-            <th className="sticky right-0 z-10 h-11 min-w-32 border-b border-l bg-surface px-2.5 text-right text-xs font-semibold">
+            <th className={cn(endEdge, CORNER, 'top-0 h-11 border-b px-2.5 text-right text-xs font-semibold')}>
               Total
             </th>
           </tr>
         </thead>
         <tbody>
           {data.rows.map(row => (
-            <tr key={row.member.username}>
-              <th className="sticky left-0 z-10 h-row border-b border-border-subtle bg-surface px-3 text-left font-normal">
+            <tr key={row.member.username} className="[&:last-child>*]:border-b-0">
+              <th
+                title={row.member.name}
+                className={cn(
+                  startEdge,
+                  'z-10 h-row border-b border-b-border-subtle bg-surface px-3 text-left font-normal',
+                )}
+              >
                 <span className="flex min-w-0 items-center gap-2">
-                  <MemberAvatar member={row.member} />
-                  <span className="truncate">
-                    <PersonName person={row.member} />
-                  </span>
+                  <MemberAvatar member={row.member} className="size-avatar-sm flex-none max-sm:hidden" />
+                  <PersonName person={row.member} className="min-w-0" />
                 </span>
               </th>
               {row.minutes.map((minutes, i) => {
@@ -174,20 +292,28 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 return (
                   <td
                     key={day.date}
-                    className={cn('h-row border-b border-border-subtle p-0.5 text-right', !day.working_day && 'bg-app')}
+                    className={cn(
+                      'h-row border-b border-b-border-subtle p-0.5 text-right',
+                      !day.working_day && 'bg-app',
+                    )}
                   >
                     {minutes > 0 ? (
                       <DrillCell
                         drill={{ member: row.member, from: day.date, to: day.date, minutes }}
                         scope={scope}
                         calendar={calendar}
-                        align="end"
+                        align="start"
                       />
                     ) : null}
                   </td>
                 );
               })}
-              <td className="sticky right-0 z-10 h-row border-b border-l border-border-subtle bg-surface p-0.5 text-right font-medium">
+              <td
+                className={cn(
+                  endEdge,
+                  'z-10 h-row border-b border-b-border-subtle bg-surface p-0.5 text-right font-medium',
+                )}
+              >
                 {row.total > 0 && period ? (
                   <DrillCell
                     drill={{ member: row.member, from: period.from, to: period.to, minutes: row.total }}
@@ -196,7 +322,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                     align="end"
                   />
                 ) : (
-                  <span className="px-2 text-text-muted">0m</span>
+                  <span className="px-2 font-mono text-text-muted tabular">0m</span>
                 )}
               </td>
             </tr>
@@ -204,16 +330,19 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
         </tbody>
         <tfoot>
           <tr>
-            <th className="sticky left-0 z-10 h-row bg-surface px-3 text-left font-semibold">Total</th>
+            <th className={cn(startEdge, CORNER, 'bottom-0 h-row border-t px-3 text-left font-semibold')}>Total</th>
             {data.day_totals.map((minutes, i) => (
               <td
                 key={data.days[i]!.date}
-                className={cn('h-row px-2.5 text-right font-medium', !data.days[i]!.working_day && 'bg-app')}
+                className={cn(
+                  'sticky bottom-0 z-20 h-row border-t px-2.5 text-right font-medium',
+                  data.days[i]!.working_day ? 'bg-surface' : 'bg-app',
+                )}
               >
                 {minutes > 0 ? <Duration minutes={minutes} calendar={calendar} /> : null}
               </td>
             ))}
-            <td className="sticky right-0 z-10 h-row border-l bg-surface px-2.5 text-right font-semibold">
+            <td className={cn(endEdge, CORNER, 'bottom-0 h-row border-t px-2.5 text-right font-semibold')}>
               <Duration minutes={data.total} calendar={calendar} />
             </td>
           </tr>
@@ -227,12 +356,12 @@ function DrillCell({
   drill,
   scope,
   calendar,
-  align = 'center',
+  align,
 }: {
   drill: Drill;
   scope: ReportQuery;
   calendar: WorkCalendar;
-  align?: 'center' | 'end';
+  align: 'start' | 'end';
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -241,16 +370,12 @@ function DrillCell({
         <button
           type="button"
           aria-label={`${drill.member.name}, ${formatCalendarRange(drill.from, drill.to)}: the time entries`}
-          className={cn(
-            'flex h-8 w-full items-center rounded-xs px-2 hover:bg-hover',
-            align === 'end' ? 'justify-end' : 'justify-center',
-            open && 'bg-active',
-          )}
+          className={cn('flex h-8 w-full items-center justify-end rounded-xs px-2 hover:bg-hover', open && 'bg-active')}
         >
           <Duration minutes={drill.minutes} calendar={calendar} />
         </button>
       </PopoverTrigger>
-      <PopoverContent align={align === 'end' ? 'end' : 'center'} className="w-[420px] max-w-[calc(100vw-32px)] p-0">
+      <PopoverContent align={align} collisionPadding={16} className="w-[440px] max-w-[calc(100vw-32px)] p-0">
         {open ? <WorkItems drill={drill} scope={scope} calendar={calendar} /> : null}
       </PopoverContent>
     </Popover>
@@ -259,6 +384,10 @@ function DrillCell({
 
 // A cell names its own person and days; the report's period and people give way to them.
 const PERIOD_AND_PEOPLE = new Set(['period', 'from', 'to', 'users']);
+
+// Key, title, badges, duration: one row per entry, the columns shared across rows.
+const ENTRY_GRID = 'grid grid-cols-[max-content_minmax(0,1fr)_auto_auto] gap-x-2';
+const ENTRY_ROW = 'col-span-full grid grid-cols-subgrid items-center gap-y-0.5 px-3 py-2';
 
 function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuery; calendar: WorkCalendar }) {
   const rest = Object.fromEntries(Object.entries(scope).filter(([key]) => !PERIOD_AND_PEOPLE.has(key)));
@@ -276,43 +405,61 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {items.isPending ? (
-          <RowsSkeleton rows={3} columns={['key', 'title', 'short']} bordered={false} className="px-3" />
+          <div className={ENTRY_GRID} aria-hidden>
+            {[60, 80, 48].map((w, i) => (
+              <div key={i} className={cn(ENTRY_ROW, single ? 'min-h-9' : 'min-h-[3.625rem]')}>
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3" style={{ width: `${w}%` }} />
+                <Skeleton className="size-4" />
+                <Skeleton className="h-3 w-10" />
+                {single ? null : <Skeleton className="col-start-2 h-3 w-16" />}
+              </div>
+            ))}
+          </div>
         ) : items.isError && !items.data ? (
           <div className="flex items-center gap-3 px-3 py-3">
             <p className="min-w-0 flex-1 text-xs text-danger-fg">{items.error.message}</p>
             <RetryButton onRetry={() => void items.refetch()} size="xs" />
           </div>
         ) : (
-          <ul className="divide-y divide-border-subtle">
-            {rows.map(item => (
-              <li key={item.id} className="flex flex-col gap-1 px-3 py-2">
-                <div className="flex items-center gap-2">
+          <ul className={cn(ENTRY_GRID, 'divide-y divide-border-subtle')}>
+            {rows.map(item => {
+              const note = item.description_md?.split('\n')[0]?.trim() ?? '';
+              return (
+                <li key={item.id} className={ENTRY_ROW}>
                   <Link
                     href={`/issue/${item.issue}` as Route}
-                    className="flex min-w-0 flex-1 items-center gap-2 hover:underline"
+                    className="col-span-2 grid grid-cols-subgrid items-center hover:underline"
                   >
-                    <IssueKey issueKey={item.issue} column />
+                    <IssueKey issueKey={item.issue} />
                     <span className="truncate">{item.issue_title}</span>
                   </Link>
-                  <Duration minutes={item.duration_minutes} calendar={calendar} />
-                </div>
-                <div className="flex min-w-0 items-center gap-1.5 text-xs text-text-secondary">
-                  {!single ? <span className="tabular">{formatCalendarDateShort(item.work_date)}</span> : null}
-                  {item.work_type ? (
-                    <LetterBadge letter={item.work_type.short_label} label={item.work_type.name} variant="outlined" />
+                  <span className="flex items-center gap-1">
+                    {item.work_type ? (
+                      <LetterBadge letter={item.work_type.short_label} label={item.work_type.name} variant="outlined" />
+                    ) : null}
+                    {item.attributes.map(a => (
+                      <LetterBadge
+                        key={a.attribute}
+                        letter={a.value.short_label}
+                        label={`${a.attribute}: ${a.value.name}`}
+                        variant="outlined"
+                      />
+                    ))}
+                  </span>
+                  <Duration minutes={item.duration_minutes} calendar={calendar} className="text-right" />
+                  {!single || note ? (
+                    <span className="col-span-3 col-start-2 flex min-w-0 gap-1.5 text-xs text-text-secondary">
+                      {!single ? (
+                        <span className="flex-none tabular">{formatCalendarDateShort(item.work_date)}</span>
+                      ) : null}
+                      {!single && note ? <span aria-hidden>·</span> : null}
+                      {note ? <span className="truncate">{note}</span> : null}
+                    </span>
                   ) : null}
-                  {item.attributes.map(a => (
-                    <LetterBadge
-                      key={a.attribute}
-                      letter={a.value.short_label}
-                      label={`${a.attribute}: ${a.value.name}`}
-                      variant="outlined"
-                    />
-                  ))}
-                  {item.description_md ? <span className="truncate">{item.description_md.split('\n')[0]}</span> : null}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

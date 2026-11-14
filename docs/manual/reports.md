@@ -142,10 +142,11 @@ a red end when it is past its due date and still open. An arrow turns red when a
 before the one it depends on ends. Click a bar to open the issue over the chart; **Days** and
 **Weeks** change the scale.
 
-### Timesheet
+### Timesheets
 
 People as rows, days as columns, totals both ways - this week for you unless you choose other
-people or dates, up to 62 days. Non-working days are marked. Open a cell to see the time entries
+people or dates, up to 62 days, so the period picker offers this and last week, this and last
+month, or a range you choose. Non-working days are marked. Open a cell to see the time entries
 behind it - or a person's total, for the whole period. **People** adds colleagues or shows
 *Everyone*. You see time logged on any issue you can open, whoever logged it.
 

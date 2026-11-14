@@ -535,6 +535,10 @@ every chart:
   never look alike.
 - On phones reports are read-only views: the picker row wraps, charts take the full width, and
   the matrix, Gantt and timesheet scroll sideways.
+- Wide grids scroll inside their frame: the header and total row stay, the name and total columns
+  stay, with a hairline and a soft fade on the inner edge while content is under them.
+- A refused period offers _Use this week_ and _Use this month_ as small outline buttons; a
+  suggestion inside an alert is never tinted.
 
 ## Issue list
 

@@ -16,6 +16,8 @@ import {
   ReportFailure,
   ReportProblem,
   ReportSkeleton,
+  SUGGESTION,
+  WIDER_PERIODS,
   type SkeletonShape,
 } from '@components/reports/report-states';
 import { ProjectsPicker, ViewPicker } from '@components/reports/scope-pickers';
@@ -26,6 +28,13 @@ import { reportDef } from '@lib/reports/registry';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
+
+const PERIOD_PROBLEMS = new Set([
+  'report.invalid_period',
+  'report.period_incomplete',
+  'report.period_out_of_order',
+  'report.period_too_long',
+]);
 
 interface FramedReport {
   empty: ReportEmpty | null;
@@ -46,6 +55,8 @@ interface ReportFrameProps<D extends FramedReport> {
   emptyAction?: (data: D) => ReactNode;
   /** A valid value picked from a 400: most set their own parameter; a sprint name needs its project. */
   pickValue?: (field: string, value: string) => void;
+  /** The periods offered to widen an empty report or to replace one the API refused. */
+  widerPeriods?: readonly string[];
   children: (data: D) => ReactNode;
 }
 
@@ -60,6 +71,7 @@ export function ReportFrame<D extends FramedReport>({
   ownEmpty,
   emptyAction,
   pickValue,
+  widerPeriods = WIDER_PERIODS,
   children,
 }: ReportFrameProps<D>) {
   const def = reportDef(state.name);
@@ -73,6 +85,12 @@ export function ReportFrame<D extends FramedReport>({
       : null;
   const paramProblem = error && !queryProblem && (error.status === 400 || error.status === 404) ? error : null;
   const failure = result.error && !queryProblem && !paramProblem ? result.error : null;
+
+  const periodProblem = paramProblem ? PERIOD_PROBLEMS.has(paramProblem.code) : false;
+  const currentPeriod = state.params.get('from') ? null : (state.params.get('period') ?? DEFAULT_PERIOD);
+  const periodFixes = [DEFAULT_PERIOD, ...widerPeriods].filter(
+    (p, i, all) => all.indexOf(p) === i && p !== currentPeriod,
+  );
 
   const pick = (field: string, value: string) => (pickValue ? pickValue(field, value) : state.set({ [field]: value }));
 
@@ -120,7 +138,12 @@ export function ReportFrame<D extends FramedReport>({
             onClick={exportCsv}
             disabled={!canExport}
             pending={exporter.isPending}
-            pendingLabel="Preparing the file…"
+            pendingLabel={
+              <>
+                <Download className="size-3.5 animate-pulse" />
+                Preparing the file…
+              </>
+            }
           >
             <Download className="size-3.5" />
             Export CSV
@@ -154,6 +177,22 @@ export function ReportFrame<D extends FramedReport>({
           message={paramProblem.message}
           validValues={paramProblem.field ? (paramProblem.validValues ?? []) : []}
           onPick={paramProblem.field ? v => pick(paramProblem.field!, v) : undefined}
+          formatValue={paramProblem.field === 'users' ? v => `@${v}` : undefined}
+          fixes={
+            periodProblem
+              ? periodFixes.map(p => (
+                  <Button
+                    key={p}
+                    variant="outline"
+                    size="xs"
+                    className={SUGGESTION}
+                    onClick={() => state.set({ period: p === DEFAULT_PERIOD ? null : p, from: null, to: null })}
+                  >
+                    Use {p.toLowerCase()}
+                  </Button>
+                ))
+              : undefined
+          }
         />
       ) : null}
       {paramProblem?.status === 404 && scope.projects ? (
@@ -165,10 +204,7 @@ export function ReportFrame<D extends FramedReport>({
       ) : null}
 
       {queryProblem ? (
-        <EmptyState
-          title="Fix the query to see the report."
-          description="The message under the search bar names the part at fault. Valid values, where there are any, are one click away."
-        />
+        <EmptyState title="Fix the query to see the report." />
       ) : failure ? (
         <ReportFailure message={failure.message} onRetry={() => void result.refetch()} />
       ) : result.isPending ? (
@@ -182,6 +218,7 @@ export function ReportFrame<D extends FramedReport>({
               period={state.params.get('from') ? null : (state.params.get('period') ?? DEFAULT_PERIOD)}
               onChange={changes => state.set(changes, 'push')}
               action={emptyAction?.(data)}
+              widerPeriods={widerPeriods}
             />
           ) : (
             children(data)
