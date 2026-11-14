@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { CreateProjectSchema, type PaletteHue } from '@nothingleft/types';
-import { generateProjectKey } from '@nothingleft/format';
+import { generateProjectKey, parseProjectKey } from '@nothingleft/format';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
@@ -25,6 +25,7 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [keyEdited, setKeyEdited] = useState(false);
+  const [keyChecked, setKeyChecked] = useState(false);
   const [color, setColor] = useState<PaletteHue>('blue');
   const create = useCreateProject();
   const error = useApiError(create.error, ['name', 'key']);
@@ -32,12 +33,17 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
 
   const derived = keyEdited ? key : (generateProjectKey(name) ?? '');
   const suggestion = error.code === 'project.key_taken' ? error.validValues[0] : undefined;
+  const keyProblem =
+    keyChecked && derived.trim() !== '' && parseProjectKey(derived) === null
+      ? 'A key is 2–10 letters and digits.'
+      : undefined;
 
   const close = () => {
     onOpenChange(false);
     setName('');
     setKey('');
     setKeyEdited(false);
+    setKeyChecked(false);
     local.clear('name');
     create.reset();
   };
@@ -58,7 +64,9 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
           className="flex flex-col gap-4"
           onSubmit={event => {
             event.preventDefault();
-            if (!local.check({ name })) return;
+            setKeyChecked(true);
+            const keyValid = derived.trim() === '' || parseProjectKey(derived) !== null;
+            if (!local.check({ name }) || !keyValid) return;
             create.mutate(
               { name: name.trim(), avatar_color: color, ...(derived ? { key: derived } : {}) },
               {
@@ -75,7 +83,7 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
           <Field
             label="Name"
             autoFocus
-            placeholder="Partner Portal"
+            placeholder="e.g. Partner Portal"
             value={name}
             error={local.problems['name'] ?? error.fields['name']}
             onChange={e => {
@@ -86,10 +94,10 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
 
           <Field
             label="Key"
-            className="font-mono tabular uppercase"
-            placeholder="PP"
+            className="font-mono tabular uppercase placeholder:font-sans placeholder:normal-case"
+            placeholder="e.g. PP"
             value={derived}
-            error={error.fields['key']}
+            error={keyProblem ?? error.fields['key']}
             errorAction={
               suggestion ? (
                 <button
@@ -105,6 +113,7 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
                 </button>
               ) : null
             }
+            onBlur={() => setKeyChecked(true)}
             onChange={e => {
               setKeyEdited(true);
               setKey(e.target.value.toUpperCase());

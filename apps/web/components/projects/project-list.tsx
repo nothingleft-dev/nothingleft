@@ -5,22 +5,29 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import type { Project } from '@nothingleft/types';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { Archive, ArchiveRestore, MoreHorizontal, Plus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
-import { Skeleton } from '@components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu';
+import { FormAlert } from '@components/auth/form-alert';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
 import { Segmented } from '@components/segmented';
 import { LoadError, errorDetail } from '@components/query-state';
-import { ProjectCard } from '@components/projects/project-card';
+import { ProjectCard, ProjectCardSkeleton } from '@components/projects/project-card';
 import { CreateProjectDialog } from '@components/projects/project-dialog';
 import { useArchiveProject, useProjects } from '@hooks/use-projects';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useSession } from '@hooks/use-session';
 import { toastError } from '@components/toast-error';
+import { isRateLimited } from '@lib/api/errors';
 
 const FILTERS = [
   { value: 'active', label: 'Active' },
@@ -47,20 +54,31 @@ export function ProjectList() {
   const archive = useArchiveProject();
 
   const rows = projects.data ?? [];
+  const emptyActive = filter === 'active' && projects.data !== undefined && rows.length === 0;
+  const archiveFailed = archive.isError && !isRateLimited(archive.error) ? archive.error : null;
+  const unarchive = (project: Project) =>
+    archive.mutate(
+      { key: project.key, archived: false },
+      {
+        onSuccess: p => toast.success(`${p.name} is active again.`),
+        onError: e => toastError(`Could not unarchive ${project.name}`, e, { retry: () => unarchive(project) }),
+      },
+    );
 
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
         title="Projects"
         actions={
-          <>
+          // On phones the actions always take their own row, so New project arriving with the roles moves nothing.
+          <div className="flex items-center justify-end gap-1 max-sm:w-[calc(100vw-2rem)]">
             <Segmented ariaLabel="Project filter" value={filter} options={FILTERS} onChange={setFilter} />
-            {orgAdmin ? (
-              <Button size="sm" onClick={() => setCreating(true)}>
+            {orgAdmin && !emptyActive ? (
+              <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
                 <Plus className="size-icon-sm" /> New project
               </Button>
             ) : null}
-          </>
+          </div>
         }
       />
 
@@ -79,9 +97,10 @@ export function ProjectList() {
           Your projects could not be loaded.
         </LoadError>
       ) : projects.isPending ? (
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Skeleton className="h-36 rounded-md" />
-          <Skeleton className="h-36 rounded-md" />
+        <div className="grid gap-3 lg:grid-cols-2" role="status" aria-label="Loading">
+          {Array.from({ length: 4 }, (_, i) => (
+            <ProjectCardSkeleton key={i} />
+          ))}
         </div>
       ) : rows.length === 0 ? (
         <EmptyState
@@ -115,20 +134,25 @@ export function ProjectList() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem asChild>
-                        <Link href={`/projects/${project.key}/settings` as Route}>Project settings</Link>
+                        <Link href={`/projects/${project.key}/settings` as Route}>
+                          <Settings className="size-icon-sm" /> Project settings
+                        </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() =>
-                          project.is_archived
-                            ? archive.mutate(
-                                { key: project.key, archived: false },
-                                { onSuccess: p => toast.success(`${p.name} is active again.`) },
-                              )
-                            : setArchiving(project)
-                        }
-                      >
-                        {project.is_archived ? 'Unarchive' : 'Archive'}
-                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {project.is_archived ? (
+                        <DropdownMenuItem onSelect={() => unarchive(project)}>
+                          <ArchiveRestore className="size-icon-sm" /> Unarchive
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            archive.reset();
+                            setArchiving(project);
+                          }}
+                        >
+                          <Archive className="size-icon-sm" /> Archive
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : undefined
@@ -157,7 +181,9 @@ export function ProjectList() {
                 toast.success(`${p.name} archived.`);
                 setArchiving(null);
               },
-              onError: e => toastError(`Could not archive ${archiving.name}`, e),
+              onError: e => {
+                if (isRateLimited(e)) toastError(`Could not archive ${archiving.name}`, e);
+              },
             },
           );
         }}
@@ -166,6 +192,9 @@ export function ProjectList() {
           It leaves the sidebar and the active list for every member, and its issues become read-only. Nothing is
           deleted; unarchive it any time from the archived list.
         </p>
+        {archiveFailed ? (
+          <FormAlert title={`Could not archive ${archiving?.name ?? 'the project'}`}>{archiveFailed.message}</FormAlert>
+        ) : null}
       </ConfirmDialog>
     </div>
   );

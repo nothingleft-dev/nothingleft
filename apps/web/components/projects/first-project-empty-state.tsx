@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { FileSpreadsheet, KeyRound, Plus } from 'lucide-react';
+import { Bot, FileSpreadsheet, Plus } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Kbd } from '@components/kbd';
 import { useCreateIssueDialog } from '@components/issues/create-issue-provider';
@@ -14,12 +14,29 @@ interface FirstProjectEmptyStateProps {
   projectName: string;
   canCreate: boolean;
   canImport: boolean;
+  /** Why nobody here can add the first issue (observer, archived); the cards give way to this sentence. */
+  readOnly?: string | null;
 }
 
 /** onboarding.md § The first empty state: three equal actions, the MCP one level with the first. */
-export function FirstProjectEmptyState({ projectKey, projectName, canCreate, canImport }: FirstProjectEmptyStateProps) {
+export function FirstProjectEmptyState({
+  projectKey,
+  projectName,
+  canCreate,
+  canImport,
+  readOnly = null,
+}: FirstProjectEmptyStateProps) {
   const { openCreateIssue } = useCreateIssueDialog();
   const unverified = useNeedsVerification();
+
+  if (readOnly) {
+    return (
+      <section aria-label="No issues yet" className="flex flex-col gap-1 border-y py-4">
+        <h2 className="font-semibold">{projectName} has no issues yet.</h2>
+        <p className="text-text-secondary">{readOnly}</p>
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Get started" className="flex flex-col gap-4">
@@ -43,7 +60,7 @@ export function FirstProjectEmptyState({ projectKey, projectName, canCreate, can
           }
         />
         <Card
-          icon={<KeyRound />}
+          icon={<Bot />}
           title="Connect an LLM"
           body="Create a token and paste one command into Claude Code or Claude Desktop. The agent files, triages and comments on issues as you."
           action={

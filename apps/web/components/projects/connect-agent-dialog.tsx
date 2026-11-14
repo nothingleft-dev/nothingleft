@@ -2,10 +2,11 @@
 
 import { useState, type ReactNode } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import type { CreatedPersonalAccessToken, PatScope } from '@nothingleft/types';
+import { CreatePersonalAccessTokenSchema, type CreatedPersonalAccessToken, type PatScope } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -23,6 +24,7 @@ import { useCreateToken, useTokenFirstUse } from '@hooks/use-tokens';
 import { formatTime } from '@lib/datetime';
 import { env } from '@lib/env';
 import { PendingButton } from '@components/pending-button';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 // What an agent triaging issues needs; admin scopes are a deliberate extra tick.
 const AGENT_SCOPES: PatScope[] = ['issues:read', 'issues:write', 'comments:write', 'time:write'];
@@ -42,7 +44,9 @@ interface AgentClient {
   config: (token: string) => string;
 }
 
-const cmd = (text: string) => <code className="rounded-xs bg-inset px-1 font-mono text-2xs text-text">{text}</code>;
+const cmd = (text: string) => <code className="rounded-xs bg-active px-1 font-mono text-2xs text-text">{text}</code>;
+
+const StepLabel = ({ step }: { step: number }) => <p className="text-xs text-text-secondary">Step {step} of 2</p>;
 
 // Every client below speaks Streamable HTTP with a bearer header except Claude Desktop,
 // which only starts local servers and so runs the stdio shim.
@@ -157,11 +161,13 @@ function TokenStep({ onCreated }: { onCreated: (token: CreatedPersonalAccessToke
   const [scopes, setScopes] = useState<PatScope[]>(AGENT_SCOPES);
   const create = useCreateToken();
   const error = useApiError(create.error, ['name']);
+  const local = useFieldProblems(CreatePersonalAccessTokenSchema, { name: 'Token name' });
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Connect an LLM</DialogTitle>
+        <StepLabel step={1} />
+        <DialogTitle>Connect an agent</DialogTitle>
         <DialogDescription>
           The agent acts as you through an access token. It can never do more than your role allows, and everything it
           changes is recorded under your name.
@@ -176,20 +182,27 @@ function TokenStep({ onCreated }: { onCreated: (token: CreatedPersonalAccessToke
         className="flex flex-col gap-4"
         onSubmit={event => {
           event.preventDefault();
-          create.mutate({ name, scopes }, { onSuccess: onCreated });
+          if (!local.check({ name, scopes })) return;
+          create.mutate({ name: name.trim(), scopes }, { onSuccess: onCreated });
         }}
       >
         <Field
           label="Token name"
           hint="Where it will live, so you can tell it apart later."
           value={name}
-          error={error.fields['name']}
-          onChange={e => setName(e.target.value)}
+          error={local.problems['name'] ?? error.fields['name']}
+          onChange={e => {
+            setName(e.target.value);
+            local.clear('name');
+          }}
         />
         <ScopeChecklist value={scopes} onChange={setScopes} />
       </form>
 
       <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="outline">Cancel</Button>
+        </DialogClose>
         <PendingButton
           type="submit"
           form="connect-agent-token"
@@ -214,6 +227,7 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
   return (
     <>
       <DialogHeader>
+        <StepLabel step={2} />
         <DialogTitle>Add Nothing Left to your agent</DialogTitle>
         <DialogDescription>
           The token is in the config below. This is the only time it is shown; you can revoke it in Settings → Access
@@ -223,13 +237,15 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
 
       <div className="flex min-w-0 flex-col gap-3">
         <ChoiceSelect label="Your agent" value={clientId} options={CLIENTS} onChange={setClientId} showHint />
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-text-secondary">{client.where}</p>
-          <CopyButton value={config} what="Config" />
+        <p className="text-xs text-text-secondary">{client.where}</p>
+        <div className="relative min-w-0">
+          <pre className="min-w-0 rounded-md border bg-inset py-3 pr-24 pl-3 font-mono text-2xs leading-5 whitespace-pre-wrap text-text [overflow-wrap:anywhere]">
+            {config}
+          </pre>
+          <div className="absolute top-2 right-2">
+            <CopyButton value={config} what="Config" />
+          </div>
         </div>
-        <pre className="min-w-0 rounded-md border bg-inset p-3 font-mono text-2xs leading-5 break-all whitespace-pre-wrap text-text">
-          {config}
-        </pre>
       </div>
 
       <section aria-label="Verify" className="flex flex-col gap-2 border-t pt-4">
@@ -257,9 +273,7 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
       </section>
 
       <DialogFooter>
-        <Button variant={usedAt ? 'default' : 'ghost'} onClick={onDone}>
-          Done
-        </Button>
+        <Button onClick={onDone}>Done</Button>
       </DialogFooter>
     </>
   );
