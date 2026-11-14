@@ -57,7 +57,7 @@ export function ReportIndex({ project }: { project?: string }) {
       <PageHeader title="Reports" />
       <p className="-mt-3 text-text-secondary">
         {project
-          ? `Charts over ${projectQuery.data?.name ?? project}'s issues and time. Every bar, slice and cell opens the issues it counts.`
+          ? `Charts over ${projectQuery.data?.name ?? project}’s issues and time. Every bar, slice and cell opens the issues it counts.`
           : 'Charts over the issues and time you can open. Every bar, slice and cell opens the issues it counts.'}
       </p>
       {REPORT_SECTIONS.map(section => (
@@ -70,11 +70,13 @@ export function ReportIndex({ project }: { project?: string }) {
                 const Icon = ICONS[report.name];
                 const hint =
                   report.name === 'burndown' && project
-                    ? active
-                      ? active.days_left === null
-                        ? active.name
-                        : `${active.name}, ${daysLeftLabel(active.days_left).toLowerCase()}`
-                      : 'No active sprint; choose one'
+                    ? sprints.isPending
+                      ? null
+                      : active
+                        ? active.days_left === null
+                          ? active.name
+                          : `${active.name}, ${daysLeftLabel(active.days_left).toLowerCase()}`
+                        : 'No active sprint; choose one'
                     : null;
                 return (
                   <li key={report.name} className="border-b">

@@ -82,6 +82,9 @@ one project and *Closed* in another both count as Done.
 
 ### Matrix
 
+Every column is the same width so shades compare fairly; the row names and the Total column stay
+in place while the rest scrolls sideways.
+
 Two fields at once: status × assignee, priority × type, or any two custom fields. Each cell is
 the number of issues with both values and leads to them. At most 50 values per side; the rest
 are added up as *Other*. Pick **Rows** and **Columns**, or swap them with the arrows between.
@@ -130,6 +133,10 @@ most 366 days. To report on a sprint, add `sprint: {September 2026}` to the quer
 
 ### Gantt chart
 
+The month in view is named above the days and today is marked. A bar that starts before the
+visible window still shows its status at the window's edge, and a row whose bar is out of view
+has an arrow that scrolls to it.
+
 A project's issues on a timeline, from start date to due date, with an arrow for every
 *depends on* link between two of them. Group the bars by epic (the issue's nearest Epic above
 it), by assignee, or not at all.
@@ -154,7 +161,9 @@ behind it - or a person's total, for the whole period. **People** adds colleague
 
 Each chart uses up to eight colours, given to the eight largest groups in the field's own order,
 so a person or a priority keeps its colour however the numbers move. Anything smaller is added
-up as *Other*. A chart by status uses the statuses' own colours.
+up as *Other*. A chart by status uses the statuses' own colours. Unassigned, and any other group
+of issues with no value such as *No tag*, is always grey: an absence never takes one of the eight
+colours.
 
 A chart by project uses **each project's own colour**, the one picked in its settings. When two
 projects in the same chart share a colour, the one created later is drawn in a colour no other

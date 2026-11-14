@@ -35,7 +35,7 @@ export function ProjectPicker({ value, onChange }: { value: string; onChange: (v
     <ReportPicker
       label="Project"
       value={value}
-      fallback={value || 'Choose one'}
+      fallback={value || (projects.data?.length === 0 ? 'None' : 'Choose one')}
       options={(projects.data ?? []).map(p => ({
         value: p.key,
         label: p.name,
@@ -43,6 +43,7 @@ export function ProjectPicker({ value, onChange }: { value: string; onChange: (v
       }))}
       loading={projects.isPending}
       searchable={(projects.data?.length ?? 0) > 8}
+      disabled={projects.data?.length === 0}
       onChange={onChange}
     />
   );

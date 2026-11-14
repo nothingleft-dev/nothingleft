@@ -62,7 +62,9 @@ function Trigger({
       >
         {label}
         {marks ? <span className="-mr-0.5 flex items-center gap-0.5">{marks}</span> : null}
-        <span className="max-w-48 truncate font-medium text-text">{text}</span>
+        <span className="max-w-48 truncate font-medium text-text" title={text}>
+          {text}
+        </span>
         <ChevronDown className="size-3 text-text-muted" />
       </Button>
     </PopoverTrigger>
@@ -113,7 +115,9 @@ function Options({
                       onSelect={() => onSelect(option.value)}
                     >
                       {option.mark}
-                      <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                      <span className="min-w-0 flex-1 truncate" title={option.label}>
+                        {option.label}
+                      </span>
                     </PickerItem>
                   ))}
                 </CommandGroup>

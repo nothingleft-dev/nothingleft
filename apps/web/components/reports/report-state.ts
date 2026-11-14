@@ -53,3 +53,9 @@ export function useDefaultProject(state: ReportState): string | null {
   }, [chosen, fallback, set]);
   return chosen;
 }
+
+/** True once the projects have loaded and there are none: a one-project report has nothing to chart. */
+export function useNoProjects(): boolean {
+  const projects = useProjects();
+  return projects.data !== undefined && projects.data.length === 0;
+}

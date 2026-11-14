@@ -19,7 +19,9 @@ import {
   UnitToggle,
   type DurationUnit,
 } from '@components/reports/report-bits';
-import { useDefaultProject, useReportState } from '@components/reports/report-state';
+import { useDefaultProject, useNoProjects, useReportState } from '@components/reports/report-state';
+import { EmptyState } from '@components/empty-state';
+import { Button } from '@components/ui/button';
 import { ProjectPicker } from '@components/reports/scope-pickers';
 import {
   AXIS_TICK,
@@ -31,6 +33,7 @@ import {
 } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
 import { useSprints } from '@hooks/use-sprints';
+import { useProjects } from '@hooks/use-projects';
 import { formatCalendarDate, formatCalendarDateShort, formatCalendarRange, todayCalendarDate } from '@lib/datetime';
 import type { MarkPaint } from '@lib/reports/colors';
 import { burndownSprintParam } from '@lib/reports/url';
@@ -76,13 +79,20 @@ export function BurndownReport() {
   const sprints = useSprints(project);
   const sprint = result.data?.sprint.slug ?? state.query.sprint ?? '';
   const unit = durationUnitOf(state.params.get('unit'));
+  const noProjects = useNoProjects();
+  const projects = useProjects();
+  const projectName = projects.data?.find(p => p.key === project)?.name;
 
-  const sprintOptions = (sprints.data ?? [])
+  const STATES = ['active', 'planned', 'completed'];
+  const list = sprints.data ?? [];
+  // Completed sprints newest first: the one just finished is the one most often looked back on.
+  const sprintOptions = list
+    .map((s, i) => ({ s, i }))
     .toSorted(
       (a, b) =>
-        ['active', 'planned', 'completed'].indexOf(a.state) - ['active', 'planned', 'completed'].indexOf(b.state),
+        STATES.indexOf(a.s.state) - STATES.indexOf(b.s.state) || (a.s.state === 'completed' ? b.i - a.i : a.i - b.i),
     )
-    .map(s => ({ value: s.slug, label: s.name, group: SPRINT_GROUP[s.state] }));
+    .map(({ s }) => ({ value: s.slug, label: s.name, group: SPRINT_GROUP[s.state] }));
 
   return (
     <ReportFrame
@@ -131,6 +141,27 @@ export function BurndownReport() {
         ) : null
       }
       skeleton="line"
+      skeletonStats={['Remaining', 'Completed', 'Scope change since the start']}
+      blocked={
+        noProjects ? (
+          <EmptyState
+            title="You are not in any project yet."
+            description="A burndown follows one project’s sprint. Once an admin adds you to a project, its sprints show up here."
+          />
+        ) : undefined
+      }
+      problemMessage={({ code, validValues }) =>
+        code === 'report.no_active_sprint' && validValues.length === 0
+          ? `${projectName ?? project} has no sprints yet. Plan one in the backlog and start it to follow its burndown.`
+          : undefined
+      }
+      problemFixes={({ code, validValues }) =>
+        code === 'report.no_active_sprint' && validValues.length === 0 && project ? (
+          <Button variant="outline" size="xs" className="bg-surface text-text hover:bg-hover" asChild>
+            <Link href={`/projects/${project}/backlog` as Route}>Plan a sprint in the backlog</Link>
+          </Button>
+        ) : null
+      }
       summary={d =>
         `${d.sprint.name} in ${d.sprint.project.name}${
           d.sprint.start_date && d.sprint.end_date
@@ -139,7 +170,7 @@ export function BurndownReport() {
         } · ${SPRINT_GROUP[d.sprint.state].toLowerCase()}`
       }
     >
-      {d => <BurndownBody data={d} unit={unit} />}
+      {d => <BurndownBody data={d} unit={unit} onMeasure={measure => state.set({ measure })} />}
     </ReportFrame>
   );
 }
@@ -164,8 +195,34 @@ function planSentence(data: Burndown, format: (v: number | null) => string) {
       };
 }
 
-function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
+function BurndownBody({
+  data,
+  unit,
+  onMeasure,
+}: {
+  data: Burndown;
+  unit: DurationUnit;
+  onMeasure: (measure: string) => void;
+}) {
   const format = formatter(data, unit);
+  if (data.unit === 'minutes' && data.days.every(d => !d.scope && !d.remaining)) {
+    return (
+      <EmptyState
+        title="No issue in this sprint has an estimate, so there is no time to burn down."
+        description="Estimate the sprint’s issues, or follow it by story points or by issues."
+        action={
+          <div className="flex gap-2">
+            <Button variant="outline" size="xs" onClick={() => onMeasure('story_points')}>
+              Story points
+            </Button>
+            <Button variant="outline" size="xs" onClick={() => onMeasure('issue_count')}>
+              Issues
+            </Button>
+          </div>
+        }
+      />
+    );
+  }
   const today = todayCalendarDate();
   const { summary } = data;
   const added = summary.scope_added ?? 0;
@@ -180,8 +237,7 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
       label: 'Scope change since the start',
       value: (
         <span className={cn(Math.round(added) !== 0 && 'text-warning-fg')}>
-          {added > 0 ? '+' : ''}
-          {Math.round(added) === 0 ? 'None' : format(added)}
+          {Math.round(added) === 0 ? format(0) : `${added > 0 ? '+' : ''}${format(added)}`}
         </span>
       ),
     },
@@ -213,9 +269,9 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
           { key: 'remaining', label: 'Remaining', paint: REMAINING, shape: 'line' },
           { key: 'scope', label: 'Scope (total committed)', paint: SCOPE, shape: 'line' },
           { key: 'ideal', label: 'Ideal', paint: IDEAL, shape: 'line' },
-          { key: 'off', label: 'Non-working day', paint: line('var(--chart-off-day)') },
+          { key: 'off', label: 'Non-working day', paint: line('var(--chart-off-day)'), outlined: true },
           ...(data.days.some(d => d.remaining === null && d.date > (latestDay(data)?.date ?? ''))
-            ? [{ key: 'ahead', label: 'Still to come', paint: line('var(--chart-future)') }]
+            ? [{ key: 'ahead', label: 'Still to come', paint: line('var(--chart-future)'), outlined: true }]
             : []),
         ]}
       />
@@ -231,7 +287,10 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
 function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
   const format = formatter(data, unit);
   const peak = Math.max(1, ...data.days.flatMap(d => [d.remaining ?? 0, d.scope ?? 0, d.ideal ?? 0]));
-  const ticks = data.unit === 'minutes' ? unitTicks(peak * 1.05, unit, calendarOf(data)) : niceTicks(peak * 1.05);
+  const ticks =
+    data.unit === 'minutes'
+      ? unitTicks(peak * 1.05, unit, calendarOf(data))
+      : niceTicks(peak * 1.05, undefined, { minStep: data.unit === 'points' ? 0 : 1 });
   const top = ticks.at(-1)!;
   const rows = data.days.map(d => ({ ...d, shade: d.working_day ? null : top }));
   // The live point is today in the snapshots' own days, which the viewer's calendar can be a day off.
@@ -287,15 +346,6 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
         />
       ) : null}
       <Line
-        dataKey="ideal"
-        stroke={IDEAL.fill}
-        strokeWidth={2}
-        strokeDasharray="6 4"
-        dot={false}
-        activeDot={false}
-        isAnimationActive={false}
-      />
-      <Line
         dataKey="scope"
         type="stepAfter"
         stroke={SCOPE.fill}
@@ -320,6 +370,9 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
               fill="var(--text)"
               fontSize={12}
               fontWeight={600}
+              stroke="var(--bg-surface)"
+              strokeWidth={4}
+              paintOrder="stroke"
             >
               {format(latest.remaining)}
             </text>
@@ -343,6 +396,16 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
             />
           )
         }
+      />
+      {/* Drawn last, so the plan stays readable where the remaining line runs along it. */}
+      <Line
+        dataKey="ideal"
+        stroke={IDEAL.fill}
+        strokeWidth={2}
+        strokeDasharray="6 4"
+        dot={false}
+        activeDot={false}
+        isAnimationActive={false}
       />
       <Tooltip
         cursor={{ stroke: 'var(--border-strong)', strokeWidth: 1 }}

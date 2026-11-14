@@ -18,10 +18,12 @@ import {
   SwitchParam,
   ToggleGroup,
   formatCount,
+  formatShare,
 } from '@components/reports/report-bits';
 import { useReportState } from '@components/reports/report-state';
 import { ChartTooltipBody, HatchDefs, Swatch, svgFill, svgOpacity } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
+import { groupFieldLabel } from '@lib/issue-list/groups';
 import { listHref } from '@lib/issue-list/links';
 import { markPaint, OTHER_FILL, type MarkPaint } from '@lib/reports/colors';
 
@@ -87,14 +89,17 @@ function AssigneeStats({ data }: { data: Distribution }) {
       ? [{ label: 'Assignee entries', value: formatCount(data.total_counted) }]
       : []),
     { label: people === 1 ? 'Person assigned' : 'People assigned', value: formatCount(people) },
-    unassigned
-      ? {
-          label: 'Unassigned',
-          value: formatCount(unassigned.count),
-          unit: `${data.total_issues ? Math.round((unassigned.count / data.total_issues) * 1000) / 10 : 0}% of issues`,
-          ...(unassigned.query ? { href: listHref(unassigned.query) as Route } : {}),
-        }
-      : { label: 'Unassigned', value: 'Hidden' },
+    // With Include unassigned off there is no figure, so no cell rather than a word in its place.
+    ...(unassigned
+      ? [
+          {
+            label: 'Unassigned',
+            value: formatCount(unassigned.count),
+            unit: `${data.total_issues ? Math.round((unassigned.count / data.total_issues) * 1000) / 10 : 0}% of issues`,
+            ...(unassigned.query ? { href: listHref(unassigned.query) as Route } : {}),
+          },
+        ]
+      : []),
   ];
   return <StatRow stats={stats} />;
 }
@@ -168,6 +173,11 @@ export function DistributionReport({ name }: { name: DistributionName }) {
         </>
       }
       skeleton="bars"
+      skeletonStats={
+        name === 'issues-per-assignee'
+          ? ['Issues', 'People assigned', ...(state.get('include_unassigned') === 'true' ? ['Unassigned'] : [])]
+          : undefined
+      }
       summary={d => (
         <>
           {plural(d.total_issues, 'issue')} {scopeText(d.scope, Boolean(state.get('projects')))}.
@@ -193,13 +203,13 @@ export function DistributionReport({ name }: { name: DistributionName }) {
                   rows={rows}
                   total={d.total_counted}
                   truncated={d.truncated}
-                  heading={NOUN[d.field] ? capitalise(noun.one) : 'Value'}
+                  heading={headingOf(d.field)}
                 />
               </div>
             ) : (
               <>
                 <BarTable
-                  heading={NOUN[d.field] ? capitalise(noun.one) : 'Value'}
+                  heading={headingOf(d.field)}
                   amountHeading="Issues"
                   rows={rows.map(r => ({ ...r, paint: d.palette === 'series' ? null : r.paint, folded: false }))}
                   formatAmount={formatCount}
@@ -224,12 +234,13 @@ export function DistributionReport({ name }: { name: DistributionName }) {
 }
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const headingOf = (field: string) => capitalise(groupFieldLabel(field));
 
 function RowTooltip({ row }: { row: Row }) {
   return (
     <ChartTooltipBody
       rows={[{ key: row.key, paint: row.paint, value: formatCount(row.amount), label: row.label, person: row.person }]}
-      note={`${row.share}% of the total${row.query ? ' · click to open the issues' : ''}`}
+      note={`${formatShare(row.share, row.amount)} of the total${row.query ? ' · click to open the issues' : ''}`}
     />
   );
 }
@@ -324,7 +335,7 @@ export function DistributionTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm tabular">
+      <table className="w-full text-sm [&_td:not(:first-child)]:tabular">
         <thead>
           <tr className="h-8 border-b text-left text-xs text-text-secondary">
             <th className="font-medium">{heading}</th>
@@ -350,7 +361,7 @@ export function DistributionTable({
               <td className="text-right">
                 <DrillLink query={row.query}>{formatCount(row.amount)}</DrillLink>
               </td>
-              <td className="text-right text-text-secondary">{row.share}%</td>
+              <td className="text-right text-text-secondary">{formatShare(row.share, row.amount)}</td>
             </tr>
           ))}
         </tbody>

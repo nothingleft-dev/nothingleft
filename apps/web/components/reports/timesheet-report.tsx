@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { formatDuration, type WorkCalendar } from '@nothingleft/format';
@@ -18,6 +18,7 @@ import { ReportFrame } from '@components/reports/report-frame';
 import { ReportMultiPicker } from '@components/reports/report-picker';
 import { plural } from '@components/reports/report-bits';
 import { useReportState, type ReportState } from '@components/reports/report-state';
+import { EDGE_END, EDGE_START, useScrollEdges } from '@components/reports/scroll-edges';
 import { useMembers } from '@hooks/use-members';
 import { useReport, useTimesheetWorkItems } from '@hooks/use-reports';
 import { useSession } from '@hooks/use-session';
@@ -160,31 +161,7 @@ const widthFor = (minutesList: readonly number[], calendar: WorkCalendar, floor:
   return Math.max(floor, Math.ceil(chars * MONO_CHAR_PX) + CELL_INSET_PX);
 };
 
-function useScrollEdges() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: false, end: false });
-  const measure = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
-    const start = el.scrollLeft > 0;
-    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
-    setEdges(prev => (prev.start === start && prev.end === end ? prev : { start, end }));
-  }, []);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [measure]);
-  return { ref, edges, measure };
-}
-
 const CORNER = 'z-30 bg-surface';
-const EDGE_START =
-  "after:pointer-events-none after:absolute after:inset-y-0 after:-right-2 after:w-2 after:bg-linear-to-r after:from-[color-mix(in_oklab,var(--text)_10%,transparent)] after:to-transparent after:content-['']";
-const EDGE_END =
-  "before:pointer-events-none before:absolute before:inset-y-0 before:-left-2 before:w-2 before:bg-linear-to-l before:from-[color-mix(in_oklab,var(--text)_10%,transparent)] before:to-transparent before:content-['']";
 
 function scrollToToday(el: HTMLElement, today: string) {
   const days = [...el.querySelectorAll<HTMLElement>('thead [data-day]')];

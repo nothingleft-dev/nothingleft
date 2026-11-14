@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
-import { DrillLink, PersonMark } from '@components/reports/report-bits';
+import { DrillLink, formatShare, PersonMark } from '@components/reports/report-bits';
 import { cssPaint } from '@components/reports/chart/chart-parts';
 import type { MarkPaint } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
@@ -40,6 +40,7 @@ export function BarTable<T extends BarTableRow>({
   formatAmount,
   total,
   columns = [],
+  amountClassName,
 }: {
   heading: string;
   amountHeading: string;
@@ -47,11 +48,13 @@ export function BarTable<T extends BarTableRow>({
   formatAmount: (amount: number) => string;
   total: number;
   columns?: readonly BarTableColumn<T>[];
+  /** Durations wear the mono face. */
+  amountClassName?: string;
 }) {
   const max = Math.max(1, ...rows.map(r => r.amount));
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] text-sm tabular">
+      <table className="w-full min-w-[560px] text-sm [&_td:not(:first-child)]:tabular">
         <thead>
           <tr className="h-8 border-b text-right text-xs text-text-secondary">
             <th className="w-[30%] text-left font-medium">{heading}</th>
@@ -95,13 +98,13 @@ export function BarTable<T extends BarTableRow>({
                   />
                 </span>
               </td>
-              <td className="font-medium">
+              <td className={cn('font-medium', amountClassName)}>
                 <DrillLink query={row.query}>{formatAmount(row.amount)}</DrillLink>
               </td>
               {columns.map(c => (
                 <td key={c.heading}>{c.cell(row)}</td>
               ))}
-              <td className="text-text-secondary">{row.share}%</td>
+              <td className="text-text-secondary">{formatShare(row.share, row.amount)}</td>
             </tr>
           ))}
         </tbody>
@@ -109,7 +112,7 @@ export function BarTable<T extends BarTableRow>({
           <tr className="h-row text-right font-medium">
             <td className="text-left">Total</td>
             <td />
-            <td>{formatAmount(total)}</td>
+            <td className={amountClassName}>{formatAmount(total)}</td>
             {columns.map(c => (
               <td key={c.heading}>{c.total ?? null}</td>
             ))}

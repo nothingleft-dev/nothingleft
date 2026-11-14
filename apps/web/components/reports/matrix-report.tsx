@@ -37,6 +37,7 @@ import { listHref } from '@lib/issue-list/links';
 import { markPaint } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
+import { EDGE_END, EDGE_START, useScrollEdges } from '@components/reports/scroll-edges';
 
 const HEAT_STEPS = 5;
 const heatStep = (count: number, max: number) =>
@@ -132,18 +133,25 @@ function AxisLabel({
   group,
   palette,
   people,
+  wrap = false,
 }: {
   group: ReportGroup;
   palette: Matrix['rows']['palette'];
   people: boolean;
+  /** A column heading: the mark above the name, which takes two lines before it is shortened. */
+  wrap?: boolean;
 }) {
   const person = personOf(group, people);
   return (
-    <span className="inline-flex min-w-0 items-center gap-2">
-      <Swatch paint={markPaint(group, palette)} />
+    <span
+      className={cn('inline-flex min-w-0 items-center', wrap ? 'flex-col gap-1 text-center' : 'gap-1.5')}
+      title={group.label}
+    >
+      {/* A series swatch keys nothing in a table; status, category and project colours are the meaning. */}
+      {palette === 'series' ? null : <Swatch paint={markPaint(group, palette)} />}
       {palette === 'project' && group.value ? <ProjectMarkByKey projectKey={group.value} /> : null}
       {person ? <PersonMark name={group.label} {...person} small /> : null}
-      <DrillLink query={group.query} className="truncate">
+      <DrillLink query={group.query} className={wrap ? 'line-clamp-2 max-w-full' : 'truncate'}>
         {group.label}
       </DrillLink>
     </span>
@@ -157,46 +165,65 @@ interface Hover {
   y: number;
 }
 
+// One width for every value column, so equal counts sit in equal cells and a shade compares by value alone.
+const LABEL_PX = 176;
+const VALUE_PX = 96;
+const TOTAL_PX = 80;
+
 function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }) {
   const cells = useCells(data);
   const [hover, setHover] = useState<Hover | null>(null);
   const hovered = hover ? cells.get(cellKey(hover.row, hover.column)) : undefined;
+  const { ref: scroller, edges, measure } = useScrollEdges();
+  const startEdge = cn('sticky left-0 z-10 border-r bg-surface', edges.start && EDGE_START);
+  const endEdge = cn('sticky right-0 z-10 border-l bg-surface', edges.end && EDGE_END);
+  const columnPeople = isPeopleField(data.columns.field, data.columns.groups);
+  const rowPeople = isPeopleField(data.rows.field, data.rows.groups);
 
   return (
     <div className="relative">
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full border-separate border-spacing-0 text-sm tabular">
+      <div ref={scroller} onScroll={measure} className="overflow-x-auto overscroll-x-contain rounded-md border">
+        <table
+          className="w-full table-fixed border-separate border-spacing-0 text-sm [&_td]:tabular"
+          style={{ minWidth: LABEL_PX + data.columns.groups.length * VALUE_PX + TOTAL_PX }}
+        >
+          <colgroup>
+            <col className="w-44 max-sm:w-32" />
+            {data.columns.groups.map((_, j) => (
+              <col key={j} />
+            ))}
+            <col style={{ width: TOTAL_PX }} />
+          </colgroup>
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 h-9 min-w-44 border-b bg-surface px-3 text-left text-xs font-normal text-text-muted">
+              <th
+                className={cn(
+                  startEdge,
+                  'h-11 border-b px-3 pt-2 text-left align-top text-xs font-normal text-text-muted',
+                )}
+              >
                 {groupFieldLabel(data.rows.field)} ↓ · {groupFieldLabel(data.columns.field)} →
               </th>
               {data.columns.groups.map((g, j) => (
                 <th
                   key={j}
-                  className="h-9 max-w-40 min-w-22 border-b px-2 text-center text-xs font-medium whitespace-nowrap text-text-secondary"
+                  className="h-11 border-b px-2 pt-2 pb-2 text-center align-top text-xs font-medium text-text-secondary"
                 >
-                  <span className="inline-flex max-w-36 items-center">
-                    <AxisLabel
-                      group={g}
-                      palette={data.columns.palette}
-                      people={isPeopleField(data.columns.field, data.columns.groups)}
-                    />
+                  <span className="inline-flex max-w-full items-center justify-center">
+                    <AxisLabel group={g} palette={data.columns.palette} people={columnPeople} wrap />
                   </span>
                 </th>
               ))}
-              <th className="h-9 min-w-18 border-b border-l px-3 text-right text-xs font-semibold">Total</th>
+              <th className={cn(endEdge, 'h-11 border-b px-3 pt-2 text-right align-top text-xs font-semibold')}>
+                Total
+              </th>
             </tr>
           </thead>
           <tbody>
             {data.rows.groups.map((row, i) => (
               <tr key={i}>
-                <th className="sticky left-0 z-10 h-9 max-w-64 border-b border-border-subtle bg-surface px-3 text-left font-normal">
-                  <AxisLabel
-                    group={row}
-                    palette={data.rows.palette}
-                    people={isPeopleField(data.rows.field, data.rows.groups)}
-                  />
+                <th className={cn(startEdge, 'h-9 border-b border-b-border-subtle px-3 text-left font-normal')}>
+                  <AxisLabel group={row} palette={data.rows.palette} people={rowPeople} />
                 </th>
                 {data.columns.groups.map((_, j) => {
                   const cell = cells.get(cellKey(i, j));
@@ -250,7 +277,7 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
                     </td>
                   );
                 })}
-                <td className="h-9 border-b border-l border-border-subtle px-3 text-right font-semibold">
+                <td className={cn(endEdge, 'h-9 border-b border-b-border-subtle px-3 text-right font-semibold')}>
                   <DrillLink query={row.query}>{row.count}</DrillLink>
                 </td>
               </tr>
@@ -258,13 +285,13 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
           </tbody>
           <tfoot>
             <tr>
-              <th className="sticky left-0 z-10 h-9 bg-surface px-3 text-left font-semibold">Total</th>
+              <th className={cn(startEdge, 'h-9 px-3 text-left font-semibold')}>Total</th>
               {data.columns.groups.map((g, j) => (
                 <td key={j} className="h-9 px-2 text-center font-semibold">
                   <DrillLink query={g.query}>{g.count}</DrillLink>
                 </td>
               ))}
-              <td className="h-9 border-l px-3 text-right font-semibold">{data.total_issues}</td>
+              <td className={cn(endEdge, 'h-9 px-3 text-right font-semibold')}>{data.total_issues}</td>
             </tr>
           </tfoot>
         </table>
@@ -281,20 +308,24 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
           />
         </div>
       ) : null}
-      <div className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary" aria-hidden>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
         {cellStyle === 'shade' ? (
-          <>
-            Fewer
+          <span className="inline-flex items-center gap-1.5" aria-hidden>
+            Issues per cell
+            <span className="ml-1 tabular">1</span>
             {Array.from({ length: HEAT_STEPS }, (_, k) => (
-              <i key={k} className={cn('inline-block h-3 w-5 rounded-[2px]', `heat-${k + 1}`)} />
+              <i key={k} className={cn('inline-block h-3 w-5 rounded-[2px] border border-border', `heat-${k + 1}`)} />
             ))}
-            More
-          </>
+            <span className="tabular">{data.max_cell}</span>
+          </span>
         ) : (
-          <>The bar under each count is its share of the largest cell, {data.max_cell}.</>
+          <span>The bar under each count is its share of the largest cell, {data.max_cell}.</span>
         )}
+        {data.rows.field === data.columns.field && !data.multi_valued ? (
+          <span>Rows and columns are the same field, so only the diagonal can hold issues.</span>
+        ) : null}
         {data.rows.truncated || data.columns.truncated ? (
-          <span className="ml-3">Beyond 50 values a side, the rest are added up as Other.</span>
+          <span>Beyond 50 values a side, the rest are added up as Other.</span>
         ) : null}
       </div>
     </div>

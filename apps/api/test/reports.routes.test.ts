@@ -164,6 +164,15 @@ describe('issues per assignee', () => {
     expect(countOf(without.groups, 'Unassigned')).toBe(0);
   });
 
+  test('an empty result names leaving out unassigned issues among the filters to widen', async () => {
+    const data = await report(w.admin, 'issues-per-assignee', {
+      include_unassigned: 'false',
+      q: 'assignee: Unassigned',
+    });
+    expect(data.total_issues).toBe(0);
+    expect(data.empty.filters.map((f: { kind: string }) => f.kind)).toContain('include_unassigned');
+  });
+
   test('a person carries their picture, as everywhere else; other groups never do', async () => {
     const pictureOf = async (username: string) =>
       (await w.call(w.admin, 'GET', `/v1/organizations/${w.slug}/members/${username}`)).json().data.avatar_url;

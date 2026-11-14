@@ -19,8 +19,12 @@ const CATEGORY_FILL: Record<StatusCategory, string> = {
 };
 
 export const OTHER_FILL = 'var(--border-strong)';
+/** Unassigned, No tag: an absence is never a hue, so it reads the same in every report. */
+export const NONE_FILL = 'var(--palette-gray-solid)';
 
 interface Paintable {
+  value?: string | null;
+  other?: boolean;
   series: number | null;
   color?: LabelColor | null;
   category?: StatusCategory | null;
@@ -44,6 +48,7 @@ export function markPaint(group: Paintable, palette: ReportPalette): MarkPaint {
       ...(group.hue_striped ? { stripe: group.hue } : {}),
     };
   }
+  if (group.value === null && !group.other) return { fill: NONE_FILL, hatched: false, faded: false };
   if (group.series !== null) return { fill: `var(--chart-${group.series})`, hatched: false, faded: false };
   return { fill: OTHER_FILL, hatched: false, faded: false };
 }

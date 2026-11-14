@@ -1,11 +1,13 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { Route } from 'next';
 import type { ReportEmpty, ReportFilter } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';
 import { LoadError } from '@components/query-state';
+import { StatRow } from '@components/dashboard/stat-row';
 import type { ReportChanges } from '@lib/reports/url';
 import { EVERYONE } from '@lib/reports/url';
 import { cn } from '@lib/utils';
@@ -48,6 +50,7 @@ export function ReportEmptyState({
   period,
   onChange,
   action,
+  description,
   widerPeriods = WIDER_PERIODS,
   className,
 }: {
@@ -55,13 +58,17 @@ export function ReportEmptyState({
   period: string | null;
   onChange: (changes: ReportChanges) => void;
   action?: ReactNode;
+  description?: string;
   widerPeriods?: readonly string[];
   className?: string;
 }) {
   const widenings = empty.filters.flatMap(f => wideningsOf(f, period, widerPeriods));
   return (
-    <div className={cn('flex flex-col items-start gap-3 rounded-md border border-dashed px-4 py-6', className)}>
-      <p className="font-medium">{empty.message}</p>
+    <div className={cn('flex flex-col items-start gap-3 rounded-md border px-4 py-6', className)}>
+      <div className="flex flex-col gap-1">
+        <p className="font-medium">{empty.message}</p>
+        {description ? <p className="text-xs text-text-secondary">{description}</p> : null}
+      </div>
       {action}
       {widenings.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -117,10 +124,11 @@ export function ReportProblem({
                       key={value}
                       variant="outline"
                       size="xs"
-                      className={SUGGESTION}
+                      className={cn(SUGGESTION, 'max-w-full')}
+                      title={formatValue(value)}
                       onClick={() => onPick(value)}
                     >
-                      {formatValue(value)}
+                      <span className="truncate">{formatValue(value)}</span>
                     </Button>
                   ))
                 : null}
@@ -143,58 +151,146 @@ export function ReportFailure({ message, onRetry }: { message: string; onRetry: 
 
 export type SkeletonShape = 'bars' | 'grid' | 'line' | 'gantt' | 'sheet';
 
+const BAR_WIDTHS = [78, 64, 52, 41, 33, 22, 15, 9];
+
+/** The bar table's own template: name, bar, figure and share, unboxed, with its header and total rows. */
+function BarTableSkeleton() {
+  const row = (label: ReactNode, bar: ReactNode, key: number | string, className = 'border-b border-border-subtle') => (
+    <div key={key} className={cn('flex h-row items-center gap-0', className)}>
+      <div className="flex w-[30%] flex-none items-center gap-2 pr-4">{label}</div>
+      <div className="flex min-w-0 flex-1 items-center px-2">{bar}</div>
+      <div className="flex w-28 flex-none justify-end">
+        <Skeleton className="h-3 w-8" />
+      </div>
+      <div className="flex w-20 flex-none justify-end">
+        <Skeleton className="h-3 w-10" />
+      </div>
+    </div>
+  );
+  return (
+    <div className="flex flex-col">
+      <div className="flex h-8 items-center border-b">
+        <Skeleton className="h-3 w-16" />
+      </div>
+      {BAR_WIDTHS.map((w, i) =>
+        row(
+          <>
+            <Skeleton className="size-6 flex-none rounded-full" />
+            <Skeleton className="h-3 w-28" />
+          </>,
+          <Skeleton className="h-3 rounded-l-none" style={{ width: `${w}%` }} />,
+          i,
+        ),
+      )}
+      {row(<Skeleton className="h-3 w-10" />, null, 'total', '')}
+    </div>
+  );
+}
+
+/** A line falling across the plot, the shape a burndown draws. */
+function LineSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-4">
+        {[72, 128, 56].map(w => (
+          <Skeleton key={w} className="h-3" style={{ width: w }} />
+        ))}
+      </div>
+      <div className="relative h-80 border-b border-l">
+        {[0.25, 0.5, 0.75].map(y => (
+          <div key={y} className="absolute inset-x-0 border-t border-border-subtle" style={{ top: `${y * 100}%` }} />
+        ))}
+        <svg className="absolute inset-0 size-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+          <polyline
+            points="0,12 18,22 36,30 54,44 72,58 100,96"
+            fill="none"
+            stroke="var(--bg-hover)"
+            strokeWidth={3}
+            vectorEffect="non-scaling-stroke"
+            strokeLinejoin="round"
+            className="animate-pulse"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 /** Shaped like the report it stands in for, so nothing moves when the figures arrive. */
-export function ReportSkeleton({ shape }: { shape: SkeletonShape }) {
+/** A stat row's cell while it loads: its label, and whether the loaded cell is a link (which insets the row). */
+export type SkeletonStat = string | { label: string; linked: true };
+
+export function ReportSkeleton({ shape, stats }: { shape: SkeletonShape; stats?: readonly SkeletonStat[] }) {
   return (
     <div className="flex flex-col gap-4" role="status" aria-label="Loading the report">
       <div className="flex h-4 items-center">
         <Skeleton className="h-3 w-72" />
       </div>
+      {stats?.length ? (
+        <StatRow
+          state="loading"
+          stats={stats.map(stat =>
+            typeof stat === 'string'
+              ? { label: stat, value: null }
+              : { label: stat.label, value: null, href: '/' as Route },
+          )}
+        />
+      ) : null}
       {shape === 'sheet' ? (
         <SheetSkeleton />
       ) : shape === 'bars' ? (
-        <div className="flex flex-col gap-3">
-          {[78, 64, 52, 41, 33, 22, 15, 9].map((w, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="h-3 w-28 flex-none" />
-              <Skeleton className="h-4 rounded-r-sm" style={{ width: `${w}%` }} />
-            </div>
-          ))}
-        </div>
+        <BarTableSkeleton />
       ) : shape === 'line' ? (
-        <div className="flex h-72 items-end gap-2 border-b border-l px-2 pb-2">
-          {Array.from({ length: 14 }, (_, i) => (
-            <Skeleton key={i} className="flex-1" style={{ height: `${92 - i * 5}%`, opacity: 0.5 }} />
-          ))}
+        <LineSkeleton />
+      ) : shape === 'gantt' ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-4">
+            {[72, 56, 44, 64, 96].map(w => (
+              <Skeleton key={w} className="h-3" style={{ width: w }} />
+            ))}
+          </div>
+          <div className="grid grid-cols-[minmax(220px,320px)_minmax(0,1fr)] overflow-hidden rounded-md border max-sm:grid-cols-[132px_minmax(0,1fr)]">
+            <div className="border-r">
+              <div className="h-11 border-b" />
+              {Array.from({ length: 9 }, (_, i) => (
+                <div
+                  key={i}
+                  className="flex h-8 items-center gap-2.5 border-b border-border-subtle px-3 last:border-b-0"
+                >
+                  <Skeleton className="h-3 w-12 flex-none" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              ))}
+            </div>
+            <div>
+              <div className="h-11 border-b" />
+              {Array.from({ length: 9 }, (_, i) => (
+                <div key={i} className="flex h-8 items-center border-b border-border-subtle last:border-b-0">
+                  <Skeleton
+                    className="h-4"
+                    style={{ marginLeft: `${(i * 7) % 40}%`, width: `${18 + ((i * 11) % 24)}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-border-subtle rounded-md border">
-          {Array.from({ length: shape === 'gantt' ? 9 : 7 }, (_, i) => (
-            <div key={i} className="flex h-row items-center gap-3 px-3">
-              <Skeleton className="h-3 w-40 flex-none" />
-              {shape === 'gantt' ? (
-                <Skeleton
-                  className="h-3"
-                  style={{ marginLeft: `${(i * 7) % 40}%`, width: `${18 + ((i * 11) % 24)}%` }}
-                />
-              ) : (
-                Array.from({ length: 6 }, (_, j) => <Skeleton key={j} className="h-3 flex-1" />)
-              )}
+        <div className="flex flex-col divide-y divide-border-subtle overflow-hidden rounded-md border">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className="flex h-9 items-center">
+              <div className="w-56 flex-none px-3 max-sm:w-36">
+                <Skeleton className="h-3 w-28" />
+              </div>
+              {Array.from({ length: 6 }, (_, j) => (
+                <div key={j} className="flex w-28 flex-none justify-center">
+                  <Skeleton className="h-3 w-6" />
+                </div>
+              ))}
             </div>
           ))}
         </div>
       )}
-      {shape === 'bars' || shape === 'line' ? (
-        <div className="flex flex-col divide-y divide-border-subtle rounded-md border">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="flex h-row items-center gap-3 px-3">
-              <Skeleton className="h-3 w-32" />
-              <Skeleton className="ml-auto h-3 w-12" />
-              <Skeleton className="h-3 w-12" />
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -13,9 +14,11 @@ import { StatusDot } from '@components/issues/value-marks';
 import { ReportFrame } from '@components/reports/report-frame';
 import { ReportEmptyState } from '@components/reports/report-states';
 import { DrillLink, plural, ToggleGroup } from '@components/reports/report-bits';
-import { useDefaultProject, useReportState } from '@components/reports/report-state';
+import { useDefaultProject, useNoProjects, useReportState } from '@components/reports/report-state';
 import { ProjectPicker } from '@components/reports/scope-pickers';
-import { ChartLegend, ChartTooltipBody } from '@components/reports/chart/chart-parts';
+import { ChartTooltipBody } from '@components/reports/chart/chart-parts';
+import { EmptyState } from '@components/empty-state';
+import { EDGE_FADE_END, EDGE_FADE_START } from '@components/reports/scroll-edges';
 import { useReport } from '@hooks/use-reports';
 import { useWorkWeek } from '@hooks/use-work-calendar';
 import {
@@ -25,7 +28,7 @@ import {
   formatCalendarWeekday,
   todayCalendarDate,
 } from '@lib/datetime';
-import { categoryFill, type MarkPaint } from '@lib/reports/colors';
+import { categoryFill } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
 
 const ROW = 32;
@@ -43,25 +46,57 @@ const GROUPS = [
 const HATCH = 'repeating-linear-gradient(135deg, var(--palette-gray-solid) 0 2px, var(--palette-gray-bg) 2px 5px)';
 const OVERDUE = 'var(--palette-red-solid)';
 
-const BAR_FILL = 'color-mix(in oklab, var(--text) 16%, var(--bg-surface))';
+// A step darker than the shaded non-working days, with a hairline that holds the bar's edge in both themes.
+const BAR_FILL = 'color-mix(in oklab, var(--text) 22%, var(--bg-surface))';
+const BAR_RIM = 'color-mix(in oklab, var(--text) 34%, var(--bg-surface))';
+
+const edgeOf = (category: GanttBar['status']['category']) =>
+  category === 'cancelled' ? 'var(--palette-gray-solid)' : categoryFill(category);
 
 // A neutral bar with the status category on its left edge: the board's dot, stretched (owner, 27 Sep 2026).
-function barStyle(bar: GanttBar, overdue: boolean): CSSProperties {
-  const category = bar.status.category;
-  const edge = category === 'cancelled' ? 'var(--palette-gray-solid)' : categoryFill(category);
+function barStyle(category: GanttBar['status']['category'], overdue: boolean): CSSProperties {
   return {
     background: category === 'cancelled' ? HATCH : BAR_FILL,
-    boxShadow: [`inset 4px 0 0 ${edge}`, overdue ? `inset -5px 0 0 ${OVERDUE}` : null].filter(Boolean).join(', '),
+    boxShadow: [`inset 0 0 0 1px ${BAR_RIM}`, overdue ? `inset -5px 0 0 ${OVERDUE}` : null].filter(Boolean).join(', '),
     opacity: category === 'backlog' ? 0.6 : 1,
   };
 }
 
-const paint = (fill: string, extra: Partial<MarkPaint> = {}): MarkPaint => ({
-  fill,
-  hatched: false,
-  faded: false,
-  ...extra,
-});
+/** The legend's sample: a short bar drawn exactly as the timeline draws one. */
+function KeyBar({ category, overdue = false }: { category: GanttBar['status']['category']; overdue?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className="relative inline-flex h-2.5 w-5 flex-none overflow-hidden rounded-[3px]"
+      style={barStyle(category, overdue)}
+    >
+      <span className="w-1 flex-none" style={{ background: edgeOf(category) }} />
+    </span>
+  );
+}
+
+function GanttKey() {
+  const item = (key: string, label: string, mark: ReactNode) => (
+    <li key={key} className="inline-flex items-center gap-1.5">
+      {mark}
+      {label}
+    </li>
+  );
+  const line = (colour: string) => (
+    <i aria-hidden className="inline-block h-0.5 w-3 flex-none rounded-full" style={{ background: colour }} />
+  );
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary">
+      {item('unstarted', 'Not started', <KeyBar category="unstarted" />)}
+      {item('started', 'Started', <KeyBar category="started" />)}
+      {item('done', 'Done', <KeyBar category="done" />)}
+      {item('cancelled', 'Cancelled', <KeyBar category="cancelled" />)}
+      {item('overdue', 'Past its due date', <KeyBar category="started" overdue />)}
+      {item('dep', 'Depends on', line('var(--text-muted)'))}
+      {item('conflict', 'Starts before its prerequisite ends', line(OVERDUE))}
+    </ul>
+  );
+}
 
 const isOverdue = (bar: GanttBar, today: string) => !bar.resolved && bar.due_date !== null && bar.due_date < today;
 
@@ -70,6 +105,7 @@ export function GanttReport() {
   const project = useDefaultProject(state);
   const result = useReport('gantt', state.query, project !== null);
   const zoom: Zoom = state.params.get('zoom') === 'month' ? 'month' : 'week';
+  const noProjects = useNoProjects();
 
   return (
     <ReportFrame
@@ -99,6 +135,14 @@ export function GanttReport() {
         />
       }
       skeleton="gantt"
+      blocked={
+        noProjects ? (
+          <EmptyState
+            title="You are not in any project yet."
+            description="A Gantt chart draws one project’s issues. Once an admin adds you to a project, its issues show up here."
+          />
+        ) : undefined
+      }
       ownEmpty
       summary={d =>
         `${plural(d.bar_count, 'issue')} on the timeline in ${d.project.name}${
@@ -117,7 +161,7 @@ export function GanttReport() {
           ) : (
             <GanttTimeline data={d} zoom={zoom} />
           )}
-          <MissingDates data={d} />
+          <MissingDates data={d} drawn={!d.empty || d.empty.reason === 'no_dates'} />
         </div>
       )}
     </ReportFrame>
@@ -150,19 +194,48 @@ const isWorking = (date: string, week: WorkWeek) => {
   return offset < week.workweekDays;
 };
 
+const scrollToX = (el: HTMLElement, left: number) => {
+  el.scrollLeft = Math.max(0, left);
+};
+
+/** Where the timeline is scrolled to, and how wide its window is. */
+function useView() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState({ left: 0, width: 0, content: 0 });
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setView(prev =>
+      prev.left === el.scrollLeft && prev.width === el.clientWidth && prev.content === el.scrollWidth
+        ? prev
+        : { left: el.scrollLeft, width: el.clientWidth, content: el.scrollWidth },
+    );
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => observer.disconnect();
+  }, [measure]);
+  return { ref, view, measure };
+}
+
 function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
   const week = useWorkWeek();
   const today = todayCalendarDate();
-  const scroller = useRef<HTMLDivElement>(null);
+  const { ref: scroller, view, measure } = useView();
   const modal = useIssueModal();
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<{ bar: GanttBar; x: number; y: number } | null>(null);
-  const dayWidth = DAY_WIDTH[zoom];
 
   // Two days of air either side, so the first and last bars do not sit on the edge.
   const start = addCalendarDays(data.range!.start, -2);
   const end = addCalendarDays(data.range!.end, 3);
   const dayCount = calendarDaysBetween(start, end);
+  // A short range stretches to fill the frame rather than leaving its right side empty.
+  const dayWidth = Math.max(DAY_WIDTH[zoom], view.width > 0 ? view.width / dayCount : 0);
   const days = useMemo(() => Array.from({ length: dayCount }, (_, i) => addCalendarDays(start, i)), [start, dayCount]);
   const indexOf = (date: string) => calendarDaysBetween(start, date) - 1;
   const width = dayCount * dayWidth;
@@ -192,8 +265,9 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
     const el = scroller.current;
     if (!el) return;
     const t = calendarDaysBetween(start, today) - 1;
-    if (t > 0 && t < dayCount) el.scrollLeft = Math.max(0, t * dayWidth - el.clientWidth / 3);
-  }, [start, today, dayCount, dayWidth]);
+    if (t > 0 && t < dayCount) scrollToX(el, t * dayWidth - el.clientWidth / 3);
+    measure();
+  }, [scroller, measure, start, today, dayCount, dayWidth]);
 
   const months = useMemo(() => {
     const out: { label: string; days: number }[] = [];
@@ -212,17 +286,7 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <ChartLegend
-        items={[
-          { key: 'unstarted', label: 'Not started', paint: paint(categoryFill('unstarted')) },
-          { key: 'started', label: 'Started', paint: paint(categoryFill('started')) },
-          { key: 'done', label: 'Done', paint: paint(categoryFill('done')) },
-          { key: 'cancelled', label: 'Cancelled', paint: paint('', { hatched: true }) },
-          { key: 'overdue', label: 'Past its due date', paint: paint(OVERDUE) },
-          { key: 'dep', label: 'Depends on', paint: paint('var(--text-muted)'), shape: 'line' },
-          { key: 'conflict', label: 'Starts before its prerequisite ends', paint: paint(OVERDUE), shape: 'line' },
-        ]}
-      />
+      <GanttKey />
       <div className="relative grid grid-cols-[minmax(220px,320px)_minmax(0,1fr)] max-sm:grid-cols-[132px_minmax(0,1fr)] overflow-hidden rounded-md border text-sm">
         <div className="border-r">
           <div className="flex h-11 items-end border-b px-3 pb-1.5 text-xs text-text-muted">Issue</div>
@@ -270,172 +334,223 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
           )}
         </div>
 
-        <div ref={scroller} className="overflow-x-auto">
-          <div style={{ width }}>
-            <div className="h-11 border-b">
-              <div className="flex h-[22px]">
-                {months.map((m, i) => (
-                  <span
-                    key={`${m.label}-${i}`}
-                    className="truncate border-l border-border-subtle px-1.5 pt-1 text-xs font-medium text-text-secondary first:border-l-0"
-                    style={{ width: m.days * dayWidth }}
-                  >
-                    {m.days * dayWidth > 48 ? m.label : ''}
-                  </span>
-                ))}
-              </div>
-              <div className="flex h-[22px]">
-                {days.map(d => {
-                  const monday = new Date(`${d}T00:00:00Z`).getUTCDay() === week.weekStartsOn;
-                  const label = zoom === 'week' ? String(Number(d.slice(8))) : monday ? String(Number(d.slice(8))) : '';
-                  return (
+        <div className="relative min-w-0">
+          <div ref={scroller} onScroll={measure} className="overflow-x-auto overscroll-x-contain">
+            <div style={{ width }}>
+              <div className="h-11 border-b">
+                <div className="flex h-[22px]">
+                  {months.map((m, i) => (
                     <span
-                      key={d}
-                      className={cn(
-                        'flex-none text-center text-2xs leading-[22px] tabular',
-                        isWorking(d, week) ? 'text-text-muted' : 'text-text-disabled',
-                        d === today && 'font-semibold text-text',
-                        zoom === 'month' && 'overflow-visible text-left',
-                      )}
-                      style={{ width: dayWidth }}
-                      aria-label={`${formatCalendarWeekday(d)} ${formatCalendarDate(d)}`}
+                      key={`${m.label}-${i}`}
+                      className="flex-none border-l border-border-subtle pt-1 text-xs font-medium whitespace-nowrap text-text-secondary first:border-l-0"
+                      style={{ width: m.days * dayWidth }}
                     >
-                      {label}
+                      {/* Sticky inside its own month, so the month in view is always named. */}
+                      {m.days * dayWidth > 72 ? (
+                        <span className="sticky left-0 inline-block px-1.5">{m.label}</span>
+                      ) : null}
                     </span>
-                  );
-                })}
+                  ))}
+                </div>
+                <div className="flex h-[22px]">
+                  {days.map(d => {
+                    const monday = new Date(`${d}T00:00:00Z`).getUTCDay() === week.weekStartsOn;
+                    const isToday = d === today;
+                    const label = zoom === 'week' || monday || isToday ? String(Number(d.slice(8))) : '';
+                    return (
+                      <span
+                        key={d}
+                        className={cn(
+                          'relative flex flex-none items-center justify-center text-2xs tabular',
+                          'text-text-muted',
+                          !isWorking(d, week) && 'bg-app',
+                          zoom === 'month' && !isToday && 'justify-start overflow-visible whitespace-nowrap',
+                        )}
+                        style={{ width: dayWidth }}
+                        aria-label={`${formatCalendarWeekday(d)} ${formatCalendarDate(d)}${isToday ? ', today' : ''}`}
+                      >
+                        {isToday ? (
+                          <span className="z-[1] rounded-xs bg-text px-1 leading-4 font-semibold text-surface">
+                            {label}
+                          </span>
+                        ) : (
+                          label
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
 
-            <div className="relative" style={{ height }}>
-              {days.map((d, i) =>
-                isWorking(d, week) ? null : (
-                  <div key={d} className="absolute inset-y-0 bg-app" style={{ left: i * dayWidth, width: dayWidth }} />
-                ),
-              )}
-              {rows.map((row, i) => {
-                const top = rows.slice(0, i).reduce((sum, r) => sum + (r.kind === 'band' ? BAND : ROW), 0);
-                return (
-                  <div
-                    key={`line-${i}`}
-                    className={cn(
-                      'absolute inset-x-0 border-b border-border-subtle',
-                      row.kind === 'band' && 'bg-app/60',
-                    )}
-                    style={{ top, height: row.kind === 'band' ? BAND : ROW }}
-                  />
-                );
-              })}
-              {calendarDaysBetween(start, today) > 0 && today <= end ? (
-                <div
-                  className="absolute inset-y-0 z-[3] w-px bg-text"
-                  style={{ left: (calendarDaysBetween(start, today) - 1) * dayWidth + dayWidth / 2 }}
-                  aria-hidden
-                />
-              ) : null}
-
-              <svg
-                className="pointer-events-none absolute inset-0 z-[1] overflow-visible"
-                width={width}
-                height={height}
-                aria-hidden
-              >
-                <defs>
-                  <marker
-                    id="gantt-arrow"
-                    viewBox="0 0 8 8"
-                    refX="7"
-                    refY="4"
-                    markerWidth="7"
-                    markerHeight="7"
-                    orient="auto"
-                  >
-                    <path d="M0 0 8 4 0 8z" fill="var(--text-muted)" />
-                  </marker>
-                  <marker
-                    id="gantt-arrow-conflict"
-                    viewBox="0 0 8 8"
-                    refX="7"
-                    refY="4"
-                    markerWidth="7"
-                    markerHeight="7"
-                    orient="auto"
-                  >
-                    <path d="M0 0 8 4 0 8z" fill={OVERDUE} />
-                  </marker>
-                  <marker
-                    id="gantt-arrow-hover"
-                    viewBox="0 0 8 8"
-                    refX="7"
-                    refY="4"
-                    markerWidth="7"
-                    markerHeight="7"
-                    orient="auto"
-                  >
-                    <path d="M0 0 8 4 0 8z" fill="var(--text)" />
-                  </marker>
-                </defs>
-                {data.dependencies.map(dep => {
-                  const from = placed.get(dep.from);
-                  const to = placed.get(dep.to);
-                  if (!from || !to) return null;
-                  const conflict = to.bar.start_date! <= from.bar.due_date!;
-                  const x1 = from.x + from.width;
-                  const x2 = to.x - 1;
-                  const lane = to.mid - ROW / 2;
-                  const d =
-                    x2 - x1 < 16
-                      ? `M${x1} ${from.mid} h8 V${lane} H${x2 - 10} V${to.mid} H${x2}`
-                      : `M${x1} ${from.mid} h8 V${to.mid} H${x2}`;
-                  const lit = hover !== null && (dep.from === hover || dep.to === hover);
-                  const dim = hover !== null && !lit;
+              <div className="relative" style={{ height }}>
+                {days.map((d, i) =>
+                  isWorking(d, week) ? null : (
+                    <div
+                      key={d}
+                      className="absolute inset-y-0 bg-app"
+                      style={{ left: i * dayWidth, width: dayWidth }}
+                    />
+                  ),
+                )}
+                {rows.map((row, i) => {
+                  const top = rows.slice(0, i).reduce((sum, r) => sum + (r.kind === 'band' ? BAND : ROW), 0);
                   return (
-                    <path
-                      key={`${dep.from}-${dep.to}`}
-                      d={d}
-                      fill="none"
-                      stroke={conflict ? OVERDUE : lit ? 'var(--text)' : 'var(--text-muted)'}
-                      strokeWidth={lit ? 2 : 1.5}
-                      strokeLinejoin="round"
-                      opacity={dim ? 0.35 : 1}
-                      markerEnd={`url(#${conflict ? 'gantt-arrow-conflict' : lit ? 'gantt-arrow-hover' : 'gantt-arrow'})`}
+                    <div
+                      key={`line-${i}`}
+                      className={cn(
+                        'absolute inset-x-0 border-b border-border-subtle',
+                        row.kind === 'band' && 'bg-app/60',
+                      )}
+                      style={{ top, height: row.kind === 'band' ? BAND : ROW }}
                     />
                   );
                 })}
-              </svg>
+                {calendarDaysBetween(start, today) > 0 && today <= end ? (
+                  <div
+                    className="absolute inset-y-0 z-[3] w-px bg-text"
+                    style={{ left: (calendarDaysBetween(start, today) - 1) * dayWidth + dayWidth / 2 }}
+                    aria-hidden
+                  />
+                ) : null}
 
-              {[...placed.values()].map(({ bar, x, width: w, mid }) => (
-                <button
-                  key={bar.key}
-                  type="button"
-                  aria-label={`${bar.key} ${bar.title}, ${formatCalendarRange(bar.start_date!, bar.due_date!)}`}
-                  onClick={() => modal.open(bar.key)}
-                  onPointerEnter={e => {
-                    setHover(bar.key);
-                    const frame = e.currentTarget.closest('.grid')!.getBoundingClientRect();
-                    const box = e.currentTarget.getBoundingClientRect();
-                    setTip({ bar, x: box.left - frame.left + Math.min(box.width, 240) / 2, y: box.top - frame.top });
-                  }}
-                  onPointerLeave={() => {
-                    setHover(null);
-                    setTip(null);
-                  }}
-                  className={cn(
-                    'absolute z-[2] rounded-sm',
-                    'hover:outline-2 hover:outline-offset-1 hover:outline-text focus-visible:outline-offset-1',
-                    related(bar.key) && hover !== bar.key && 'outline-1 outline-offset-1 outline-text-muted',
-                  )}
-                  style={{
-                    left: x,
-                    top: mid - BAR / 2,
-                    width: w,
-                    height: BAR,
-                    ...barStyle(bar, isOverdue(bar, today)),
-                  }}
-                />
-              ))}
+                <svg
+                  className="pointer-events-none absolute inset-0 z-[1] overflow-visible"
+                  width={width}
+                  height={height}
+                  aria-hidden
+                >
+                  <defs>
+                    <marker
+                      id="gantt-arrow"
+                      viewBox="0 0 8 8"
+                      refX="7"
+                      refY="4"
+                      markerWidth="7"
+                      markerHeight="7"
+                      orient="auto"
+                    >
+                      <path d="M0 0 8 4 0 8z" fill="var(--text-muted)" />
+                    </marker>
+                    <marker
+                      id="gantt-arrow-conflict"
+                      viewBox="0 0 8 8"
+                      refX="7"
+                      refY="4"
+                      markerWidth="7"
+                      markerHeight="7"
+                      orient="auto"
+                    >
+                      <path d="M0 0 8 4 0 8z" fill={OVERDUE} />
+                    </marker>
+                    <marker
+                      id="gantt-arrow-hover"
+                      viewBox="0 0 8 8"
+                      refX="7"
+                      refY="4"
+                      markerWidth="7"
+                      markerHeight="7"
+                      orient="auto"
+                    >
+                      <path d="M0 0 8 4 0 8z" fill="var(--text)" />
+                    </marker>
+                  </defs>
+                  {data.dependencies.map(dep => {
+                    const from = placed.get(dep.from);
+                    const to = placed.get(dep.to);
+                    if (!from || !to) return null;
+                    const conflict = to.bar.start_date! <= from.bar.due_date!;
+                    const x1 = from.x + from.width;
+                    const x2 = to.x - 1;
+                    const lane = to.mid - ROW / 2;
+                    const d =
+                      x2 - x1 < 16
+                        ? `M${x1} ${from.mid} h8 V${lane} H${x2 - 10} V${to.mid} H${x2}`
+                        : `M${x1} ${from.mid} h8 V${to.mid} H${x2}`;
+                    const lit = hover !== null && (dep.from === hover || dep.to === hover);
+                    const dim = hover !== null && !lit;
+                    return (
+                      <path
+                        key={`${dep.from}-${dep.to}`}
+                        d={d}
+                        fill="none"
+                        stroke={conflict ? OVERDUE : lit ? 'var(--text)' : 'var(--text-muted)'}
+                        strokeWidth={lit ? 2 : 1.5}
+                        strokeLinejoin="round"
+                        opacity={dim ? 0.35 : 1}
+                        markerEnd={`url(#${conflict ? 'gantt-arrow-conflict' : lit ? 'gantt-arrow-hover' : 'gantt-arrow'})`}
+                      />
+                    );
+                  })}
+                </svg>
+
+                {[...placed.values()].map(({ bar, x, width: w, mid }) => (
+                  <button
+                    key={bar.key}
+                    type="button"
+                    aria-label={`${bar.key} ${bar.title}, ${formatCalendarRange(bar.start_date!, bar.due_date!)}`}
+                    onClick={() => modal.open(bar.key)}
+                    onPointerEnter={e => {
+                      setHover(bar.key);
+                      const frame = e.currentTarget.closest('.grid')!.getBoundingClientRect();
+                      const box = e.currentTarget.getBoundingClientRect();
+                      setTip({ bar, x: box.left - frame.left + Math.min(box.width, 240) / 2, y: box.top - frame.top });
+                    }}
+                    onPointerLeave={() => {
+                      setHover(null);
+                      setTip(null);
+                    }}
+                    className={cn(
+                      'absolute z-[2] rounded-sm',
+                      'hover:outline-2 hover:outline-offset-1 hover:outline-text focus-visible:outline-offset-1',
+                      related(bar.key) && hover !== bar.key && 'outline-1 outline-offset-1 outline-text-muted',
+                    )}
+                    style={{
+                      left: x,
+                      top: mid - BAR / 2,
+                      width: w,
+                      height: BAR,
+                      ...barStyle(bar.status.category, isOverdue(bar, today)),
+                    }}
+                  >
+                    {/* Sticky, so a bar that starts left of the window still shows its status at the window's edge. */}
+                    <span
+                      aria-hidden
+                      className="sticky left-0 block h-full w-1 rounded-l-sm"
+                      style={{ background: edgeOf(bar.status.category) }}
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+          {view.left > 0 ? <div className={cn(EDGE_FADE_START, 'z-[4]')} /> : null}
+          {view.left + view.width < view.content - 1 ? <div className={cn(EDGE_FADE_END, 'z-[4]')} /> : null}
+          {view.width > 0
+            ? [...placed.values()].map(({ bar, x, width: w, mid }) => {
+                const before = x + w < view.left;
+                const after = x > view.left + view.width;
+                if (!before && !after) return null;
+                const Icon = before ? ChevronLeft : ChevronRight;
+                return (
+                  <button
+                    key={`off-${bar.key}`}
+                    type="button"
+                    aria-label={`${bar.key} is ${before ? 'earlier' : 'later'} on the timeline; scroll to it`}
+                    title={formatCalendarRange(bar.start_date!, bar.due_date!)}
+                    onClick={() =>
+                      scroller.current?.scrollTo({ left: Math.max(0, x - view.width / 3), behavior: 'smooth' })
+                    }
+                    className={cn(
+                      'absolute z-[5] flex size-5 items-center justify-center rounded-xs bg-surface text-text-muted hover:bg-hover hover:text-text',
+                      before ? 'left-1' : 'right-1',
+                    )}
+                    style={{ top: 44 + mid - 10 }}
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                );
+              })
+            : null}
         </div>
 
         {tip ? (
@@ -475,10 +590,12 @@ function missingText(bar: GanttBar) {
 }
 
 /** Never dropped: a timeline that quietly omits half the work is worse than none. */
-function MissingDates({ data }: { data: Gantt }) {
+function MissingDates({ data, drawn }: { data: Gantt; drawn: boolean }) {
   const { missing } = data;
   if (missing.count === 0) {
-    return <p className="text-xs text-text-secondary">Every issue here has both a start date and a due date.</p>;
+    return drawn ? (
+      <p className="text-xs text-text-secondary">Every issue here has both a start date and a due date.</p>
+    ) : null;
   }
   return (
     <section className="flex flex-col gap-2">

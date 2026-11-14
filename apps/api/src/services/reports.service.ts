@@ -670,7 +670,7 @@ export function reportsService(deps: ReportsDeps) {
         return {
           report: name,
           scope: scopeDto(s),
-          empty: total === 0 ? emptyIssues(filtersOf(s)) : null,
+          empty: total === 0 ? emptyIssues(filtersOf(s, extra)) : null,
           generated_at: now().toISOString(),
           field: input.by_category ? STATUS_CATEGORY_GROUP : field,
           palette: paletteOf(source),
