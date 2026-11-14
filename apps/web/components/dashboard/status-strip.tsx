@@ -1,3 +1,4 @@
+import { formatCount } from '@lib/numbers';
 import { STATUS_CATEGORIES, type BoardValueCount, type StatusCategory } from '@nothingleft/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { cn } from '@lib/utils';
@@ -100,13 +101,13 @@ export function StatusDistribution({
           <Tooltip key={s.name}>
             <TooltipTrigger asChild>
               <i
-                aria-label={`${s.count} ${s.count === 1 ? one : noun} ${phrase} ${s.name}`}
+                aria-label={`${formatCount(s.count)} ${s.count === 1 ? one : noun} ${phrase} ${s.name}`}
                 className={cn('block h-full', `l-${s.color}`, STATUS_TEXTURE[s.category ?? 'started'])}
                 style={{ flex: s.count }}
               />
             </TooltipTrigger>
             <TooltipContent side={tooltipSide}>
-              {s.count} {s.count === 1 ? one : noun} {phrase} {s.name}
+              {formatCount(s.count)} {s.count === 1 ? one : noun} {phrase} {s.name}
             </TooltipContent>
           </Tooltip>
         ))}
@@ -122,7 +123,7 @@ export function StatusDistribution({
                   STATUS_TEXTURE[s.category ?? 'started'],
                 )}
               />
-              {s.name} <b className="font-medium tabular text-text">{s.count}</b>
+              {s.name} <b className="font-medium tabular text-text">{formatCount(s.count)}</b>
             </li>
           ))}
         </ul>
