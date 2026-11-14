@@ -193,19 +193,19 @@ export function AttachmentsSection({
                         {...(file.mime_type === 'application/pdf'
                           ? { target: '_blank', rel: 'noopener noreferrer' }
                           : { download: file.filename })}
-                        className="flex h-10 max-w-72 items-center gap-2 rounded-md border pr-3 pl-2 text-xs hover:border-border-strong hover:bg-hover"
+                        className="flex h-10 max-w-96 items-center gap-2 rounded-md border pr-3 pl-2 text-xs hover:border-border-strong hover:bg-hover"
                       >
                         <FileBadge filename={file.filename} mime={file.mime_type} className="h-6 flex-none" />
-                        <span className="truncate text-text">{file.filename}</span>
+                        <FileName name={file.filename} className="text-text" />
                         <span className="flex-none tabular text-text-muted">{formatBytes(file.size_bytes)}</span>
                       </a>
                     ) : (
                       <span
                         tabIndex={0}
-                        className="flex h-10 max-w-72 items-center gap-2 rounded-md border border-dashed pr-3 pl-2 text-xs"
+                        className="flex h-10 max-w-96 items-center gap-2 rounded-md border border-dashed pr-3 pl-2 text-xs"
                       >
                         <CloudOff className="size-icon-sm flex-none text-text-muted" aria-hidden />
-                        <span className="truncate text-text-secondary">{file.filename}</span>
+                        <FileName name={file.filename} className="text-text-secondary" />
                         <span className="flex-none tabular text-text-muted">{formatBytes(file.size_bytes)}</span>
                       </span>
                     )}
@@ -248,10 +248,22 @@ export function AttachmentsSection({
   );
 }
 
+/** Truncates the name before its extension, so `.csv` stays readable. */
+function FileName({ name, className }: { name: string; className?: string }) {
+  const dot = name.lastIndexOf('.');
+  const extension = dot > 0 && name.length - dot <= 8 ? name.slice(dot) : '';
+  return (
+    <span className={cn('flex min-w-0', className)}>
+      <span className="truncate">{extension ? name.slice(0, dot) : name}</span>
+      {extension ? <span className="flex-none">{extension}</span> : null}
+    </span>
+  );
+}
+
 function TileCaption({ file }: { file: Attachment }) {
   return (
     <span className="flex min-w-0 items-baseline gap-2 px-2 py-1.5 text-xs">
-      <span className="truncate text-text">{file.filename}</span>
+      <FileName name={file.filename} className="text-text" />
       <span className="ml-auto flex-none tabular text-text-muted">{formatBytes(file.size_bytes)}</span>
     </span>
   );

@@ -79,7 +79,7 @@ export function FieldValue({ entry, calendar, variant, timeZone, decimals }: Fie
     case 'number':
     case 'integer':
       return (
-        <span className="font-mono tabular">
+        <span className="tabular">
           {entry.type === 'number' && decimals !== undefined ? entry.value!.toFixed(decimals) : entry.value}
         </span>
       );

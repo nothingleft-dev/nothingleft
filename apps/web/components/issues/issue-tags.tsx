@@ -9,6 +9,7 @@ import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } fr
 import { PickerCommand, PickerItem } from '@components/picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { LabelColorPicker } from '@components/label-color-picker';
+import { Field } from '@components/auth/field';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { useDebounced } from '@hooks/use-debounced';
 import { useIssueTag } from '@hooks/use-issues';
@@ -60,8 +61,9 @@ export function TagChip({ tag, onRemove }: { tag: TagRef; onRemove?: () => void 
     <span
       className={cn(
         `l-${tag.color}`,
-        'group/tag inline-flex h-5 items-center rounded-sm bg-c-bg pl-1.5 text-2xs font-medium text-c-fg',
-        onRemove ? 'pr-0.5' : 'pr-1.5',
+        'group/tag relative inline-flex h-5 items-center rounded-sm bg-c-bg px-2 text-2xs font-medium text-c-fg',
+        // Touch has no hover, so the × is always there and keeps its own room.
+        onRemove && '[@media(hover:none)]:pr-5',
       )}
     >
       {tag.name}
@@ -70,9 +72,11 @@ export function TagChip({ tag, onRemove }: { tag: TagRef; onRemove?: () => void 
           type="button"
           aria-label={`Remove tag ${tag.name}`}
           onClick={onRemove}
-          className="ml-0.5 inline-flex size-3.5 items-center justify-center rounded-xs reveal group-hover/tag:opacity-100 hover:bg-c-fg/15"
+          className="group/x absolute inset-y-0 right-0 grid w-5 place-items-center rounded-r-sm bg-c-bg reveal group-hover/tag:opacity-100 before:absolute before:inset-y-0 before:-left-1.5 before:w-1.5 before:bg-linear-to-r before:from-transparent before:to-c-bg [@media(hover:none)]:before:hidden"
         >
-          <X className="size-3" />
+          <span className="grid size-3.5 place-items-center rounded-xs group-hover/x:bg-c-fg/15">
+            <X className="size-3" />
+          </span>
         </button>
       ) : null}
     </span>
@@ -127,7 +131,7 @@ export function TagPicker({ applied, open, onOpenChange, onChange, empty, contex
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0">
-        {creating ? (
+        {creating !== null ? (
           <form
             noValidate
             className="flex flex-col gap-3 p-3"
@@ -135,20 +139,23 @@ export function TagPicker({ applied, open, onOpenChange, onChange, empty, contex
               e.preventDefault();
               // React bubbles submit through portals: the create-issue form around this must not see it.
               e.stopPropagation();
-              onChange({ name: creating, slug: slugify(creating), color }, true, true);
+              const name = creating.trim();
+              if (!name) return;
+              onChange({ name, slug: slugify(name), color }, true, true);
               reset(false);
             }}
           >
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-text-secondary">New tag</span>
-              <TagChip tag={{ name: creating, slug: slugify(creating), color }} />
-            </div>
+            <Field label="Name" value={creating} autoFocus onChange={e => setCreating(e.target.value)} />
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs text-text-secondary">Colour</span>
+              <span className="text-sm font-medium text-text-secondary">Colour</span>
               <LabelColorPicker value={color} onChange={setColor} />
             </div>
+            <div className="flex items-center gap-2 text-xs text-text-secondary">
+              Preview
+              <TagChip tag={{ name: creating.trim() || 'Tag', slug: slugify(creating), color }} />
+            </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm">
+              <Button type="submit" size="sm" disabled={!creating.trim()}>
                 Create tag
               </Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(null)}>

@@ -45,7 +45,7 @@ export function DevelopmentField({ issue, onOpen, onLink }: DevelopmentFieldProp
       aside={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-xs" aria-label="Development actions" className="text-text-muted">
+            <Button variant="ghost" size="icon-xs" aria-label="Development actions" className="text-text-secondary">
               <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
@@ -84,7 +84,16 @@ export function DevelopmentField({ issue, onOpen, onLink }: DevelopmentFieldProp
           ) : (
             <DevelopmentBadge rollup={rollup} />
           )}
-          {counts ? <span className="w-full text-2xs text-text-secondary">{counts}</span> : null}
+          {counts ? (
+            <span className="flex w-full flex-wrap gap-x-1 text-2xs text-text-secondary">
+              {counts.split(' · ').map((part, i, parts) => (
+                <span key={part} className="whitespace-nowrap">
+                  {part}
+                  {i < parts.length - 1 ? ',' : null}
+                </span>
+              ))}
+            </span>
+          ) : null}
         </>
       )}
     </SidebarField>

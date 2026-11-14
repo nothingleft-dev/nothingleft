@@ -67,18 +67,18 @@ function Body({
       >
         {children}
       </span>
-      {aside ? <span className="col-start-2 row-span-2 row-start-1 flex items-center">{aside}</span> : null}
+      {aside ? <span className="col-start-2 row-start-1 -my-1 flex items-center">{aside}</span> : null}
     </>
   );
 }
 
-/** Left of the rail while it sits beside the issue; below the row once the rail spans the page. */
-export const useRailPopoverSide = () => (useMediaQuery('(min-width: 1100px)') ? 'left' : 'bottom');
+/** Rail editors open below their row: to the left they would cover the key-field strip. */
+export const useRailPopoverAlign = () => (useMediaQuery('(min-width: 1100px)') ? 'end' : 'start');
 
 export function SidebarField(props: SidebarFieldProps) {
   const { label, editor, disabled, open, onOpenChange, contentClassName, variant = 'rail' } = props;
-  const railSide = useRailPopoverSide();
-  const side = variant === 'strip' ? 'bottom' : railSide;
+  const railAlign = useRailPopoverAlign();
+  const align = variant === 'strip' ? 'start' : railAlign;
   const rowClass = ROW_CLASS[variant];
 
   if (!editor || disabled) {
@@ -101,8 +101,8 @@ export function SidebarField(props: SidebarFieldProps) {
         </button>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
-        side={side}
+        align={align}
+        side="bottom"
         collisionPadding={16}
         className={cn('w-[280px] max-w-[calc(100vw-32px)] p-0', contentClassName)}
       >

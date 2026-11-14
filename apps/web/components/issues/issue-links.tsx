@@ -17,6 +17,7 @@ import { useIssueLinks, useRemoveIssueLink, useStarLinkedIssue } from '@hooks/us
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { TextButton } from '@components/text-button';
+import { LoadError, errorDetail } from '@components/query-state';
 
 interface IssueLinksProps {
   issueKey: string;
@@ -61,11 +62,15 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
       {links.isPending ? (
         <LinksSkeleton />
       ) : links.isError ? (
-        <p className="py-3 text-xs text-danger-fg">The links could not be loaded. {links.error.message}</p>
+        <div className="mt-3">
+          <LoadError onRetry={() => void links.refetch()} detail={errorDetail(links.error)}>
+            The links could not be loaded.
+          </LoadError>
+        </div>
       ) : active ? (
         <LinkRows issueKey={issueKey} group={active} canEdit={canEdit} />
       ) : (
-        <p className="py-3 text-xs text-text-secondary">
+        <p className="pt-3 text-xs text-text-secondary">
           No linked issues. <TextButton onClick={onAddLinks}>Add links</TextButton> to show what this depends on,
           duplicates or relates to.
         </p>
@@ -168,8 +173,10 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
 // One line, the height of the empty state most issues end on, so Activity below does not move when it settles.
 function LinksSkeleton() {
   return (
-    <div className="py-3" aria-hidden>
-      <Skeleton className="h-4 w-1/2" />
+    <div className="flex h-[30px] items-end" aria-hidden>
+      <span className="flex h-[18px] items-center">
+        <Skeleton className="h-3 w-80 max-w-full" />
+      </span>
     </div>
   );
 }

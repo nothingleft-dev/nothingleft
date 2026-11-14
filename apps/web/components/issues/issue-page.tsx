@@ -2,7 +2,8 @@
 
 import { ArchivedNotice } from '@components/projects/archived-notice';
 import { useEffect, useRef, useState } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Route } from 'next';
 import {
   Eye,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Issue, MemberRef } from '@nothingleft/types';
+import { parseIssueKey } from '@nothingleft/format';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
@@ -62,6 +64,9 @@ import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+
+const PAGE_GRID =
+  'grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center';
 
 export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; variant?: 'page' | 'modal' }) {
   const modal = variant === 'modal';
@@ -126,13 +131,15 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
   if (issue.isError && isApiError(issue.error) && issue.error.isNotFound) {
     if (modal) return <FormAlert title={`${issueKey} does not exist, or you cannot open it.`} />;
-    notFound();
+    return <IssueNotFound issueKey={issueKey} />;
   }
   if (issue.isError) {
     return (
-      <LoadError onRetry={() => void issue.refetch()} detail={errorDetail(issue.error)}>
-        This issue could not be loaded.
-      </LoadError>
+      <div className={PAGE_GRID}>
+        <LoadError onRetry={() => void issue.refetch()} detail={errorDetail(issue.error)}>
+          This issue could not be loaded.
+        </LoadError>
+      </div>
     );
   }
   // The role decides the title's action strip and so its wrap: drawn without it, the page jumps when it lands.
@@ -163,8 +170,8 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
-      <div className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center">
-        <div className="min-w-0">
+      <div className={PAGE_GRID}>
+        <div className="@container min-w-0">
           {archived ? (
             <div className="mb-4">
               <ArchivedNotice>
@@ -179,7 +186,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
           <div className="flex items-start gap-4 max-sm:flex-col max-sm:gap-1">
             <IssueTitle issue={data} canEdit={canEdit} />
-            <div className="mt-0.5 flex flex-none gap-0.5">
+            <div className="mt-0.5 flex flex-none items-center gap-0.5">
               {canEdit ? (
                 <>
                   <IconAction label="Edit description" shortcut="e" onClick={() => setEditingDescription(true)}>
@@ -333,7 +340,9 @@ function Provenance({ issue, timeZone, withKey }: { issue: Issue; timeZone?: str
         Created by <PersonName person={issue.created_by} className="font-medium text-text" />{' '}
         <RelativeTime value={issue.created_at} timeZone={timeZone} />
       </span>
-      <span className="text-text-muted">·</span>
+      <span aria-hidden className="text-text-muted max-sm:hidden">
+        ·
+      </span>
       <span>
         Updated by <PersonName person={issue.updated_by} className="font-medium text-text" />{' '}
         <RelativeTime value={issue.updated_at} timeZone={timeZone} />
@@ -440,7 +449,12 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="More actions" className="text-text-secondary">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="More actions"
+              className="text-text-secondary max-md:size-control"
+            >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -514,30 +528,93 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
   );
 }
 
+const STRIP_CELLS = ['w-20', 'w-16', 'w-16', 'w-24', 'w-20', 'w-24'];
+
 function IssueSkeleton() {
   return (
-    <div
-      className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center"
-      role="status"
-      aria-label="Loading"
-    >
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-3 w-80" />
-        <Skeleton className="h-8 w-2/3" />
-        <Skeleton className="h-[54px] w-full rounded-md" />
-        <div className="mt-2 flex flex-col gap-2">
+    <div className={PAGE_GRID} role="status" aria-label="Loading">
+      <div className="@container min-w-0">
+        <div className="mb-4 flex h-8 items-center justify-between gap-4">
+          <Skeleton className="h-3 w-96 max-w-[70%]" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="flex h-8 items-center">
+          <Skeleton className="h-6 w-2/3" />
+        </div>
+        <div className="mt-2 flex h-5 gap-1.5">
+          <Skeleton className="h-5 w-16 rounded-sm" />
+          <Skeleton className="h-5 w-12 rounded-sm" />
+        </div>
+        <div className="key-strip mt-4 grid-cols-2! @[26rem]:grid-cols-3! @[46rem]:grid-cols-6!">
+          {STRIP_CELLS.map((width, i) => (
+            <div key={i} className="flex flex-col gap-0.5 px-3 py-2">
+              <span className="flex h-4 items-center">
+                <Skeleton className="h-2.5 w-12" />
+              </span>
+              <span className="flex h-5 items-center">
+                <Skeleton className={cn('h-3.5', width)} />
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-col gap-3">
           <Skeleton className="h-4 w-full max-w-[72ch]" />
           <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
           <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
         </div>
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-1.5 px-2 py-1">
-            <Skeleton className="h-2.5 w-16" />
-            <Skeleton className="h-3.5 w-32" />
+          <div key={i} className="flex flex-col gap-0.5 px-2 py-[7px]">
+            <span className="flex h-4 items-center">
+              <Skeleton className="h-2.5 w-16" />
+            </span>
+            <span className="flex h-5 items-center">
+              <Skeleton className="h-3.5 w-28" />
+            </span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Missing and denied read the same (docs/permissions.md); a deleted issue is missing until it is restored. */
+function IssueNotFound({ issueKey }: { issueKey: string }) {
+  const projectKey = parseIssueKey(issueKey)?.projectKey ?? null;
+  const project = useProject(projectKey);
+  const found = project.data;
+
+  return (
+    <div className="flex max-w-lg flex-col items-start gap-3 pt-12">
+      <p className="font-mono text-2xs text-text-muted">404</p>
+      <h1 className="text-xl font-semibold tracking-tight">
+        <span className="font-mono">{issueKey}</span> does not exist
+      </h1>
+      <p className="text-pretty text-text-secondary">
+        {found
+          ? `There is no issue ${issueKey} in ${found.name} that you can open. A deleted issue can be restored by a Project Admin for 14 days.`
+          : 'The key may be wrong, or the issue is in a project you cannot open. Your data is unaffected.'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {found ? (
+          <>
+            <Button asChild variant="outline">
+              <Link href={`/projects/${found.key}/issues` as Route}>Back to {found.name} issues</Link>
+            </Button>
+            {found.my_role === 'project_admin' ? (
+              <Button asChild variant="ghost">
+                <Link href={`/projects/${found.key}/settings?tab=deleted` as Route}>Deleted issues</Link>
+              </Button>
+            ) : null}
+          </>
+        ) : project.isPending && projectKey ? (
+          <Skeleton className="h-control w-48" />
+        ) : (
+          <Button asChild variant="outline">
+            <Link href="/">Go home</Link>
+          </Button>
+        )}
       </div>
     </div>
   );

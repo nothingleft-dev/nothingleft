@@ -9,6 +9,7 @@ import { PickerCommand, PickerItem } from '@components/picker';
 import { Skeleton } from '@components/ui/skeleton';
 import { MonthGrid } from '@components/date-picker';
 import { MemberAvatar } from '@components/issues/member-avatar';
+import { todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 
 export interface PickerOption {
@@ -27,16 +28,18 @@ interface ValueCommandProps {
   loading?: boolean;
   /** Set when the list failed to load: the picker says so and offers this, never "nothing matches". */
   onRetry?: () => void;
+  /** What failed, in the picker's words: "The statuses could not be loaded." */
+  failure?: string;
 }
 
 /** A query's retry, but only while it has failed: the `onRetry` the pickers take. */
 export const retryOf = (query: { isError: boolean; refetch: () => unknown }) =>
   query.isError ? () => void query.refetch() : undefined;
 
-function PickerFailure({ onRetry }: { onRetry: () => void }) {
+function PickerFailure({ onRetry, message }: { onRetry: () => void; message: string }) {
   return (
     <div role="alert" className="flex items-center justify-between gap-2 px-3 py-3 text-xs text-text-secondary">
-      The list could not be loaded.
+      {message}
       <Button type="button" variant="outline" size="xs" onClick={onRetry}>
         Retry
       </Button>
@@ -65,6 +68,7 @@ export function ValueCommand({
   onSelect,
   loading = false,
   onRetry,
+  failure = 'The list could not be loaded.',
 }: ValueCommandProps) {
   return (
     <PickerCommand>
@@ -73,7 +77,7 @@ export function ValueCommand({
         {loading ? (
           <PickerSkeleton />
         ) : onRetry && options.length === 0 ? (
-          <PickerFailure onRetry={onRetry} />
+          <PickerFailure onRetry={onRetry} message={failure} />
         ) : (
           <CommandEmpty>No value matches.</CommandEmpty>
         )}
@@ -100,10 +104,18 @@ interface AssigneeCommandProps {
   onToggle: (username: string) => void;
   loading?: boolean;
   onRetry?: () => void;
+  failure?: string;
 }
 
 /** Stays open while toggling: several people are often assigned in one go. */
-export function AssigneeCommand({ people, selected, onToggle, loading = false, onRetry }: AssigneeCommandProps) {
+export function AssigneeCommand({
+  people,
+  selected,
+  onToggle,
+  loading = false,
+  onRetry,
+  failure = 'The list could not be loaded.',
+}: AssigneeCommandProps) {
   return (
     <PickerCommand>
       <CommandInput placeholder="Find a person" />
@@ -111,7 +123,7 @@ export function AssigneeCommand({ people, selected, onToggle, loading = false, o
         {loading ? (
           <PickerSkeleton />
         ) : onRetry && people.length === 0 ? (
-          <PickerFailure onRetry={onRetry} />
+          <PickerFailure onRetry={onRetry} message={failure} />
         ) : (
           <CommandEmpty>Nobody in this project matches.</CommandEmpty>
         )}
@@ -173,8 +185,9 @@ export function EstimateEditor({ value, calendar, error, onSave, label = 'Estima
         value={text}
         onChange={e => setText(e.target.value)}
         placeholder="1w 1d 1h 1m"
+        data-slot="input"
         aria-invalid={invalid || Boolean(error)}
-        className="h-control w-full rounded-md border border-border-strong bg-surface px-2 font-mono text-xs text-text placeholder:text-text-muted aria-invalid:border-danger-fg"
+        className="h-control w-full rounded-md border border-border-strong bg-surface px-2 font-mono text-xs text-text placeholder:text-text-muted"
       />
       <p className={cn('text-2xs', invalid || error ? 'text-danger-fg' : 'text-text-secondary')}>
         {error ??
@@ -201,17 +214,27 @@ export function EstimateEditor({ value, calendar, error, onSave, label = 'Estima
 interface DateEditorProps {
   value: string | null;
   onChange: (value: string | null) => void;
+  /** The viewer's zone, so Today is their calendar day. */
+  timeZone?: string | undefined;
 }
 
-export function DateEditor({ value, onChange }: DateEditorProps) {
+export function DateEditor({ value, onChange, timeZone }: DateEditorProps) {
+  const today = todayCalendarDate(timeZone);
   return (
     <div className="flex flex-col gap-2 p-3">
       <MonthGrid value={value} onSelect={onChange} />
-      {value ? (
-        <Button type="button" size="sm" variant="ghost" className="self-start" onClick={() => onChange(null)}>
-          Clear date
-        </Button>
-      ) : null}
+      <div className="flex justify-end gap-1 border-t pt-2">
+        {value !== today ? (
+          <Button type="button" size="xs" variant="ghost" className="h-7" onClick={() => onChange(today)}>
+            Today
+          </Button>
+        ) : null}
+        {value ? (
+          <Button type="button" size="xs" variant="ghost" className="h-7" onClick={() => onChange(null)}>
+            Clear date
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

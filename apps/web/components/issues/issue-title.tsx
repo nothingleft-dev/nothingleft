@@ -73,6 +73,7 @@ export function IssueTitle({ issue, canEdit }: { issue: Issue; canEdit: boolean 
             setError(null);
           }
         }}
+        data-slot="input"
         aria-invalid={Boolean(error)}
         className="-mx-1 block w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text [overflow-wrap:anywhere]"
       />

@@ -80,7 +80,7 @@ export function entryWith(
 }
 
 const inputClass =
-  'h-control w-full rounded-md border border-border-strong bg-surface px-2 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg';
+  'h-control w-full rounded-md border border-border-strong bg-surface px-2 text-sm text-text placeholder:text-text-muted';
 
 function EditorForm({ onSubmit, children }: { onSubmit: () => void; children: ReactNode }) {
   return (
@@ -151,6 +151,7 @@ export function TextValueEditor({ label, value, kind, error, onSave }: TextEdito
         inputMode={kind === 'url' ? 'url' : undefined}
         placeholder={kind === 'url' ? 'https://' : undefined}
         onChange={e => setText(e.target.value)}
+        data-slot="input"
         aria-invalid={badUrl || Boolean(error)}
         className={inputClass}
       />
@@ -228,8 +229,9 @@ export function NumberValueEditor({ field, value, error, onSave }: NumberEditorP
         inputMode="decimal"
         value={text}
         onChange={e => setText(e.target.value)}
+        data-slot="input"
         aria-invalid={Boolean(problem || error)}
-        className={cn(inputClass, 'font-mono tabular')}
+        className={cn(inputClass, 'tabular')}
       />
       <Hint error={error ?? problem}>{rangeHint(field)}</Hint>
       <SaveRow canClear={value !== null} disabled={Boolean(problem)} onClear={() => onSave(null)} />
@@ -266,8 +268,9 @@ export function DateTimeValueEditor({ label, value, timeZone, error, onSave }: D
           value={time}
           onChange={e => setTime(e.target.value)}
           placeholder="9:30am"
+          data-slot="input"
           aria-invalid={invalid || Boolean(error)}
-          className={cn(inputClass, 'w-28 font-mono text-xs tabular')}
+          className={cn(inputClass, 'w-28 tabular')}
         />
       </div>
       <Hint error={error ?? (invalid ? 'Write a time such as 9:30am or 14:30.' : null)} />
@@ -463,7 +466,7 @@ export function FieldEditor(props: FieldEditorProps) {
     case 'date':
       return (
         <div>
-          <DateEditor value={typeof value === 'string' ? value : null} onChange={onSave} />
+          <DateEditor value={typeof value === 'string' ? value : null} timeZone={timeZone} onChange={onSave} />
           {error ? <p className="px-3 pb-3 text-2xs text-danger-fg">{error}</p> : null}
         </div>
       );

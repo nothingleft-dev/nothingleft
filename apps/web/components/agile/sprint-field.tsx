@@ -88,8 +88,9 @@ export function StoryPointsEditor({ value, error, onSave }: StoryPointsEditorPro
         value={text}
         onChange={e => setText(e.target.value)}
         placeholder="3"
+        data-slot="input"
         aria-invalid={invalid || Boolean(error)}
-        className="h-control w-full rounded-md border border-border-strong bg-surface px-2 font-mono text-xs text-text tabular placeholder:text-text-muted aria-invalid:border-danger-fg"
+        className="h-control w-full rounded-md border border-border-strong bg-surface px-2 text-sm text-text tabular placeholder:text-text-muted"
       />
       <p className={cn('text-2xs', invalid || error ? 'text-danger-fg' : 'text-text-secondary')}>
         {error ??
