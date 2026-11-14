@@ -47,6 +47,8 @@ export function AccountSettings() {
       <div className="flex flex-col gap-2">
         <PageHeader title="Settings" />
         <Tabs
+          // The Git tab can arrive after the strip has scrolled; a new strip scrolls to it again.
+          key={tabs.length}
           ariaLabel="Account settings"
           value={tab}
           options={tabs}

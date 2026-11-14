@@ -59,15 +59,18 @@ function EmailSection({ user }: { user: Me }) {
       description={
         user.has_password
           ? 'Changing it needs your password, and the new address has to be confirmed before it takes effect.'
-          : `Verified by ${providerList(user)}. Changing it needs a password - set one below first.`
+          : `Verified by ${providerList(user)}. Changing it needs a password — set one below first.`
       }
-      actions={<span className="font-mono tabular text-xs text-text-secondary">{user.email}</span>}
     >
       <div className="flex flex-col gap-3">
         {unverified ? (
           <VerifyEmailNotice title="Verify your email address to invite people, be invited, create access tokens or change it." />
         ) : null}
 
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-text-secondary">Current email</span>
+          <span className="break-all">{user.email}</span>
+        </div>
         {error.summary ? <FormAlert title={error.summary} /> : null}
         {user.has_password ? (
           <form
@@ -98,6 +101,7 @@ function EmailSection({ user }: { user: Me }) {
             />
             <PendingButton
               type="submit"
+              variant="outline"
               disabled={unverified}
               className="self-start"
               pending={change.isPending}
@@ -154,7 +158,13 @@ function PasswordSection() {
           error={error.fields['password']}
           onChange={e => setForm({ ...form, password: e.target.value })}
         />
-        <PendingButton type="submit" className="self-start" pending={change.isPending} pendingLabel="Saving…">
+        <PendingButton
+          type="submit"
+          variant="outline"
+          className="self-start"
+          pending={change.isPending}
+          pendingLabel="Saving…"
+        >
           Change password
         </PendingButton>
       </form>

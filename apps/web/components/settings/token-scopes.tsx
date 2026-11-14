@@ -17,13 +17,13 @@ export function ScopeChecklist({ value, onChange }: { value: PatScope[]; onChang
     onChange(value.includes(scope) ? value.filter(s => s !== scope) : [...value, scope]);
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 font-medium">Scopes</legend>
+      <legend className="mb-1 text-sm font-medium text-text-secondary">Scopes</legend>
       {PAT_SCOPES.map(scope => (
         <label key={scope} className="flex cursor-pointer items-start gap-2">
           <Checkbox className="mt-0.5" checked={value.includes(scope)} onCheckedChange={() => toggle(scope)} />
           <span className="flex flex-col">
             <span className="font-mono tabular text-xs">{scope}</span>
-            <span className="text-2xs text-text-muted">{SCOPE_HINTS[scope]}</span>
+            <span className="text-xs text-text-secondary">{SCOPE_HINTS[scope]}</span>
           </span>
         </label>
       ))}

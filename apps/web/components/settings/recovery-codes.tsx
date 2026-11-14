@@ -1,7 +1,7 @@
 'use client';
 
 import { Download, TriangleAlert } from 'lucide-react';
-import type { TwoFactorRecoveryCodes } from '@nothingleft/types';
+import { RECOVERY_CODE_COUNT, type TwoFactorRecoveryCodes } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { CopyButton } from '@components/copy-button';
 import { formatDate } from '@lib/datetime';
@@ -29,8 +29,8 @@ export function RecoveryCodes({ email, codes, onDone }: RecoveryCodesProps) {
       <div className="flex items-start gap-2.5 rounded-md border border-warning-fg/25 bg-warning-bg px-3 py-2.5 text-warning-fg">
         <TriangleAlert className="mt-0.5 size-icon-sm flex-none" />
         <p className="text-xs leading-5">
-          Save these ten recovery codes now - they are not shown again. Each one signs you in once if you lose your
-          phone, and there is no support desk that can let you back in without them.
+          Save these {RECOVERY_CODE_COUNT} recovery codes now — they are not shown again. Each one signs you in once if
+          you lose your phone, and there is no support desk that can let you back in without them.
         </p>
       </div>
 

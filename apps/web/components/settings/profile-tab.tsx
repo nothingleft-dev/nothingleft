@@ -42,7 +42,10 @@ export function ProfileTab({ user }: { user: Me }) {
     <div className="flex flex-col gap-5">
       <AvatarSection user={user} />
 
-      <SettingsSection title="Name" description="Shown on every issue, comment and mention you author.">
+      <SettingsSection
+        title="Name and time zone"
+        description="Your name shows on every issue, comment and mention you author. Dates and times read in your time zone."
+      >
         {error.summary ? <FormAlert title={error.summary} /> : null}
         <form
           noValidate
@@ -57,19 +60,22 @@ export function ProfileTab({ user }: { user: Me }) {
             label="Full name"
             value={name}
             error={local.problems['name'] ?? error.fields['name']}
+            onBlur={() => {
+              if (name !== user.name) local.check({ name, timezone });
+            }}
             onChange={e => {
               setName(e.target.value);
               local.clear('name');
             }}
           />
           <div className="flex flex-col gap-1.5">
-            <span className="font-medium">Time zone</span>
+            <span className="text-sm font-medium text-text-secondary">Time zone</span>
             <TimezonePicker value={timezone} onChange={setTimezone} />
             <ZoneExample timeZone={timezone} />
           </div>
           <PendingButton
             type="submit"
-            disabled={!dirty}
+            disabled={!dirty || local.problems['name'] !== undefined}
             className="self-start"
             pending={update.isPending}
             pendingLabel="Saving…"
@@ -84,21 +90,27 @@ export function ProfileTab({ user }: { user: Me }) {
   );
 }
 
+// Only an uploaded photo has anything to remove; a provider picture, Gravatar or the generated mark stays.
+const isUploaded = (url: string | null) => url !== null && url.includes('/web/avatar/');
+
 function AvatarSection({ user }: { user: Me }) {
   const input = useRef<HTMLInputElement>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const upload = useUploadAvatar();
   const remove = useRemoveAvatar();
 
   const pick = (file: File | undefined) => {
+    if (input.current) input.current.value = '';
     if (!file) return;
     if (!AVATAR_MIME_TYPES.includes(file.type as (typeof AVATAR_MIME_TYPES)[number])) {
-      toast.error('Use a PNG, JPEG or WebP image.');
+      setRefusal('That file is not a PNG, JPEG or WebP image.');
       return;
     }
     if (file.size > AVATAR_MAX_BYTES) {
-      toast.error('That image is over 2MB.');
+      setRefusal('That image is over 2MB. Choose a smaller one.');
       return;
     }
+    setRefusal(null);
     upload.mutate(file, {
       onSuccess: () => toast.success('Photo updated.'),
       onError: e => toastError('Could not upload the picture', e),
@@ -106,39 +118,46 @@ function AvatarSection({ user }: { user: Me }) {
   };
 
   return (
-    <SettingsSection
-      title="Photo"
-      description="PNG, JPEG or WebP, up to 2MB. Avatars never count toward your organisation’s storage."
-      actions={
-        <>
-          <PendingButton
-            variant="outline"
-            onClick={() => input.current?.click()}
-            pending={upload.isPending}
-            pendingLabel="Uploading…"
-          >
-            Upload
-          </PendingButton>
-          <Button
-            variant="ghost"
-            disabled={remove.isPending}
-            onClick={() => remove.mutate(undefined, { onSuccess: () => toast.success('Photo removed.') })}
-          >
-            Remove
-          </Button>
-        </>
-      }
-    >
-      <div className="flex items-center gap-3">
-        <Avatar className="size-12">
+    <SettingsSection title="Photo" description="Shown beside your name across every organisation you belong to.">
+      <div className="flex items-center gap-4">
+        <Avatar className="size-16">
           {user.avatar_url ? <AvatarImage src={user.avatar_url} alt="" /> : null}
-          <AvatarFallback className="bg-inset font-semibold text-text-secondary">
+          <AvatarFallback className="bg-inset text-2xl font-medium text-text-secondary">
             {initialsOf(user.name)}
           </AvatarFallback>
         </Avatar>
-        <p className="text-xs text-text-muted">
-          Removing your photo falls back to your Gravatar, or to generated initials.
-        </p>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <PendingButton
+              variant="outline"
+              size="sm"
+              onClick={() => input.current?.click()}
+              pending={upload.isPending}
+              pendingLabel="Uploading…"
+            >
+              Upload
+            </PendingButton>
+            {isUploaded(user.avatar_url) ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(undefined, { onSuccess: () => toast.success('Photo removed.') })}
+              >
+                Remove
+              </Button>
+            ) : null}
+          </div>
+          {refusal ? (
+            <p role="alert" className="text-xs text-danger-fg">
+              {refusal}
+            </p>
+          ) : (
+            <p className="text-xs text-text-secondary">
+              PNG, JPEG or WebP, up to 2MB. It never counts toward your organisation’s storage.
+            </p>
+          )}
+        </div>
       </div>
       <input
         ref={input}

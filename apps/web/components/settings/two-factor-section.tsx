@@ -60,7 +60,7 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
     ? 'Your account only signs in with Google or GitHub, so there is no password for two-factor to protect. Set a password first if you want it.'
     : status.enabled
       ? 'Signing in with your password also asks for a code from your authenticator app. Google and GitHub sign-in never ask.'
-      : 'Add a second step to signing in with your password: a six-digit code from an authenticator app on your phone.';
+      : 'Add a second step to signing in with your password: a 6-digit code from an authenticator app on your phone.';
 
   const actions =
     user.has_password && !setup && !codes ? (
@@ -113,7 +113,7 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
             open={dialog === 'regenerate'}
             onOpenChange={closeDialog}
             user={user}
-            title="Create new recovery codes"
+            title="Create new recovery codes?"
             confirmLabel="Create new codes"
             pendingLabel="Creating…"
             destructive={false}
@@ -130,8 +130,8 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
             }
           >
             <p>
-              Ten new codes replace the old ones, which stop working at once - including the{' '}
-              {status.recovery_codes_remaining} you have not used. We email you to say it happened.
+              {RECOVERY_CODE_COUNT} new codes replace your old ones. The old ones stop working at once, including the{' '}
+              {status.recovery_codes_remaining} you have not used, and we email you to say it happened.
             </p>
           </StepUpDialog>
 
@@ -139,7 +139,7 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
             open={dialog === 'disable'}
             onOpenChange={closeDialog}
             user={user}
-            title="Turn off two-factor authentication"
+            title="Turn off two-factor authentication?"
             confirmLabel="Turn off"
             pendingLabel="Turning off…"
             returnTo="/settings?tab=security&confirm=disable-two-factor"
@@ -176,7 +176,7 @@ function TwoFactorStatusLine({ enabledAt, left }: { enabledAt: string | null; le
       {enabledAt ? <span>since {formatDate(enabledAt)}</span> : null}
       <span aria-hidden>·</span>
       <span className={cn(low && 'font-medium text-warning-fg')}>
-        {left} of {RECOVERY_CODE_COUNT} recovery codes left{low ? ' - create new ones before you run out' : ''}
+        {left} of {RECOVERY_CODE_COUNT} recovery codes left{low ? ' — create new ones before you run out' : ''}
       </span>
     </p>
   );
@@ -236,12 +236,12 @@ function SetupPanel({ setup, email, onCancel, onEnabled }: SetupPanelProps) {
 
       <SetupStep number={2} title="Enter the code it shows">
         {error.summary ? <FormAlert title={error.summary} /> : null}
-        <div className="grid max-w-md gap-3">
+        <div className="grid max-w-sm gap-3">
           <Field
-            label="Six-digit code"
+            label="6-digit code"
             inputMode="numeric"
             autoComplete="one-time-code"
-            className="font-mono tabular"
+            className="w-40 font-mono tabular"
             placeholder="123456"
             value={form.code}
             error={missing.code ?? error.fields['code']}
@@ -267,13 +267,13 @@ function SetupPanel({ setup, email, onCancel, onEnabled }: SetupPanelProps) {
         </p>
       </SetupStep>
 
-      <div className="flex gap-2 border-t pt-4">
+      <div className="flex justify-end gap-2 border-t pt-4">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={confirm.isPending}>
+          Cancel
+        </Button>
         <PendingButton type="submit" size="sm" pending={confirm.isPending} pendingLabel="Turning on…">
           Turn on two-factor
         </PendingButton>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={confirm.isPending}>
-          Cancel
-        </Button>
       </div>
     </form>
   );

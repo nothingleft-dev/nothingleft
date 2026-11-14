@@ -145,7 +145,8 @@ apps/web/
 │   │                         recent-imports (rows that open in place)
 │   ├── invitations/          email-chips · invite-emails-form · share-links · seat-notice
 │   ├── settings/             one file per ?tab= panel, plus SettingsSection and the timezone picker; security-tab
-│   │                         composes two-factor-section (setup, QR), recovery-codes and deactivate-section
+│   │                         composes two-factor-section (setup, QR), recovery-codes and deactivate-section;
+│   │                         SettingsList is the one bordered list (sessions, tokens, git identities)
 │   ├── transfer/             transfer-flow (the /transfer/<token> states)
 │   ├── git/                  development-panel (the issue's Development tab) · development-field (the sidebar row) ·
 │   │                         git-marks (badge, state chips, the board icon) · git-author · provider-glyph ·

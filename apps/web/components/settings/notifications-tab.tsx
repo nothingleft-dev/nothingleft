@@ -13,8 +13,9 @@ import {
 import { Button } from '@components/ui/button';
 import { ChoiceSelect } from '@components/choice-select';
 import { LoadError, errorDetail } from '@components/query-state';
-import { RowsSkeleton } from '@components/skeletons';
+import { Skeleton } from '@components/ui/skeleton';
 import { SettingsSection } from '@components/settings/section';
+import { zoneLabel } from '@components/settings/timezone-picker';
 import { useNotificationPreferences, useUpdateNotificationPreferences } from '@hooks/use-notifications';
 import { useOrganizations } from '@hooks/use-organizations';
 import { AREA_LABELS, EMAIL_OPTIONS, KIND_COPY } from '@lib/notifications/kinds';
@@ -60,15 +61,18 @@ export function NotificationsTab({ user }: { user: Me }) {
         }
       >
         <p className="text-sm text-text-secondary">
-          Digests arrive at 9am in your profile&apos;s time zone, {user.timezone} — daily every morning, weekly on
+          Digests arrive at 9am in your profile’s time zone, {zoneLabel(user.timezone)} — daily every morning, weekly on
           Mondays — and only when something unread is waiting.{' '}
-          <Link href={'/settings?tab=profile' as Route} className="text-text underline-offset-4 hover:underline">
+          <Link
+            href={'/settings?tab=profile' as Route}
+            className="action-link font-medium whitespace-nowrap text-text-secondary hover:text-text"
+          >
             Change your time zone
           </Link>
         </p>
       </SettingsSection>
 
-      {preferences.isPending ? <RowsSkeleton rows={8} /> : null}
+      {preferences.isPending ? <PreferencesSkeleton /> : null}
       {preferences.isError ? (
         <LoadError onRetry={() => void preferences.refetch()} detail={errorDetail(preferences.error)}>
           Your notification settings could not be loaded.
@@ -129,5 +133,30 @@ function PreferenceRow({
         />
       )}
     </li>
+  );
+}
+
+function PreferencesSkeleton() {
+  return (
+    <section className="flex flex-col gap-3" role="status" aria-label="Loading notification settings">
+      <div className="flex h-5 items-center">
+        <Skeleton className="h-3.5 w-16" />
+      </div>
+      <div className="flex flex-col divide-y divide-border-subtle">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="flex min-h-row-lg items-center gap-4 py-2">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex h-5 items-center">
+                <Skeleton className="h-3.5 w-full" style={{ maxWidth: `${18 + ((i * 7) % 12)}%` }} />
+              </div>
+              <div className="flex h-4 items-center">
+                <Skeleton className="h-3 w-full" style={{ maxWidth: `${30 + ((i * 11) % 20)}%` }} />
+              </div>
+            </div>
+            <Skeleton className="h-control w-44 flex-none rounded-md max-sm:hidden" />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

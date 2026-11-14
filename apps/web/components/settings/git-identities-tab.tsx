@@ -12,13 +12,14 @@ import {
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
-import { Skeleton } from '@components/ui/skeleton';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
 import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
 import { SettingsSection } from '@components/settings/section';
+import { SettingsList, SettingsListRow, SettingsListSkeleton } from '@components/settings/settings-list';
+import { TextButton } from '@components/text-button';
 import { HueDot } from '@components/git/git-marks';
 import { ProviderGlyph } from '@components/git/provider-glyph';
 import { useClaimGitIdentity, useMyGitIdentities, useRemoveMyGitIdentity } from '@hooks/use-git';
@@ -47,7 +48,7 @@ export function GitIdentitiesTab() {
         description="The logins and commit emails that are yours, so branches, commits and pull requests show under your name in every organisation you belong to. Used for attribution only, never to sign in."
       >
         {identities.isPending ? (
-          <IdentitiesSkeleton />
+          <SettingsListSkeleton rows={2} label="Loading identities" trailing={['w-32', 'w-20', 'w-16']} />
         ) : identities.isError && !identities.data ? (
           <LoadError onRetry={() => void identities.refetch()} detail={errorDetail(identities.error)}>
             Your identities could not be loaded.
@@ -58,11 +59,11 @@ export function GitIdentitiesTab() {
             description="Work signed with your verified account email already counts. Add a login, or another email your commits use, below."
           />
         ) : (
-          <ul className="divide-y divide-border-subtle rounded-md border">
+          <SettingsList>
             {rows.map(identity => (
               <IdentityRow key={identity.id} identity={identity} />
             ))}
-          </ul>
+          </SettingsList>
         )}
       </SettingsSection>
       <AddIdentity />
@@ -74,55 +75,57 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
   const remove = useRemoveMyGitIdentity();
   const resend = useClaimGitIdentity();
   const selfHosted = identity.base_url !== PUBLIC_HOSTS[identity.provider];
+  const status = identity.pending ? (
+    <span className="inline-flex items-center gap-1.5 text-warning-fg">
+      <HueDot hue="amber" />
+      Waiting for the link we sent
+    </span>
+  ) : (
+    <span>{HOW[identity.verified_by]}</span>
+  );
 
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
-      <ProviderGlyph provider={identity.provider} className="text-text-muted" />
-      <span className="flex min-w-0 flex-col">
+    <SettingsListRow>
+      <ProviderGlyph provider={identity.provider} className="text-text-secondary" />
+      <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate font-mono text-xs">{identity.login ? `@${identity.login}` : identity.email}</span>
-        <span className="text-2xs text-text-secondary">
+        <span className="truncate text-xs text-text-secondary">
           {identity.login ? 'Login' : 'Commit email'} on {providerLabel(identity.provider)}
           {selfHosted ? ` at ${identity.base_url}` : ''}
         </span>
+        <span className="text-xs text-text-secondary sm:hidden">{status}</span>
       </span>
-      <span className="ml-auto flex items-center gap-3 text-xs text-text-secondary">
+      <span className="w-56 shrink-0 text-xs text-text-secondary max-sm:hidden">{status}</span>
+      <RelativeTime
+        value={identity.verified_at ?? identity.created_at}
+        className="w-24 shrink-0 text-right text-xs text-text-secondary max-sm:hidden"
+      />
+      <span className="flex w-40 shrink-0 items-center justify-end gap-1 max-sm:w-auto max-sm:flex-col max-sm:items-end">
         {identity.pending ? (
-          <>
-            <span className="inline-flex items-center gap-1.5 text-warning-fg">
-              <HueDot hue="amber" />
-              Waiting for the link we sent
-            </span>
-            <Button
-              variant="ghost"
-              size="xs"
-              disabled={resend.isPending}
-              onClick={() =>
-                resend.mutate(
-                  {
-                    provider: identity.provider,
-                    email: identity.email!,
-                    ...(selfHosted ? { base_url: identity.base_url } : {}),
-                  },
-                  {
-                    onSuccess: () =>
-                      toast.success(
-                        `A link is on its way to ${identity.email}. If we sent one a few minutes ago, that one still works.`,
-                      ),
-                    onError: error => toastError('Could not send the verification link', error),
-                  },
-                )
-              }
-            >
-              Send again
-            </Button>
-          </>
-        ) : (
-          <span className="inline-flex items-center gap-1.5">
-            <HueDot hue="green" />
-            {HOW[identity.verified_by]}
-          </span>
-        )}
-        <RelativeTime value={identity.verified_at ?? identity.created_at} className="w-20 text-right" />
+          <Button
+            variant="ghost"
+            size="xs"
+            disabled={resend.isPending}
+            onClick={() =>
+              resend.mutate(
+                {
+                  provider: identity.provider,
+                  email: identity.email!,
+                  ...(selfHosted ? { base_url: identity.base_url } : {}),
+                },
+                {
+                  onSuccess: () =>
+                    toast.success(
+                      `A link is on its way to ${identity.email}. If we sent one a few minutes ago, that one still works.`,
+                    ),
+                  onError: error => toastError('Could not send the verification link', error),
+                },
+              )
+            }
+          >
+            Send again
+          </Button>
+        ) : null}
         <Button
           variant="ghost"
           size="xs"
@@ -137,7 +140,7 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
           Remove
         </Button>
       </span>
-    </li>
+    </SettingsListRow>
   );
 }
 
@@ -225,7 +228,7 @@ function AddIdentity() {
             <Segmented ariaLabel="Provider" value={provider} options={PROVIDERS} onChange={setProvider} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-text-secondary">What</span>
+            <span className="text-sm font-medium text-text-secondary">Type</span>
             <Segmented
               ariaLabel="Identity kind"
               value={kind}
@@ -237,8 +240,10 @@ function AddIdentity() {
             />
           </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="git-identity-value">{kind === 'login' ? 'Login' : 'Email'}</Label>
+        <div className="flex max-w-sm flex-col gap-1.5">
+          <Label htmlFor="git-identity-value" className="text-sm font-medium text-text-secondary">
+            {kind === 'login' ? 'Login' : 'Email'}
+          </Label>
           <Input
             id="git-identity-value"
             value={value}
@@ -261,8 +266,10 @@ function AddIdentity() {
           </p>
         </div>
         {selfHosted ? (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="git-identity-base-url">Address of your {providerLabel(provider)}</Label>
+          <div className="flex max-w-sm flex-col gap-1.5">
+            <Label htmlFor="git-identity-base-url" className="text-sm font-medium text-text-secondary">
+              Address of your {providerLabel(provider)}
+            </Label>
             <Input
               id="git-identity-base-url"
               value={baseUrl}
@@ -286,30 +293,12 @@ function AddIdentity() {
             {kind === 'login' ? 'Add login' : 'Send verification link'}
           </PendingButton>
           {selfHosted ? null : (
-            <button
-              type="button"
-              className="text-xs text-text-secondary hover:text-text hover:underline"
-              onClick={() => setSelfHosted(true)}
-            >
+            <TextButton className="text-xs font-normal" onClick={() => setSelfHosted(true)}>
               On a self-hosted {providerLabel(provider)}?
-            </button>
+            </TextButton>
           )}
         </div>
       </form>
     </SettingsSection>
-  );
-}
-
-function IdentitiesSkeleton() {
-  return (
-    <div className="divide-y divide-border-subtle rounded-md border" role="status" aria-label="Loading identities">
-      {Array.from({ length: 2 }, (_, i) => (
-        <div key={i} className="flex h-12 items-center gap-3 px-3">
-          <Skeleton className="size-4 rounded-full" />
-          <Skeleton className="h-3 w-40" />
-          <Skeleton className="ml-auto h-3 w-24" />
-        </div>
-      ))}
-    </div>
   );
 }
