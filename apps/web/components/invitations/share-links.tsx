@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Link2, RefreshCw, Users, X } from 'lucide-react';
+import { Check, Copy, Link2, RefreshCw, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { PROJECT_ROLES, type Invitation, type OrgRole, type ProjectRole } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -49,7 +49,7 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
 
   return (
     <div className="flex flex-col gap-4">
-      {error.summary ? <FormAlert title={error.summary} /> : null}
+      {error.summary ? <FormAlert title="The link was not created.">{error.summary}</FormAlert> : null}
 
       <div className={cn('flex flex-wrap items-end gap-3', invitations.isError && !invitations.data && 'hidden')}>
         {scope.kind === 'project' ? (
@@ -124,11 +124,12 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
     }
   };
 
-  const limits = [
-    link.max_uses === null ? 'unlimited uses' : `${link.use_count} of ${link.max_uses} used`,
-    link.expires_at === null ? 'no expiry' : `expires ${formatDate(link.expires_at)}`,
-    link.allowed_email_domain ? `@${link.allowed_email_domain} only` : null,
-  ].filter(Boolean);
+  const facts = [
+    `Joins as ${grantedRoleLabel(link.org_role, link.project_role)}`,
+    link.max_uses === null ? 'Unlimited uses' : `${link.use_count} of ${link.max_uses} used`,
+    link.expires_at === null ? 'No expiry' : `Expires ${formatDate(link.expires_at)}`,
+    link.allowed_email_domain ? `Only @${link.allowed_email_domain} emails` : null,
+  ].filter((fact): fact is string => fact !== null);
 
   return (
     <li className="flex flex-col gap-2 px-3 py-2.5">
@@ -152,7 +153,7 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="Rotate link"
+              aria-label="Replace link"
               disabled={rotate.isPending}
               onClick={() =>
                 rotate.mutate(link.id, {
@@ -163,44 +164,43 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
               <RefreshCw className="size-icon-sm" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Rotate — the old address stops working</TooltipContent>
+          <TooltipContent>Replace link: the old address stops working</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Revoke link"
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate(link.id, { onSuccess: () => toast.success('Link revoked.') })}
-            >
-              <X className="size-icon-sm" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Revoke</TooltipContent>
-        </Tooltip>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="Revoke link"
+          disabled={revoke.isPending}
+          onClick={() => revoke.mutate(link.id, { onSuccess: () => toast.success('Link revoked.') })}
+        >
+          Revoke
+        </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
-        <span className="text-text-secondary">Joins as {grantedRoleLabel(link.org_role, link.project_role)}</span>
-        <span>·</span>
-        <span>{limits.join(' · ')}</span>
+      <ul className="flex flex-wrap items-center gap-y-1 text-xs text-text-secondary">
+        {facts.map((fact, i) => (
+          <li key={fact} className="flex items-center">
+            {i > 0 ? <Dot /> : null}
+            {fact}
+          </li>
+        ))}
         {link.use_count > 0 ? (
-          <>
-            <span>·</span>
+          <li className="flex items-center">
+            <Dot />
             <button
               type="button"
+              aria-expanded={showUses}
               onClick={() => setShowUses(v => !v)}
-              className="font-medium text-text-secondary underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 font-medium text-text-secondary underline decoration-current/45 underline-offset-4 hover:text-text hover:decoration-2"
             >
-              <Users className="mr-1 inline size-3" />
+              <Users className="size-3" />
               {link.use_count} joined
             </button>
-          </>
+          </li>
         ) : null}
-      </div>
+      </ul>
 
       {showUses ? <LinkUses orgSlug={orgSlug} id={link.id} /> : null}
     </li>
@@ -222,5 +222,13 @@ function LinkUses({ orgSlug, id }: { orgSlug: string; id: number }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function Dot() {
+  return (
+    <span aria-hidden className="px-1.5 text-text-muted">
+      ·
+    </span>
   );
 }

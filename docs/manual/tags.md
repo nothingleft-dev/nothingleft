@@ -27,8 +27,8 @@ updated to the new name, so they keep finding the same issues. A view that only 
 types and sprints of that name.
 
 Choose **Edit** on the tag, type the new name and **Save**. A name another tag already has is
-refused, since two tags cannot share one address: merge them instead. Org Admins get a link
-under the name to do exactly that.
+refused, since two tags cannot share one address, and **Save** stays off until you change it:
+merge them instead. Org Admins get a **Merge into …** button under the name to do exactly that.
 
 ## Recolouring
 

@@ -1,7 +1,7 @@
 import { Info } from 'lucide-react';
 import type { Seats } from '@nothingleft/types';
 import { nextSeatOrdinal, seatNoticeApplies } from '@lib/seats';
-import { plural } from '@lib/numbers';
+import { formatCount, plural } from '@lib/numbers';
 
 /**
  * docs/limits-and-billing.md § Seats: nothing is blocked and nothing degrades. The
@@ -31,10 +31,9 @@ export function SeatBanner({ seats }: { seats: Seats }) {
     <div className="flex gap-2.5 rounded-md border border-warning-fg/25 bg-warning-bg px-3 py-2.5 text-warning-fg">
       <Info className="mt-px size-icon-sm flex-none" />
       <p className="text-xs leading-5">
-        {seats.used} members, {seats.free} of them free.{' '}
         {seats.over > 0
-          ? `${plural(seats.over, 'is', 'are')} beyond the free allowance. Nothing is blocked and nothing is degraded; billing does not exist yet, and your first ${seats.free} seats stay free when it does.`
-          : `You are at the free allowance. Nothing is blocked when you pass it — your first ${seats.free} seats stay free permanently.`}
+          ? `${plural(seats.used, 'member')}, ${formatCount(seats.over)} over the ${seats.free} free seats. Nothing changes today, and your first ${seats.free} seats stay free when paid plans arrive.`
+          : `${plural(seats.used, 'member')}, all ${seats.free} free seats in use. Adding more blocks nothing, and the first ${seats.free} stay free permanently.`}
       </p>
     </div>
   );

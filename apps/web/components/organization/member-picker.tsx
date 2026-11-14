@@ -42,7 +42,7 @@ export function MemberPicker({ people, value, onChange, placeholder, label, load
               <span className="truncate">{selected.name}</span>
             </span>
           ) : (
-            <span className="truncate text-text-muted">{placeholder}</span>
+            <span className="truncate text-text-secondary">{placeholder}</span>
           )}
           <ChevronsUpDown className="size-icon-sm shrink-0 text-text-muted" />
         </Button>

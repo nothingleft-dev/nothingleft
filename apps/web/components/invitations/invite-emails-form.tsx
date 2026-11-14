@@ -58,7 +58,7 @@ export function InviteEmailsForm({
   return (
     <form
       noValidate
-      className="flex flex-col gap-4"
+      className="flex max-w-2xl flex-col gap-4"
       onSubmit={event => {
         event.preventDefault();
         if (emails.length === 0) return;
@@ -78,7 +78,7 @@ export function InviteEmailsForm({
         );
       }}
     >
-      {error.summary ? <FormAlert title={error.summary} /> : null}
+      {error.summary ? <FormAlert title="The invitations were not sent.">{error.summary}</FormAlert> : null}
 
       <EmailChips value={emails} onChange={setEmails} max={EMAIL_INVITATION_BATCH_MAX} disabled={invite.isPending} />
 

@@ -12,7 +12,7 @@ import { Button } from '@components/ui/button';
 import { SeatBanner } from '@components/invitations/seat-notice';
 import { StorageBanner } from '@components/attachments/storage-banner';
 import { GeneralTab } from '@components/organization/general-tab';
-import { MembersTab } from '@components/organization/members-tab';
+import { MembersSkeleton, MembersTab } from '@components/organization/members-tab';
 import { InvitesTab } from '@components/organization/invites-tab';
 import { AuditTab } from '@components/organization/audit-tab';
 import { PlanTab } from '@components/organization/plan-tab';
@@ -21,7 +21,7 @@ import { DangerTab } from '@components/organization/danger-tab';
 import { TagsTab } from '@components/organization/tags/tags-tab';
 import { ExportsTab } from '@components/organization/exports-tab';
 import { IntegrationsTab } from '@components/organization/integrations/integrations-tab';
-import { useOrganization } from '@hooks/use-organizations';
+import { useOrganization, useOrganizations } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { useProjectRoles } from '@hooks/use-project-roles';
 
@@ -51,12 +51,15 @@ export function OrganizationSettings() {
   const user = session.status === 'signed-in' ? session.user : null;
   const slug = user?.current_organization_slug ?? null;
   const organization = useOrganization(slug);
+  const organizations = useOrganizations(slug !== null);
+  // The shell's list already knows the role, so the tab set holds while this organisation loads or fails.
+  const membership =
+    organization.data?.membership ?? organizations.data?.find(o => o.slug === slug)?.membership ?? null;
 
   // Anything an admin cannot read answers 404, so the tabs an admin owns are hidden
   // rather than rendered into a wall of errors - permissions.md rule 4.
-  const isAdmin =
-    organization.data?.membership.org_role === 'org_admin' || organization.data?.membership.is_owner === true;
-  const isOwner = organization.data?.membership.is_owner === true;
+  const isAdmin = membership?.org_role === 'org_admin' || membership?.is_owner === true;
+  const isOwner = membership?.is_owner === true;
   // Tags open to a Project Admin of any project too (permissions.md § Tags).
   const roles = useProjectRoles();
   const projectAdmin = roles.isAdmin;
@@ -104,7 +107,9 @@ export function OrganizationSettings() {
 function TabSkeleton({ tab }: { tab: Tab }) {
   return (
     <div role="status" aria-label="Loading">
-      {tab === 'members' || tab === 'invites' ? (
+      {tab === 'members' ? (
+        <MembersSkeleton />
+      ) : tab === 'invites' ? (
         <RowsSkeleton rows={6} columns={PERSON_ROW} />
       ) : tab === 'audit' || tab === 'tags' ? (
         <RowsSkeleton rows={8} columns={['avatar', 'lines', 'meta']} />

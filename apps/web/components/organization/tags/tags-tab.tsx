@@ -16,6 +16,10 @@ import { useDebounced } from '@hooks/use-debounced';
 import { MANAGED_TAGS_PAGE, useManagedTags } from '@hooks/use-tags';
 import { cn } from '@lib/utils';
 
+// The chip column holds the longest name a tag can have, so every count starts at one x.
+const ROW =
+  'grid min-h-row grid-cols-[minmax(0,24rem)_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 px-3 py-1.5 max-sm:grid-cols-[minmax(0,1fr)_auto]';
+
 type Open =
   { kind: 'edit'; tag: Tag } | { kind: 'merge'; tags: Tag[]; into: Tag | null } | { kind: 'delete'; tag: Tag };
 
@@ -28,14 +32,15 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
 
   const tags = list.data?.tags ?? [];
   const total = list.data?.total ?? 0;
+  const none = list.data !== undefined && total === 0 && !q && !text;
 
   return (
     <SettingsSection
       title="Tags"
       description="One vocabulary for every project, shared by issues and knowledge base articles. Counts cover the whole organisation."
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="relative w-full max-w-xs">
+      <div className={cn('flex flex-wrap items-center gap-3', none && 'hidden')}>
+        <label className="relative max-w-xs min-w-48 flex-1">
           <span className="sr-only">Search tags</span>
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-icon-sm -translate-y-1/2 text-text-muted" />
           <input
@@ -130,32 +135,33 @@ interface TagRowProps {
 function TagRow({ tag, orgAdmin, onEdit, onMerge, onDelete }: TagRowProps) {
   const usage = tagUsage(tag);
   return (
-    <li className="flex h-row items-center gap-3 px-3">
-      <TagChip tag={tag} />
-      <span className="text-text-muted">—</span>
-      <span
-        className={cn('min-w-0 flex-1 truncate text-sm tabular', usage ? 'text-text-secondary' : 'text-text-muted')}
-      >
+    <li className={ROW}>
+      <span className="min-w-0 overflow-hidden whitespace-nowrap" title={tag.name}>
+        <TagChip tag={tag} />
+      </span>
+      <span className="min-w-0 truncate text-sm text-text-secondary tabular max-sm:col-start-1 max-sm:row-start-2 max-sm:text-xs">
         {usage ?? 'Unused'}
       </span>
-      <Button variant="ghost" size="xs" onClick={onEdit} aria-label={`Rename or recolour ${tag.name}`}>
-        Edit
-      </Button>
-      {orgAdmin ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-xs" aria-label={`More actions for ${tag.name}`}>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem onSelect={onMerge}>Merge into…</DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              Delete…
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+      <span className="flex items-center gap-1 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1">
+        <Button variant="ghost" size="xs" onClick={onEdit} aria-label={`Rename or recolour ${tag.name}`}>
+          Edit
+        </Button>
+        {orgAdmin ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-xs" aria-label={`More actions for ${tag.name}`}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onSelect={onMerge}>Merge into…</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                Delete…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </span>
     </li>
   );
 }
@@ -164,10 +170,10 @@ function TagsSkeleton() {
   return (
     <div className="divide-y divide-border-subtle rounded-md border" role="status" aria-label="Loading tags">
       {Array.from({ length: 8 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-3 px-3">
+        <div key={i} className={ROW}>
           <Skeleton className="h-5 rounded-sm" style={{ width: `${48 + ((i * 23) % 56)}px` }} />
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="ml-auto h-3 w-8" />
+          <Skeleton className="h-3 w-24 max-sm:col-start-1 max-sm:row-start-2" />
+          <Skeleton className="h-3 w-16 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1" />
         </div>
       ))}
     </div>

@@ -29,6 +29,7 @@ import { useDeleteTag, useManagedTags, useMergeTags, useUpdateTag } from '@hooks
 import { isApiError } from '@lib/api/errors';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
+import { cn } from '@lib/utils';
 
 interface EditTagDialogProps {
   tag: Tag;
@@ -48,7 +49,12 @@ export function EditTagDialog({ tag, orgAdmin, onClose, onMergeInstead }: EditTa
   const error = update.error;
   const taken = isApiError(error) && error.code === 'tag.slug_taken' ? (error.validValues?.[0] ?? null) : null;
   const holder = taken ? (all.data?.tags.find(t => t.name === taken) ?? null) : null;
-  const nameError = invalid ?? (isApiError(error) && error.field === 'name' ? error.message : undefined);
+  const clash = taken
+    ? taken.toLowerCase() === name.trim().toLowerCase()
+      ? `“${taken}” already exists.`
+      : `“${name.trim()}” would be the same tag as “${taken}”.`
+    : undefined;
+  const nameError = invalid ?? clash ?? (isApiError(error) && error.field === 'name' ? error.message : undefined);
   const otherError = error && !(isApiError(error) && error.field === 'name') ? error.message : null;
 
   const trimmed = name.trim();
@@ -82,7 +88,7 @@ export function EditTagDialog({ tag, orgAdmin, onClose, onMergeInstead }: EditTa
           </DialogDescription>
         </DialogHeader>
         <form id="edit-tag" noValidate onSubmit={save} className="flex flex-col gap-4">
-          {otherError ? <FormAlert title={otherError} /> : null}
+          {otherError ? <FormAlert title="The tag was not saved.">{otherError}</FormAlert> : null}
           <div className="flex flex-col gap-1.5">
             <Field
               label="Name"
@@ -104,15 +110,12 @@ export function EditTagDialog({ tag, orgAdmin, onClose, onMergeInstead }: EditTa
             />
             {taken ? (
               orgAdmin && holder ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  className="self-start"
-                  onClick={() => onMergeInstead(tag, holder)}
-                >
-                  Merge {tag.name} into {holder.name}
-                </Button>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <span className="text-xs text-text-secondary">Merge {tag.name} into it instead?</span>
+                  <Button type="button" variant="outline" size="sm" onClick={() => onMergeInstead(tag, holder)}>
+                    Merge into {holder.name}
+                  </Button>
+                </div>
               ) : !orgAdmin ? (
                 <p className="text-xs text-text-secondary">An Org Admin can merge the two.</p>
               ) : null
@@ -133,7 +136,7 @@ export function EditTagDialog({ tag, orgAdmin, onClose, onMergeInstead }: EditTa
           <PendingButton
             type="submit"
             form="edit-tag"
-            disabled={!trimmed}
+            disabled={!trimmed || taken !== null}
             pending={update.isPending}
             pendingLabel="Saving…"
           >
@@ -144,6 +147,8 @@ export function EditTagDialog({ tag, orgAdmin, onClose, onMergeInstead }: EditTa
     </Dialog>
   );
 }
+
+const MERGE_ROW = 'grid h-row grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto] items-center gap-3 px-3';
 
 const describe = (tag: Tag) => tagUsage(tag) ?? 'unused';
 
@@ -191,12 +196,12 @@ export function MergeTagsDialog({ initial, onClose }: MergeTagsDialogProps) {
         <DialogHeader>
           <DialogTitle>Merge tags</DialogTitle>
           <DialogDescription>
-            Every issue and article with any of these tags gets the one you keep — once, even if it had several.
+            Issues and articles with any of these tags get the one you keep instead, once each.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {merge.error ? <FormAlert title={merge.error.message} /> : null}
+          {merge.error ? <FormAlert title="The tags were not merged.">{merge.error.message}</FormAlert> : null}
           <div className="flex flex-wrap items-center gap-2">
             <ReportMultiPicker
               label="Merge"
@@ -221,19 +226,23 @@ export function MergeTagsDialog({ initial, onClose }: MergeTagsDialogProps) {
           </div>
 
           {sources.length > 0 ? (
-            <ul className="flex flex-col divide-y divide-border-subtle rounded-md border text-sm">
+            <ul className="flex flex-col divide-y rounded-md border text-sm">
               {sources.map(s => (
-                <li key={s.slug} className="flex h-row items-center gap-3 px-3">
-                  <TagChip tag={s} />
-                  <span className="text-text-secondary tabular">{describe(s)}</span>
-                  <span className="ml-auto text-xs text-text-muted">deleted</span>
+                <li key={s.slug} className={MERGE_ROW}>
+                  <span className="min-w-0 overflow-hidden whitespace-nowrap" title={s.name}>
+                    <TagChip tag={s} />
+                  </span>
+                  <span className="truncate text-text-secondary tabular">{describe(s)}</span>
+                  <span className="text-xs text-text-secondary">deleted</span>
                 </li>
               ))}
               {into ? (
-                <li className="flex h-row items-center gap-3 bg-app px-3">
-                  <TagChip tag={into} />
-                  <span className="text-text-secondary tabular">{describe(into)}</span>
-                  <span className="ml-auto text-xs text-text-secondary">kept</span>
+                <li className={cn(MERGE_ROW, 'bg-app')}>
+                  <span className="min-w-0 overflow-hidden whitespace-nowrap" title={into.name}>
+                    <TagChip tag={into} />
+                  </span>
+                  <span className="truncate text-text-secondary tabular">{describe(into)}</span>
+                  <span className="text-xs font-medium text-text">kept</span>
                 </li>
               ) : null}
             </ul>
@@ -241,9 +250,9 @@ export function MergeTagsDialog({ initial, onClose }: MergeTagsDialogProps) {
 
           {ready ? (
             <p className="text-xs leading-5 text-text-secondary">
-              {sources.length === 1 ? `${sources[0]!.name} is` : `${sources.length} tags are`} deleted, in every
-              project. Saved views that searched for {sources.length === 1 ? 'it' : 'them'} search for {into!.name}. A
-              merge cannot be undone.
+              {sources.length === 1 ? `${sources[0]!.name} is` : `${sources.length} tags are`} deleted in every project.
+              Saved views searching for {sources.length === 1 ? 'it' : 'them'} will search for {into!.name}. A merge
+              cannot be undone.
             </p>
           ) : null}
         </div>
