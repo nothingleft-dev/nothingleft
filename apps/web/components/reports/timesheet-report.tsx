@@ -143,7 +143,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 data-day={day.date}
                 className={cn(
                   'h-11 min-w-16 border-b px-2.5 text-right text-2xs font-normal text-text-muted',
-                  !day.working_day && 'bg-app text-text-disabled',
+                  !day.working_day && 'bg-app',
                   day.date === today && 'text-text',
                 )}
               >
@@ -153,7 +153,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                 </span>
               </th>
             ))}
-            <th className="sticky right-0 z-10 h-11 min-w-20 border-b border-l bg-surface px-2.5 text-right text-xs font-semibold">
+            <th className="sticky right-0 z-10 h-11 min-w-32 border-b border-l bg-surface px-2.5 text-right text-xs font-semibold">
               Total
             </th>
           </tr>
