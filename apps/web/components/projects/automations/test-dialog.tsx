@@ -19,6 +19,8 @@ import { useTestAutomation } from '@hooks/use-automations';
 import { SKIP_REASON } from '@lib/git/words';
 import { PendingButton } from '@components/pending-button';
 
+const ISSUE_INPUT = 'test-issue';
+
 interface TestDialogProps {
   projectKey: string;
   rule: Automation | null;
@@ -29,7 +31,15 @@ interface TestDialogProps {
 export function TestDialog({ projectKey, rule, onClose }: TestDialogProps) {
   return (
     <Dialog open={rule !== null} onOpenChange={open => (open ? null : onClose())}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          const input = document.getElementById(ISSUE_INPUT) as HTMLInputElement | null;
+          input?.focus();
+          input?.setSelectionRange(input.value.length, input.value.length);
+        }}
+      >
         {rule ? <TestForm key={rule.name} projectKey={projectKey} rule={rule} onClose={onClose} /> : null}
       </DialogContent>
     </Dialog>
@@ -63,16 +73,17 @@ function TestForm({ projectKey, rule, onClose }: { projectKey: string; rule: Aut
       }}
     >
       <DialogHeader>
-        <DialogTitle>Test {rule.name}</DialogTitle>
+        <DialogTitle>Test “{rule.name}”</DialogTitle>
         <DialogDescription>{rule.sentence} The test changes nothing.</DialogDescription>
       </DialogHeader>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="test-issue">Issue</Label>
+        <Label htmlFor={ISSUE_INPUT} className="text-text-secondary">
+          Issue
+        </Label>
         <Input
-          id="test-issue"
-          autoFocus
+          id={ISSUE_INPUT}
           value={issue}
-          className="w-40 font-mono text-xs"
+          className="font-mono"
           aria-invalid={error !== null}
           onChange={event => {
             setIssue(event.target.value);
@@ -80,7 +91,11 @@ function TestForm({ projectKey, rule, onClose }: { projectKey: string; rule: Aut
             test.reset();
           }}
         />
-        {error ? <p className="text-xs text-danger-fg">{error}</p> : null}
+        {error ? (
+          <p className="text-xs text-danger-fg">{error}</p>
+        ) : (
+          <p className="text-xs text-text-secondary">The issue key, such as {projectKey}-12.</p>
+        )}
       </div>
       {test.data ? (
         <FormAlert tone={test.data.result === 'would_apply' ? 'success' : 'warning'} title={describe(key, test.data)}>

@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import { AlertTriangle, FlaskConical, History, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Automation, AutomationCatalogue, AutomationTrigger, ProjectRepository } from '@nothingleft/types';
+import {
+  PLAN_PRESETS,
+  type Automation,
+  type AutomationCatalogue,
+  type AutomationTrigger,
+  type ProjectRepository,
+} from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Switch } from '@components/ui/switch';
 import { Skeleton } from '@components/ui/skeleton';
@@ -25,7 +31,9 @@ import { ProviderGlyph } from '@components/git/provider-glyph';
 import { AutomationEditor, type EditorTarget } from '@components/projects/automations/automation-editor';
 import { BranchChips } from '@components/projects/automations/branch-chips';
 import { RunsDrawer, type RunsTarget } from '@components/projects/automations/runs-drawer';
-import { StatusPicker } from '@components/projects/automations/status-picker';
+import { StatusPicker, StatusText } from '@components/projects/automations/status-picker';
+import { ReadOnlyNotice } from '@components/projects/read-only-notice';
+import { TextButton } from '@components/text-button';
 import { TemplateCards } from '@components/projects/automations/templates';
 import { TestDialog } from '@components/projects/automations/test-dialog';
 import {
@@ -37,6 +45,8 @@ import {
   useUpdateAutomation,
 } from '@hooks/use-automations';
 import { useUpdateRepositoryLink } from '@hooks/use-git';
+import { useOrganization } from '@hooks/use-organizations';
+import { useSession } from '@hooks/use-session';
 import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
@@ -71,7 +81,10 @@ export function AutomationsSettings({
   const rules = useAutomations(projectKey);
   const catalogue = useAutomationCatalogue();
   const gitEnabled = repositories.length > 0;
+  const session = useSession();
+  const organization = useOrganization(session.status === 'signed-in' ? session.user.current_organization_slug : null);
   const [editing, setEditing] = useState<EditorTarget | null>(null);
+  const [viewing, setViewing] = useState<Automation | null>(null);
   const [testing, setTesting] = useState<Automation | null>(null);
 
   const runsParam = params.get('runs');
@@ -111,11 +124,21 @@ export function AutomationsSettings({
   }
 
   const cat = catalogue.data;
-  const shared = { projectKey, canEdit, onEdit: setEditing, onTest: setTesting, onRuns: setRuns };
+  const shared = {
+    projectKey,
+    canEdit,
+    onEdit: setEditing,
+    onView: setViewing,
+    onTest: setTesting,
+    onRuns: setRuns,
+  };
+  const limit = organization.data ? PLAN_PRESETS[organization.data.plan].automations_per_project : null;
+  const atLimit = limit !== null && list.length >= limit;
+  const limitNote = `${list.length} of ${limit} automations used, the most this plan allows in one project. Delete one to add another.`;
 
   return (
     <>
-      {canEdit ? null : <p className="text-xs text-text-secondary">{readOnlyReason}</p>}
+      {canEdit ? null : <ReadOnlyNotice>{readOnlyReason}</ReadOnlyNotice>}
 
       {list.length === 0 ? (
         <SettingsSection
@@ -149,7 +172,11 @@ export function AutomationsSettings({
           {gitEnabled ? (
             <SettingsSection
               title="When git moves an issue"
-              description="One status per event. Pick — to leave issues alone on it. Each row is a rule; conditions opens the whole rule."
+              description={
+                canEdit
+                  ? 'Choose a status for each git event, or off to leave issues alone on it. Each row is a rule; Edit conditions opens the whole of it.'
+                  : 'The status each git event sets. Each row is a rule; View opens the whole of it.'
+              }
               actions={
                 <Button variant="outline" size="sm" onClick={() => setRuns({ automation: null, issue: null })}>
                   <History /> All runs
@@ -176,13 +203,27 @@ export function AutomationsSettings({
                   </Button>
                 )}
                 {canEdit ? (
-                  <Button size="sm" onClick={() => setEditing({ trigger: null })}>
-                    <Plus /> New automation
-                  </Button>
+                  atLimit ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="rounded-md">
+                          <Button size="sm" disabled className="pointer-events-none">
+                            <Plus /> New automation
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">{limitNote}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button size="sm" onClick={() => setEditing({ trigger: null })}>
+                      <Plus /> New automation
+                    </Button>
+                  )
                 ) : null}
               </>
             }
           >
+            {canEdit && atLimit ? <p className="text-xs text-text-secondary">{limitNote}</p> : null}
             {others.length === 0 ? (
               <p className="text-sm text-text-secondary">
                 Nothing beyond the table above. A commit pushed rule, a second rule for one event or the subtasks rule
@@ -206,6 +247,14 @@ export function AutomationsSettings({
         target={editing}
         onClose={() => setEditing(null)}
       />
+      <AutomationEditor
+        projectKey={projectKey}
+        catalogue={cat}
+        gitEnabled={gitEnabled}
+        target={viewing ? { rule: viewing } : null}
+        readOnly
+        onClose={() => setViewing(null)}
+      />
       <TestDialog projectKey={projectKey} rule={testing} onClose={() => setTesting(null)} />
       <RunsDrawer projectKey={projectKey} target={runs} onClose={() => setRuns(null)} />
     </>
@@ -216,6 +265,7 @@ interface Shared {
   projectKey: string;
   canEdit: boolean;
   onEdit: (target: EditorTarget) => void;
+  onView: (rule: Automation) => void;
   onTest: (rule: Automation) => void;
   onRuns: (target: RunsTarget) => void;
 }
@@ -256,6 +306,7 @@ function GitMatrix({
   projectKey,
   canEdit,
   onEdit,
+  onView,
   onRuns,
 }: Shared & { catalogue: AutomationCatalogue; rules: Map<AutomationTrigger, Automation> }) {
   const templates = useAutomationTemplates(projectKey, canEdit);
@@ -280,77 +331,81 @@ function GitMatrix({
   };
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="w-full min-w-[640px] table-fixed text-sm">
-        <thead className="bg-app text-left text-2xs text-text-secondary">
-          <tr>
-            <th className="h-7 px-3 font-medium">When</th>
-            <th className="w-52 px-3 font-medium">Set status to</th>
-            <th className="w-56 px-3 font-medium">Runs</th>
-            <th className="w-24 px-3" aria-label="Rule" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-subtle">
-          {MATRIX.map(trigger => {
-            const rule = rules.get(trigger);
-            const label = catalogue.triggers.find(t => t.key === trigger)?.label ?? trigger;
-            const value = rule && rule.is_enabled ? String(rule.action_params.status) : null;
-            return (
-              <tr key={trigger} className="h-11">
-                <td className="px-3">
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate">{label}</span>
-                    {rule && rule.name !== label ? (
-                      <span className="truncate text-2xs text-text-muted">{rule.name}</span>
-                    ) : null}
+    <div className="rounded-md border">
+      <div
+        aria-hidden
+        className={cn(
+          MATRIX_GRID,
+          'h-7 items-center rounded-t-md bg-app text-2xs font-medium text-text-secondary max-sm:hidden',
+        )}
+      >
+        <span>When</span>
+        <span>Set status to</span>
+        <span>Runs</span>
+        <span />
+      </div>
+      <ul className="divide-y divide-border-subtle border-border-subtle sm:border-t">
+        {MATRIX.map(trigger => {
+          const rule = rules.get(trigger);
+          const label = catalogue.triggers.find(t => t.key === trigger)?.label ?? trigger;
+          const value = rule && rule.is_enabled ? String(rule.action_params.status) : null;
+          return (
+            <li key={trigger} className={cn(MATRIX_GRID, 'py-2 sm:min-h-11')}>
+              <span className="flex min-w-0 flex-col max-sm:col-span-2">
+                <span className="truncate">{label}</span>
+                {rule && rule.name !== label ? (
+                  <span className="truncate text-2xs text-text-secondary">{rule.name}</span>
+                ) : null}
+              </span>
+              <span className="flex min-w-0 items-center gap-2 max-sm:col-span-2">
+                {canEdit ? (
+                  <StatusPicker
+                    projectKey={projectKey}
+                    value={value}
+                    allowOff
+                    label={`${label}: status`}
+                    className="min-w-0 flex-1"
+                    onChange={status => pick(trigger, rule, status)}
+                  />
+                ) : (
+                  <span className="flex h-control min-w-0 items-center">
+                    <StatusText projectKey={projectKey} value={value} />
                   </span>
-                </td>
-                <td className="px-3">
-                  <span className="flex items-center gap-2">
-                    <StatusPicker
-                      projectKey={projectKey}
-                      value={value}
-                      allowOff
-                      disabled={!canEdit}
-                      label={`${label}: status`}
-                      onChange={status => pick(trigger, rule, status)}
-                    />
-                    {rule?.status_missing ? <MissingFlag compact /> : null}
-                  </span>
-                </td>
-                <td className="px-3 text-xs text-text-secondary">
-                  {rule && value !== null ? (
-                    <button
-                      type="button"
-                      className="text-left whitespace-nowrap hover:text-text hover:underline"
-                      onClick={() => onRuns({ automation: rule.name, issue: null })}
-                    >
-                      <RunsLine rule={rule} />
-                    </button>
-                  ) : (
-                    <span className="text-text-muted">off</span>
-                  )}
-                </td>
-                <td className="px-3 text-right">
-                  {canEdit ? (
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="text-text-secondary"
-                      onClick={() => onEdit(rule ? { rule } : { trigger })}
-                    >
-                      conditions
-                    </Button>
-                  ) : null}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                )}
+                <span className="flex w-icon-sm flex-none">
+                  {rule?.status_missing ? <MissingFlag compact /> : null}
+                </span>
+              </span>
+              <span className="min-w-0 text-xs text-text-secondary">
+                {rule && value !== null ? (
+                  <button
+                    type="button"
+                    className="action-link max-w-full truncate rounded-xs text-left tabular hover:text-text"
+                    onClick={() => onRuns({ automation: rule.name, issue: null })}
+                  >
+                    <RunsLine rule={rule} />
+                  </button>
+                ) : null}
+              </span>
+              <span className="text-right text-xs">
+                {canEdit ? (
+                  <TextButton onClick={() => onEdit(rule ? { rule } : { trigger })}>Edit conditions</TextButton>
+                ) : rule ? (
+                  <TextButton aria-label={`View ${rule.name}`} onClick={() => onView(rule)}>
+                    View
+                  </TextButton>
+                ) : null}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
+
+const MATRIX_GRID =
+  'grid items-center gap-x-4 gap-y-2 px-3 grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_12rem_15.5rem_7rem]';
 
 function MergedInto({
   projectKey,
@@ -367,13 +422,13 @@ function MergedInto({
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs text-text-secondary">
-        <span className="font-medium text-text">Merged into</span> — the branches a merge into counts for the merged
-        rows, per repository. They belong to the repository, so every project it is linked to shares them.
+        <span className="font-medium text-text">Merged into:</span> the branches that count as a merge for the merged
+        rows. Set per repository and shared by every project that links it.
       </p>
       <ul className="flex flex-col gap-1.5">
         {repositories.map(repository => (
           <li key={repository.full_name} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="flex w-72 min-w-0 items-center gap-1.5 font-mono text-xs">
+            <span className="flex w-64 min-w-0 items-center gap-1.5 font-mono text-xs max-sm:w-full">
               <ProviderGlyph provider={repository.provider} className="text-text-muted" />
               <span className="truncate">{repository.full_name}</span>
             </span>
@@ -408,6 +463,7 @@ function RuleRow({
   projectKey,
   canEdit,
   onEdit,
+  onView,
   onTest,
   onRuns,
 }: Shared & { rule: Automation; gitEnabled: boolean }) {
@@ -418,20 +474,26 @@ function RuleRow({
 
   return (
     <li className={cn('flex items-start gap-3 px-3 py-3', !rule.is_enabled && 'text-text-muted')}>
-      <Switch
-        checked={rule.is_enabled}
-        disabled={!canEdit}
-        aria-label={`${rule.name}: ${rule.is_enabled ? 'on' : 'off'}`}
-        className="mt-0.5"
-        onCheckedChange={value =>
-          update.mutate(
-            { name: rule.name, body: { is_enabled: value } },
-            {
-              onError: e => toastError(value ? `Could not turn ${rule.name} on` : `Could not turn ${rule.name} off`, e),
-            },
-          )
-        }
-      />
+      {canEdit ? (
+        <Switch
+          checked={rule.is_enabled}
+          aria-label={`${rule.name}: ${rule.is_enabled ? 'on' : 'off'}`}
+          className="mt-0.5"
+          onCheckedChange={value =>
+            update.mutate(
+              { name: rule.name, body: { is_enabled: value } },
+              {
+                onError: e =>
+                  toastError(value ? `Could not turn ${rule.name} on` : `Could not turn ${rule.name} off`, e),
+              },
+            )
+          }
+        />
+      ) : (
+        <span className={cn('w-8 flex-none text-xs font-medium', rule.is_enabled ? 'text-text' : 'text-text-muted')}>
+          {rule.is_enabled ? 'On' : 'Off'}
+        </span>
+      )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className={cn('font-medium', rule.is_enabled ? 'text-text' : 'text-text-secondary')}>{rule.name}</span>
@@ -441,42 +503,40 @@ function RuleRow({
         <span className="text-xs text-text-secondary">{rule.sentence}</span>
         <button
           type="button"
-          className="self-start text-2xs text-text-secondary hover:text-text hover:underline"
+          className="action-link self-start rounded-xs text-2xs text-text-secondary tabular hover:text-text"
           onClick={() => onRuns({ automation: rule.name, issue: null })}
         >
           <RunsLine rule={rule} />
         </button>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-xs" aria-label={`${rule.name} actions`} className="text-text-muted">
-            <MoreHorizontal />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          {canEdit ? (
-            <>
-              <DropdownMenuItem onSelect={() => onEdit({ rule })}>
-                <Pencil /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onTest(rule)}>
-                <FlaskConical /> Test on an issue…
-              </DropdownMenuItem>
-            </>
-          ) : null}
-          <DropdownMenuItem onSelect={() => onRuns({ automation: rule.name, issue: null })}>
-            <History /> Runs
-          </DropdownMenuItem>
-          {canEdit ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
-                <Trash2 /> Delete
-              </DropdownMenuItem>
-            </>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {canEdit ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-xs" aria-label={`${rule.name} actions`} className="text-text-muted">
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={() => onEdit({ rule })}>
+              <Pencil /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onTest(rule)}>
+              <FlaskConical /> Test on an issue…
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onRuns({ automation: rule.name, issue: null })}>
+              <History /> Runs
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)}>
+              <Trash2 /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <TextButton aria-label={`View ${rule.name}`} className="text-xs" onClick={() => onView(rule)}>
+          View
+        </TextButton>
+      )}
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
@@ -504,15 +564,33 @@ function RuleRow({
 function AutomationsSkeleton() {
   return (
     <div className="flex flex-col gap-3" role="status" aria-label="Loading automations">
-      <Skeleton className="h-4 w-48" />
-      <div className="divide-y divide-border-subtle rounded-md border">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex h-11 items-center gap-6 px-3">
-            <Skeleton className="h-3 w-48" />
-            <Skeleton className="h-7 w-40" />
-            <Skeleton className="h-3 w-28" />
-          </div>
-        ))}
+      <div className="flex items-start gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-3.5 w-3/4" />
+        </div>
+        <Skeleton className="h-8 w-24 flex-none" />
+      </div>
+      <div className="rounded-md border">
+        <div className={cn(MATRIX_GRID, 'h-7 rounded-t-md bg-app max-sm:hidden')}>
+          <Skeleton className="h-2.5 w-10" />
+          <Skeleton className="h-2.5 w-20" />
+          <Skeleton className="h-2.5 w-10" />
+          <span />
+        </div>
+        <div className="divide-y divide-border-subtle border-border-subtle sm:border-t">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className={cn(MATRIX_GRID, 'py-2 sm:min-h-11')}>
+              <Skeleton className="h-3 w-40 max-sm:col-span-2" />
+              <span className="flex items-center gap-2 max-sm:col-span-2">
+                <Skeleton className="h-8 flex-1" />
+                <span className="w-icon-sm flex-none" />
+              </span>
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="ml-auto h-3 w-20" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

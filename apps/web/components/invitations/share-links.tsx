@@ -51,28 +51,6 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
     <div className="flex flex-col gap-4">
       {error.summary ? <FormAlert title={error.summary} /> : null}
 
-      {invitations.isPending ? (
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-row w-full rounded-md" />
-          <Skeleton className="h-row w-3/4 rounded-md" />
-        </div>
-      ) : !invitations.data ? (
-        <LoadError onRetry={() => void invitations.refetch()} detail={errorDetail(invitations.error)}>
-          The share links could not be loaded.
-        </LoadError>
-      ) : links.length === 0 ? (
-        <EmptyState
-          title="No share link yet."
-          description="A link can be pasted into a group chat and used by everyone who opens it. It never expires unless you say so, and revoking it is one click."
-        />
-      ) : (
-        <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
-          {links.map(link => (
-            <ShareLinkRow key={link.id} link={link} scope={scope} orgSlug={orgSlug} />
-          ))}
-        </ul>
-      )}
-
       <div className={cn('flex flex-wrap items-end gap-3', invitations.isError && !invitations.data && 'hidden')}>
         {scope.kind === 'project' ? (
           <div className="w-[240px]">
@@ -101,9 +79,30 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
           }
         >
           <Link2 className="size-icon-sm" />
-          {links.length === 0 ? 'Create a share link' : 'Create another link'}
+          {links.length === 0 ? 'Create a share link' : 'Create link'}
         </PendingButton>
       </div>
+      {invitations.isPending ? (
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-row w-full rounded-md" />
+          <Skeleton className="h-row w-3/4 rounded-md" />
+        </div>
+      ) : !invitations.data ? (
+        <LoadError onRetry={() => void invitations.refetch()} detail={errorDetail(invitations.error)}>
+          The share links could not be loaded.
+        </LoadError>
+      ) : links.length === 0 ? (
+        <EmptyState
+          title="No share link yet."
+          description="A link can be pasted into a group chat and used by everyone who opens it. It never expires unless you say so, and revoking it is one click."
+        />
+      ) : (
+        <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
+          {links.map(link => (
+            <ShareLinkRow key={link.id} link={link} scope={scope} orgSlug={orgSlug} />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

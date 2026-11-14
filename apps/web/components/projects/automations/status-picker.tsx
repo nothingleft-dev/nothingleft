@@ -26,6 +26,19 @@ interface StatusPickerProps {
   className?: string;
 }
 
+/** The picker's value for a reader who cannot change it. */
+export function StatusText({ projectKey, value }: { projectKey: string; value: string | null }) {
+  const statuses = useSchemaValues(projectKey, 'statuses');
+  const current = (statuses.data ?? []).find(s => !s.is_archived && s.name.toLowerCase() === value?.toLowerCase());
+  if (value === null) return <span className="text-text-secondary">{OFF} off</span>;
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {current ? <StatusDot category={current.category} color={current.color} /> : null}
+      <span className={cn('truncate', !current && 'text-danger-fg')}>{value}</span>
+    </span>
+  );
+}
+
 /** A project status by name, the archived ones left out: what an automation sets. */
 export function StatusPicker({
   projectKey,
@@ -58,7 +71,7 @@ export function StatusPicker({
         >
           <span className="flex min-w-0 items-center gap-2">
             {current ? <StatusDot category={current.category} color={current.color} /> : null}
-            <span className={cn('truncate', !value && 'text-text-muted', value && !current && 'text-danger-fg')}>
+            <span className={cn('truncate', !value && 'text-text-secondary', value && !current && 'text-danger-fg')}>
               {value ?? (allowOff ? `${OFF} off` : placeholder)}
             </span>
           </span>

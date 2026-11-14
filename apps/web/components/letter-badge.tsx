@@ -35,7 +35,7 @@ export function LetterBadge({ letter, label, color, swatch, variant = 'filled', 
         <span
           aria-label={label}
           className={cn(
-            'inline-flex size-badge-letter items-center justify-center rounded-xs text-[11px] font-semibold leading-none',
+            'inline-flex size-badge-letter shrink-0 items-center justify-center rounded-xs text-[11px] font-semibold leading-none',
             swatch ? `l-${swatch}` : color ? `c-${color}` : 'c-neutral',
             variant === 'filled' ? 'bg-c-bg text-c-fg' : 'border border-border-strong text-text-secondary',
             className,

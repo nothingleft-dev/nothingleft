@@ -59,7 +59,7 @@ export function AccountSettings() {
       {session.status === 'signed-out' ? <FormAlert title="Sign in to manage your account." /> : null}
 
       {session.status === 'signed-in' ? (
-        <div className="max-w-3xl">
+        <div>
           {tab === 'profile' ? <ProfileTab user={session.user} /> : null}
           {tab === 'security' ? <SecurityTab user={session.user} /> : null}
           {tab === 'sessions' ? <SessionsTab /> : null}

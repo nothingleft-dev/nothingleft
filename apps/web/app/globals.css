@@ -1452,6 +1452,17 @@
 }
 
 [data-slot='dialog-overlay'],
+/* A sheet opened by mouse takes focus for its keyboard users; that is not a reason to ring the whole panel. */
+[data-slot='sheet-content']:focus-visible {
+  box-shadow: var(--shadow-dialog);
+}
+
+/* A sheet's title outranks the section headings inside it. */
+[data-slot='sheet-title'] {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+}
+
 [data-slot='sheet-overlay'] {
   background: var(--bg-overlay);
 }

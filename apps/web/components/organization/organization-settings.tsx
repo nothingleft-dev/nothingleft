@@ -24,7 +24,6 @@ import { IntegrationsTab } from '@components/organization/integrations/integrati
 import { useOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { useProjectRoles } from '@hooks/use-project-roles';
-import { cn } from '@lib/utils';
 
 const TABS = [
   { value: 'general', label: 'General' },
@@ -104,7 +103,7 @@ export function OrganizationSettings() {
 
 function TabSkeleton({ tab }: { tab: Tab }) {
   return (
-    <div className="max-w-4xl" role="status" aria-label="Loading">
+    <div role="status" aria-label="Loading">
       {tab === 'members' || tab === 'invites' ? (
         <RowsSkeleton rows={6} columns={PERSON_ROW} />
       ) : tab === 'audit' || tab === 'tags' ? (
@@ -126,7 +125,7 @@ interface OrganizationTabsProps {
 function OrganizationTabs({ organization, user, tab, isAdmin }: OrganizationTabsProps) {
   return (
     // The storage tab's file list is a table of seven columns; the other tabs are forms.
-    <div className={cn('flex flex-col gap-5', tab === 'storage' || tab === 'integrations' ? 'max-w-6xl' : 'max-w-4xl')}>
+    <div className="flex flex-col gap-5">
       {isAdmin ? <SeatBanner seats={organization.seats} /> : null}
       {tab === 'storage' ? null : <StorageBanner storage={organization.storage} withLink={false} />}
 

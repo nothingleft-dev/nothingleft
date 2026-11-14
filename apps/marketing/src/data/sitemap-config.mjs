@@ -36,7 +36,7 @@ export const SITEMAP_PAGES = {
   '/docs/reports': { lastmod: '2026-11-14T13:49:00+05:30' },
   '/docs/knowledge-base': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/git': { lastmod: '2026-10-26T00:11:14+05:30' },
-  '/docs/automations': { lastmod: '2026-11-10T12:00:00+05:30' },
+  '/docs/automations': { lastmod: '2026-11-14T14:01:00+05:30' },
   '/docs/mcp-tools': { lastmod: '2026-11-08T17:44:11+05:30' },
   '/docs/account-security': { lastmod: '2026-10-13T11:11:10+05:30' },
   '/docs/permissions': { lastmod: '2026-10-26T00:11:14+05:30' },

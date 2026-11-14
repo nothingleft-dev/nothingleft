@@ -59,16 +59,18 @@ export function DeletedIssues({ projectKey, canRestore }: { projectKey: string; 
                 <tr key={issue.key} className="h-row">
                   <td className="px-3">
                     <span className="flex min-w-0 items-center gap-2">
-                      <PriorityBadge priority={issue.priority} />
-                      <TypeBadge type={issue.type} />
-                      <IssueKey issueKey={issue.key} />
-                      <span className="min-w-0 truncate">{issue.title}</span>
+                      <PriorityBadge priority={issue.priority} className="flex-none" />
+                      <TypeBadge type={issue.type} className="flex-none" />
+                      <IssueKey issueKey={issue.key} column />
+                      <span className="min-w-0 truncate" title={issue.title}>
+                        {issue.title}
+                      </span>
                     </span>
                   </td>
-                  <td className="px-3 text-xs whitespace-nowrap">
+                  <td className="px-3 text-xs whitespace-nowrap tabular">
                     {issue.deleted_at ? <RelativeTime value={issue.deleted_at} /> : EMPTY}
                   </td>
-                  <td className="px-3 text-xs whitespace-nowrap text-text-secondary">
+                  <td className="px-3 text-xs whitespace-nowrap text-text-secondary tabular">
                     {issue.restorable_until ? formatDateTime(issue.restorable_until) : EMPTY}
                   </td>
                   <td className="px-3 text-right">

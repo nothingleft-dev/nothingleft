@@ -16,7 +16,7 @@ export function SettingsSection({
       <header className="flex items-start gap-4 max-sm:flex-col max-sm:gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 className="font-semibold">{title}</h2>
-          {description ? <p className="text-sm text-text-secondary">{description}</p> : null}
+          {description ? <p className="text-sm text-pretty text-text-secondary">{description}</p> : null}
         </div>
         {actions ? (
           // On a phone the description keeps the width and the actions drop under it.

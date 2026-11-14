@@ -107,7 +107,7 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
         />
       </div>
 
-      <div className="flex max-w-4xl flex-col gap-5">
+      <div className="flex flex-col gap-5">
         {tab === 'general' ? (
           <>
             <SettingsSection title="Identity" description="What this project is called and how its issues are keyed.">
@@ -182,7 +182,7 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
                 seats={organization.data?.seats}
               />
             </SettingsSection>
-            <SettingsSection title="Share links" description="Anyone with the link can join with the selected role.">
+            <SettingsSection title="Share links" description="Anyone with a link joins with that link’s role.">
               {slug ? <ShareLinks scope={{ kind: 'project', key: projectKey }} orgSlug={slug} /> : null}
             </SettingsSection>
           </>

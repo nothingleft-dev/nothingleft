@@ -31,12 +31,14 @@ import {
   useUpdateRepositoryLink,
 } from '@hooks/use-git';
 import { useDebounced } from '@hooks/use-debounced';
-import { WEBHOOK_STATUS, count } from '@lib/git/words';
+import { useProjects } from '@hooks/use-projects';
+import { WEBHOOK_STATUS, count, providerLabel } from '@lib/git/words';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
+import { ReadOnlyNotice } from '@components/projects/read-only-notice';
 
 interface RepositoriesSettingsProps {
   projectKey: string;
@@ -63,7 +65,7 @@ export function RepositoriesSettings({
         title="Linked repositories"
         description="Branches, commits and pull requests in these repositories that name one of this project’s issues show on that issue."
         actions={
-          canEdit && orgSlug ? (
+          canEdit && orgSlug && !(repositories.isError && !repositories.data) ? (
             <LinkRepositoryPicker
               projectKey={projectKey}
               orgSlug={orgSlug}
@@ -74,7 +76,7 @@ export function RepositoriesSettings({
           ) : null
         }
       >
-        {canEdit ? null : <p className="text-xs text-text-secondary">{readOnlyReason}</p>}
+        {canEdit ? null : <ReadOnlyNotice>{readOnlyReason}</ReadOnlyNotice>}
         {offer ? <TemplateOffer projectKey={projectKey} onDone={() => setOffer(false)} /> : null}
         {repositories.isPending ? (
           <RowsSkeleton />
@@ -170,7 +172,10 @@ function RepositoryRow({
   const update = useUpdateRepositoryLink(projectKey);
   const unlink = useUnlinkRepository(projectKey);
   const [confirming, setConfirming] = useState(false);
-  const shared = repository.projects.filter(k => k !== projectKey);
+  const projects = useProjects({ archived: 'false' });
+  const shared = repository.projects
+    .filter(k => k !== projectKey)
+    .map(k => projects.data?.find(p => p.key === k)?.name ?? k);
   const webhook = WEBHOOK_STATUS[repository.webhook_status];
   const dim = repository.removed || repository.is_archived;
   const patch = (body: Parameters<typeof update.mutate>[0]['body']) =>
@@ -208,7 +213,7 @@ function RepositoryRow({
         </span>
       </div>
 
-      <dl className="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 text-xs">
+      <dl className="grid items-center gap-x-4 gap-y-1.5 text-xs sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-y-2.5">
         <dt className="text-text-secondary">Merged into</dt>
         <dd>
           <span className="flex flex-col gap-1">
@@ -220,7 +225,7 @@ function RepositoryRow({
             {canEdit && locks.branches ? <span className="text-2xs text-text-secondary">{locks.branches}</span> : null}
           </span>
         </dd>
-        <dt className="text-text-secondary">Every project</dt>
+        <dt className="text-text-secondary max-sm:mt-2">Every project</dt>
         <dd className="flex items-center gap-2">
           <Switch
             checked={repository.match_all_projects}
@@ -230,14 +235,14 @@ function RepositoryRow({
           />
           <span className="text-text-secondary">
             {repository.match_all_projects
-              ? 'Names an issue of any project in the organisation.'
-              : 'Names only issues of projects it is linked to.'}
+              ? 'On: matches issues of any project in the organisation.'
+              : 'Off: matches only issues of the projects this repository is linked to.'}
             {canEdit && locks.everyProject ? ` ${locks.everyProject}` : ''}
           </span>
         </dd>
       </dl>
       <p className="text-2xs text-text-muted">
-        Both belong to the repository, so they change for every project it is linked to
+        Merged into and Every project are shared by every project this repository is linked to
         {shared.length > 0 ? ` (also ${shared.join(', ')})` : ''}. Linked
         {repository.linked_by ? (
           <>
@@ -332,7 +337,7 @@ function LinkRepositoryPicker({
               </CommandEmpty>
             )}
             {groups.map(([connection, repositories]) => (
-              <CommandGroup key={connection} heading={connection}>
+              <CommandGroup key={connection} heading={connectionLabel(connection, repositories[0]?.provider)}>
                 {repositories.map(repository => (
                   <CommandItem
                     key={repository.full_name}
@@ -357,7 +362,7 @@ function LinkRepositoryPicker({
                     <ProviderGlyph provider={repository.provider} className="text-text-muted" />
                     <span className="min-w-0 flex-1 truncate font-mono text-xs">{repository.full_name}</span>
                     {repository.projects.length > 0 ? (
-                      <span className="text-2xs text-text-muted">also {repository.projects.join(', ')}</span>
+                      <span className="text-2xs text-text-muted">Also linked to {repository.projects.join(', ')}</span>
                     ) : null}
                   </CommandItem>
                 ))}
@@ -369,7 +374,10 @@ function LinkRepositoryPicker({
           {orgAdmin ? (
             <>
               Not listed?{' '}
-              <Link href={'/organization?tab=integrations' as Route} className="text-text underline">
+              <Link
+                href={'/organization?tab=integrations' as Route}
+                className="action-link rounded-xs font-medium text-text"
+              >
                 Connect another account in Organisation settings
               </Link>
               .
@@ -381,6 +389,11 @@ function LinkRepositoryPicker({
       </PopoverContent>
     </Popover>
   );
+}
+
+function connectionLabel(connection: string, provider: GitRepository['provider'] | undefined): string {
+  const account = connection.includes(':') ? connection.slice(connection.indexOf(':') + 1) : connection;
+  return provider ? `${providerLabel(provider)} · ${account}` : account;
 }
 
 function RowsSkeleton() {

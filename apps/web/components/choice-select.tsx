@@ -90,7 +90,7 @@ export function ChoiceSelect<T extends string>({
                       {option.mark}
                       {option.label}
                     </span>
-                    <span className="text-xs text-text-muted">{option.hint}</span>
+                    <span className="text-xs text-text-secondary">{option.hint}</span>
                   </span>
                 </PickerItem>
               ))}

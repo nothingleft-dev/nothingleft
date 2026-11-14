@@ -78,7 +78,6 @@ export function InviteEmailsForm({
         );
       }}
     >
-      {seats ? <SeatNotice seats={seats} /> : null}
       {error.summary ? <FormAlert title={error.summary} /> : null}
 
       <EmailChips value={emails} onChange={setEmails} max={EMAIL_INVITATION_BATCH_MAX} disabled={invite.isPending} />
@@ -106,14 +105,13 @@ export function InviteEmailsForm({
         ) : null}
       </div>
 
-      <div className="flex items-start gap-3 max-sm:flex-col">
+      {seats && emails.length > 0 ? <SeatNotice seats={seats} /> : null}
+
+      <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-start">
         <PendingButton type="submit" disabled={emails.length === 0} pending={invite.isPending} pendingLabel="Sending…">
           {submitLabel}
         </PendingButton>
-        <span className="text-xs text-text-muted">
-          Invitations expire in 14 days and can be used once.
-          {isProject ? ' Accepting joins the organisation and this project in one step.' : ''}
-        </span>
+        <span className="text-xs text-text-secondary">Invitations expire in 14 days and work once.</span>
       </div>
     </form>
   );

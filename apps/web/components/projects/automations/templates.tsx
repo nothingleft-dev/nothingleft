@@ -8,9 +8,9 @@ import type { AutomationTemplate } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
 import { Skeleton } from '@components/ui/skeleton';
+import { LoadError, errorDetail } from '@components/query-state';
 import { StatusPicker } from '@components/projects/automations/status-picker';
 import { useAutomationTemplates, useCreateAutomation } from '@hooks/use-automations';
-import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
 
@@ -20,7 +20,10 @@ function NeedsStatus({ projectKey }: { projectKey: string }) {
   return (
     <p className="text-2xs text-text-secondary">
       The project has no fitting status yet. Pick one, or{' '}
-      <Link href={`/projects/${projectKey}/settings?tab=statuses` as Route} className="text-text underline">
+      <Link
+        href={`/projects/${projectKey}/settings?tab=statuses` as Route}
+        className="action-link rounded-xs font-medium text-text"
+      >
         add one in Statuses
       </Link>
       .
@@ -42,7 +45,13 @@ export function TemplateCards({ projectKey, gitEnabled }: { projectKey: string; 
       </div>
     );
   }
-  if (templates.isError) return <p className="text-sm text-danger-fg">{templates.error.message}</p>;
+  if (templates.isError) {
+    return (
+      <LoadError onRetry={() => void templates.refetch()} detail={errorDetail(templates.error)}>
+        The suggested rules could not be loaded.
+      </LoadError>
+    );
+  }
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -65,6 +74,7 @@ function TemplateCard({ projectKey, template }: { projectKey: string; template: 
         <StatusPicker projectKey={projectKey} value={status} onChange={setStatus} label={`${template.name}: status`} />
         <PendingButton
           size="sm"
+          variant="outline"
           disabled={!status}
           pending={create.isPending}
           pendingLabel="Adding…"
@@ -147,7 +157,6 @@ export function TemplateOffer({ projectKey, onDone }: { projectKey: string; onDo
                   value={s.status}
                   onChange={status => setPicked({ ...picked, [t.key]: { on: true, status } })}
                   label={`${t.name}: status`}
-                  className={cn(!s.on && 'opacity-60')}
                 />
               </li>
             );
