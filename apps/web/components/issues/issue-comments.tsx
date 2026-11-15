@@ -71,7 +71,7 @@ export function CommentHeader({ comment, verb = 'commented', timeZone }: Comment
         <Tooltip>
           <TooltipTrigger asChild>
             <span tabIndex={0} className="text-text-muted">
-              · edited
+              edited
             </span>
           </TooltipTrigger>
           <TooltipContent>Edited {formatDateTimeWithZone(comment.edited_at, timeZone)}</TooltipContent>
@@ -308,13 +308,18 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
     <div className="mt-4 grid grid-cols-[32px_minmax(0,1fr)] gap-3">
       {me ? <MemberAvatar member={me} className="mt-1 size-avatar-lg" /> : <span />}
       <div className="flex min-w-0 flex-col gap-2">
+        {error ? (
+          <FormAlert title="The comment was not posted.">
+            {error} Your text is still here, so you can post it again.
+          </FormAlert>
+        ) : null}
         <MarkdownEditor
           value={text}
           onChange={setText}
           projectKey={projectKey}
           label="Comment"
           placeholder="Write a comment. Type @ to mention someone, # to link an issue."
-          invalid={Boolean(error) || size.level === 'too_large'}
+          invalid={size.level === 'too_large'}
           onSubmit={submit}
           onCancel={empty ? undefined : discard}
           uploader={uploader}
@@ -344,11 +349,6 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
           }
         />
         <MarkdownSizeNote size={size} />
-        {error ? (
-          <FormAlert title="The comment was not posted.">
-            {error} Your text is still here, so you can post it again.
-          </FormAlert>
-        ) : null}
       </div>
     </div>
   );

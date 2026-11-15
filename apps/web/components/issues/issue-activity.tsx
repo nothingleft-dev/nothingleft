@@ -498,13 +498,6 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
   const git = entry.rows.filter(r => GIT_KINDS.includes(r.kind));
   const automated = entry.rows.find(r => r.automation)?.automation ?? null;
   const touchedDescription = entry.rows.some(r => r.field === 'description');
-  const descriptionOnly =
-    touchedDescription &&
-    changes.length === 0 &&
-    relations.length === 0 &&
-    time.length === 0 &&
-    git.length === 0 &&
-    !automated;
 
   const details =
     changes.length > 0 || relations.length > 0 || time.length > 0 || git.length > 0 || touchedDescription ? (
@@ -554,7 +547,7 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
             <dd className="min-w-0 text-text-secondary [overflow-wrap:anywhere]">{automated.cause}</dd>
           </div>
         ) : null}
-        {touchedDescription && !descriptionOnly ? (
+        {touchedDescription ? (
           <div className="contents">
             <dt className="text-text-muted">Description</dt>
             <dd className="text-text-secondary">updated</dd>
@@ -584,9 +577,7 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
           ? fileVerb
           : entry.rows.length === 1 && first.kind === 'sprint_changed'
             ? sprintVerb(first)
-            : descriptionOnly
-              ? 'updated the description'
-              : 'updated';
+            : 'updated';
 
   return (
     <li className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 py-3">
@@ -609,7 +600,9 @@ function ActivityEntry({ entry, last, calendar, nameOf, fieldOf, ...context }: A
             </>
           ) : (
             <span className="inline-flex items-center gap-1.5">
-              {lifecycle?.kind === 'deleted' ? <Trash2 aria-hidden className="size-3.5 text-text-muted" /> : null}
+              {lifecycle?.kind === 'deleted' || lifecycle?.kind === 'comment_deleted' ? (
+                <Trash2 aria-hidden className="size-3.5 text-text-muted" />
+              ) : null}
               {lifecycle?.kind === 'restored' ? <RotateCcw aria-hidden className="size-3.5 text-text-muted" /> : null}
               {verb}
             </span>

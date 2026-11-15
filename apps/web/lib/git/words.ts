@@ -36,7 +36,7 @@ export const PR_STATE: Record<GitPullRequestState, { label: string; hue: Hue }> 
   open: { label: 'Open', hue: 'gray' },
   draft: { label: 'Draft', hue: 'gray' },
   merged: { label: 'Merged', hue: 'blue' },
-  closed: { label: 'Closed', hue: 'red' },
+  closed: { label: 'Closed', hue: 'gray' },
 };
 
 export const CI_STATE: Record<GitCiState, { label: string; hue: Hue }> = {
@@ -62,7 +62,8 @@ export const REVIEWER_STATE: Record<GitReviewerState, { label: string; hue: Hue 
 };
 
 export function checkTone(status: GitCheckStatus, conclusion: GitCheckConclusion | null): { label: string; hue: Hue } {
-  if (status !== 'completed') return { label: status === 'queued' ? 'Queued' : 'Running', hue: 'amber' };
+  if (status === 'queued') return { label: 'Queued', hue: 'gray' };
+  if (status !== 'completed') return { label: 'Running', hue: 'amber' };
   switch (conclusion) {
     case 'success':
       return { label: 'Passed', hue: 'green' };

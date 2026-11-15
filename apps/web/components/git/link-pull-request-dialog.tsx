@@ -93,7 +93,7 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
           Cancel
         </Button>
         <PendingButton type="submit" disabled={url.trim() === ''} pending={link.isPending} pendingLabel="Linking…">
-          Link pull request
+          Link
         </PendingButton>
       </DialogFooter>
     </form>

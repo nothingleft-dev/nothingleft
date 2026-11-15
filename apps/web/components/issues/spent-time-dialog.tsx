@@ -347,7 +347,7 @@ function SpentTimeForm({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="-ml-2 self-start text-brand-text hover:text-brand-text"
+                className="-ml-2 self-start text-text-secondary"
                 disabled={rows.length >= WORK_ITEM_MAX_RECORDS}
                 onClick={() => setRows(current => [...current, newRow(mode === 'single' ? today : null)])}
               >
@@ -397,6 +397,9 @@ function SpentTimeForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
+          <span aria-hidden className="text-sm font-medium text-text-secondary">
+            Note <span className="font-normal text-text-muted">(optional)</span>
+          </span>
           <MarkdownEditor
             value={note}
             onChange={next => {

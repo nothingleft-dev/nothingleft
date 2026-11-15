@@ -211,8 +211,7 @@ epic shows the whole effort beneath it. Deleting a subtask takes its time off th
 restoring it brings the time back. Moving a subtask to a new parent moves its time too.
 
 The **Spent time** tab lists every record, the subtasks' included (each marked with its
-subtask's key), with the total at the top (and how far over the estimate it is, in red). Each
-record's type and attributes show as letters, one column each; hover a letter for its name. You
+subtask's key), with the total at the top (and how far over the estimate it is, in red). Each record's type and attributes show as letters, one column each, with the column names above them; a dash means the record has none. Hover a letter for its value. You
 can edit or delete your own records;
 Project Admins can edit or delete anyone's, and change whose time a record is. Deleting
 asks first, because a deleted record cannot be brought back. Every addition, change and

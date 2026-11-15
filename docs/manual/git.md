@@ -103,8 +103,7 @@ never brings it back, but a new one does (a later commit naming the issue, say).
 Authors show as members when the server can tell who they are: by their GitHub account if they sign
 in with GitHub, by a commit email they have verified, or by an identity they claimed. Otherwise
 the provider's login shows, marked *Not linked to a member*. When that login reads like your own
-name, the card offers *This is me*, which claims it, and *Not me*, which hides the offer in this
-browser.
+name, the card asks whether that login is you: *This is me* claims it, *Not me* hides the question in this browser.
 
 To have your work show as yours, add your **git identities** in your account settings:
 

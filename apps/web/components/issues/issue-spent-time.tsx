@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { MoreHorizontal, Pencil, Timer, Trash2 } from 'lucide-react';
@@ -66,33 +66,36 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   }
 
   const header = (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-xs text-text-secondary">
-      <span>
-        Total{' '}
-        <b className="font-mono text-sm font-medium tabular text-text">
-          {issue.spent_minutes > 0 ? formatDuration(issue.spent_minutes, calendar) : '0m'}
-        </b>
-      </span>
-      {issue.estimate_minutes !== null ? (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 text-xs text-text-secondary">
+      <p className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 sm:gap-x-2">
         <span>
-          of <Duration minutes={issue.estimate_minutes} calendar={calendar} className="text-text" /> estimated
-          {over > 0 ? (
-            <span className="text-danger-fg">
-              {' · '}
-              <Duration minutes={over} calendar={calendar} /> over
-            </span>
+          Total <Duration minutes={issue.spent_minutes} calendar={calendar} className="text-sm font-medium text-text" />
+          {issue.estimate_minutes !== null ? (
+            <>
+              {' '}
+              of <Duration minutes={issue.estimate_minutes} calendar={calendar} className="text-text" /> estimated
+            </>
           ) : null}
         </span>
-      ) : null}
-      <span className="text-text-muted">{plural(total, 'record')}</span>
+        {over > 0 ? (
+          <>
+            <Dot />
+            <span className="text-danger-fg">
+              <Duration minutes={over} calendar={calendar} /> over
+            </span>
+          </>
+        ) : null}
+        <Dot />
+        <span>{plural(total, 'record')}</span>
+      </p>
       {canLog ? (
-        <Button size="sm" variant="outline" className="ml-auto max-sm:size-8 max-sm:px-0" onClick={onLogTime}>
-          <Timer />
-          <span className="max-sm:sr-only">Add spent time</span>
+        <Button size="sm" variant="outline" className="sm:ml-auto" onClick={onLogTime}>
+          <Timer /> Add spent time
         </Button>
       ) : null}
     </div>
   );
+  const legend = slots.map(slot => (slot === TYPE_SLOT ? 'Type' : slot)).join(' · ');
 
   if (rows.length === 0) {
     return (
@@ -118,6 +121,11 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   return (
     <>
       {header}
+      {legend ? (
+        <p aria-hidden className="pb-1.5 text-2xs text-text-muted max-sm:pl-9 sm:pr-[7.5rem] sm:text-right">
+          {legend}
+        </p>
+      ) : null}
       <ol className="divide-y divide-border-subtle border-y">
         {rows.map(row => (
           <SpentTimeRow
@@ -126,6 +134,7 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
             ownIssue={row.issue === issue.key}
             slots={slots}
             durationText={formatDuration(row.duration_minutes, calendar)}
+            duration={<Duration minutes={row.duration_minutes} calendar={calendar} />}
             onEdit={() => setEditing(row)}
           />
         ))}
@@ -160,6 +169,23 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
 
 const TYPE_SLOT = '';
 
+// A wrapped line on a phone would start or end on the dot; the wider gap separates there.
+function Dot() {
+  return (
+    <span aria-hidden className="text-text-muted max-sm:hidden">
+      ·
+    </span>
+  );
+}
+
+function EmptySlot() {
+  return (
+    <span aria-hidden className="grid size-badge-letter flex-none place-items-center">
+      <i className="h-px w-1.5 bg-border-strong" />
+    </span>
+  );
+}
+
 /** One column per attribute any row carries, so each attribute's letter sits at the same x on every row. */
 function badgeSlots(rows: WorkItem[]): string[] {
   const names = new Set<string>();
@@ -172,10 +198,11 @@ interface SpentTimeRowProps {
   ownIssue: boolean;
   slots: string[];
   durationText: string;
+  duration: ReactNode;
   onEdit: () => void;
 }
 
-function SpentTimeRow({ item, ownIssue, slots, durationText, onEdit }: SpentTimeRowProps) {
+function SpentTimeRow({ item, ownIssue, slots, durationText, duration, onEdit }: SpentTimeRowProps) {
   const onBehalf = item.created_by.username !== item.author.username;
   return (
     <li className="group/record grid grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3 py-2.5 max-sm:grid-cols-[24px_minmax(0,1fr)]">
@@ -205,19 +232,17 @@ function SpentTimeRow({ item, ownIssue, slots, durationText, onEdit }: SpentTime
                 variant="outlined"
               />
             ) : (
-              <span key="type" aria-hidden className="size-badge-letter flex-none" />
+              <EmptySlot key="type" />
             );
           }
           const value = item.attributes.find(a => a.attribute === slot)?.value;
           return value ? (
             <LetterBadge key={slot} letter={value.short_label} label={`${slot}: ${value.name}`} variant="outlined" />
           ) : (
-            <span key={slot} aria-hidden className="size-badge-letter flex-none" />
+            <EmptySlot key={slot} />
           );
         })}
-        <span className="text-right font-mono text-xs font-medium whitespace-nowrap tabular max-sm:ml-auto sm:w-20">
-          {durationText}
-        </span>
+        <span className="text-right text-xs font-medium whitespace-nowrap max-sm:ml-auto sm:w-20">{duration}</span>
         <RecordMenu item={item} durationText={durationText} onEdit={onEdit} />
       </div>
       {item.description_md.trim() ? (
