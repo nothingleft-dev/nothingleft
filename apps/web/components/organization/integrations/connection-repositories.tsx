@@ -17,7 +17,6 @@ import { EmptyState } from '@components/empty-state';
 import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { HueDot } from '@components/git/git-marks';
-import { ProviderGlyph } from '@components/git/provider-glyph';
 import {
   GIT_PAGE,
   useGitRepositories,
@@ -68,10 +67,11 @@ export function ConnectionRepositories({
   const total = repositories.data?.meta.pagination?.total ?? rows.length;
   const nothingToSearch = !q && !query && repositories.data !== undefined && total === 0;
   const provider = providerLabel(connection.provider);
+  const viaApp = connection.auth_kind === 'app_installation';
 
   return (
     <div className="flex flex-col gap-3">
-      <div className={cn('relative max-w-xs', nothingToSearch && 'hidden')}>
+      <div className={cn('relative max-w-xs max-sm:max-w-none', nothingToSearch && 'hidden')}>
         <Search aria-hidden className="absolute top-1/2 left-2.5 size-icon-sm -translate-y-1/2 text-text-muted" />
         <Input
           value={q}
@@ -129,29 +129,37 @@ export function ConnectionRepositories({
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full min-w-[820px] table-fixed text-sm">
-            <thead className="bg-app text-left text-2xs text-text-secondary">
-              <tr>
-                <th className="h-7 px-3 font-medium">Repository</th>
-                <th className={cn('px-3 font-medium', COLUMNS[1])}>Linked to</th>
-                <th className={cn('px-3 font-medium', COLUMNS[2])}>Webhook</th>
-                <th className={cn('px-3 font-medium', COLUMNS[3])}>Last event</th>
-                <th className={cn('px-3', COLUMNS[4])} aria-label="Actions" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle">
-              {rows.map(repository => (
-                <RepositoryRow
-                  key={repository.full_name}
-                  slug={slug}
-                  repository={repository}
-                  onDeliveries={() => onDeliveries(repository.full_name)}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {viaApp ? (
+            <p className="text-xs text-text-secondary">
+              Deliveries come through the {provider} app, so no repository needs a webhook of its own.
+            </p>
+          ) : null}
+          <div className="rounded-md border sm:overflow-x-auto">
+            <table className="w-full table-fixed text-sm max-sm:block sm:min-w-[720px]">
+              <thead className="bg-app text-left text-2xs text-text-secondary max-sm:hidden">
+                <tr>
+                  <th className="h-7 px-3 font-medium">Repository</th>
+                  <th className={cn('px-3 font-medium', COLUMNS[1])}>Linked to</th>
+                  {viaApp ? null : <th className={cn('px-3 font-medium', COLUMNS[2])}>Webhook</th>}
+                  <th className={cn('px-3 font-medium', COLUMNS[3])}>Last event</th>
+                  <th className={cn('px-3', COLUMNS[4])} aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle max-sm:block">
+                {rows.map(repository => (
+                  <RepositoryRow
+                    key={repository.full_name}
+                    slug={slug}
+                    repository={repository}
+                    showWebhook={!viaApp}
+                    onDeliveries={() => onDeliveries(repository.full_name)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {total > GIT_PAGE ? (
@@ -180,13 +188,21 @@ export function ConnectionRepositories({
   );
 }
 
+const NONE = (
+  <span className="text-xs text-text-muted" title="None">
+    –
+  </span>
+);
+
 function RepositoryRow({
   slug,
   repository,
+  showWebhook,
   onDeliveries,
 }: {
   slug: string;
   repository: GitRepository;
+  showWebhook: boolean;
   onDeliveries: () => void;
 }) {
   const resync = useResyncGitRepository(slug);
@@ -195,10 +211,15 @@ function RepositoryRow({
   const dim = repository.removed || repository.is_archived;
 
   return (
-    <tr className={cn('h-11 align-middle', dim && 'text-text-muted')}>
-      <td className="px-3">
+    <tr
+      className={cn(
+        'group/repo h-11 align-middle',
+        'max-sm:grid max-sm:h-auto max-sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] max-sm:items-center max-sm:gap-x-4 max-sm:gap-y-1 max-sm:py-2 max-sm:pr-1 max-sm:pl-3 max-sm:[&>td]:px-0',
+        dim && 'text-text-muted',
+      )}
+    >
+      <td className="px-3 max-sm:col-span-3">
         <div className="flex min-w-0 items-center gap-2">
-          <ProviderGlyph provider={repository.provider} className="text-text-muted" />
           <a
             href={repository.html_url}
             target="_blank"
@@ -229,58 +250,69 @@ function RepositoryRow({
               </Link>
             ))}
             {repository.match_all_projects ? (
-              <span className="inline-flex h-5 items-center text-2xs leading-4 text-text-secondary">
-                · every project
-              </span>
-            ) : null}
-          </span>
-        ) : repository.removed ? (
-          <span className="text-xs text-text-muted">—</span>
-        ) : (
-          <LinkToProject repository={repository} />
-        )}
-      </td>
-      <td className="px-3">
-        {repository.projects.length === 0 && repository.webhook_status === 'missing' ? (
-          <span className="text-xs text-text-muted" title="Not needed until the repository is linked">
-            —
-          </span>
-        ) : (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 text-xs',
-              webhook.hue === 'red'
-                ? 'text-danger-fg'
-                : webhook.hue === 'amber'
-                  ? 'text-warning-fg'
-                  : 'text-text-secondary',
-            )}
-          >
-            <HueDot hue={webhook.hue} />
-            {webhook.label}
-            {repository.webhook_last_status_code !== null ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="cursor-help font-mono text-2xs text-text-muted">
-                    {repository.webhook_last_status_code}
+                  <span className="inline-flex h-5 cursor-help items-center rounded-sm border px-1 text-2xs leading-4 text-text-secondary">
+                    All projects
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={8}>
-                  The provider’s HTTP status on its last delivery
+                  Its commits and pull requests can name an issue in any project
                 </TooltipContent>
               </Tooltip>
             ) : null}
           </span>
+        ) : dim ? (
+          NONE
+        ) : (
+          <LinkToProject repository={repository} />
         )}
       </td>
+      {showWebhook ? (
+        <td className="px-3">
+          {repository.projects.length === 0 && repository.webhook_status === 'missing' ? (
+            <span className="text-xs text-text-muted" title="Not needed until the repository is linked">
+              –
+            </span>
+          ) : (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 text-xs',
+                webhook.hue === 'red'
+                  ? 'text-danger-fg'
+                  : webhook.hue === 'amber'
+                    ? 'text-warning-fg'
+                    : 'text-text-secondary',
+              )}
+            >
+              <HueDot hue={webhook.hue} />
+              {webhook.label}
+              {repository.webhook_last_status_code !== null ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help font-mono text-2xs text-text-muted">
+                      {repository.webhook_last_status_code}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={8}>
+                    The provider’s HTTP status on its last delivery
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+            </span>
+          )}
+        </td>
+      ) : null}
       <td className="px-3">
         {repository.last_event_at ? (
           <RelativeTime value={repository.last_event_at} className="text-xs whitespace-nowrap" />
         ) : (
-          <span className="text-xs text-text-muted">None yet</span>
+          <span className="text-xs text-text-muted" title="Nothing has arrived from this repository yet">
+            –
+          </span>
         )}
       </td>
-      <td className="px-3 text-right">
+      <td className="px-3 text-right max-sm:col-start-4 max-sm:row-span-2 max-sm:row-start-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -324,7 +356,7 @@ function RepositoryRow({
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onSelect={onDeliveries}>
-              <ScrollText /> Show deliveries
+              <ScrollText /> Delivery log
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -342,7 +374,12 @@ function LinkToProject({ repository }: { repository: GitRepository }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="xs" className="-ml-2 text-text-secondary" disabled={link.isPending}>
+        <Button
+          variant="ghost"
+          size="xs"
+          className="-ml-2 font-normal text-text-secondary group-hover/repo:text-text"
+          disabled={link.isPending}
+        >
           <Plus /> Link to project
         </Button>
       </PopoverTrigger>
@@ -400,7 +437,7 @@ function RepositoriesSkeleton() {
         className="min-w-[820px]"
         rows={4}
         rowClassName="h-11"
-        columns={COLUMNS.map(className => (className ? { className } : {}))}
+        columns={COLUMNS.map(className => (className ? { className: `${className} *:max-w-full` } : {}))}
       />
     </div>
   );

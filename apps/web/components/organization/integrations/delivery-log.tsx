@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ExternalLink, RotateCcw } from 'lucide-react';
+import { ChevronRight, ExternalLink, RotateCcw, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import type { GitConnection, GitEventStatus, GitWebhookEvent } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -70,8 +70,8 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
       <SheetHeader className="border-b px-5 py-4">
         <SheetTitle>Delivery log</SheetTitle>
         <SheetDescription>
-          Every webhook {connection.account.login} on {providerLabel(connection.provider)} delivered
-          {repository ? ` for ${repository}` : ''} in the last 7 days, and what was done with it.
+          Webhooks from {connection.account.login} on {providerLabel(connection.provider)}
+          {repository ? ` for ${repository}` : ''} in the last 7&nbsp;days, and what was done with each.
         </SheetDescription>
       </SheetHeader>
       {failed ? null : (
@@ -114,7 +114,9 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
               }
               description={
                 filter === 'all'
-                  ? 'A push, a pull request or a check on a linked repository arrives here within seconds.'
+                  ? connection.redelivery_url
+                    ? 'A push, a pull request or a check on a linked repository arrives here within seconds.'
+                    : `A push, a pull request or a check on a linked repository arrives here within seconds. One ${providerLabel(connection.provider)} never sent can be redelivered from the repository’s webhook settings there.`
                   : undefined
               }
               action={
@@ -175,6 +177,7 @@ function EventRow({ slug, event }: { slug: string; event: GitWebhookEvent }) {
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
         className="grid w-full grid-cols-[14px_92px_minmax(0,1fr)_auto] items-start gap-x-3 px-5 py-2 text-left hover:bg-hover"
+        title={!open && reason ? reason : undefined}
       >
         <span className="flex h-5 items-center">
           <ChevronRight
@@ -184,8 +187,8 @@ function EventRow({ slug, event }: { slug: string; event: GitWebhookEvent }) {
         </span>
         <JobStatus tone={TONE[event.status]} label={EVENT_STATUS[event.status]} className="text-xs leading-5" />
         <span className="flex min-w-0 flex-col">
-          <span className="flex min-w-0 items-center gap-2 text-sm leading-5">
-            <span className="font-mono text-xs">{event.event}</span>
+          <span className="flex min-w-0 items-center gap-3 text-sm leading-5">
+            <span className="w-28 flex-none truncate font-mono text-xs max-sm:w-auto">{event.event}</span>
             {event.repository ? <span className="truncate text-text-secondary">{event.repository}</span> : null}
           </span>
           {reason ? (
@@ -281,9 +284,9 @@ function EventDetail({ slug, event }: { slug: string; event: GitWebhookEvent }) 
           </Label>
         </div>
         {runAutomations ? (
-          <p className="w-full text-xs text-warning-fg">
-            Rules may change issue statuses again. Only what this delivery changes counts: a pull request already
-            recorded as merged does not count as merged twice. Needs Project Admin in every project it touches.
+          <p className="flex w-full items-start gap-1.5 text-xs text-text-secondary">
+            <TriangleAlert aria-hidden className="mt-0.5 size-3 flex-none text-warning-fg" />
+            Rules run again for this delivery only. Needs Project Admin in each project it touches.
           </p>
         ) : null}
       </div>

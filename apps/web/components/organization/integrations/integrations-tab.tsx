@@ -4,7 +4,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
-import { ArrowLeft, ChevronRight, KeyRound, MoreHorizontal, RefreshCw, ScrollText, Unlink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, KeyRound, MoreHorizontal, RefreshCw, ScrollText, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   PLAN_PRESETS,
@@ -51,7 +51,7 @@ import {
   useRotateGitSecret,
   useStartGitHubConnect,
 } from '@hooks/use-git';
-import { CONNECTION_REASON, HEALTH, count, providerLabel } from '@lib/git/words';
+import { CONNECTION_REASON, HEALTH, capitalize, count, providerLabel, type Hue } from '@lib/git/words';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
@@ -89,7 +89,6 @@ export function IntegrationsTab({ organization }: { organization: Organization }
   const limit = PLAN_PRESETS[organization.plan].git_connections;
   const atLimit = limit !== null && live.length >= limit;
   const failed = <T,>(query: UseQueryResult<T>) => query.isError && query.data === undefined;
-  const nothingLoaded = failed(connections) && failed(providers) && failed(identities);
 
   const deliveryLog = (
     <DeliveryLog
@@ -141,7 +140,7 @@ export function IntegrationsTab({ organization }: { organization: Organization }
   const connectDescription =
     limit === null
       ? 'Connect as many GitHub and GitLab accounts as you need.'
-      : `Connect as many accounts as your plan allows (${planLabel}: ${limit}).`;
+      : `${planLabel} allows ${count(limit, 'connection')}. Each GitHub or GitLab account you connect is one.`;
 
   // The list decides the height of everything under it, so the tab appears in one piece.
   if (connections.isPending) {
@@ -157,21 +156,6 @@ export function IntegrationsTab({ organization }: { organization: Organization }
           <IdentitiesSkeleton />
         </SettingsSection>
       </div>
-    );
-  }
-
-  if (nothingLoaded) {
-    return (
-      <LoadError
-        onRetry={() => {
-          void connections.refetch();
-          void providers.refetch();
-          void identities.refetch();
-        }}
-        detail={errorDetail(connections.error)}
-      >
-        The integrations could not be loaded.
-      </LoadError>
     );
   }
 
@@ -207,16 +191,12 @@ export function IntegrationsTab({ organization }: { organization: Organization }
 
       <SettingsSection title="Connect an account" description={connectDescription}>
         {atLimit ? (
-          <p id="git-connection-limit" className="rounded-md border bg-app px-3 py-2.5 text-sm text-text-secondary">
-            {live.length > limit
-              ? `${live.length} connections in use; ${planLabel} allows ${limit}.`
-              : `${live.length} of ${limit} connections used on ${planLabel}.`}{' '}
-            Disconnect one to connect another, or{' '}
-            <Link href={PLAN_TAB} className="action-link text-text">
-              see the plan
-            </Link>
-            .
-          </p>
+          <div id="git-connection-limit">
+            <FormAlert tone="warning" title={`${live.length} of ${limit} connections in use on ${planLabel}.`}>
+              Disconnect {live.length > limit ? live.length - limit + 1 : 'one'} to connect another, or{' '}
+              <Link href={PLAN_TAB}>see the plan</Link>.
+            </FormAlert>
+          </div>
         ) : null}
         {providers.isPending ? (
           <ProvidersSkeleton />
@@ -226,12 +206,11 @@ export function IntegrationsTab({ organization }: { organization: Organization }
           </LoadError>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {providers.data.map((provider, i) => (
+            {providers.data.map(provider => (
               <ProviderCard
                 key={provider.kind}
                 slug={slug}
                 provider={provider}
-                primary={live.length === 0 && i === 0}
                 blocked={atLimit}
                 onConnect={setConnecting}
               />
@@ -252,13 +231,21 @@ const CONNECTED_DESCRIPTION =
 const IDENTITIES_DESCRIPTION =
   'Logins and verified emails members have added, so commits and pull requests show under their name. Attribution only, never sign-in.';
 
+type Severity = 'stopped' | 'at_risk' | 'healthy';
+
+function severityOf(connection: GitConnection): Severity {
+  if (connection.health === 'active') return connection.repositories.webhooks_missing > 0 ? 'at_risk' : 'healthy';
+  return connection.health === 'expiring' ? 'at_risk' : 'stopped';
+}
+
+const SEVERITY_RANK: Record<Severity, number> = { stopped: 2, at_risk: 1, healthy: 0 };
+
 function severity(connection: GitConnection): number {
-  if (connection.health === 'active') return connection.repositories.webhooks_missing > 0 ? 1 : 0;
-  return HEALTH[connection.health].hue === 'red' ? 3 : 2;
+  return SEVERITY_RANK[severityOf(connection)];
 }
 
 function AttentionSummary({ connections }: { connections: GitConnection[] }) {
-  const stopped = connections.filter(c => c.health !== 'active' && c.health !== 'expiring');
+  const stopped = connections.filter(c => severityOf(c) === 'stopped');
   const expiring = connections.filter(c => c.health === 'expiring');
   if (stopped.length === 0 && expiring.length === 0) return null;
 
@@ -284,65 +271,174 @@ function AttentionSummary({ connections }: { connections: GitConnection[] }) {
   );
 }
 
-function rowReason(connection: GitConnection): string | null {
-  if (connection.health === 'active') return null;
-  if (connection.health === 'expiring') return 'Replace the token before it expires, or new activity stops arriving.';
-  if (connection.health === 'removed_at_provider') return 'Removed at the provider. Nothing new arrives.';
-  const reason = connection.last_error ? CONNECTION_REASON[connection.last_error] : null;
-  return reason ? `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.` : 'New activity may not be arriving.';
+type FixAction = { kind: 'rotate' } | { kind: 'log' } | { kind: 'external'; href: string; label: string };
+
+interface Fix {
+  problem: string;
+  remedy: string;
+  action?: FixAction;
 }
 
-function attentionSentence(connection: GitConnection): string {
-  if (connection.health === 'expiring' && connection.token_expires_at) {
-    return `Its access token expires ${formatDate(connection.token_expires_at)}. Replace it before then, or new activity stops arriving.`;
+/** What went wrong and what to do about it, in one line under the row and in the detail's alert. */
+function fixFor(connection: GitConnection): Fix | null {
+  const provider = providerLabel(connection.provider);
+  const reconnect = `Make a new token on ${provider}, then disconnect and reconnect with it.`;
+  const rotate: FixAction = { kind: 'rotate' };
+  const settings: FixAction = {
+    kind: 'external',
+    href: connection.redelivery_url ?? connection.account.url,
+    label: `Open ${provider}`,
+  };
+
+  if (connection.health === 'active') {
+    const missing = connection.repositories.webhooks_missing;
+    return missing > 0
+      ? {
+          problem: `${count(missing, 'linked repository has', 'linked repositories have')} no webhook.`,
+          remedy: `Choose Re-register webhook in ${missing === 1 ? 'its' : 'each one’s'} menu, under the connection’s repositories.`,
+        }
+      : null;
   }
-  if (connection.health === 'removed_at_provider')
-    return 'It was removed at the provider. What is linked stays; nothing new arrives.';
-  const reason = connection.last_error ? CONNECTION_REASON[connection.last_error] : null;
-  return reason
-    ? `${reason.charAt(0).toUpperCase()}${reason.slice(1)}. What is linked stays; new activity stops arriving until it is fixed.`
-    : 'New activity may not be arriving.';
+  if (connection.health === 'expiring') {
+    return {
+      problem: connection.token_expires_at
+        ? `Its access token expires ${formatDate(connection.token_expires_at)}.`
+        : 'Its access token expires soon.',
+      remedy: `Before then, make a new token on ${provider} and reconnect with it.`,
+    };
+  }
+  if (connection.health === 'removed_at_provider') {
+    return {
+      problem: `The account no longer exists on ${provider}.`,
+      remedy: 'Disconnect it from the menu; what is already linked stays.',
+    };
+  }
+  if (connection.health === 'suspended' || connection.last_error === 'suspended') {
+    return {
+      problem: `The app was suspended on ${provider}.`,
+      remedy: 'Unsuspend it in the installation’s settings there.',
+      action: settings,
+    };
+  }
+  switch (connection.last_error) {
+    case 'signature':
+      return {
+        problem: 'Deliveries fail the signature check.',
+        remedy:
+          connection.auth_kind === 'manual'
+            ? 'Rotate the webhook secret and paste the new one into each webhook.'
+            : 'Rotate the webhook secrets; each webhook gets its new one.',
+        action: rotate,
+      };
+    case 'processing':
+      return {
+        problem: 'Deliveries keep failing to process.',
+        remedy: 'The delivery log says why each one failed.',
+        action: { kind: 'log' },
+      };
+    case 'token_expired':
+      return { problem: 'Its access token has expired.', remedy: reconnect };
+    case 'token_invalid':
+      return { problem: `${provider} refused its access token.`, remedy: reconnect };
+    case 'uninstalled':
+      return {
+        problem: `The app was uninstalled on ${provider}.`,
+        remedy: 'Install it again and connect, or disconnect this connection.',
+      };
+    default: {
+      const reason = connection.last_error ? CONNECTION_REASON[connection.last_error] : null;
+      return {
+        problem: reason ? `${capitalize(reason)}.` : 'New activity may not be arriving.',
+        remedy: 'The delivery log shows the latest failures.',
+        action: { kind: 'log' },
+      };
+    }
+  }
 }
+
+const FIX_TONE: Record<Severity, string> = { stopped: 'text-danger-fg', at_risk: 'text-warning-fg', healthy: '' };
+
+interface FixProps {
+  connection: GitConnection;
+  fix: Fix;
+  onRotate: () => void;
+  onLog: () => void;
+}
+
+function FixLine(props: FixProps) {
+  return (
+    <p className="max-w-[80ch] text-xs text-pretty text-text">
+      <span className={cn('font-medium', FIX_TONE[severityOf(props.connection)])}>{props.fix.problem}</span>{' '}
+      <FixRemedy {...props} />
+    </p>
+  );
+}
+
+function FixRemedy({ connection, fix, onRotate, onLog }: FixProps) {
+  const action = fix.action;
+  const rotateLabel = connection.auth_kind === 'manual' ? 'Rotate webhook secret' : 'Rotate webhook secrets';
+  return (
+    <>
+      {fix.remedy}
+      {action ? ' ' : null}
+      {action?.kind === 'external' ? (
+        <a
+          href={action.href}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="action-link inline-flex items-center gap-0.5 font-medium whitespace-nowrap"
+        >
+          {action.label}
+          <ExternalLink aria-hidden className="size-3" />
+        </a>
+      ) : action ? (
+        <button
+          type="button"
+          onClick={action.kind === 'rotate' ? onRotate : onLog}
+          className="action-link font-medium whitespace-nowrap"
+        >
+          {action.kind === 'rotate' ? rotateLabel : 'Delivery log'}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
+const HEALTH_HUE: Record<Severity, Hue> = { stopped: 'red', at_risk: 'amber', healthy: 'gray' };
 
 /** Healthy connections carry no chip: colour only where something is wrong. */
 function HealthChip({ connection }: { connection: GitConnection }) {
-  if (connection.health === 'active') {
-    return connection.repositories.webhooks_missing > 0 ? <HueChip hue="amber">Needs attention</HueChip> : null;
-  }
-  const { label, hue } = HEALTH[connection.health];
+  const level = severityOf(connection);
+  if (level === 'healthy') return null;
+  if (connection.health === 'active') return <HueChip hue="amber">Needs attention</HueChip>;
   const text =
     connection.health === 'expiring' && connection.token_expires_at
       ? `Expires ${formatDate(connection.token_expires_at)}`
-      : label;
-  return <HueChip hue={hue}>{text}</HueChip>;
+      : HEALTH[connection.health].label;
+  return <HueChip hue={HEALTH_HUE[level]}>{text}</HueChip>;
 }
 
+/** Each part keeps its separator on its own line, so a wrapped line never ends in a dangling dot. */
 function Separated({ parts, className }: { parts: ReactNode[]; className?: string }) {
   return (
     <span className={cn('flex flex-wrap items-center gap-x-1.5', className)}>
       {parts.map((part, i) => (
-        <Fragment key={i}>
+        <span key={i} className="inline-flex items-center gap-x-1.5 whitespace-nowrap">
           {i > 0 ? (
             <span aria-hidden className="text-text-muted">
               ·
             </span>
           ) : null}
           {part}
-        </Fragment>
+        </span>
       ))}
     </span>
   );
 }
 
 function webhookPart(connection: GitConnection): ReactNode {
-  const { webhooks_missing } = connection.repositories;
-  if (webhooks_missing > 0) {
-    return (
-      <span className="font-medium text-warning-fg">
-        Webhook missing on {count(webhooks_missing, 'repository', 'repositories')}
-      </span>
-    );
-  }
+  if (connection.repositories.webhooks_missing > 0) return null;
+  if (connection.health !== 'active' && connection.health !== 'expiring') return null;
   return connection.auth_kind === 'app_installation' ? 'Delivered by the app' : 'Webhooks active';
 }
 
@@ -359,11 +455,12 @@ function ConnectionRow({
   onLog: () => void;
   onRotated: (connection: GitConnectionSecret) => void;
 }) {
+  const [confirm, setConfirm] = useState<MenuConfirm | null>(null);
   const { known, linked } = connection.repositories;
-  const reason = rowReason(connection);
+  const fix = fixFor(connection);
   const parts: ReactNode[] = [
     <span key="known" className="tabular">
-      {known} known
+      {count(known, 'repository', 'repositories')}
     </span>,
     <span key="linked" className="tabular">
       {linked} linked
@@ -376,8 +473,8 @@ function ConnectionRow({
     ) : (
       <span key="last">no delivery yet</span>
     ),
-  ];
-  if (connection.token_expires_at && connection.health !== 'expiring') {
+  ].filter(part => part !== null);
+  if (connection.token_expires_at && connection.health !== 'expiring' && connection.health !== 'token_expired') {
     parts.push(
       <span key="token" title={formatDateTimeWithZone(connection.token_expires_at)}>
         token until {formatDate(connection.token_expires_at)}
@@ -385,29 +482,39 @@ function ConnectionRow({
     );
   }
   return (
-    <li className="flex items-center gap-3 px-3 py-3">
-      <button type="button" onClick={onOpen} className="group/row flex min-w-0 flex-1 items-start gap-3 text-left">
-        <ConnectionMark connection={connection} />
-        <span className="flex min-w-0 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="min-w-0 font-medium [overflow-wrap:anywhere] group-hover/row:underline">
-              {connection.account.login}
-            </span>
-            <span className="text-xs text-text-secondary">
-              {providerLabel(connection.provider)} · {AUTH_KIND[connection.auth_kind]}
-            </span>
-            <HealthChip connection={connection} />
+    <li className="group/row relative flex items-start gap-3 px-3 py-3 hover:bg-hover">
+      <ConnectionMark connection={connection} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="min-w-0 text-left font-medium [overflow-wrap:anywhere] group-hover/row:underline after:absolute after:inset-0 focus-visible:shadow-none focus-visible:after:shadow-(--focus-ring)"
+          >
+            {connection.account.login}
+          </button>
+          <span className="text-xs text-text-secondary">
+            {providerLabel(connection.provider)} · {AUTH_KIND[connection.auth_kind]}
           </span>
-          <Separated parts={parts} className="text-xs text-text-secondary" />
-          {reason ? (
-            <span className={cn('text-xs', connection.health === 'expiring' ? 'text-warning-fg' : 'text-danger-fg')}>
-              {reason}
-            </span>
-          ) : null}
+          <HealthChip connection={connection} />
         </span>
-      </button>
-      <ConnectionMenu slug={slug} connection={connection} onLog={onLog} onRotated={onRotated} />
-      <ChevronRight aria-hidden className="size-icon-sm text-text-muted" />
+        <Separated parts={parts} className="text-xs text-text-secondary" />
+        {fix ? (
+          <div className="relative z-10 self-start">
+            <FixLine connection={connection} fix={fix} onRotate={() => setConfirm('rotate')} onLog={onLog} />
+          </div>
+        ) : null}
+      </div>
+      <div className="relative z-10 -my-1.5 flex-none">
+        <ConnectionMenu
+          slug={slug}
+          connection={connection}
+          onLog={onLog}
+          onRotated={onRotated}
+          confirm={confirm}
+          onConfirmChange={setConfirm}
+        />
+      </div>
     </li>
   );
 }
@@ -425,18 +532,23 @@ function ConnectionMark({ connection }: { connection: GitConnection }) {
   );
 }
 
+type MenuConfirm = 'remove' | 'rotate';
+
 function ConnectionMenu({
   slug,
   connection,
   onLog,
   onRotated,
+  confirm,
+  onConfirmChange: setConfirm,
 }: {
   slug: string;
   connection: GitConnection;
   onLog: () => void;
   onRotated: (connection: GitConnectionSecret) => void;
+  confirm: MenuConfirm | null;
+  onConfirmChange: (confirm: MenuConfirm | null) => void;
 }) {
-  const [confirm, setConfirm] = useState<'remove' | 'rotate' | null>(null);
   const refresh = useRefreshGitConnection(slug);
   const rotate = useRotateGitSecret(slug);
   const remove = useRemoveGitConnection(slug);
@@ -474,7 +586,7 @@ function ConnectionMenu({
           </DropdownMenuItem>
           {canRotate ? (
             <DropdownMenuItem onSelect={() => setConfirm('rotate')}>
-              <KeyRound /> {manual ? 'Rotate secret' : 'Replace webhook secrets'}
+              <KeyRound /> {manual ? 'Rotate webhook secret' : 'Rotate webhook secrets'}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSeparator />
@@ -516,9 +628,9 @@ function ConnectionMenu({
       <ConfirmDialog
         open={confirm === 'rotate'}
         onOpenChange={value => setConfirm(value ? 'rotate' : null)}
-        title={manual ? 'Rotate the webhook secret?' : 'Replace the webhook secrets?'}
-        confirmLabel={manual ? 'Rotate secret' : 'Replace secrets'}
-        pendingLabel={manual ? 'Rotating…' : 'Replacing…'}
+        title={manual ? 'Rotate the webhook secret?' : 'Rotate the webhook secrets?'}
+        confirmLabel={manual ? 'Rotate webhook secret' : 'Rotate webhook secrets'}
+        pendingLabel="Rotating…"
         destructive={false}
         pending={rotate.isPending}
         onConfirm={() =>
@@ -528,12 +640,15 @@ function ConnectionMenu({
               if (result.auth_kind === 'manual' && result.webhook_secret) onRotated(result);
               else
                 toast.success(
-                  `Webhook secrets replaced at ${provider}. Open the connection to see any webhook it refused.`,
+                  `Webhook secrets rotated at ${provider}. Open the connection to see any webhook it refused.`,
                 );
             },
             onError: error => {
               setConfirm(null);
-              toastError(manual ? 'Could not rotate the secret' : 'Could not replace the webhook secrets', error);
+              toastError(
+                manual ? 'Could not rotate the webhook secret' : 'Could not rotate the webhook secrets',
+                error,
+              );
             },
           })
         }
@@ -560,20 +675,17 @@ function ConnectionMenu({
 function ProviderCard({
   slug,
   provider,
-  primary,
   blocked,
   onConnect,
 }: {
   slug: string;
   provider: GitProviderInfo;
-  primary: boolean;
   blocked: boolean;
   onConnect: (target: ConnectTarget) => void;
 }) {
   const start = useStartGitHubConnect(slug);
   const app = provider.connect_kind === 'app';
   const manual = provider.connect_kinds.includes('manual');
-  const variant = primary && !blocked ? 'default' : 'outline';
   const describedBy = blocked ? 'git-connection-limit' : undefined;
 
   const description =
@@ -595,7 +707,7 @@ function ProviderCard({
         {app ? (
           <PendingButton
             size="sm"
-            variant={variant}
+            variant="outline"
             disabled={blocked}
             aria-describedby={describedBy}
             onClick={() =>
@@ -609,7 +721,7 @@ function ProviderCard({
         ) : (
           <Button
             size="sm"
-            variant={variant}
+            variant="outline"
             disabled={blocked}
             aria-describedby={describedBy}
             onClick={() => onConnect({ provider, mode: provider.connect_kind === 'token' ? 'token' : 'manual' })}
@@ -671,7 +783,9 @@ function ConnectionDetail({
   onLog: (repository: string | null) => void;
   onRotated: (connection: GitConnectionSecret) => void;
 }) {
-  const reason = connection.health === 'active' ? null : attentionSentence(connection);
+  const [confirm, setConfirm] = useState<MenuConfirm | null>(null);
+  const fix = fixFor(connection);
+  const level = severityOf(connection);
   const meta: ReactNode[] = [providerLabel(connection.provider), AUTH_KIND[connection.auth_kind], connection.base_url];
   if (connection.created_by) {
     meta.push(
@@ -709,22 +823,35 @@ function ConnectionDetail({
               </p>
             ) : null}
           </div>
-          <div className="flex items-center gap-1 max-sm:col-start-2">
+          <div className="flex items-center gap-1 max-sm:col-span-2 max-sm:col-start-1">
             <Button variant="outline" size="sm" onClick={() => onLog(null)}>
               <ScrollText /> Delivery log
             </Button>
-            <ConnectionMenu slug={slug} connection={connection} onLog={() => onLog(null)} onRotated={onRotated} />
+            <ConnectionMenu
+              slug={slug}
+              connection={connection}
+              onLog={() => onLog(null)}
+              onRotated={onRotated}
+              confirm={confirm}
+              onConfirmChange={setConfirm}
+            />
           </div>
+          {connection.webhook_url ? (
+            <div className="col-start-2 max-sm:col-span-2 max-sm:col-start-1">
+              <PayloadUrl url={connection.webhook_url} />
+            </div>
+          ) : null}
         </div>
-        {reason ? (
-          <FormAlert
-            tone={connection.health === 'expiring' ? 'warning' : 'danger'}
-            title="This connection needs attention."
-          >
-            {reason}
+        {fix ? (
+          <FormAlert tone={level === 'stopped' ? 'danger' : 'warning'} title={fix.problem}>
+            <FixRemedy
+              connection={connection}
+              fix={fix}
+              onRotate={() => setConfirm('rotate')}
+              onLog={() => onLog(null)}
+            />
           </FormAlert>
         ) : null}
-        {connection.webhook_url ? <PayloadUrl url={connection.webhook_url} /> : null}
       </div>
       <SettingsSection
         title="Repositories"
@@ -738,9 +865,12 @@ function ConnectionDetail({
 
 function PayloadUrl({ url }: { url: string }) {
   return (
-    <div className="flex items-start gap-2 text-xs max-sm:flex-col max-sm:items-stretch">
-      <span className="flex-none leading-8 text-text-secondary max-sm:leading-5">Payload URL</span>
-      <code className="min-w-0 self-center rounded-xs bg-inset px-1.5 py-1 font-mono [overflow-wrap:anywhere] text-text max-sm:self-stretch">
+    <div className="flex items-center gap-2 text-xs">
+      <span className="flex-none text-text-secondary">Payload URL</span>
+      <code
+        title={url}
+        className="flex h-8 min-w-0 flex-1 items-center overflow-x-auto rounded-sm border bg-inset px-2 font-mono whitespace-nowrap text-text"
+      >
         {url}
       </code>
       <span className="flex-none">
@@ -777,7 +907,7 @@ function MemberIdentities({ slug, identities }: { slug: string; identities: UseQ
               <tr>
                 <th className={cn('h-7 px-3 font-medium', IDENTITY_COLUMNS[0])}>Member</th>
                 <th className={cn('px-3 font-medium', IDENTITY_COLUMNS[1])}>Identity</th>
-                <th className={cn('px-3 font-medium', IDENTITY_COLUMNS[2])}>How it counts</th>
+                <th className={cn('px-3 font-medium', IDENTITY_COLUMNS[2])}>Source</th>
                 <th className={cn('px-3 font-medium', IDENTITY_COLUMNS[3])}>Added</th>
                 <th className={cn('px-3', IDENTITY_COLUMNS[4])} aria-label="Actions" />
               </tr>

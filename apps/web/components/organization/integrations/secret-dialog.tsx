@@ -1,6 +1,6 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Square } from 'lucide-react';
 import type { GitConnectionSecret } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import {
@@ -30,8 +30,11 @@ function Value({ label, value, what }: { label: string; value: string; what: str
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <span className="text-sm font-medium text-text-secondary">{label}</span>
-      <div className="flex items-start gap-2">
-        <code className="min-h-8 min-w-0 flex-1 rounded-sm border bg-inset px-2 py-1.5 font-mono text-xs [overflow-wrap:anywhere]">
+      <div className="flex items-center gap-2">
+        <code
+          title={value}
+          className="flex h-8 min-w-0 flex-1 items-center overflow-x-auto rounded-sm border bg-inset px-2 font-mono text-xs whitespace-nowrap"
+        >
           {value}
         </code>
         <span className="flex-none">
@@ -70,7 +73,8 @@ export function SecretDialog({
             <div className="flex min-w-0 flex-col gap-4">
               {connection.webhook_secret ? (
                 <FormAlert tone="warning" title="This secret is shown once.">
-                  Copy it now. Nothing shows it again; a lost secret is replaced with Rotate secret.
+                  Copy it now. Nothing shows it again; a lost one is replaced with Rotate webhook secret in the
+                  connection’s menu.
                 </FormAlert>
               ) : null}
               {connection.webhook_url ? (
@@ -84,12 +88,12 @@ export function SecretDialog({
                   <p className="text-pretty">
                     In the repository’s <span className="text-text">Settings → Webhooks → Add webhook</span>: content
                     type <code className="font-mono text-xs text-text">application/json</code>, and under{' '}
-                    <span className="text-text">Let me select individual events</span>:
+                    <span className="text-text">Let me select individual events</span>, tick these:
                   </p>
                   <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-text max-sm:grid-cols-1">
                     {GITHUB_EVENTS.map(event => (
                       <li key={event} className="flex items-center gap-1.5">
-                        <Check aria-hidden className="size-3.5 flex-none text-text-secondary" />
+                        <Square aria-hidden className="size-3.5 flex-none text-text-secondary" />
                         {event}
                       </li>
                     ))}

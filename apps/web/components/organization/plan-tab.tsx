@@ -3,7 +3,6 @@
 import { PLAN_PRESETS, type Organization } from '@nothingleft/types';
 import { formatBytes } from '@nothingleft/format';
 import { SettingsSection } from '@components/settings/section';
-import { cn } from '@lib/utils';
 
 export const PLAN_LABELS: Record<keyof typeof PLAN_PRESETS, string> = {
   free: 'Free',
@@ -17,7 +16,6 @@ const limit = (value: number | null) => (value === null ? 'Unlimited' : String(v
 export function PlanTab({ organization }: { organization: Organization }) {
   const preset = PLAN_PRESETS[organization.plan];
   const { seats } = organization;
-  const share = seats.free === null ? 0 : Math.min(1, seats.used / seats.free);
 
   return (
     <div className="flex flex-col gap-5">
@@ -27,45 +25,34 @@ export function PlanTab({ organization }: { organization: Organization }) {
           <p className="text-sm text-text-secondary">Nothing to pay and no card on file.</p>
         </div>
 
-        <div className="flex flex-col gap-2 pt-2">
+        <div className="flex max-w-xl flex-col gap-2 pt-2">
           <div className="flex items-baseline justify-between gap-4 text-sm">
             <span className="font-medium text-text-secondary">Members</span>
             <span className="tabular text-text">
-              {seats.free === null
-                ? `${seats.used} · no limit`
-                : seats.over > 0
-                  ? `${seats.used} members · ${seats.free} free`
-                  : `${seats.used} of ${seats.free} free`}
+              {seats.free === null ? `${seats.used} · no limit` : `${seats.used} of ${seats.free} free seats in use`}
             </span>
           </div>
-          {seats.free === null ? null : (
-            <div className="h-1 w-full overflow-hidden rounded-full bg-inset">
-              <div
-                className={cn('h-full rounded-full', seats.over > 0 ? 'bg-warning-fg' : 'bg-ink')}
-                style={{ width: `${Math.max(share * 100, 2)}%` }}
-              />
-            </div>
-          )}
+          {seats.free === null ? null : <SeatMeter used={seats.used} free={seats.free} />}
           <p className="text-sm text-pretty text-text-secondary">
             {seats.free === null
               ? 'This plan has no seat limit.'
               : seats.over > 0
-                ? 'Nothing is blocked or degraded: no read-only mode, no countdown, no feature withheld.'
-                : `${seats.free} members are free for good. Going past that is allowed; you would see a notice.`}
+                ? `${seats.over} past the free ${seats.free}. Nothing is blocked or degraded: no read-only mode, no countdown, no feature withheld.`
+                : `The first ${seats.free} members are free. Adding more is never blocked.`}
           </p>
         </div>
       </SettingsSection>
 
-      <SettingsSection title="What this plan includes" description="Self-hosted installs set their own limits.">
-        <dl className="grid gap-x-8 text-sm sm:grid-cols-2">
+      <SettingsSection title="What this plan includes">
+        <dl className="grid max-w-4xl gap-x-10 text-sm sm:grid-cols-2">
           <Row term="Free members" value={limit(seats.free)} />
           <Row term="File storage" value={formatBytes(organization.storage.limit_bytes)} />
           <Row term="Git connections" value={limit(preset.git_connections)} />
           <Row term="Repositories per project" value={limit(preset.git_repositories_per_project)} />
           <Row term="Automations per project" value={limit(preset.automations_per_project)} />
           <Row term="Projects" value="Unlimited" />
-          <Row term="Issues, boards, reports" value="All of them" />
-          <Row term="MCP and the API" value="No separate tier" />
+          <Row term="Issues, boards, reports" value="Included" />
+          <Row term="MCP and the API" value="Included" />
         </dl>
       </SettingsSection>
 
@@ -75,6 +62,19 @@ export function PlanTab({ organization }: { organization: Organization }) {
           plenty of notice first. Organisations that exist before then keep their first twenty seats free.
         </p>
       </SettingsSection>
+    </div>
+  );
+}
+
+/** Free seats in ink; seats past them continue the bar in amber, so the overage has its own length. */
+function SeatMeter({ used, free }: { used: number; free: number }) {
+  const total = Math.max(used, free);
+  const within = Math.min(used, free);
+  const over = Math.max(0, used - free);
+  return (
+    <div className="flex h-1.5 w-full gap-px overflow-hidden rounded-full bg-border" aria-hidden>
+      <div className="h-full bg-ink" style={{ width: `${Math.max((within / total) * 100, 2)}%` }} />
+      {over > 0 ? <div className="h-full flex-1 bg-warning-fg" /> : null}
     </div>
   );
 }

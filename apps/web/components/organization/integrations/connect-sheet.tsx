@@ -156,6 +156,7 @@ function ConnectForm({
           id="git-base-url"
           label="Address"
           value={baseUrl}
+          placeholder={provider.default_base_url}
           help={`Leave empty for ${provider.default_base_url}. A self-managed ${label} needs a publicly trusted certificate.`}
           error={errors.base_url}
           onChange={value => {
@@ -280,12 +281,17 @@ function TextField({
         autoComplete="off"
         spellCheck={false}
         aria-invalid={error !== undefined}
-        aria-describedby={`${id}-help`}
+        aria-describedby={error ? `${id}-error ${id}-help` : `${id}-help`}
         className={cn(mono && 'font-mono text-xs')}
         onChange={event => onChange(event.target.value)}
       />
-      <p id={`${id}-help`} className={cn('text-xs', error ? 'text-danger-fg' : 'text-text-secondary')}>
-        {error ?? help}
+      {error ? (
+        <p id={`${id}-error`} className="text-xs text-danger-fg">
+          {error}
+        </p>
+      ) : null}
+      <p id={`${id}-help`} className="text-xs text-text-secondary">
+        {help}
       </p>
     </div>
   );

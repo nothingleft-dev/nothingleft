@@ -31,7 +31,9 @@ The Org Admins get an email when a connection stops working: deliveries failing 
 check, deliveries failing to apply, a token refused, the app suspended or uninstalled. An access
 token that expires within 7 days (a GitLab token, or a GitHub token in manual mode) gets one email
 ahead of time, and another when it expires. What is
-already linked stays; new activity stops arriving until the connection is fixed.
+already linked stays; new activity stops arriving until the connection is fixed. An expired
+or refused token is replaced by making a new token, disconnecting the connection and connecting
+again with it.
 
 ## Linking repositories to a project
 

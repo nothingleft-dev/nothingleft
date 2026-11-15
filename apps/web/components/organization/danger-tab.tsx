@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import { toast } from 'sonner';
@@ -114,40 +114,38 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
       {cancelError.summary ? <FormAlert title={cancelError.summary} /> : null}
 
       {scheduled ? (
-        <p className="text-sm text-text-secondary">
-          Ownership cannot be handed over while the organisation is scheduled for deletion. Cancel the deletion first.
-        </p>
+        <DangerRow>
+          <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+            Ownership cannot be handed over while the organisation is scheduled for deletion. Cancel the deletion first.
+          </p>
+        </DangerRow>
+      ) : !members.isPending && candidates.length === 0 ? (
+        <DangerRow>
+          <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+            Nobody can receive it yet: the new Owner has to be an active member with a verified email address. Invite
+            someone from the Invites tab.
+          </p>
+        </DangerRow>
       ) : (
-        <div className="flex max-w-lg items-end gap-2 max-sm:flex-col max-sm:items-stretch">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span className="text-sm font-medium text-text-secondary">New owner</span>
-            <MemberPicker
-              people={candidates}
-              value={target}
-              onChange={setTarget}
-              placeholder="Choose a member"
-              label="New owner"
-              loading={members.isPending}
-            />
+        <DangerRow>
+          <div className="flex min-w-0 flex-1 items-center gap-3 max-sm:flex-col max-sm:items-stretch max-sm:gap-1.5">
+            <span className="flex-none text-sm font-medium text-text-secondary">New owner</span>
+            <div className="min-w-0 flex-1 sm:max-w-sm">
+              <MemberPicker
+                people={candidates}
+                value={target}
+                onChange={setTarget}
+                placeholder="Choose a member"
+                label="New owner"
+                loading={members.isPending}
+              />
+            </div>
           </div>
-          <Button size="sm" disabled={chosen === null} onClick={() => setOpen(true)}>
+          <Button size="sm" variant="outline" disabled={chosen === null} onClick={() => setOpen(true)}>
             {transfer ? 'Make a new offer' : 'Transfer ownership'}
           </Button>
-        </div>
+        </DangerRow>
       )}
-      {!scheduled && candidates.length > 0 ? (
-        <p className="-mt-1 text-sm text-text-secondary">
-          {chosen
-            ? `${chosen.name} gets an email to accept or decline.`
-            : `Choose a member to ${transfer ? 'make a new offer' : 'transfer ownership'}.`}
-        </p>
-      ) : null}
-      {!scheduled && !members.isPending && candidates.length === 0 ? (
-        <p className="text-sm text-text-secondary">
-          Nobody can receive it yet: the new Owner has to be an active member with a verified email address. Invite
-          someone from the Invites tab.
-        </p>
-      ) : null}
 
       {chosen ? (
         <StepUpDialog
@@ -182,7 +180,7 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
           }
         >
           <ul className="flex list-disc flex-col gap-1.5 pl-5">
-            <li>{chosen.name} gets an email to accept or decline, valid for 7 days.</li>
+            <li>{chosen.name} gets an email to accept or decline, valid for 7&nbsp;days.</li>
             <li>If they accept, they become the Owner and you stay an Org Admin.</li>
             <li>
               {transfer
@@ -210,15 +208,18 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
   return (
     <SettingsSection
       title="Delete organisation"
-      description={`Deletion is scheduled, not immediate: nothing is removed for ${ORG_DELETION_GRACE_DAYS} days, and you can cancel at any time until then.`}
+      description={
+        deletion
+          ? `Scheduled. Cancel any time before ${formatDate(deletion.deletes_at)}.`
+          : `Deletion is scheduled, not immediate: everything goes ${ORG_DELETION_GRACE_DAYS} days after you confirm, and you can cancel until then.`
+      }
     >
       {cancelError.summary ? <FormAlert title={cancelError.summary} /> : null}
       {deletion ? (
-        <div className="flex items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-start">
+        <DangerRow>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <p className="font-medium">
-              {organization.name} will be deleted {daysUntil(deletion.deletes_at)}, on {formatDate(deletion.deletes_at)}
-              .
+              {organization.name} will be deleted {daysUntil(deletion.deletes_at)}.
             </p>
             <p className="text-sm text-text-secondary">
               Scheduled {formatDate(deletion.scheduled_at)}. Everyone can keep working until then.
@@ -235,12 +236,11 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
           >
             Cancel deletion
           </PendingButton>
-        </div>
+        </DangerRow>
       ) : (
-        <div className="flex items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-start">
+        <DangerRow>
           <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
-            Projects, issues, comments, articles and files go after {ORG_DELETION_GRACE_DAYS} days. Members’ accounts
-            are unaffected.
+            Projects, issues, comments, articles and files are deleted. Members’ accounts are unaffected.
           </p>
           <Button
             variant="outline"
@@ -250,7 +250,7 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
           >
             Delete organisation
           </Button>
-        </div>
+        </DangerRow>
       )}
 
       <StepUpDialog
@@ -302,11 +302,19 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
           <li>Org Admins get an email now, a reminder the day before, and one when it is done.</li>
           <li>
             A pending ownership offer is cancelled, and the address{' '}
-            <code className="rounded-xs bg-inset px-1 font-mono text-xs text-text">{slug}</code> is never reused.
+            <code className="rounded-xs border bg-inset px-1 font-mono text-xs text-text">{slug}</code> is never reused.
           </li>
         </ul>
       </StepUpDialog>
     </SettingsSection>
+  );
+}
+
+function DangerRow({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-14 items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-stretch">
+      {children}
+    </div>
   );
 }
 

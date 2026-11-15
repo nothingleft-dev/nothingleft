@@ -76,7 +76,7 @@ export function GitHubCallback() {
           tone={atLimit ? 'warning' : 'danger'}
           title={(isApiError(finish.error) && TITLES[finish.error.code]) || 'GitHub could not be connected.'}
         >
-          {finish.error.message}
+          {atLimit ? 'Disconnect one in Integrations to connect another, or see the plan.' : finish.error.message}
         </FormAlert>
       ) : (
         <div className="flex flex-col gap-3 rounded-md border p-4" role="status" aria-label="Connecting">
