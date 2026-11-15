@@ -1,6 +1,6 @@
 'use client';
 
-import { Monitor, MonitorSmartphone, Smartphone, Tablet, type LucideIcon } from 'lucide-react';
+import { Globe, Monitor, Smartphone, Tablet, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Session } from '@nothingleft/types';
 import { LoadError, errorDetail } from '@components/query-state';
@@ -17,7 +17,7 @@ const DEVICE_ICONS: Record<DeviceKind, LucideIcon> = {
   phone: Smartphone,
   tablet: Tablet,
   desktop: Monitor,
-  unknown: MonitorSmartphone,
+  unknown: Globe,
 };
 
 export function SessionsTab() {
@@ -28,8 +28,8 @@ export function SessionsTab() {
 
   return (
     <SettingsSection
-      title="Active sessions"
-      description="Every browser signed in to this account. Revoking one takes effect immediately."
+      title="Where you’re signed in"
+      description="Every browser signed in to this account. Revoking one signs it out at once."
       actions={
         <Button
           variant="outline"
@@ -94,7 +94,7 @@ function SessionRow({ session, onRevoke }: { session: Session; onRevoke: () => v
           ) : null}
         </span>
         <span className="truncate text-xs text-text-secondary">
-          {place} · last seen <RelativeTime value={session.last_seen_at} />
+          {place} · last seen <RelativeTime value={session.last_seen_at} className="text-text-secondary" />
         </span>
       </div>
       {session.current ? null : (

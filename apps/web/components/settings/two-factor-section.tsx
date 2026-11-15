@@ -18,7 +18,7 @@ import {
   useRegenerateRecoveryCodes,
   useStartTwoFactorSetup,
 } from '@hooks/use-account-security';
-import { formatDate } from '@lib/datetime';
+import { RelativeTime } from '@components/relative-time';
 import { cn } from '@lib/utils';
 import { PendingButton } from '@components/pending-button';
 
@@ -69,12 +69,18 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
           <Button variant="outline" size="sm" onClick={() => setDialog('regenerate')}>
             Create new recovery codes
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setDialog('disable')}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-danger-fg hover:text-danger-fg"
+            onClick={() => setDialog('disable')}
+          >
             Turn off
           </Button>
         </>
       ) : (
         <PendingButton
+          variant="outline"
           size="sm"
           onClick={() => start.mutate(undefined, { onSuccess: setSetup })}
           pending={start.isPending}
@@ -86,11 +92,12 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
     ) : null;
 
   return (
-    <SettingsSection title="Two-factor authentication" description={description} actions={actions}>
+    <SettingsSection title="Two-factor authentication" description={description}>
       {status.enabled && !codes ? (
         <TwoFactorStatusLine enabledAt={status.enabled_at} left={status.recovery_codes_remaining} />
       ) : null}
       {startError.summary ? <FormAlert title={startError.summary} /> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
 
       {setup ? (
         <SetupPanel
@@ -100,7 +107,6 @@ export function TwoFactorSection({ user, confirm, onConfirmHandled }: TwoFactorS
           onEnabled={result => {
             setSetup(null);
             setCodes(result);
-            toast.success('Two-factor authentication is on.');
           }}
         />
       ) : null}
@@ -173,7 +179,11 @@ function TwoFactorStatusLine({ enabledAt, left }: { enabledAt: string | null; le
         <span className="size-2 rounded-full bg-green-solid" aria-hidden />
         On
       </span>
-      {enabledAt ? <span>since {formatDate(enabledAt)}</span> : null}
+      {enabledAt ? (
+        <span>
+          turned on <RelativeTime value={enabledAt} className="text-text-secondary" />
+        </span>
+      ) : null}
       <span aria-hidden>·</span>
       <span className={cn(low && 'font-medium text-warning-fg')}>
         {left} of {RECOVERY_CODE_COUNT} recovery codes left{low ? ' — create new ones before you run out' : ''}
@@ -209,7 +219,7 @@ function SetupPanel({ setup, email, onCancel, onEnabled }: SetupPanelProps) {
       <SetupStep number={1} title="Scan the QR code">
         <p className="text-sm text-text-secondary">
           Use an authenticator app on your phone, such as Google Authenticator, 1Password or Authy. It adds an entry for
-          Nothing Left, {email}.
+          Nothing Left, <span className="whitespace-nowrap">{email}</span>.
         </p>
         <div className="flex flex-wrap items-start gap-5">
           {/* QR codes scan reliably only dark on light, so the tile stays white in both themes. */}
@@ -267,13 +277,13 @@ function SetupPanel({ setup, email, onCancel, onEnabled }: SetupPanelProps) {
         </p>
       </SetupStep>
 
-      <div className="flex justify-end gap-2 border-t pt-4">
-        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={confirm.isPending}>
-          Cancel
-        </Button>
+      <div className="flex gap-2 pl-9">
         <PendingButton type="submit" size="sm" pending={confirm.isPending} pendingLabel="Turning on…">
           Turn on two-factor
         </PendingButton>
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={confirm.isPending}>
+          Cancel
+        </Button>
       </div>
     </form>
   );

@@ -173,17 +173,15 @@ function AvatarSection({ user }: { user: Me }) {
 function ThemeSection({ user }: { user: Me }) {
   const update = useUpdatePreferences();
   return (
-    <SettingsSection
-      title="Theme"
-      description="Stored on your account, so it follows you to another device."
-      actions={
+    <SettingsSection title="Theme" description="Stored on your account, so it follows you to another device.">
+      <div className="self-start">
         <Segmented
           ariaLabel="Theme"
           value={user.preferences.theme}
           options={THEME_OPTIONS}
           onChange={(theme: UserTheme) => update.mutate({ theme })}
         />
-      }
-    />
+      </div>
+    </SettingsSection>
   );
 }

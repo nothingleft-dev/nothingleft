@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import type { Me, OAuthProvider } from '@nothingleft/types';
+import { PASSWORD_MIN_LENGTH, type Me, type OAuthProvider } from '@nothingleft/types';
 import { useMutation } from '@tanstack/react-query';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -69,7 +69,7 @@ function EmailSection({ user }: { user: Me }) {
 
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-medium text-text-secondary">Current email</span>
-          <span className="break-all">{user.email}</span>
+          <span className="[overflow-wrap:anywhere]">{user.email}</span>
         </div>
         {error.summary ? <FormAlert title={error.summary} /> : null}
         {user.has_password ? (
@@ -101,7 +101,6 @@ function EmailSection({ user }: { user: Me }) {
             />
             <PendingButton
               type="submit"
-              variant="outline"
               disabled={unverified}
               className="self-start"
               pending={change.isPending}
@@ -153,18 +152,13 @@ function PasswordSection() {
           label="New password"
           type="password"
           autoComplete="new-password"
-          below={<PasswordStrength value={form.password} />}
+          hint={form.password ? undefined : `At least ${PASSWORD_MIN_LENGTH} characters`}
+          below={form.password ? <PasswordStrength value={form.password} /> : null}
           value={form.password}
           error={error.fields['password']}
           onChange={e => setForm({ ...form, password: e.target.value })}
         />
-        <PendingButton
-          type="submit"
-          variant="outline"
-          className="self-start"
-          pending={change.isPending}
-          pendingLabel="Saving…"
-        >
+        <PendingButton type="submit" className="self-start" pending={change.isPending} pendingLabel="Saving…">
           Change password
         </PendingButton>
       </form>

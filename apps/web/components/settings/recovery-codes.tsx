@@ -25,19 +25,19 @@ export function RecoveryCodes({ email, codes, onDone }: RecoveryCodesProps) {
   ].join('\n');
 
   return (
-    <div className="flex flex-col gap-4 rounded-md border p-4">
-      <div className="flex items-start gap-2.5 rounded-md border border-warning-fg/25 bg-warning-bg px-3 py-2.5 text-warning-fg">
-        <TriangleAlert className="mt-0.5 size-icon-sm flex-none" />
-        <p className="text-xs leading-5">
-          Save these {RECOVERY_CODE_COUNT} recovery codes now — they are not shown again. Each one signs you in once if
-          you lose your phone, and there is no support desk that can let you back in without them.
-        </p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <p className="flex max-w-[72ch] items-start gap-2 text-sm text-text">
+        <TriangleAlert className="mt-0.5 size-icon-sm flex-none text-warning-fg" aria-hidden />
+        <span>
+          Save these {RECOVERY_CODE_COUNT} recovery codes now; they are not shown again. Each one signs you in once if
+          you lose your phone, and nobody can let you back in without them.
+        </span>
+      </p>
 
-      <ol className="grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-md bg-inset px-4 py-3 font-mono text-sm tabular max-sm:grid-cols-1">
+      <ol className="grid w-max grid-cols-[repeat(2,auto)] gap-x-12 gap-y-1.5 rounded-md border bg-inset px-6 py-4 font-mono text-sm tabular max-sm:grid-cols-1">
         {codes.recovery_codes.map((code, index) => (
           <li key={code} className="flex gap-3">
-            <span className="w-5 text-right text-text-muted select-none">{index + 1}.</span>
+            <span className="w-5 text-right text-text-secondary select-none">{index + 1}.</span>
             <span className="text-text">{code}</span>
           </li>
         ))}
@@ -58,7 +58,7 @@ export function RecoveryCodes({ email, codes, onDone }: RecoveryCodesProps) {
           <Download className="size-icon-sm" />
           Download as .txt
         </Button>
-        <Button size="sm" className="ml-auto" onClick={onDone}>
+        <Button size="sm" onClick={onDone}>
           I’ve saved them
         </Button>
       </div>

@@ -10,51 +10,55 @@ export const AREA_LABELS: Record<NotificationArea, string> = {
 
 /** Per kind: its row on the preferences screen, when you hear it, and what an unsubscribe link names. */
 export const KIND_COPY: Record<NotificationKind, { label: string; when: string; about: string }> = {
-  assigned: { label: 'Assigned to you', when: 'Someone assigns an issue to you', about: 'issues assigned to you' },
-  unassigned: { label: 'Unassigned from you', when: 'Someone takes you off an issue', about: 'being taken off issues' },
-  status_changed: { label: 'Status changes', when: 'An issue you watch changes status', about: 'status changes' },
-  resolved: { label: 'Resolved', when: 'An issue you created or watch is resolved', about: 'resolved issues' },
-  linked: { label: 'Links', when: 'An issue you watch is linked to another', about: 'links' },
-  due_soon: { label: 'Due tomorrow', when: 'An issue assigned to you is due tomorrow', about: 'issues due tomorrow' },
-  overdue: { label: 'Overdue', when: 'An issue assigned to you is past its due date', about: 'overdue issues' },
+  assigned: { label: 'Assigned to you', when: 'Someone assigns an issue to you.', about: 'issues assigned to you' },
+  unassigned: {
+    label: 'Unassigned from you',
+    when: 'Someone takes you off an issue.',
+    about: 'being taken off issues',
+  },
+  status_changed: { label: 'Status changes', when: 'An issue you watch changes status.', about: 'status changes' },
+  resolved: { label: 'Resolved', when: 'An issue you created or watch is resolved.', about: 'resolved issues' },
+  linked: { label: 'Links', when: 'An issue you watch is linked to another.', about: 'links' },
+  due_soon: { label: 'Due tomorrow', when: 'An issue assigned to you is due tomorrow.', about: 'issues due tomorrow' },
+  overdue: { label: 'Overdue', when: 'An issue assigned to you is past its due date.', about: 'overdue issues' },
   time_logged: {
     label: 'Time logged',
-    when: 'Someone logs time on an issue you watch or are assigned to',
+    when: 'Someone logs time on an issue you watch or are assigned to.',
     about: 'time logged',
   },
   mentioned: {
     label: 'Mentioned',
-    when: 'Someone writes @you in an issue, a comment, logged time or an article',
+    when: 'Someone writes @you in an issue, a comment, logged time or an article.',
     about: 'mentions',
   },
-  commented: { label: 'Comments', when: 'Someone comments on an issue you watch', about: 'comments' },
-  reaction: { label: 'Reactions', when: 'Someone reacts to your comment', about: 'reactions' },
+  commented: { label: 'Comments', when: 'Someone comments on an issue you watch.', about: 'comments' },
+  reaction: { label: 'Reactions', when: 'Someone reacts to your comment.', about: 'reactions' },
   pull_request_merged: {
     label: 'Pull request merged',
-    when: 'A pull request linked to an issue you are assigned to or watch is merged',
+    when: 'A pull request linked to an issue you are assigned to or watch is merged.',
     about: 'merged pull requests',
   },
   ci_failed: {
     label: 'CI failing',
-    when: 'CI starts failing on a pull request linked to an issue assigned to you',
+    when: 'CI starts failing on a pull request linked to an issue assigned to you.',
     about: 'failing CI',
   },
   sprint_started: {
     label: 'Sprint started',
-    when: 'A sprint with an issue assigned to you starts',
+    when: 'A sprint with an issue assigned to you starts.',
     about: 'sprints starting',
   },
   sprint_finished: {
     label: 'Sprint finished',
-    when: 'A sprint with an issue assigned to you finishes',
+    when: 'A sprint with an issue assigned to you finishes.',
     about: 'sprints finishing',
   },
   article_published: {
     label: 'Article published',
-    when: 'An article is published in a project you are in',
+    when: 'An article is published in a project you are in.',
     about: 'published articles',
   },
-  article_updated: { label: 'Article updated', when: 'An article you watch changes', about: 'article updates' },
+  article_updated: { label: 'Article updated', when: 'An article you watch changes.', about: 'article updates' },
 };
 
 export interface KindFilter {

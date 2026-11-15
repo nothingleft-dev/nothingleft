@@ -609,7 +609,7 @@ As built in 6a (web half, 27 Sep 2026; the owner's choices marked):
 `/settings?tab=notifications`. An *Email* section first: in-app is always on, email is off until
 chosen, choices apply in every organisation, digests arrive at 9am in the profile's time zone
 (named, with a link to change it) — weekly on Mondays — and only when something unread is
-waiting; *Turn everything off* on its right, with *Undo* in the toast. Then Issues, Comments,
+waiting; *Turn every email off* under that note, with *Undo* in the toast. Then Issues, Comments,
 Agile and Knowledge base from each preference's `area`, one row per kind: its name, when you hear
 it, and a picker of Off / Instant / Daily digest / Weekly digest. *Mentioned* carries a neutral
 outlined *Most commonly enabled* chip; *Reactions* reads *In-app only* instead of a picker.

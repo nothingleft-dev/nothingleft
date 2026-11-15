@@ -80,7 +80,8 @@ handing over an organisation all ask you to confirm:
   [Erasing your data](#erasing-your-data), and the account cannot be reactivated.
 
 If you own an organisation, you cannot deactivate your account until you **transfer ownership**
-or the organisation is **deleted** - someone has to be able to look after it.
+or the organisation is **deleted** - someone has to be able to look after it. The dialog then offers a way into
+each organisation you own instead of asking for your password.
 
 To reactivate, email admin@nothingleft.dev (or reply to the deactivation email) from the address on the account within six months of deactivating. On a self-hosted instance, write to the address its administrator gives. Your memberships come back as they
 were; sign in again and create new access tokens.

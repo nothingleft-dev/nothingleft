@@ -110,7 +110,5 @@ export function TimezonePicker({ value, onChange, disabled }: TimezonePickerProp
 }
 
 export function ZoneExample({ timeZone }: { timeZone: string }) {
-  return (
-    <span className="text-xs text-text-secondary">Times read as {formatDateTimeWithZone(new Date(), timeZone)}</span>
-  );
+  return <span className="text-xs text-text-secondary">Now: {formatDateTimeWithZone(new Date(), timeZone)}</span>;
 }

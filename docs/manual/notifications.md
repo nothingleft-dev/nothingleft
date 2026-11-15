@@ -91,7 +91,7 @@ kind you pick one of:
 
 The kinds are grouped into Issues, Comments, Agile, Knowledge base and Development, and every change saves
 as you make it. **Mentioned** is marked *most commonly enabled*: it is the one most people turn
-on. **Reactions** are in-app only. *Turn everything off* at the top switches every email off in
+on. **Reactions** are in-app only. *Turn every email off*, under the digest note, switches every email off in
 one go, and *Undo* in the message that follows puts your choices back. Your choices apply in
 every organisation you belong to. Digests use the time zone in your profile
 (**Settings → Profile**).

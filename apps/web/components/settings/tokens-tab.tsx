@@ -33,7 +33,6 @@ import { CopyButton } from '@components/copy-button';
 import { useNeedsVerification, VerifyEmailNotice } from '@components/settings/verify-email-notice';
 import { useCreateToken, useRevokeToken, useTokens } from '@hooks/use-tokens';
 import { cn } from '@lib/utils';
-import { formatDate } from '@lib/datetime';
 import { PendingButton } from '@components/pending-button';
 import { useFieldProblems } from '@hooks/use-field-problems';
 
@@ -41,7 +40,7 @@ const projectList = new Intl.ListFormat('en-GB', { style: 'long', type: 'conjunc
 
 function projectReach(keys: readonly string[] | null): string {
   if (keys === null) return 'All projects';
-  return keys.length > 0 ? projectList.format(keys) : 'No projects';
+  return keys.length > 0 ? `Only ${projectList.format(keys)}` : 'No project access';
 }
 
 const SHOWN_SCOPES = 2;
@@ -54,7 +53,7 @@ export function TokensTab() {
 
   return (
     <SettingsSection
-      title="Access tokens"
+      title="Your tokens"
       description="For MCP clients, scripts and CI. A token never exceeds your own permissions, and its roles are checked again on every request."
       actions={<CreateTokenDialog onCreated={setCreated} disabled={unverified} />}
     >
@@ -139,23 +138,37 @@ function TokenRow({ token, fresh, onRevoke }: { token: PersonalAccessToken; fres
 }
 
 function LastUse({ token }: { token: PersonalAccessToken }) {
-  if (token.revoked_at) return <>Revoked {formatDate(token.revoked_at)}</>;
+  if (token.revoked_at)
+    return (
+      <>
+        Revoked <RelativeTime value={token.revoked_at} className="text-text-secondary" />
+      </>
+    );
   if (!token.last_used_at) return <>Never used</>;
   return (
     <>
-      Used <RelativeTime value={token.last_used_at} />
+      Used <RelativeTime value={token.last_used_at} className="text-text-secondary" />
     </>
   );
 }
 
 function NewTokenNotice({ token, onDismiss }: { token: CreatedPersonalAccessToken; onDismiss: () => void }) {
   return (
-    <FormAlert tone="warning" title={`${token.name} created`}>
+    <FormAlert
+      tone="warning"
+      title={
+        <>
+          Token “<span className="font-semibold">{token.name}</span>” created
+        </>
+      }
+    >
       <p>Copy it now — this is the only time it is shown.</p>
       <div className="mt-2 flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-xs bg-inset px-2 py-1 font-mono text-2xs">{token.token}</code>
+        <code className="min-w-0 flex-1 truncate rounded-xs bg-surface px-2 py-1 font-mono text-2xs text-text">
+          {token.token}
+        </code>
         <CopyButton value={token.token} what="Token" />
-        <Button variant="ghost" size="sm" onClick={onDismiss}>
+        <Button variant="outline" size="sm" className="text-text" onClick={onDismiss}>
           Done
         </Button>
       </div>

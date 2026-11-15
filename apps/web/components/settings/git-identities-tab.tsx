@@ -10,8 +10,7 @@ import {
   type GitProviderKind,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Input } from '@components/ui/input';
-import { Label } from '@components/ui/label';
+import { Field } from '@components/auth/field';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
 import { LoadError, errorDetail } from '@components/query-state';
@@ -25,7 +24,6 @@ import { ProviderGlyph } from '@components/git/provider-glyph';
 import { useClaimGitIdentity, useMyGitIdentities, useRemoveMyGitIdentity } from '@hooks/use-git';
 import { isApiError } from '@lib/api/errors';
 import { providerLabel } from '@lib/git/words';
-import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
 
@@ -66,7 +64,8 @@ export function GitIdentitiesTab() {
           </SettingsList>
         )}
       </SettingsSection>
-      <AddIdentity />
+      {/* Held back until the list knows its height, so the form never jumps down under it. */}
+      {identities.isPending ? null : <AddIdentity />}
     </div>
   );
 }
@@ -75,13 +74,31 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
   const remove = useRemoveMyGitIdentity();
   const resend = useClaimGitIdentity();
   const selfHosted = identity.base_url !== PUBLIC_HOSTS[identity.provider];
+  const sendAgain = () =>
+    resend.mutate(
+      {
+        provider: identity.provider,
+        email: identity.email!,
+        ...(selfHosted ? { base_url: identity.base_url } : {}),
+      },
+      {
+        onSuccess: () =>
+          toast.success(
+            `A link is on its way to ${identity.email}. If we sent one a few minutes ago, that one still works.`,
+          ),
+        onError: error => toastError('Could not send the verification link', error),
+      },
+    );
   const status = identity.pending ? (
-    <span className="inline-flex items-center gap-1.5 text-warning-fg">
-      <HueDot hue="amber" />
-      Waiting for the link we sent
+    <span className="text-warning-fg">
+      <HueDot hue="amber" className="mr-1.5 align-[0.0625rem]" />
+      Waiting for the link we sent <RelativeTime value={identity.created_at} className="text-warning-fg" />
     </span>
   ) : (
-    <span>{HOW[identity.verified_by]}</span>
+    <span>
+      {HOW[identity.verified_by]}{' '}
+      <RelativeTime value={identity.verified_at ?? identity.created_at} className="text-text-secondary" />
+    </span>
   );
 
   return (
@@ -93,36 +110,22 @@ function IdentityRow({ identity }: { identity: GitIdentity }) {
           {identity.login ? 'Login' : 'Commit email'} on {providerLabel(identity.provider)}
           {selfHosted ? ` at ${identity.base_url}` : ''}
         </span>
-        <span className="text-xs text-text-secondary sm:hidden">{status}</span>
+        <span className="text-xs text-text-secondary sm:hidden">
+          {status}
+          {identity.pending ? (
+            <>
+              {' · '}
+              <TextButton className="text-xs" disabled={resend.isPending} onClick={sendAgain}>
+                Send again
+              </TextButton>
+            </>
+          ) : null}
+        </span>
       </span>
-      <span className="w-56 shrink-0 text-xs text-text-secondary max-sm:hidden">{status}</span>
-      <RelativeTime
-        value={identity.verified_at ?? identity.created_at}
-        className="w-24 shrink-0 text-right text-xs text-text-secondary max-sm:hidden"
-      />
-      <span className="flex w-40 shrink-0 items-center justify-end gap-1 max-sm:w-auto max-sm:flex-col max-sm:items-end">
+      <span className="w-80 shrink-0 text-xs text-text-secondary max-md:w-56 max-sm:hidden">{status}</span>
+      <span className="flex w-40 shrink-0 items-center justify-end gap-1 max-sm:w-auto">
         {identity.pending ? (
-          <Button
-            variant="ghost"
-            size="xs"
-            disabled={resend.isPending}
-            onClick={() =>
-              resend.mutate(
-                {
-                  provider: identity.provider,
-                  email: identity.email!,
-                  ...(selfHosted ? { base_url: identity.base_url } : {}),
-                },
-                {
-                  onSuccess: () =>
-                    toast.success(
-                      `A link is on its way to ${identity.email}. If we sent one a few minutes ago, that one still works.`,
-                    ),
-                  onError: error => toastError('Could not send the verification link', error),
-                },
-              )
-            }
-          >
+          <Button variant="ghost" size="xs" className="max-sm:hidden" disabled={resend.isPending} onClick={sendAgain}>
             Send again
           </Button>
         ) : null}
@@ -211,7 +214,7 @@ function AddIdentity() {
   return (
     <SettingsSection
       title="Add an identity"
-      description="A login counts at once; an Org Admin can remove one that is not yours. An email counts once you follow the link we send to it."
+      description="A login counts as yours straight away, and an Org Admin can remove it if it belongs to someone else. An email counts once you follow the link we send to it."
     >
       <form
         noValidate
@@ -240,46 +243,36 @@ function AddIdentity() {
             />
           </div>
         </div>
-        <div className="flex max-w-sm flex-col gap-1.5">
-          <Label htmlFor="git-identity-value" className="text-sm font-medium text-text-secondary">
-            {kind === 'login' ? 'Login' : 'Email'}
-          </Label>
-          <Input
-            id="git-identity-value"
+        <div className="max-w-sm">
+          <Field
+            label={kind === 'login' ? 'Login' : 'Email'}
             value={value}
             placeholder={kind === 'login' ? 'alex-lee' : 'alex@example.com'}
             autoComplete="off"
             spellCheck={false}
-            aria-invalid={fieldError !== undefined}
-            aria-describedby="git-identity-help"
-            className="font-mono text-xs"
+            className="font-mono"
+            error={fieldError}
+            hint={
+              kind === 'login'
+                ? `Your username on ${providerLabel(provider)}, without the @.`
+                : 'The address in your commits’ author line: git config user.email.'
+            }
             onChange={event => {
               setValue(event.target.value);
               if (fieldError) setErrors({ ...errors, value: undefined });
             }}
           />
-          <p id="git-identity-help" className={cn('text-xs', fieldError ? 'text-danger-fg' : 'text-text-secondary')}>
-            {fieldError ??
-              (kind === 'login'
-                ? `Your username on ${providerLabel(provider)}, without the @.`
-                : 'The address in your commits’ author line: git config user.email.')}
-          </p>
         </div>
         {selfHosted ? (
-          <div className="flex max-w-sm flex-col gap-1.5">
-            <Label htmlFor="git-identity-base-url" className="text-sm font-medium text-text-secondary">
-              Address of your {providerLabel(provider)}
-            </Label>
-            <Input
-              id="git-identity-base-url"
+          <div className="max-w-sm">
+            <Field
+              label={`Address of your ${providerLabel(provider)}`}
               value={baseUrl}
               placeholder={provider === 'gitlab' ? 'https://gitlab.example.com' : 'https://github.example.com'}
-              aria-invalid={errors.base_url !== undefined}
+              error={errors.base_url}
+              hint="A login there is a different identity from one on the public site."
               onChange={event => setBaseUrl(event.target.value)}
             />
-            <p className={cn('text-xs', errors.base_url ? 'text-danger-fg' : 'text-text-secondary')}>
-              {errors.base_url ?? 'A login there is a different identity from one on the public site.'}
-            </p>
           </div>
         ) : null}
         <div className="flex items-center gap-3">

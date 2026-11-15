@@ -1008,7 +1008,7 @@ notifications.md, the visual ones ui-conventions.md § Notification centre. How 
   API kinds, each kind's row copy on the settings screen, and the phrase the unsubscribe page
   names it by. The settings screen takes areas, options and the *most commonly enabled* marker
   from the API.
-- **Preferences** PATCH one kind per change, drawn early; *Turn everything off* sends
+- **Preferences** PATCH one kind per change, drawn early; *Turn every email off* sends
   `{ all: 'off' }` and its toast's *Undo* sends the previous choices back as `email`.
 - **The unsubscribe page** reads the preview once (`staleTime: Infinity`, no refocus refetch)
   and POSTs only on the button. `/unsubscribe` is an anonymous route in `lib/auth-routes.ts`, so a 401
