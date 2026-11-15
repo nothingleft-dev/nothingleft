@@ -428,7 +428,7 @@ As built in 1e (owner decisions, 25 Sep 2026):
   raw total
 - Collapsible columns, optional WIP limits
 - Swimlanes, including an *Uncategorized Cards* lane
-- Cards: coloured left edge by priority, key, title, assignee avatars,
+- Cards: a coloured left edge for a priority above the project's default (none at or below it), key, title, assignee avatars,
   priority and type dots, due date, subtask progress (`1/3`), inline `+` to
   create in that column
 

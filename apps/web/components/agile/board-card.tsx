@@ -1,5 +1,6 @@
 'use client';
 
+import { useSchemaValues } from '@hooks/use-project-schema';
 import { useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { toast } from 'sonner';
 import { ListChecks, Plus } from 'lucide-react';
@@ -83,6 +84,14 @@ const own = {
   onDoubleClick: (e: MouseEvent) => e.stopPropagation(),
 };
 
+// Colour marks a departure from the default (DESIGN § 1): only priorities above the project's default get the edge.
+function useRaisedPriority(projectKey: string, name: string) {
+  const priorities = useSchemaValues(projectKey, 'priorities').data;
+  const fallback = priorities?.find(p => p.is_default);
+  const own = priorities?.find(p => p.name === name);
+  return Boolean(own && fallback && own.position < fallback.position);
+}
+
 export function BoardCard({
   card,
   projectKey,
@@ -92,10 +101,12 @@ export function BoardCard({
   overlay = false,
 }: BoardCardProps) {
   const { shown, hidden } = visibleTags(card.tags);
+  const raised = useRaisedPriority(projectKey, card.priority.name);
   return (
     <article
       className={cn(
-        `l-${card.priority.color} flex flex-col gap-2 rounded-md border border-l-[3px] border-l-c-solid bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong hover:border-l-c-solid`,
+        `l-${card.priority.color} flex flex-col gap-2 rounded-md border bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong`,
+        raised && 'border-l-[3px] border-l-c-solid hover:border-l-c-solid',
         dragging && 'opacity-40',
         overlay && 'rotate-1 shadow-lg',
       )}
