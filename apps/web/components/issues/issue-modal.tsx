@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { PendingButton } from '@components/pending-button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@components/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { IssuePage } from '@components/issues/issue-page';
 import { useIssue } from '@hooks/use-issues';

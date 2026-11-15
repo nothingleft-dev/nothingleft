@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { FormAlert } from '@components/auth/form-alert';
 import { useTestAutomation } from '@hooks/use-automations';
 import { SKIP_REASON } from '@lib/git/words';

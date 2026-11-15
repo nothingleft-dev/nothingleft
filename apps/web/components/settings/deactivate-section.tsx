@@ -12,7 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { PendingButton } from '@components/pending-button';
 import { EmailUs } from '@components/email-us';
 import { StepUpDialog } from '@components/step-up-dialog';

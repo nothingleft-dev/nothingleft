@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { DialogBody } from '@components/dialog-body';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Kbd } from '@components/kbd';

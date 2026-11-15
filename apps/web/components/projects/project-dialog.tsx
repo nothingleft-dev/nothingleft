@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { CreateProjectSchema, type PaletteHue } from '@nothingleft/types';
 import { generateProjectKey, parseProjectKey } from '@nothingleft/format';
 import { Button } from '@components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PaletteSwatches } from '@components/palette-swatches';

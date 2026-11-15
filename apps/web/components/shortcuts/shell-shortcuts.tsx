@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/dialog';
 import { ShortcutsTable } from '@components/shortcuts/shortcuts-table';
 import { useSession } from '@hooks/use-session';
 import { useShortcut, useSequenceShortcut } from '@hooks/use-shortcut';

@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { ConfirmDialog } from '@components/confirm-dialog';

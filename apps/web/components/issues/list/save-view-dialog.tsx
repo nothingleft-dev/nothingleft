@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';

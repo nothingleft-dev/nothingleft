@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { useLinkPullRequest } from '@hooks/use-git';
 import { PendingButton } from '@components/pending-button';
 

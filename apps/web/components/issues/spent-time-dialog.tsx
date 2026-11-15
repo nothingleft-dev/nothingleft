@@ -32,7 +32,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { DialogBody } from '@components/dialog-body';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';

@@ -899,8 +899,9 @@ never reaches a field.
 
 **Pending buttons**: a button whose action is running says so in its own verb, "Saving…",
 "Deleting…", "Removing…", never a generic "Working…". It keeps its fill at full contrast (it
-is busy, not unavailable), shows a progress cursor and refuses clicks; disabled is the inset
-fill with muted ink. The two labels share one width, so nothing beside the button moves while
+is busy, not unavailable), shows a progress cursor and refuses clicks; a disabled filled
+button keeps its own fill and ink at 45 % strength, so the primary still reads as the primary, just
+not yet available; a disabled outline or ghost button keeps its outline with secondary ink. The two labels share one width, so nothing beside the button moves while
 it works.
 
 **Banners**: page-level, rendered only while the condition is true, one sentence and

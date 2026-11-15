@@ -10,7 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { CopyButton } from '@components/copy-button';
 import { FormAlert } from '@components/auth/form-alert';
 import { providerLabel } from '@lib/git/words';

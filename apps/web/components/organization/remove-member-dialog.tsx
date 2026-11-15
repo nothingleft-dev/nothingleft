@@ -12,7 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';
