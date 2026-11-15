@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import type { Me, StorageConnection, StorageOverview } from '@nothingleft/types';
@@ -9,6 +10,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { StepUpDialog } from '@components/step-up-dialog';
 import { PROVIDER_NAMES } from '@components/organization/storage/byo-steps';
 import { CredentialsForm, validateDraft, type DraftErrors } from '@components/organization/storage/credentials-form';
@@ -19,7 +21,6 @@ import { env } from '@lib/env';
 import { regionName } from '@lib/storage/aws-regions';
 import { connectBody, draftFrom, type ConnectionDraft } from '@lib/storage/connection';
 import { JobStatus } from '@components/job-status';
-import { cn } from '@lib/utils';
 import { plural } from '@lib/numbers';
 
 const STORAGE_TAB = '/organization?tab=storage';
@@ -60,9 +61,12 @@ export function ConnectionPanel({
       actions={
         updating ? null : (
           <>
-            <Button variant={failing ? 'default' : 'outline'} size="sm" onClick={() => onUpdatingChange(true)}>
-              Update key
-            </Button>
+            {/* While the key is refused, the alert at the top of the tab carries Update key. */}
+            {failing ? null : (
+              <Button variant="outline" size="sm" onClick={() => onUpdatingChange(true)}>
+                Update key
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -75,7 +79,8 @@ export function ConnectionPanel({
         )
       }
     >
-      <dl className="grid gap-x-10 text-sm lg:grid-cols-2">
+      {/* gap-x-8 puts the second column on the third stat's text line above. */}
+      <dl className="grid gap-x-8 text-sm lg:grid-cols-2">
         <Row term="Status">
           <JobStatus tone={failing ? 'failed' : 'ok'} label={failing ? 'Refusing its key' : 'Connected'} />
         </Row>
@@ -84,9 +89,21 @@ export function ConnectionPanel({
           <span className="font-mono">{connection.bucket}</span>
         </Row>
         <Row term={byRegion ? 'Region' : 'Endpoint'}>
-          <span className={cn('truncate', !byRegion && 'font-mono text-xs')} title={location}>
-            {location}
-          </span>
+          {byRegion ? (
+            <span className="truncate">{location}</span>
+          ) : (
+            <span className="-my-1 flex min-w-0 items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="min-w-0 truncate font-mono text-xs">
+                    {location}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-none font-mono text-xs">{location}</TooltipContent>
+              </Tooltip>
+              <CopyIconButton value={location} what="endpoint" />
+            </span>
+          )}
         </Row>
         <Row term="Access key ID">
           <span className="truncate font-mono text-xs" title={connection.access_key_id}>
@@ -147,6 +164,30 @@ function Row({ term, children }: { term: string; children: ReactNode }) {
 }
 
 const Empty = () => <span className="text-text-muted">—</span>;
+
+function CopyIconButton({ value, what }: { value: string; what: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="size-7 flex-none text-text-secondary"
+          aria-label={copied ? `${what} copied` : `Copy ${what}`}
+          onClick={async () => {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          }}
+        >
+          {copied ? <Check className="size-icon-sm" /> : <Copy className="size-icon-sm" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{copied ? 'Copied' : `Copy ${what}`}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 function UpdateKeyForm({
   slug,

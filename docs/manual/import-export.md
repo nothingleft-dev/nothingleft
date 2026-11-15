@@ -106,7 +106,7 @@ shows that one. Each request is written to the audit log.
 
 The tab lists recent exports with their state (*Queued*, *Building*, *Ready*, *Failed* or
 *Expired*), who asked and when, the size, how many files went in, and the date it can be
-downloaded until. **Download** sits on each ready one. A file count followed by *3 missing*
+downloaded until. **Download** sits on each ready one. A failed one says why it stopped, with **Request again**. A file count followed by *3 missing*
 means three attached files could not be included; `manifest.json` names them.
 
 ## Asking an agent

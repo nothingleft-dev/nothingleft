@@ -35,18 +35,33 @@ export function MigrationPanel({
     start.mutate(undefined, { onError: error => toastError('Could not start moving the files', error) });
 
   const running = migration.state === 'running';
-  const title = running ? `Moving files to ${connection.bucket}` : 'Move existing files';
+  const failed = migration.state === 'failed';
+  const description = running
+    ? `Copying each file to ${connection.bucket}, then removing it here. You can leave this page.`
+    : left.files > 0
+      ? `${count(left.files)} (${formatBytes(left.bytes)}) still in the built-in storage.${verified ? '' : ' Update the key first.'}`
+      : `Every file is in ${connection.bucket}. Nothing is left to move.`;
 
   return (
     <SettingsSection
-      title={title}
-      description={
-        running
-          ? 'Each file is copied, checked, and only then removed from the built-in storage, so every file keeps opening throughout. You can leave this page; it carries on.'
-          : undefined
+      title="Move existing files"
+      description={description}
+      actions={
+        !running && !failed && left.files > 0 ? (
+          <PendingButton
+            size="sm"
+            variant={quiet ? 'outline' : 'default'}
+            onClick={move}
+            disabled={!verified}
+            pending={start.isPending}
+            pendingLabel="Starting…"
+          >
+            Move files
+          </PendingButton>
+        ) : undefined
       }
     >
-      {running || migration.state === 'failed' || (migration.state === 'done' && migration.total_files > 0) ? (
+      {running || failed || (migration.state === 'done' && migration.total_files > 0) ? (
         <Progress
           files={[migration.migrated_files, migration.total_files]}
           bytes={[migration.migrated_bytes, migration.total_bytes]}
@@ -72,7 +87,7 @@ export function MigrationPanel({
         </FormAlert>
       ) : null}
 
-      {migration.state === 'failed' ? (
+      {failed ? (
         <FormAlert
           title={`The move stopped after ${count(migration.migrated_files)} of ${migration.total_files}.`}
           action={
@@ -87,7 +102,7 @@ export function MigrationPanel({
             {migration.error ? describeCheckError(migration.error, connection).message : 'The bucket refused a file.'}{' '}
             Every file keeps opening from wherever it is now.
           </p>
-          {verified ? null : <p>Update the key first; the move then carries on from where it stopped.</p>}
+          {verified ? null : <p>Update the key first. The move then carries on from where it stopped.</p>}
         </FormAlert>
       ) : null}
 
@@ -96,31 +111,6 @@ export function MigrationPanel({
           Moved {count(migration.migrated_files)} ({formatBytes(migration.migrated_bytes)}){' '}
           <RelativeTime value={migration.finished_at} className="text-text-secondary" />.
         </p>
-      ) : null}
-
-      {!running && migration.state !== 'failed' ? (
-        left.files > 0 ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <PendingButton
-              size="sm"
-              variant={quiet ? 'outline' : 'default'}
-              onClick={move}
-              disabled={!verified}
-              pending={start.isPending}
-              pendingLabel="Starting…"
-            >
-              Move files
-            </PendingButton>
-            <span className="text-sm text-text-secondary">
-              {count(left.files)} ({formatBytes(left.bytes)}) still in the built-in storage
-              {verified ? '.' : ' — update the key first.'}
-            </span>
-          </div>
-        ) : (
-          <p className="text-sm text-text-secondary">
-            Every file is in <span className="font-mono">{connection.bucket}</span>. Nothing is left to move.
-          </p>
-        )
       ) : null}
     </SettingsSection>
   );

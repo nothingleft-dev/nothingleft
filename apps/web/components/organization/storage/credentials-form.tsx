@@ -19,7 +19,7 @@ export type DraftField = 'account_id' | 'region' | 'bucket' | 'access_key_id' | 
 export type DraftErrors = Partial<Record<DraftField, string>>;
 
 const JURISDICTIONS: readonly ChoiceOption<R2Jurisdiction>[] = [
-  { value: 'default', label: 'Default', hint: 'Most buckets. The bucket page shows no jurisdiction.' },
+  { value: 'default', label: 'Default', hint: 'Leave as Default unless the bucket’s page lists a jurisdiction.' },
   { value: 'eu', label: 'European Union', hint: 'A bucket created with the EU jurisdiction.' },
   { value: 'fedramp', label: 'FedRAMP', hint: 'A bucket in the FedRAMP jurisdiction.' },
 ];

@@ -213,17 +213,21 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, ownBuc
         {deleting ? (
           <>
             <p>
-              It leaves {holderName(deleting)} for everyone and cannot be restored. Any link to it, or image of it in
-              the text, stops working.
+              It is removed from {holderName(deleting)} for everyone and cannot be restored. Links to it, and images of
+              it in the text, stop working.
             </p>
             <p>
-              {deleting.storage_target === 'platform'
-                ? `${formatBytes(deleting.size_bytes)} of the built-in storage is free again at once.`
-                : deleting.available
-                  ? `It is deleted from ${bucket ?? 'your own bucket'} too, which frees ${formatBytes(deleting.size_bytes)} there.`
-                  : byo === 'failed'
-                    ? `It is deleted from ${bucket ?? 'your own bucket'} once the bucket accepts its key again.`
-                    : 'Its copy stays in the earlier bucket, which is no longer connected; delete it there if you want it gone.'}
+              {deleting.storage_target === 'platform' ? (
+                `This frees ${formatBytes(deleting.size_bytes)} of the built-in storage.`
+              ) : deleting.available ? (
+                <>
+                  It is also deleted from {bucketName(bucket)}, which frees {formatBytes(deleting.size_bytes)} there.
+                </>
+              ) : byo === 'failed' ? (
+                <>It is deleted from {bucketName(bucket)} once the bucket accepts its key again.</>
+              ) : (
+                'Its copy stays in the earlier bucket, which is no longer connected. Delete it there if you want it gone.'
+              )}
             </p>
           </>
         ) : null}
@@ -234,8 +238,14 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, ownBuc
 
 function holderName(file: StorageFile) {
   if (file.article) return `the article “${file.article.title}”`;
-  return file.issue ?? file.project;
+  return <span className="font-mono">{file.issue ?? file.project}</span>;
 }
+
+const bucketName = (bucket: string | null) =>
+  bucket ? <span className="font-mono">{bucket}</span> : 'your own bucket';
+
+/** "2.0 MB" under "2.4 MB": sizes in a column line up on the decimal. */
+const columnBytes = (bytes: number) => formatBytes(bytes).replace(/^(\d) (?!B$)/, '$1.0 ');
 
 interface FileRowProps {
   file: StorageFile;
@@ -267,7 +277,7 @@ function FileRow({ file, byo, bucket, timeZone, deleting, onDelete }: FileRowPro
           )}
         </span>
       </td>
-      <td className="px-3 text-right whitespace-nowrap tabular">{formatBytes(file.size_bytes)}</td>
+      <td className="px-3 text-right whitespace-nowrap tabular">{columnBytes(file.size_bytes)}</td>
       <td className="px-3">
         <Holder file={file} />
       </td>
@@ -403,7 +413,7 @@ function FilesHead() {
       <tr>
         <th className="h-7 px-3 font-medium">File</th>
         <th className="w-24 px-3 text-right font-medium">Size</th>
-        <th className="w-48 px-3 font-medium">On</th>
+        <th className="w-36 px-3 font-medium">On</th>
         <th className="w-32 px-3 font-medium">Stored in</th>
         <th className="w-40 px-3 font-medium">Uploaded by</th>
         <th className="w-28 px-3 font-medium">Uploaded</th>

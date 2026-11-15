@@ -71,9 +71,9 @@ export function StorageTab({ organization, user }: { organization: Organization;
   if (overview.isPending) {
     return (
       <div className="flex flex-col gap-6">
-        <StorageUsageSkeleton />
+        <StorageUsageSkeleton ownBucket={organization.storage.bring_your_own !== null} />
         <div className="flex items-start gap-4 border-b pb-5" aria-hidden>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 [&>*]:flex [&>*]:h-5 [&>*]:items-center">
+          <div className="flex min-w-0 flex-1 flex-col [&>*]:flex [&>*]:h-5 [&>*]:items-center [&>*:first-child]:mb-0.5">
             <div>
               <Skeleton className="h-3.5 w-40" />
             </div>
@@ -88,9 +88,9 @@ export function StorageTab({ organization, user }: { organization: Organization;
         </div>
         <SettingsSection title="Files" description={FILES_DESCRIPTION}>
           <div className="flex flex-wrap gap-2" aria-hidden>
-            <Skeleton className="h-8 w-44" />
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-8 w-52" />
+            <Skeleton className="h-6 w-[137px]" />
+            <Skeleton className="h-6 w-[150px]" />
+            <Skeleton className="h-6 w-[167px]" />
           </div>
           <FilesSkeleton />
         </SettingsSection>
@@ -99,9 +99,20 @@ export function StorageTab({ organization, user }: { organization: Organization;
   }
   if (overview.isError) {
     return (
-      <LoadError onRetry={() => void overview.refetch()} detail={overview.error.message}>
-        Storage usage could not be loaded.
-      </LoadError>
+      <div className="flex flex-col gap-6">
+        <LoadError onRetry={() => void overview.refetch()} detail={overview.error.message}>
+          Storage usage could not be loaded.
+        </LoadError>
+        <StorageFiles
+          slug={slug}
+          filter={filter}
+          onFilterChange={onFilterChange}
+          byo={organization.storage.bring_your_own}
+          bucket={null}
+          ownBucket={organization.storage.bring_your_own !== null}
+          timeZone={user.timezone}
+        />
+      </div>
     );
   }
 
@@ -120,11 +131,18 @@ export function StorageTab({ organization, user }: { organization: Organization;
               <span className="font-mono">{connection.bucket}</span> refused its key.
             </>
           }
+          action={
+            mode.updating ? undefined : (
+              <Button variant="outline" size="sm" onClick={() => setParams({ setup: 'update' })}>
+                Update key
+              </Button>
+            )
+          }
         >
           Files there cannot be opened and uploads are paused until a working key for the same bucket is saved.
         </FormAlert>
       ) : null}
-      <StorageUsage overview={data} />
+      <StorageUsage overview={data} compact={wizardOpen} />
 
       {mode.kind === 'wizard' ? (
         <ByoWizard
@@ -190,7 +208,11 @@ export function StorageTab({ organization, user }: { organization: Organization;
           title="Bring your own bucket"
           description="Store this organisation’s files in a Cloudflare R2 or AWS S3 bucket of yours instead: in your account, on your bill, with no storage limit. Setup takes a few minutes."
           actions={
-            <Button size="sm" onClick={() => setParams({ setup: 'provider' })}>
+            <Button
+              size="sm"
+              variant={data.platform.level === 'ok' ? 'outline' : 'default'}
+              onClick={() => setParams({ setup: 'provider' })}
+            >
               <HardDrive /> Connect your own bucket
             </Button>
           }

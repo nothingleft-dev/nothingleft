@@ -157,7 +157,7 @@ export function PermissionsStep({ provider, bucket, onBucketChange, bucketError 
             </li>
             <li>
               Under Specify buckets choose <span className="font-medium text-text">Apply to specific buckets only</span>{' '}
-              and pick {valid ? <span className="font-mono text-text">{name}</span> : 'the bucket'} — no other bucket.
+              and pick {valid ? <span className="font-mono text-text">{name}</span> : 'the bucket'}. No other bucket.
             </li>
             <li>Create the token and keep the page open: its secret is shown only once.</li>
           </ol>
