@@ -52,71 +52,85 @@ export function BarTable<T extends BarTableRow>({
   amountClassName?: string;
 }) {
   const max = Math.max(1, ...rows.map(r => r.amount));
+  const bar = (row: T, className: string) => (
+    <span
+      aria-hidden
+      className={cn(
+        'block min-w-0.5 rounded-r-[3px]',
+        row.paint === null &&
+          (row.folded ? 'bg-border-strong' : 'bg-text-muted transition-colors group-hover/row:bg-text-secondary'),
+        className,
+      )}
+      style={{ width: `${(row.amount / max) * 100}%`, ...(row.paint ? cssPaint(row.paint) : {}) }}
+    />
+  );
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] text-sm [&_td:not(:first-child)]:tabular">
+      <table className="w-full text-sm sm:min-w-[560px] [&_td:not(:first-child)]:tabular">
         <thead>
           <tr className="h-8 border-b text-right text-xs text-text-secondary">
-            <th className="w-[30%] text-left font-medium">{heading}</th>
-            <th className="font-medium">
+            <th className="w-px pr-6 text-left font-medium whitespace-nowrap max-sm:w-full">{heading}</th>
+            <th className="font-medium max-sm:hidden">
               <span className="sr-only">Bar</span>
             </th>
-            <th className="w-28 font-medium">{amountHeading}</th>
+            <th className="w-20 pl-3 font-medium whitespace-nowrap">{amountHeading}</th>
             {columns.map(c => (
-              <th key={c.heading} className="w-28 font-medium">
+              <th key={c.heading} className="w-28 pl-3 font-medium whitespace-nowrap max-sm:hidden">
                 {c.heading}
               </th>
             ))}
-            <th className="w-20 font-medium">Share</th>
+            <th className="w-20 pl-3 font-medium">Share</th>
           </tr>
         </thead>
         <tbody>
           {rows.map(row => (
             <tr key={row.key} className="group/row h-row border-b border-border-subtle text-right hover:bg-hover">
-              <td className="max-w-0 pr-4 text-left">
-                <span className="flex min-w-0 items-center gap-2">
-                  {row.person ? (
-                    <PersonMark name={row.label} avatarUrl={row.person.avatarUrl} nobody={row.person.nobody} />
-                  ) : null}
-                  {row.projectKey ? <ProjectMarkByKey projectKey={row.projectKey} /> : null}
-                  <DrillLink query={row.query} className={cn('truncate', row.folded && 'text-text-secondary')}>
-                    {row.label}
-                  </DrillLink>
+              <td className="w-px pr-6 text-left max-sm:w-full max-sm:max-w-0 max-sm:py-2 max-sm:pr-3">
+                <span className="flex w-max max-w-80 min-w-40 flex-col gap-1.5 max-sm:w-auto max-sm:max-w-none max-sm:min-w-0">
+                  <span className="flex min-w-0 items-center gap-2">
+                    {row.person ? (
+                      <PersonMark name={row.label} avatarUrl={row.person.avatarUrl} nobody={row.person.nobody} />
+                    ) : null}
+                    {row.projectKey ? <ProjectMarkByKey projectKey={row.projectKey} /> : null}
+                    <DrillLink
+                      query={row.query}
+                      className={cn('truncate', row.folded && 'text-text-secondary')}
+                      title={row.label}
+                    >
+                      {row.label}
+                    </DrillLink>
+                  </span>
+                  {bar(row, 'h-1 sm:hidden')}
                 </span>
               </td>
-              <td className="px-2">
-                <span className="flex h-3 items-center" aria-hidden>
-                  <span
-                    className={cn(
-                      'block h-3 min-w-0.5 rounded-r-[3px]',
-                      row.paint === null &&
-                        (row.folded
-                          ? 'bg-border-strong'
-                          : 'bg-text-muted transition-colors group-hover/row:bg-text-secondary'),
-                    )}
-                    style={{ width: `${(row.amount / max) * 100}%`, ...(row.paint ? cssPaint(row.paint) : {}) }}
-                  />
-                </span>
+              <td className="px-2 max-sm:hidden">
+                <span className="flex h-3 items-center">{bar(row, 'h-3')}</span>
               </td>
-              <td className={cn('font-medium', amountClassName)}>
+              <td className={cn('pl-3 font-medium whitespace-nowrap max-sm:pt-2.5 max-sm:align-top', amountClassName)}>
                 <DrillLink query={row.query}>{formatAmount(row.amount)}</DrillLink>
               </td>
               {columns.map(c => (
-                <td key={c.heading}>{c.cell(row)}</td>
+                <td key={c.heading} className="pl-3 whitespace-nowrap max-sm:hidden">
+                  {c.cell(row)}
+                </td>
               ))}
-              <td className="text-text-secondary">{formatShare(row.share, row.amount)}</td>
+              <td className="pl-3 text-text-secondary max-sm:pt-2.5 max-sm:align-top">
+                {formatShare(row.share, row.amount)}
+              </td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="h-row text-right font-medium">
             <td className="text-left">Total</td>
-            <td />
-            <td className={amountClassName}>{formatAmount(total)}</td>
+            <td className="max-sm:hidden" />
+            <td className={cn('pl-3 whitespace-nowrap', amountClassName)}>{formatAmount(total)}</td>
             {columns.map(c => (
-              <td key={c.heading}>{c.total ?? null}</td>
+              <td key={c.heading} className="pl-3 whitespace-nowrap max-sm:hidden">
+                {c.total ?? null}
+              </td>
             ))}
-            <td className="text-text-secondary">100%</td>
+            <td className="pl-3 text-text-secondary">100%</td>
           </tr>
         </tfoot>
       </table>

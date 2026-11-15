@@ -3,7 +3,7 @@
 import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { formatDuration, type WorkCalendar } from '@nothingleft/format';
 import type { MemberRef, ReportScope, TimesheetReport as Timesheet } from '@nothingleft/types';
 import { RetryButton } from '@components/query-state';
@@ -84,6 +84,8 @@ function PeoplePicker({ state }: { state: ReportState }) {
       none="Everyone"
       many={n => `${n} people`}
       clearLabel="Everyone"
+      clearMark={<Users aria-hidden className="size-5 flex-none p-0.5 text-text-secondary" />}
+      filterPlaceholder="Filter people…"
     />
   );
 }

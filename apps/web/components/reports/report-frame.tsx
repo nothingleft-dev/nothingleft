@@ -6,7 +6,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReportEmpty, ReportFilter } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
-import { EmptyState } from '@components/empty-state';
+import { Skeleton } from '@components/ui/skeleton';
 import { PageHeader } from '@components/page-header';
 import { QueryBar, type QueryProblem } from '@components/issues/list/query-bar';
 import { DEFAULT_PERIOD } from '@components/reports/period-picker';
@@ -57,6 +57,8 @@ interface ReportFrameProps<D extends FramedReport> {
   skeletonStats?: readonly SkeletonStat[];
   /** Shown instead of the body when the report cannot be asked for at all, such as no project to chart. */
   blocked?: ReactNode;
+  /** Shown instead of the body, below the controls, when the current choice has nothing to ask for. */
+  unasked?: ReactNode;
   summary?: (data: D) => ReactNode;
   /** The Gantt draws its own empty state, because its missing-dates list still shows. */
   ownEmpty?: boolean;
@@ -83,6 +85,7 @@ export function ReportFrame<D extends FramedReport>({
   skeleton,
   skeletonStats,
   blocked,
+  unasked,
   summary,
   ownEmpty,
   emptyAction,
@@ -125,16 +128,18 @@ export function ReportFrame<D extends FramedReport>({
   const hasContent = Boolean(data && (!data.empty || (ownEmpty && data.empty.reason === 'no_dates')));
   const canExport = hasContent && !result.isError;
   // Display choices have nothing to act on while the report is empty.
-  const showDisplay = Boolean(display) && (!data || hasContent);
+  const showDisplay = Boolean(display) && !unasked && (!data || hasContent);
   // Nothing at all to report, with no filter to blame: the way forward is a first issue.
   const nothingYet = (empty: ReportEmpty) => empty.reason === 'no_issues' && empty.filters.length === 0;
+  // With no issues anywhere, the controls, the stamp and the export would all act on nothing.
+  const bare = Boolean(data?.empty && nothingYet(data.empty) && !state.get('q') && !state.get('view'));
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title={def.title}
         meta={
-          data ? (
+          bare ? null : data ? (
             <span className="inline-flex items-center gap-1">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -155,25 +160,19 @@ export function ReportFrame<D extends FramedReport>({
                 <RefreshCw className={cn('size-3.5', result.isFetching && 'animate-spin')} />
               </Button>
             </span>
+          ) : result.isPending && !blocked && !unasked ? (
+            <Skeleton className="h-3 w-24" />
           ) : null
         }
         actions={
-          <PendingButton
-            variant="outline"
-            size="xs"
-            onClick={exportCsv}
-            disabled={!canExport}
-            pending={exporter.isPending}
-            pendingLabel={
-              <>
-                <Download className="size-3.5 animate-pulse" />
-                <span className="max-sm:sr-only">Preparing the file…</span>
-              </>
-            }
-          >
-            <Download className="size-3.5" />
-            <span className="max-sm:sr-only">Export CSV</span>
-          </PendingButton>
+          bare ? null : (
+            <ExportButton
+              disabled={!canExport}
+              reason={result.isError ? undefined : 'Nothing to export'}
+              pending={exporter.isPending}
+              onClick={exportCsv}
+            />
+          )
         }
       />
 
@@ -187,7 +186,7 @@ export function ReportFrame<D extends FramedReport>({
         />
       ) : null}
 
-      {blocked ? null : (
+      {blocked || bare ? null : (
         <div className="flex flex-wrap items-center gap-2">
           {scope.query ? (
             <ViewPicker value={state.get('view')} project={scope.project} onChange={view => state.set({ view })} />
@@ -196,7 +195,7 @@ export function ReportFrame<D extends FramedReport>({
             <ProjectsPicker value={state.get('projects')} onChange={projects => state.set({ projects })} />
           ) : null}
           {controls}
-          {showDisplay ? <div className="ml-auto flex items-center gap-2 max-sm:ml-0">{display}</div> : null}
+          {showDisplay ? <div className="ml-auto flex flex-wrap items-center gap-2 max-sm:ml-0">{display}</div> : null}
         </div>
       )}
 
@@ -208,7 +207,7 @@ export function ReportFrame<D extends FramedReport>({
           }
           validValues={paramProblem.field ? (paramProblem.validValues ?? []) : []}
           onPick={paramProblem.field ? v => pick(paramProblem.field!, v) : undefined}
-          formatValue={paramProblem.field === 'users' ? v => `@${v}` : undefined}
+          people={paramProblem.field === 'users'}
           fixes={
             paramProblem.status === 404 && scope.projects ? (
               <Button variant="outline" size="xs" className={SUGGESTION} onClick={() => state.set({ projects: null })}>
@@ -235,9 +234,9 @@ export function ReportFrame<D extends FramedReport>({
 
       {blocked ? (
         blocked
-      ) : queryProblem ? (
-        <EmptyState title="Fix the query to see the report." />
-      ) : failure ? (
+      ) : unasked ? (
+        unasked
+      ) : queryProblem ? null : failure ? (
         <ReportFailure message={failure.message} onRetry={() => void result.refetch()} />
       ) : result.isPending ? (
         <ReportSkeleton shape={skeleton} stats={skeletonStats} />
@@ -263,13 +262,8 @@ export function ReportFrame<D extends FramedReport>({
                   </Button>
                 ) : null)
               }
-              description={
-                nothingYet(data.empty)
-                  ? roles.writable.length > 0
-                    ? 'Reports count the issues in the projects you can open. Create one and it shows up here.'
-                    : 'Reports count the issues in the projects you can open. Once people create some, they show up here.'
-                  : undefined
-              }
+              title={bare ? 'No issues yet' : undefined}
+              description={nothingYet(data.empty) ? 'Reports fill in as issues are created.' : undefined}
               widerPeriods={widerPeriods}
             />
           ) : (
@@ -278,5 +272,45 @@ export function ReportFrame<D extends FramedReport>({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ExportButton({
+  disabled,
+  reason,
+  pending,
+  onClick,
+}: {
+  disabled: boolean;
+  reason?: string;
+  pending: boolean;
+  onClick: () => void;
+}) {
+  const button = (
+    <PendingButton
+      variant="outline"
+      size="xs"
+      onClick={onClick}
+      disabled={disabled}
+      pending={pending}
+      pendingLabel={
+        <>
+          <Download className="size-3.5 animate-pulse" />
+          <span className="max-sm:sr-only">Preparing the file…</span>
+        </>
+      }
+    >
+      <Download className="size-3.5" />
+      <span className="max-sm:sr-only">Export CSV</span>
+    </PendingButton>
+  );
+  if (!disabled || !reason) return button;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex rounded-md">{button}</span>
+      </TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
   );
 }

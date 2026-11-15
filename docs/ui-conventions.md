@@ -564,10 +564,13 @@ every chart:
 - **Matrix cells** are *Shade* (grey steps, ink text at ≥ 4.5:1) or *Length* (a hairline bar
   under the count), the viewer's choice; **Gantt bars** are neutral with the status category on
   their left edge, red at the end when overdue.
-- Display choices sit at the right of the picker row as small segmented toggles (*Bar | Pie*,
-  *Table | Stacked*, *Shade | Length*, *Days | Weeks*); parameters are `Label Value ▾` pickers.
+- Display choices sit at the right of the picker row as small segmented toggles as tall as the
+  pickers beside them (*Bar | Pie*,
+  *Table | Stacked*, *Shade | Length*, *Days | Weeks*, *Story points | Issues | Remaining estimate*); parameters are `Label Value ▾` pickers.
   The chosen option is filled (`--bg-active`, ink text); keyboard focus is the ring, so the two
   never look alike.
+- A bar table's name column takes its own width up to 320 px, so bars start after the longest
+  name; on phones the bar sits under the name and the figures keep their columns.
 - On phones reports are read-only views: the picker row wraps, charts take the full width, and
   the matrix and Gantt scroll sideways; the timesheet lists each person's total, and tapping one
   opens their entries.

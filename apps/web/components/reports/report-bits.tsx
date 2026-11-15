@@ -11,9 +11,8 @@ import { cn } from '@lib/utils';
 import { formatCount, plural } from '@lib/numbers';
 
 /**
- * `in Product Platform, Mobile App · view Blocking bugs` — what the figures cover. With no projects
- * picked, the API lists every project the viewer can open, so the sentence says so rather than reading
- * as a filter the picker does not show.
+ * `across 2 projects: Product Platform, Mobile App · saved view Blocking bugs` — what the figures cover.
+ * With no projects picked the API lists every project the viewer can open, so the sentence names them.
  */
 export function scopeText(scope: ReportScope, picked: boolean) {
   const names = scope.projects.map(p => p.name);
@@ -21,11 +20,11 @@ export function scopeText(scope: ReportScope, picked: boolean) {
   const where =
     names.length === 0
       ? 'in every project you can open'
-      : picked
-        ? `in ${names.length <= 3 ? listed : `${listed} projects`}`
-        : names.length === 1
-          ? `in ${listed}, the one project you can open`
-          : `in all ${formatCount(names.length)} projects you can open (${listed})`;
+      : names.length === 1
+        ? `in ${listed}`
+        : picked
+          ? `in ${names.length <= 3 ? listed : `${listed} projects`}`
+          : `across ${formatCount(names.length)} projects: ${listed}`;
   return scope.view ? `${where} · saved view ${scope.view}` : where;
 }
 
@@ -33,10 +32,12 @@ export { formatCount, plural };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+export const DURATION_FACE = 'font-mono text-xs tabular [word-spacing:-0.25em]';
+
 export type DurationUnit = 'duration' | 'days' | 'hours';
 
 export const DURATION_UNITS = [
-  { value: 'duration', label: '1w 1d' },
+  { value: 'duration', label: 'Mixed' },
   { value: 'days', label: 'Days' },
   { value: 'hours', label: 'Hours' },
 ] as const satisfies readonly { value: DurationUnit; label: string }[];
@@ -68,9 +69,9 @@ export function formatMinutes(
   return minutes === 0 ? '0m' : formatDuration(Math.round(minutes), calendar);
 }
 
-/** A duration in the mono face, as everywhere else in the app. */
+/** A duration in the mono face, as everywhere else in the app; a mono space is wide, so its gaps are tightened. */
 export function Minutes({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn('font-mono text-xs tabular', className)}>{children}</span>;
+  return <span className={cn(DURATION_FACE, className)}>{children}</span>;
 }
 
 /** `12.0%`, and `<0.1%` for a share too small to round to one: a column of shares lines up on its point. */
@@ -160,7 +161,12 @@ export function ToggleGroup<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex items-center gap-0.5 rounded-sm border p-0.5">
+    // As tall as the outline pickers beside it, so the row keeps one top and bottom edge.
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="flex h-6 flex-none items-stretch gap-px rounded-md border border-border-strong bg-background p-px shadow-xs dark:bg-inset"
+    >
       {options.map(o => (
         <button
           key={o.value}
@@ -170,7 +176,7 @@ export function ToggleGroup<T extends string>({
           data-state={o.value === value ? 'on' : 'off'}
           onClick={() => onChange(o.value)}
           className={cn(
-            'h-6 rounded-xs px-2 text-xs font-medium text-text-secondary hover:bg-hover hover:text-text',
+            'rounded-[5px] px-2 text-xs font-medium whitespace-nowrap text-text-secondary hover:bg-hover hover:text-text',
             o.value === value && 'bg-active text-text hover:bg-active',
           )}
         >
@@ -192,7 +198,10 @@ export function SwitchParam({
 }) {
   const id = useId();
   return (
-    <label htmlFor={id} className="flex h-7 cursor-pointer items-center gap-2 px-1 text-xs text-text-secondary">
+    <label
+      htmlFor={id}
+      className="flex h-6 cursor-pointer items-center gap-2 px-1 text-xs whitespace-nowrap text-text-secondary"
+    >
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
       {label}
     </label>
@@ -204,14 +213,21 @@ export function DrillLink({
   query,
   children,
   className,
+  title,
 }: {
   query: string | null;
   children: React.ReactNode;
   className?: string;
+  title?: string;
 }) {
-  if (!query) return <span className={className}>{children}</span>;
+  if (!query)
+    return (
+      <span className={className} title={title}>
+        {children}
+      </span>
+    );
   return (
-    <Link href={listHref(query)} className={cn('text-link', className)}>
+    <Link href={listHref(query)} className={cn('text-link', className)} title={title}>
       {children}
     </Link>
   );

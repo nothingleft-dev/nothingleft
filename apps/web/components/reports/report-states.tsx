@@ -6,8 +6,12 @@ import type { ReportEmpty, ReportFilter } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';
+import { EmptyState } from '@components/empty-state';
 import { LoadError } from '@components/query-state';
 import { StatRow } from '@components/dashboard/stat-row';
+import { MemberAvatar } from '@components/issues/member-avatar';
+import { useMembers } from '@hooks/use-members';
+import { useSession } from '@hooks/use-session';
 import type { ReportChanges } from '@lib/reports/url';
 import { EVERYONE } from '@lib/reports/url';
 import { cn } from '@lib/utils';
@@ -44,12 +48,13 @@ function wideningsOf(filter: ReportFilter, period: string | null, wider: readonl
   }
 }
 
-/** The API's sentence, verbatim, and one way out per filter that produced it. */
+/** The API's sentence, verbatim unless the report has a plainer one, and one way out per filter that produced it. */
 export function ReportEmptyState({
   empty,
   period,
   onChange,
   action,
+  title,
   description,
   widerPeriods = WIDER_PERIODS,
   className,
@@ -58,29 +63,35 @@ export function ReportEmptyState({
   period: string | null;
   onChange: (changes: ReportChanges) => void;
   action?: ReactNode;
+  title?: string;
   description?: string;
   widerPeriods?: readonly string[];
   className?: string;
 }) {
   const widenings = empty.filters.flatMap(f => wideningsOf(f, period, widerPeriods));
   return (
-    <div className={cn('flex flex-col items-start gap-3 rounded-md border px-4 py-6', className)}>
-      <div className="flex flex-col gap-1">
-        <p className="font-medium">{empty.message}</p>
-        {description ? <p className="text-xs text-text-secondary">{description}</p> : null}
-      </div>
-      {action}
-      {widenings.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-text-secondary">Widen it:</span>
-          {widenings.map(w => (
-            <Button key={w.label} variant="outline" size="xs" onClick={() => onChange(w.changes)}>
-              {w.label}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+    <EmptyState
+      title={title ?? empty.message}
+      description={description}
+      className={className}
+      action={
+        action || widenings.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {action}
+            {widenings.length > 0 ? (
+              <>
+                <span className="text-xs text-text-secondary">Widen it:</span>
+                {widenings.map(w => (
+                  <Button key={w.label} variant="outline" size="sm" onClick={() => onChange(w.changes)}>
+                    {w.label}
+                  </Button>
+                ))}
+              </>
+            ) : null}
+          </div>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -100,12 +111,15 @@ export function ReportProblem({
   validValues,
   onPick,
   formatValue = v => v,
+  people = false,
   fixes,
 }: {
   message: string;
   validValues: readonly string[];
   onPick?: (value: string) => void;
   formatValue?: (value: string) => string;
+  /** The values are usernames: each suggestion is the person, picture and name, with the handle on hover. */
+  people?: boolean;
   /** One-click ways out that are not a value of the field at fault, such as a shorter period. */
   fixes?: ReactNode;
 }) {
@@ -117,20 +131,25 @@ export function ReportProblem({
         <div className="flex flex-col gap-2">
           {hint ? <p>{hint}</p> : null}
           {chips || fixes ? (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {chips && people ? <span className="mr-0.5">Pick one:</span> : null}
               {chips
-                ? validValues.slice(0, 24).map(value => (
-                    <Button
-                      key={value}
-                      variant="outline"
-                      size="xs"
-                      className={cn(SUGGESTION, 'max-w-full')}
-                      title={formatValue(value)}
-                      onClick={() => onPick(value)}
-                    >
-                      <span className="truncate">{formatValue(value)}</span>
-                    </Button>
-                  ))
+                ? validValues.slice(0, 24).map(value =>
+                    people ? (
+                      <PersonSuggestion key={value} username={value} onPick={() => onPick(value)} />
+                    ) : (
+                      <Button
+                        key={value}
+                        variant="outline"
+                        size="xs"
+                        className={cn(SUGGESTION, 'max-w-full')}
+                        title={formatValue(value)}
+                        onClick={() => onPick(value)}
+                      >
+                        <span className="truncate">{formatValue(value)}</span>
+                      </Button>
+                    ),
+                  )
                 : null}
               {fixes}
             </div>
@@ -138,6 +157,29 @@ export function ReportProblem({
         </div>
       ) : null}
     </FormAlert>
+  );
+}
+
+function PersonSuggestion({ username, onPick }: { username: string; onPick: () => void }) {
+  const session = useSession();
+  const slug = session.status === 'signed-in' ? session.user.current_organization_slug : null;
+  const members = useMembers(slug, { limit: 200 });
+  const member = members.data?.find(m => m.username === username);
+  return (
+    <Button
+      variant="outline"
+      size="xs"
+      className={cn(SUGGESTION, 'max-w-full gap-1.5 pl-1')}
+      title={`@${username}`}
+      onClick={onPick}
+    >
+      {member ? (
+        <MemberAvatar member={member} className="size-4 flex-none" initialsClassName="text-[7px]" />
+      ) : (
+        <Skeleton className="size-4 flex-none rounded-full" />
+      )}
+      <span className="truncate">{member?.name ?? `@${username}`}</span>
+    </Button>
   );
 }
 
@@ -155,14 +197,24 @@ const BAR_WIDTHS = [78, 64, 52, 41, 33, 22, 15, 9];
 
 /** The bar table's own template: name, bar, figure and share, unboxed, with its header and total rows. */
 function BarTableSkeleton() {
-  const row = (label: ReactNode, bar: ReactNode, key: number | string, className = 'border-b border-border-subtle') => (
-    <div key={key} className={cn('flex h-row items-center gap-0', className)}>
-      <div className="flex w-[30%] flex-none items-center gap-2 pr-4">{label}</div>
-      <div className="flex min-w-0 flex-1 items-center px-2">{bar}</div>
-      <div className="flex w-28 flex-none justify-end">
+  const row = (
+    label: ReactNode,
+    width: number | null,
+    key: number | string,
+    className = 'border-b border-border-subtle',
+  ) => (
+    <div key={key} className={cn('flex h-row items-center', className)}>
+      <div className="flex w-56 flex-none flex-col gap-1 pr-6 max-sm:min-w-0 max-sm:flex-1 max-sm:pr-3">
+        <div className="flex items-center gap-2">{label}</div>
+        {width === null ? null : <Skeleton className="h-1 rounded-l-none sm:hidden" style={{ width: `${width}%` }} />}
+      </div>
+      <div className="flex min-w-0 flex-1 items-center px-2 max-sm:hidden">
+        {width === null ? null : <Skeleton className="h-3 rounded-l-none" style={{ width: `${width}%` }} />}
+      </div>
+      <div className="flex w-20 flex-none justify-end pl-3">
         <Skeleton className="h-3 w-8" />
       </div>
-      <div className="flex w-20 flex-none justify-end">
+      <div className="flex w-20 flex-none justify-end pl-3">
         <Skeleton className="h-3 w-10" />
       </div>
     </div>
@@ -178,7 +230,7 @@ function BarTableSkeleton() {
             <Skeleton className="size-6 flex-none rounded-full" />
             <Skeleton className="h-3 w-28" />
           </>,
-          <Skeleton className="h-3 rounded-l-none" style={{ width: `${w}%` }} />,
+          w,
           i,
         ),
       )}

@@ -39,7 +39,8 @@ import { markPaint, type MarkPaint } from '@lib/reports/colors';
 import { groupFieldLabel } from '@lib/issue-list/groups';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 
-const days = (n: number) => `${oneDecimal(n)} ${n === 1 ? 'day' : 'days'}`;
+/** `107 days`, `4.5 days`: a tenth of a day is noise once the figure reaches ten. */
+const days = (n: number) => `${n >= 10 ? formatCount(Math.round(n)) : oneDecimal(n)} ${n === 1 ? 'day' : 'days'}`;
 
 const NEUTRAL: MarkPaint = { fill: 'var(--text-muted)', hatched: false, faded: false };
 
@@ -76,7 +77,7 @@ export function AgeReport() {
       skeleton="bars"
       skeletonStats={['Issues', 'Average age', 'Oldest']}
       summary={d =>
-        `${plural(d.overall.count, d.unresolved_only ? 'unresolved issue' : 'issue')} ${scopeText(d.scope, Boolean(state.get('projects')))}, aged from creation to ${
+        `${plural(d.overall.count, d.unresolved_only ? 'unresolved issue' : 'issue')} ${scopeText(d.scope, Boolean(state.get('projects')))}. Age runs from creation to ${
           d.unresolved_only ? 'now' : 'resolution, or to now while open'
         }.`
       }
@@ -109,8 +110,8 @@ export function AgeReport() {
 
 function OldestKey({ issueKey }: { issueKey: string }) {
   return (
-    <Link href={`/issue/${issueKey}` as Route} className="w-fit hover:underline hover:underline-offset-4">
-      <IssueKey issueKey={issueKey} />
+    <Link href={`/issue/${issueKey}` as Route} className="text-link w-fit">
+      <IssueKey issueKey={issueKey} className="text-inherit" />
     </Link>
   );
 }
@@ -144,7 +145,7 @@ function AgeBars({ data }: { data: AverageAge }) {
         tickLine={false}
         ticks={ticks}
         domain={[0, ticks.at(-1)!]}
-        tickFormatter={(v: number) => `${formatCount(v)}d`}
+        tickFormatter={(v: number) => `${formatCount(v)} ${v === 1 ? 'day' : 'days'}`}
       />
       <YAxis
         type="category"
@@ -217,7 +218,10 @@ function AgeTable({ data }: { data: AverageAge }) {
             <th className="font-medium">{groupFieldLabel(data.group_by ?? '')}</th>
             <th className="w-24 text-right font-medium">Issues</th>
             <th className="w-32 text-right font-medium">Average age</th>
-            <th className="w-48 pl-6 font-medium">Oldest</th>
+            <th className="w-28 pl-6 font-medium">Oldest</th>
+            <th className="w-24 text-right font-medium">
+              <span className="sr-only">Oldest issue’s age</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -237,12 +241,8 @@ function AgeTable({ data }: { data: AverageAge }) {
                 <DrillLink query={g.query}>{g.count}</DrillLink>
               </td>
               <td className="text-right">{days(g.average_days)}</td>
-              <td className="pl-6">
-                <span className="flex items-center gap-2">
-                  {g.oldest ? <OldestKey issueKey={g.oldest} /> : null}
-                  <span className="text-text-secondary">{days(g.oldest_days)}</span>
-                </span>
-              </td>
+              <td className="pl-6">{g.oldest ? <OldestKey issueKey={g.oldest} /> : null}</td>
+              <td className="text-right text-text-secondary">{days(g.oldest_days)}</td>
             </tr>
           ))}
         </tbody>

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState, type ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { CommandEmpty, CommandGroup, CommandInput, CommandList, CommandSeparator } from '@components/ui/command';
 import { PickerCommand, PickerItem } from '@components/picker';
@@ -14,6 +14,8 @@ export interface ReportOption {
   label: string;
   group?: string;
   mark?: ReactNode;
+  /** A short code after the name, such as a project key: `Billing  BIL`. */
+  hint?: string;
 }
 
 interface BaseProps {
@@ -21,6 +23,7 @@ interface BaseProps {
   options: readonly ReportOption[];
   loading?: boolean;
   searchable?: boolean;
+  filterPlaceholder?: string;
   width?: string;
   disabled?: boolean;
 }
@@ -38,6 +41,8 @@ interface MultiProps extends BaseProps {
   none: string;
   many: (count: number) => string;
   clearLabel: string;
+  /** Sits where the options' marks sit, so the clear row's label starts on their edge. */
+  clearMark?: ReactNode;
 }
 
 function Trigger({
@@ -80,25 +85,73 @@ function grouped(options: readonly ReportOption[]) {
   return [...groups.entries()];
 }
 
+/** A multi-select row's box in the trailing column: empty until ticked, ink-filled when it is. */
+function Tick({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'ml-auto grid size-4 flex-none place-items-center rounded-[4px] border border-border-strong',
+        checked && 'border-text bg-text text-surface',
+      )}
+    >
+      {checked ? <Check className="size-3 text-surface" strokeWidth={3} /> : null}
+    </span>
+  );
+}
+
+function OptionRow({
+  option,
+  checked,
+  multi,
+  onSelect,
+}: {
+  option: ReportOption;
+  checked: boolean;
+  multi: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <PickerItem
+      checked={checked}
+      checkClassName={multi ? 'hidden' : undefined}
+      value={`${option.label} ${option.hint ?? ''} ${option.value}`}
+      onSelect={onSelect}
+    >
+      {option.mark}
+      <span className="min-w-0 flex-1 truncate" title={option.label}>
+        {option.label}
+      </span>
+      {option.hint ? <span className="flex-none font-mono text-xs text-text-secondary">{option.hint}</span> : null}
+      {multi ? <Tick checked={checked} /> : null}
+    </PickerItem>
+  );
+}
+
 function Options({
   options,
   loading,
   searchable,
+  filterPlaceholder = 'Filter…',
   isSelected,
   onSelect,
   lead,
+  multi = false,
 }: {
   options: readonly ReportOption[];
   loading?: boolean;
   searchable?: boolean;
+  filterPlaceholder?: string;
   isSelected: (value: string) => boolean;
   onSelect: (value: string) => void;
   lead?: ReactNode;
+  multi?: boolean;
 }) {
   return (
     <PickerCommand>
-      {searchable ? <CommandInput placeholder="Filter…" /> : null}
-      <CommandList className="max-h-[min(60vh,360px)]">
+      {searchable ? <CommandInput placeholder={filterPlaceholder} /> : null}
+      {/* Ten and a half rows: the list stops mid-row only where it says there is more below. */}
+      <CommandList className="max-h-[min(60vh,348px)]">
         {loading ? <PickerSkeleton /> : <CommandEmpty>Nothing matches.</CommandEmpty>}
         {lead}
         {loading
@@ -108,17 +161,13 @@ function Options({
                 {index > 0 || lead ? <CommandSeparator /> : null}
                 <CommandGroup heading={heading || undefined}>
                   {list.map(option => (
-                    <PickerItem
-                      checked={isSelected(option.value)}
+                    <OptionRow
                       key={option.value}
-                      value={`${option.label} ${option.value}`}
+                      option={option}
+                      checked={isSelected(option.value)}
+                      multi={multi}
                       onSelect={() => onSelect(option.value)}
-                    >
-                      {option.mark}
-                      <span className="min-w-0 flex-1 truncate" title={option.label}>
-                        {option.label}
-                      </span>
-                    </PickerItem>
+                    />
                   ))}
                 </CommandGroup>
               </Fragment>
@@ -164,6 +213,7 @@ export function ReportMultiPicker({
   none,
   many,
   clearLabel,
+  clearMark,
   width = 'w-64',
   ...rest
 }: MultiProps) {
@@ -182,13 +232,21 @@ export function ReportMultiPicker({
       <PopoverContent align="start" className={cn('max-w-[calc(100vw-32px)] p-0', width)}>
         <Options
           {...rest}
+          multi
           options={options}
           isSelected={v => values.includes(v)}
           onSelect={toggle}
           lead={
             <CommandGroup>
-              <PickerItem checked={values.length === 0} value={`__clear ${clearLabel}`} onSelect={() => onChange([])}>
+              <PickerItem
+                checked={values.length === 0}
+                checkClassName="hidden"
+                value={`__clear ${clearLabel}`}
+                onSelect={() => onChange([])}
+              >
+                {clearMark}
                 <span className="min-w-0 flex-1 truncate">{clearLabel}</span>
+                <Tick checked={values.length === 0} />
               </PickerItem>
             </CommandGroup>
           }

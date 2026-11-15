@@ -8,6 +8,7 @@ import { ReportFrame } from '@components/reports/report-frame';
 import { ReportPicker } from '@components/reports/report-picker';
 import {
   calendarNote,
+  DURATION_FACE,
   durationUnitOf,
   formatMinutes,
   HueNote,
@@ -157,7 +158,7 @@ export function TimeReport() {
               amountHeading="Spent"
               rows={rows}
               formatAmount={m => formatMinutes(m, unit, calendar, { column: true })}
-              amountClassName="font-mono text-xs"
+              amountClassName={DURATION_FACE}
               total={d.totals.spent_minutes}
               columns={withEstimates ? estimateColumns(d, unit, calendar) : []}
             />
@@ -173,7 +174,6 @@ export function TimeReport() {
                 </p>
               )}
               {unit !== 'hours' ? <p>{calendarNote(calendar)}</p> : null}
-              <p>Logged time shows where the hours went, not how well anyone worked.</p>
             </div>
           </div>
         );

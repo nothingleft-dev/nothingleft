@@ -108,8 +108,10 @@ export function PeriodPicker({
               {range.from && range.to
                 ? formatCalendarRange(range.from, range.to)
                 : range.from
-                  ? 'Choose the last day'
-                  : 'Choose the first day'}
+                  ? 'Pick the last day'
+                  : active
+                    ? formatCalendarRange(active.from, active.to)
+                    : 'Pick a first day'}
             </span>
             <Button
               size="xs"

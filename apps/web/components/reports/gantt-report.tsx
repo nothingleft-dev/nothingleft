@@ -12,13 +12,14 @@ import { IssueModal } from '@components/issues/issue-modal';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { StatusDot } from '@components/issues/value-marks';
 import { ReportFrame } from '@components/reports/report-frame';
+import { ReportPicker } from '@components/reports/report-picker';
 import { ReportEmptyState } from '@components/reports/report-states';
 import { DrillLink, plural, ToggleGroup } from '@components/reports/report-bits';
 import { useDefaultProject, useNoProjects, useReportState } from '@components/reports/report-state';
 import { ProjectPicker } from '@components/reports/scope-pickers';
 import { ChartTooltipBody } from '@components/reports/chart/chart-parts';
+import { EDGE_FADE_START } from '@components/reports/scroll-edges';
 import { EmptyState } from '@components/empty-state';
-import { EDGE_FADE_END, EDGE_FADE_START } from '@components/reports/scroll-edges';
 import { useReport } from '@hooks/use-reports';
 import { useWorkWeek } from '@hooks/use-work-calendar';
 import {
@@ -42,6 +43,11 @@ const GROUPS = [
   { value: 'assignee', label: 'Assignee' },
   { value: 'none', label: 'None' },
 ] as const;
+
+// The timeline runs on past the frame: its last 24 px fade out. The start keeps a shade instead, so the sticky
+// status edges stay readable there.
+const TIMELINE_FADE_END =
+  'pointer-events-none absolute inset-y-0 right-0 z-[4] w-6 bg-linear-to-l from-surface to-transparent';
 
 const HATCH = 'repeating-linear-gradient(135deg, var(--palette-gray-solid) 0 2px, var(--palette-gray-bg) 2px 5px)';
 const OVERDUE = 'var(--palette-red-solid)';
@@ -115,24 +121,27 @@ export function GanttReport() {
       controls={
         <>
           <ProjectPicker value={project ?? ''} onChange={key => state.set({ project: key })} />
-          <ToggleGroup
+          <ReportPicker
             label="Group by"
             value={state.get('group_by')}
             options={GROUPS}
+            width="w-44"
             onChange={v => state.set({ group_by: v })}
           />
         </>
       }
       display={
-        <ToggleGroup
-          label="Zoom"
-          value={zoom}
-          options={[
-            { value: 'week', label: 'Days' },
-            { value: 'month', label: 'Weeks' },
-          ]}
-          onChange={v => state.set({ zoom: v === 'month' ? 'month' : null })}
-        />
+        result.data?.empty ? null : (
+          <ToggleGroup
+            label="Zoom"
+            value={zoom}
+            options={[
+              { value: 'week', label: 'Days' },
+              { value: 'month', label: 'Weeks' },
+            ]}
+            onChange={v => state.set({ zoom: v === 'month' ? 'month' : null })}
+          />
+        )
       }
       skeleton="gantt"
       blocked={
@@ -146,13 +155,15 @@ export function GanttReport() {
       ownEmpty
       summary={d =>
         `${plural(d.bar_count, 'issue')} on the timeline in ${d.project.name}${
-          d.range ? ` · ${formatCalendarRange(d.range.start, d.range.end)}` : ''
+          d.range ? ` · ${formatCalendarRange(d.range.start, d.range.end).replaceAll(' ', '\u00a0')}` : ''
         }${d.dependencies.length ? ` · ${plural(d.dependencies.length, 'dependency', 'dependencies')}` : ''}.`
       }
     >
       {d => (
         <div className="flex flex-col gap-6">
-          {d.empty ? (
+          {d.empty?.reason === 'no_dates' ? (
+            <p className="text-text-secondary">Nothing to draw yet.</p>
+          ) : d.empty ? (
             <ReportEmptyState
               empty={{ ...d.empty, filters: d.empty.filters.filter(f => f.kind !== 'projects') }}
               period={null}
@@ -279,6 +290,9 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
     return out;
   }, [days]);
 
+  // Keys are mono, so the longest one in characters sets the column and every title starts right after it.
+  const keyWidth = `${Math.max(4, ...data.groups.flatMap(g => g.bars.map(b => b.key.length)))}ch`;
+
   const related = (key: string) =>
     hover !== null &&
     (key === hover ||
@@ -313,7 +327,11 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
                 onPointerEnter={() => setHover(row.bar.key)}
                 onPointerLeave={() => setHover(null)}
               >
-                <Link href={`/issue/${row.bar.key}` as Route} className="w-16 flex-none hover:underline max-sm:w-auto">
+                <Link
+                  href={`/issue/${row.bar.key}` as Route}
+                  className="flex-none font-mono text-2xs hover:underline max-sm:w-auto"
+                  style={{ width: keyWidth }}
+                >
                   <IssueKey issueKey={row.bar.key} resolved={row.bar.resolved} />
                 </Link>
                 <button
@@ -328,7 +346,12 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
                 </button>
                 {row.bar.assignees[0] ? (
                   <MemberAvatar member={row.bar.assignees[0]} className="size-avatar-sm max-sm:hidden" />
-                ) : null}
+                ) : (
+                  <span
+                    title="Unassigned"
+                    className="size-avatar-sm flex-none rounded-full border border-dashed border-border-strong max-sm:hidden"
+                  />
+                )}
               </div>
             ),
           )}
@@ -524,7 +547,7 @@ function GanttTimeline({ data, zoom }: { data: Gantt; zoom: Zoom }) {
             </div>
           </div>
           {view.left > 0 ? <div className={cn(EDGE_FADE_START, 'z-[4]')} /> : null}
-          {view.left + view.width < view.content - 1 ? <div className={cn(EDGE_FADE_END, 'z-[4]')} /> : null}
+          {view.left + view.width < view.content - 1 ? <div className={TIMELINE_FADE_END} /> : null}
           {view.width > 0
             ? [...placed.values()].map(({ bar, x, width: w, mid }) => {
                 const before = x + w < view.left;

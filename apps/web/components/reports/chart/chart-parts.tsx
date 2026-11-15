@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import type { WorkCalendar } from '@nothingleft/format';
 import { PALETTE_HUES, type PaletteHue } from '@nothingleft/types';
-import { PersonMark, type DurationUnit, type PersonRef } from '@components/reports/report-bits';
+import { DrillLink, PersonMark, type DurationUnit, type PersonRef } from '@components/reports/report-bits';
 import type { MarkPaint } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
 
@@ -62,8 +62,8 @@ export function Swatch({
   outlined = false,
 }: {
   paint: MarkPaint;
-  shape?: 'rect' | 'line';
-  /** A band too close to the surface to see on its own, such as a shaded day. */
+  /** `band`: a shaded area behind the plot, drawn as a short filled strip with an edge so it reads on its own. */
+  shape?: 'rect' | 'line' | 'band';
   outlined?: boolean;
 }) {
   return (
@@ -71,8 +71,12 @@ export function Swatch({
       aria-hidden
       className={cn(
         'inline-block flex-none',
-        shape === 'rect' ? 'size-2.5 rounded-[3px]' : 'h-0.5 w-3 rounded-full',
-        outlined && 'border border-border-strong',
+        shape === 'rect'
+          ? 'size-2.5 rounded-[3px]'
+          : shape === 'band'
+            ? 'h-2 w-3 rounded-[2px]'
+            : 'h-0.5 w-3 rounded-full',
+        (outlined || shape === 'band') && 'border border-border-strong',
       )}
       style={cssPaint(paint)}
     />
@@ -129,7 +133,7 @@ export function ChartLegend({
     key: string;
     label: string;
     paint: MarkPaint;
-    shape?: 'rect' | 'line';
+    shape?: 'rect' | 'line' | 'band';
     outlined?: boolean;
     person?: PersonRef;
   }[];
@@ -151,24 +155,28 @@ const truncate = (text: string, max: number) => (text.length > max ? `${text.sli
 
 /**
  * A category label on one line, shortened; the tooltip and the table carry the whole name. A person
- * wears their picture before their name, as in the table.
+ * wears their picture before their name, as in the table; with `links`, the label opens the issues it
+ * counts and carries its colour's swatch, as the table's row heading does.
  */
 export function CategoryTick({
   x = 0,
   y = 0,
   payload,
   people,
+  links,
   width = 168,
 }: {
   x?: number;
   y?: number;
   payload?: { value: string };
   people?: ReadonlyMap<string, PersonRef>;
+  links?: ReadonlyMap<string, { paint: MarkPaint | null; query: string | null }>;
   width?: number;
 }) {
   const label = payload?.value ?? '';
   const person = people?.get(label);
-  if (!person) {
+  const link = links?.get(label);
+  if (!person && !link) {
     return (
       <text x={x} y={y} dy={4} textAnchor="end" fill="var(--text-secondary)" fontSize={12}>
         {truncate(label, 26)}
@@ -177,9 +185,16 @@ export function CategoryTick({
   }
   return (
     <foreignObject x={x - width} y={y - 10} width={width - 4} height={20}>
-      <span className="flex h-5 items-center justify-end gap-1.5 text-2xs text-text-secondary">
-        <PersonMark name={label} {...person} small />
-        <span className="truncate">{label}</span>
+      <span className="flex h-5 items-center justify-end gap-1.5 text-xs text-text-secondary" title={label}>
+        {link?.paint ? <Swatch paint={link.paint} /> : null}
+        {person ? <PersonMark name={label} {...person} small /> : null}
+        {link ? (
+          <DrillLink query={link.query} className="truncate">
+            {label}
+          </DrillLink>
+        ) : (
+          <span className="truncate">{label}</span>
+        )}
       </span>
     </foreignObject>
   );

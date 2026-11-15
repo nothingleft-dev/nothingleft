@@ -60,8 +60,20 @@ function rowsOf(data: Distribution, sort: Sort): Row[] {
     ...(people ? { person: { avatarUrl: g.avatar_url, nobody: g.value === null } } : {}),
     ...(data.field === 'project' && g.value ? { projectKey: g.value } : {}),
   }));
-  // The API returns the field's own order, which is name order for people: Name keeps it.
-  return sort === 'name' ? rows : rows.toSorted((a, b) => b.amount - a.amount);
+  // The API returns the field's own order, which is name order for people: Name keeps it. An empty group
+  // (Unassigned, No tag) is an absence, so it closes the list rather than ranking among the values.
+  const empty = (i: number) => (data.groups[i]!.value === null ? 1 : 0);
+  const indexed = rows.map((row, i) => ({ row, i }));
+  const ordered =
+    sort === 'name' ? indexed : indexed.toSorted((a, b) => empty(a.i) - empty(b.i) || b.row.amount - a.row.amount);
+  return ordered.map(({ row }) => row);
+}
+
+/** What the second sort means for this field: names for people and tags, the workflow's own order for its fields. */
+function fieldOrderLabel(name: DistributionName, field: string) {
+  if (name !== 'issues-per-field' || ['assignee', 'tag', 'project', 'reporter'].includes(field)) return 'A–Z';
+  if (field === 'status' || field === 'priority') return 'Workflow order';
+  return 'Field order';
 }
 
 const NOUN: Record<string, { one: string; many: string; entries: string }> = {
@@ -157,7 +169,7 @@ export function DistributionReport({ name }: { name: DistributionName }) {
             value={sort}
             options={[
               { value: 'count', label: 'Most first' },
-              { value: 'name', label: 'Field order' },
+              { value: 'name', label: fieldOrderLabel(name, field) },
             ]}
             onChange={v => state.set({ sort: v === 'name' ? 'name' : null })}
           />
@@ -175,7 +187,11 @@ export function DistributionReport({ name }: { name: DistributionName }) {
       skeleton="bars"
       skeletonStats={
         name === 'issues-per-assignee'
-          ? ['Issues', 'People assigned', ...(state.get('include_unassigned') === 'true' ? ['Unassigned'] : [])]
+          ? [
+              'Issues',
+              'People assigned',
+              ...(state.get('include_unassigned') === 'true' ? [{ label: 'Unassigned', linked: true as const }] : []),
+            ]
           : undefined
       }
       summary={d => (
@@ -339,8 +355,8 @@ export function DistributionTable({
         <thead>
           <tr className="h-8 border-b text-left text-xs text-text-secondary">
             <th className="font-medium">{heading}</th>
-            <th className="w-28 text-right font-medium">{valueLabel}</th>
-            <th className="w-28 text-right font-medium">Share</th>
+            <th className="w-20 pl-3 text-right font-medium">{valueLabel}</th>
+            <th className="w-20 pl-3 text-right font-medium">Share</th>
           </tr>
         </thead>
         <tbody>
@@ -358,10 +374,10 @@ export function DistributionTable({
                   </DrillLink>
                 </span>
               </td>
-              <td className="text-right">
+              <td className="pl-3 text-right font-medium">
                 <DrillLink query={row.query}>{formatCount(row.amount)}</DrillLink>
               </td>
-              <td className="text-right text-text-secondary">{formatShare(row.share, row.amount)}</td>
+              <td className="pl-3 text-right text-text-secondary">{formatShare(row.share, row.amount)}</td>
             </tr>
           ))}
         </tbody>

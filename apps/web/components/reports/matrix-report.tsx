@@ -34,12 +34,12 @@ import {
 import { useReport } from '@hooks/use-reports';
 import { groupFieldLabel } from '@lib/issue-list/groups';
 import { listHref } from '@lib/issue-list/links';
-import { markPaint } from '@lib/reports/colors';
+import { HEAT_FILLS, markPaint } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { EDGE_END, EDGE_START, useScrollEdges } from '@components/reports/scroll-edges';
 
-const HEAT_STEPS = 5;
+const HEAT_STEPS = HEAT_FILLS.length;
 const heatStep = (count: number, max: number) =>
   count === 0 || max === 0 ? 0 : Math.min(HEAT_STEPS, Math.ceil((count / max) * HEAT_STEPS));
 
@@ -142,6 +142,8 @@ function AxisLabel({
   wrap?: boolean;
 }) {
   const person = personOf(group, people);
+  // A person's column reads `Casey M.`, so every heading takes one line; the picture and tooltip say who.
+  const label = wrap && person && !person.nobody ? shortName(group.label) : group.label;
   return (
     <span
       className={cn('inline-flex min-w-0 items-center', wrap ? 'flex-col gap-1 text-center' : 'gap-1.5')}
@@ -150,13 +152,18 @@ function AxisLabel({
       {/* A series swatch keys nothing in a table; status, category and project colours are the meaning. */}
       {palette === 'series' ? null : <Swatch paint={markPaint(group, palette)} />}
       {palette === 'project' && group.value ? <ProjectMarkByKey projectKey={group.value} /> : null}
-      {person ? <PersonMark name={group.label} {...person} small /> : null}
+      {person ? <PersonMark name={group.label} {...person} small={!wrap} /> : null}
       <DrillLink query={group.query} className={wrap ? 'line-clamp-2 max-w-full' : 'truncate'}>
-        {group.label}
+        {label}
       </DrillLink>
     </span>
   );
 }
+
+const shortName = (name: string) => {
+  const parts = name.trim().split(/\s+/);
+  return parts.length < 2 ? name : `${parts[0]} ${parts.at(-1)!.charAt(0)}.`;
+};
 
 interface Hover {
   row: number;
@@ -233,9 +240,9 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
                     <span
                       className={cn(
                         'flex h-[34px] flex-col items-center justify-center gap-[3px] rounded-xs',
-                        cellStyle === 'shade' && step > 0 && `heat-${step}`,
                         cell?.query && 'hover:outline-[1.5px] hover:outline-text hover:-outline-offset-[1.5px]',
                       )}
+                      style={cellStyle === 'shade' && step > 0 ? { background: HEAT_FILLS[step - 1] } : undefined}
                     >
                       {count > 0 ? count : ''}
                       {cellStyle === 'length' && count > 0 ? (
@@ -313,8 +320,12 @@ function MatrixTable({ data, cellStyle }: { data: Matrix; cellStyle: CellStyle }
           <span className="inline-flex items-center gap-1.5" aria-hidden>
             Issues per cell
             <span className="ml-1 tabular">1</span>
-            {Array.from({ length: HEAT_STEPS }, (_, k) => (
-              <i key={k} className={cn('inline-block h-3 w-5 rounded-[2px] border border-border', `heat-${k + 1}`)} />
+            {HEAT_FILLS.map(fill => (
+              <i
+                key={fill}
+                className="inline-block h-3 w-5 rounded-[2px] border border-border-strong"
+                style={{ background: fill }}
+              />
             ))}
             <span className="tabular">{data.max_cell}</span>
           </span>
@@ -370,7 +381,19 @@ function MatrixStacked({ data }: { data: Matrix }) {
           type="category"
           dataKey="label"
           width={176}
-          tick={<CategoryTick people={peopleByLabel(data.rows.groups, rowPeople)} />}
+          tick={
+            <CategoryTick
+              people={peopleByLabel(data.rows.groups, rowPeople)}
+              links={
+                new Map(
+                  data.rows.groups.map(g => [
+                    g.label,
+                    { paint: data.rows.palette === 'series' ? null : markPaint(g, data.rows.palette), query: g.query },
+                  ]),
+                )
+              }
+            />
+          }
           axisLine={{ stroke: 'var(--border)' }}
           tickLine={false}
           interval={0}

@@ -27,7 +27,7 @@ line chart has a table with the same numbers under or beside it. Hover a slice o
 read its figure; click a name, a figure or a slice to open the issues it counts. People appear
 with their pictures, and projects in their own colours.
 
-Durations can be read three ways - **1w 1d** (`1w 2d 3h`), **Days** or **Hours**. Days and
+Durations can be read three ways - **Mixed** (`1w 2d 3h`), **Days** or **Hours**. Days and
 weeks are your organisation's working ones, and the report says how long they are.
 
 ## Choosing what a report covers
@@ -74,7 +74,9 @@ How issues spread over the organisation's projects.
 How issues spread over any field: status, priority, type, assignee, tag, sprint, due date
 (Overdue, Today, This week, Later, No due date), or a custom field - a select, multi-select,
 person, people or checkbox field. Issues without a value are counted under the field's empty
-label (*No severity*), and a custom field counts only on the issue types it applies to.
+label (*No severity*), and a custom field counts only on the issue types it applies to. For
+status and priority the second sort is **Workflow order**; for people, tags and projects it is
+**A–Z**. Issues with no value (*Unassigned*, *No tags*) are always listed last.
 
 When the projects in a report name their statuses differently, **group by category** adds them
 up by the five status categories - Backlog, Unstarted, Started, Done, Cancelled - so *Fixed* in
@@ -105,8 +107,10 @@ the days left underneath.
 The figures are recorded every night and when the sprint starts and finishes, so the chart
 shows how the sprint really went even after issues are edited later; today's point is read
 live and labelled with its figure; a day with no recorded figure is bridged by a dashed line. **Scope added after the start is its own line**, so *we
-finished nothing* and *they added 30 points on Tuesday* look different. Days still to come are
-shaded. A sprint that has not started yet has no figures. Choose the project and the sprint at
+finished nothing* and *they added 30 points on Tuesday* look different. Non-working days are
+shaded; the dashed Today line marks where the figures stop. When some of the commitment was
+already done on the first day, the line under the figures says so (*Committed at the start: 37,
+with 35 still to do*) and the ideal line starts from what was still to do. A sprint that has not started yet has no figures. Choose the project and the sprint at
 the top; **Daily figures** under the chart lists every day's numbers, with scope change and
 completed work counted from the start of the sprint to that day.
 
@@ -138,8 +142,8 @@ visible window still shows its status at the window's edge, and a row whose bar 
 has an arrow that scrolls to it.
 
 A project's issues on a timeline, from start date to due date, with an arrow for every
-*depends on* link between two of them. Group the bars by epic (the issue's nearest Epic above
-it), by assignee, or not at all.
+*depends on* link between two of them. **Group by** puts the bars under their
+epic (the issue's nearest Epic above it), under their assignee, or in one list.
 
 An issue without both a start date and a due date is **listed underneath, not dropped** - a
 timeline that quietly leaves out half the work is worse than none.

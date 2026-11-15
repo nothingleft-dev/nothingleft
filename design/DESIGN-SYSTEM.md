@@ -286,8 +286,9 @@ the issue's Project field, list and knowledge-base groups), its mark sits beside
 and project colours stay, because there the colour is the meaning.
 
 **Magnitude in a grid** (the matrix report) is a neutral ramp, not a hue: `--heat-1…5`
-mix the text colour into the surface at 5 / 10 / 16 / 23 / 31 %, so ink text clears 4.5:1 on every
-step in both themes (8.2:1 light, 6.2:1 dark at the deepest). The alternative the viewer can pick
+mix the text colour into the surface at 8 / 15 / 23 / 31 / 40 %, so ink text clears 4.5:1 on every
+step in both themes (40 % is the cap: at 43 % ink drops to 4.35:1 in dark). The ramp is mixed in
+`lib/reports/colors.ts` (`HEAT_FILLS`). The alternative the viewer can pick
 is a hairline bar under each count, `--text-muted`, as long as the count's share of the largest
 cell. **Timeline bars** (Gantt) are the text colour at 22 % on the surface with a 1 px rim at 34 %, and the status
 category as a 4 px left edge that sticks to the timeline's visible start — the board card's dot, stretched — hatched when cancelled, and a

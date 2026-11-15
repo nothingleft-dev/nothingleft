@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import {
   CalendarDays,
-  ChartBarBig,
+  ChartColumnBig,
   ChartGantt,
   ChevronRight,
   FolderKanban,
@@ -27,7 +27,7 @@ import { REPORT_SECTIONS, REPORTS, type ReportDef } from '@lib/reports/registry'
 const ICONS: Record<ReportName, LucideIcon> = {
   'issues-per-assignee': Users,
   'issues-per-project': FolderKanban,
-  'issues-per-field': ChartBarBig,
+  'issues-per-field': ChartColumnBig,
   matrix: Grid3x3,
   'average-age': Hourglass,
   burndown: TrendingDown,

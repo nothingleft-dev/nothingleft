@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { ChevronRight } from 'lucide-react';
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
 import type { WorkCalendar } from '@nothingleft/format';
 import type { BurndownReport as Burndown, Sprint } from '@nothingleft/types';
 import { StatRow, type Stat } from '@components/dashboard/stat-row';
@@ -35,7 +35,7 @@ import { useReport } from '@hooks/use-reports';
 import { useSprints } from '@hooks/use-sprints';
 import { useProjects } from '@hooks/use-projects';
 import { formatCalendarDate, formatCalendarDateShort, formatCalendarRange, todayCalendarDate } from '@lib/datetime';
-import type { MarkPaint } from '@lib/reports/colors';
+import { OFF_DAY_FILL, type MarkPaint } from '@lib/reports/colors';
 import { burndownSprintParam } from '@lib/reports/url';
 import { cn } from '@lib/utils';
 import { plural } from '@lib/numbers';
@@ -75,8 +75,15 @@ const latestDay = (data: Burndown) => data.days.findLast(d => d.remaining !== nu
 export function BurndownReport() {
   const state = useReportState('burndown');
   const project = useDefaultProject(state);
-  const result = useReport('burndown', state.query, project !== null);
   const sprints = useSprints(project);
+  // Asked only once the sprints are known, so a project with none sends no request the API would refuse.
+  const asksActive = !state.query.sprint;
+  const noSprints = asksActive && sprints.data?.length === 0;
+  const result = useReport(
+    'burndown',
+    state.query,
+    project !== null && (!asksActive || (!sprints.isPending && !noSprints)),
+  );
   const sprint = result.data?.sprint.slug ?? state.query.sprint ?? '';
   const unit = durationUnitOf(state.params.get('unit'));
   const noProjects = useNoProjects();
@@ -105,13 +112,20 @@ export function BurndownReport() {
           <ReportPicker
             label="Sprint"
             value={sprint}
-            fallback={sprint || 'Active sprint'}
+            fallback={sprint || (noSprints ? 'None' : 'Active sprint')}
             options={sprintOptions}
             loading={sprints.isPending && project !== null}
             searchable={sprintOptions.length > 8}
-            disabled={project === null}
+            disabled={project === null || noSprints}
             onChange={slug => project && state.set({ sprint: burndownSprintParam(project, slug), project: null })}
           />
+        </>
+      }
+      display={
+        <>
+          {state.get('measure') === 'remaining_estimate' ? (
+            <UnitToggle value={unit} onChange={u => state.set({ unit: u === 'duration' ? null : u })} />
+          ) : null}
           <ToggleGroup
             label="Measure"
             value={state.get('measure')}
@@ -120,11 +134,6 @@ export function BurndownReport() {
           />
         </>
       }
-      display={
-        state.get('measure') === 'remaining_estimate' ? (
-          <UnitToggle value={unit} onChange={u => state.set({ unit: u === 'duration' ? null : u })} />
-        ) : null
-      }
       pickValue={(field, value) =>
         field === 'sprint' && project
           ? state.set({ sprint: burndownSprintParam(project, value), project: null })
@@ -132,12 +141,9 @@ export function BurndownReport() {
       }
       emptyAction={d =>
         d.sprint.state === 'planned' ? (
-          <Link
-            href={`/projects/${d.sprint.project.key}/backlog` as Route}
-            className="text-xs font-medium text-brand-text hover:underline"
-          >
-            Start it from the backlog
-          </Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/projects/${d.sprint.project.key}/backlog` as Route}>Start it from the backlog</Link>
+          </Button>
         ) : null
       }
       skeleton="line"
@@ -147,6 +153,19 @@ export function BurndownReport() {
           <EmptyState
             title="You are not in any project yet."
             description="A burndown follows one project’s sprint. Once an admin adds you to a project, its sprints show up here."
+          />
+        ) : undefined
+      }
+      unasked={
+        noSprints && project ? (
+          <EmptyState
+            title={`${projectName ?? project} has no sprints yet.`}
+            description="Plan one in the backlog and start it to follow its burndown."
+            action={
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${project}/backlog` as Route}>Plan a sprint in the backlog</Link>
+              </Button>
+            }
           />
         ) : undefined
       }
@@ -212,10 +231,10 @@ function BurndownBody({
         description="Estimate the sprint’s issues, or follow it by story points or by issues."
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="xs" onClick={() => onMeasure('story_points')}>
+            <Button variant="outline" size="sm" onClick={() => onMeasure('story_points')}>
               Story points
             </Button>
-            <Button variant="outline" size="xs" onClick={() => onMeasure('issue_count')}>
+            <Button variant="outline" size="sm" onClick={() => onMeasure('issue_count')}>
               Issues
             </Button>
           </div>
@@ -229,6 +248,12 @@ function BurndownBody({
   const end = data.sprint.end_date;
   const daysTo = end ? Math.round((Date.parse(end) - Date.parse(today)) / 86_400_000) : null;
   const plan = planSentence(data, format);
+  // Ideal burns down what was open on day one; said when that differs from the commitment, so the two reconcile.
+  const firstIdeal = data.days.find(d => d.ideal !== null)?.ideal ?? null;
+  const openAtStart =
+    firstIdeal !== null && summary.start_scope !== null && Math.abs(firstIdeal - summary.start_scope) > 0.05
+      ? firstIdeal
+      : null;
 
   const stats: Stat[] = [
     { label: 'Remaining', value: format(summary.remaining) },
@@ -262,16 +287,25 @@ function BurndownBody({
       <StatRow stats={stats} />
       <p className="text-xs text-text-secondary">
         Committed at the start: <span className="font-medium text-text tabular">{format(summary.start_scope)}</span>
+        {openAtStart !== null ? (
+          <>
+            , with <span className="font-medium text-text tabular">{format(openAtStart)}</span> still to do
+          </>
+        ) : null}
         {timing ? ` · ${timing}` : null}
       </p>
       <ChartLegend
         items={[
           { key: 'remaining', label: 'Remaining', paint: REMAINING, shape: 'line' },
           { key: 'scope', label: 'Scope (total committed)', paint: SCOPE, shape: 'line' },
-          { key: 'ideal', label: 'Ideal', paint: IDEAL, shape: 'line' },
-          { key: 'off', label: 'Non-working day', paint: line('var(--chart-off-day)'), outlined: true },
-          ...(data.days.some(d => d.remaining === null && d.date > (latestDay(data)?.date ?? ''))
-            ? [{ key: 'ahead', label: 'Still to come', paint: line('var(--chart-future)'), outlined: true }]
+          {
+            key: 'ideal',
+            label: openAtStart !== null ? `Ideal, from ${format(openAtStart)}` : 'Ideal',
+            paint: IDEAL,
+            shape: 'line',
+          },
+          ...(data.days.some(d => !d.working_day)
+            ? [{ key: 'off', label: 'Non-working day', paint: line(OFF_DAY_FILL), shape: 'band' as const }]
             : []),
         ]}
       />
@@ -303,7 +337,6 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
   const today = data.days.find(d => d.live)?.date ?? null;
   const latest = latestDay(data);
   const lastIndex = latest ? data.days.indexOf(latest) : -1;
-  const future = latest ? data.days.filter(d => d.date > latest.date) : [];
 
   return (
     <ComposedChart
@@ -333,16 +366,7 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
         tickFormatter={(v: number) => format(v)}
         ticks={ticks}
       />
-      <Bar dataKey="shade" fill="var(--chart-off-day)" isAnimationActive={false} activeBar={false} />
-      {future.length > 0 ? (
-        <ReferenceArea
-          x1={future[0]!.date}
-          x2={future.at(-1)!.date}
-          fill="var(--chart-future)"
-          fillOpacity={1}
-          ifOverflow="extendDomain"
-        />
-      ) : null}
+      <Bar dataKey="shade" fill={OFF_DAY_FILL} isAnimationActive={false} activeBar={false} />
       {today ? (
         <ReferenceLine
           x={today}
