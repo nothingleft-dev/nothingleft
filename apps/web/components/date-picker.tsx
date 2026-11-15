@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { formatCalendarDate } from '@lib/datetime';
@@ -51,9 +51,14 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" aria-label={`${label} date`}>
-          <span className="text-text-muted">{label}</span>
-          <span>{value ? formatCalendarDate(value) : 'any'}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={`${label} date`}
+          className="gap-1.5 font-normal text-text-secondary"
+        >
+          {label}
+          <span className="font-medium text-text">{value ? formatCalendarDate(value) : 'Any'}</span>
           {value ? (
             <span
               role="button"
@@ -67,7 +72,9 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
             >
               <X className="size-3" />
             </span>
-          ) : null}
+          ) : (
+            <ChevronDown className="size-3 text-text-muted" />
+          )}
         </Button>
       </PopoverTrigger>
 
