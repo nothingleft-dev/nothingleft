@@ -67,13 +67,14 @@ like; changing a column's field sets the dry run aside until you run it again.
 After a dry run, **Import 172 issues** (with the number the dry run found) starts the import.
 The issues are created in the background, and the page shows how many rows are done; you can
 leave it. Rows that fail are skipped and listed with the reason, the rest are created, and the
-page says how many of each when it is done, with **Open the issues** and the failed rows. An
-import that stops early also says how many rows it did not reach. To
+page says how many of each when it is done - Rows, Created, Failed and Not reached - with **Open
+the issues** and the failed rows. An import that stops early is marked **Stopped** and names the
+rows it did not reach (spreadsheet row numbers), so you can import just those. To
 bring in the skipped rows, fix them in the file and import just those rows.
 
 **Recent imports**, under the import, lists the latest imports into the project by anyone:
 the file, its state, the rows, how many issues were created and how many rows failed, who
-imported it and when. Choose one to open it in place - how far it has got while it runs, the
+uploaded it and when. Choose one to open it in place - how far it has got while it runs, the
 failed rows once it is done, or why it stopped.
 
 The uploaded file is deleted when the import finishes. One that is uploaded but never

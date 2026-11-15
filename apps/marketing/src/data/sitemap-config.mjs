@@ -42,7 +42,7 @@ export const SITEMAP_PAGES = {
   '/docs/permissions': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/notifications': { lastmod: '2026-11-15T16:11:17+05:30' },
   '/docs/tags': { lastmod: '2026-11-15T15:45:11+05:30' },
-  '/docs/import-export': { lastmod: '2026-11-15T16:19:00+05:30' },
+  '/docs/import-export': { lastmod: '2026-11-15T22:40:07+05:30' },
   '/docs/storage': { lastmod: '2026-11-15T00:23:00+05:30' },
   '/docs/self-hosting': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/self-hosting-aws': { lastmod: '2026-10-26T00:11:14+05:30' },

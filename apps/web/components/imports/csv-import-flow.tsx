@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Check, FileSpreadsheet } from 'lucide-react';
+import { Check, CheckCircle2, FileSpreadsheet, X } from 'lucide-react';
 import { formatBytes } from '@nothingleft/format';
 import { CSV_IMPORT_MAX_BYTES, CSV_IMPORT_MAX_ROWS, type ImportDryRun, type ImportPreview } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -16,10 +16,11 @@ import {
   ImportErrorsTable,
   GroupHeading,
   ImportProgress,
+  ResultFigures,
   UnknownValues,
   issues,
-  notReached,
   rows,
+  stoppedSummary,
 } from '@components/imports/import-results';
 import { useCustomFields } from '@hooks/use-custom-fields';
 import {
@@ -45,7 +46,7 @@ type Step =
 
 const STEPS = ['File', 'Columns', 'Dry run', 'Import'] as const;
 
-type StepState = 'done' | 'current' | 'upcoming';
+type Outcome = 'completed' | 'failed' | null;
 
 interface CsvImportFlowProps {
   project: string;
@@ -58,7 +59,7 @@ interface CsvImportFlowProps {
 export function CsvImportFlow({ project, projectName, resumeId, onDone }: CsvImportFlowProps) {
   const [step, setStep] = useState<Step>({ kind: 'pick' });
   const [checked, setChecked] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome>(null);
   const [pickError, setPickError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
   const upload = useUploadImport(project);
@@ -99,7 +100,11 @@ export function CsvImportFlow({ project, projectName, resumeId, onDone }: CsvImp
 
   return (
     <div className="flex flex-col gap-4">
-      <StepRail index={stepIndex(step, checked, finished)} />
+      <StepRail
+        index={stepIndex(step, checked, outcome)}
+        failed={step.kind === 'started' && outcome === 'failed'}
+        sticky={step.kind === 'map' || step.kind === 'started'}
+      />
 
       {step.kind === 'pick' ? (
         read.isPending ? (
@@ -128,7 +133,7 @@ export function CsvImportFlow({ project, projectName, resumeId, onDone }: CsvImp
         <StartedStep
           project={project}
           id={step.id}
-          onFinished={setFinished}
+          onFinished={setOutcome}
           onAnother={() => {
             setStep({ kind: 'pick' });
             onDone();
@@ -139,17 +144,53 @@ export function CsvImportFlow({ project, projectName, resumeId, onDone }: CsvImp
   );
 }
 
-function stepIndex(step: Step, checked: boolean, finished: boolean) {
+function stepIndex(step: Step, checked: boolean, outcome: Outcome) {
   if (step.kind === 'pick' || step.kind === 'uploading') return 0;
   if (step.kind === 'map') return checked ? 2 : 1;
-  return finished ? STEPS.length : 3;
+  return outcome === 'completed' ? STEPS.length : 3;
 }
 
-function StepRail({ index }: { index: number }) {
+/** Whether a sticky element is pinned to the scroll root's top or bottom edge rather than resting in flow. */
+function useStuck<T extends HTMLElement>(edge: 'top' | 'bottom') {
+  const ref = useRef<T>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = el.closest<HTMLElement>('[data-scroll-root]');
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const bounds = entry?.rootBounds;
+        if (!entry || !bounds) return;
+        const box = entry.boundingClientRect;
+        setStuck(
+          entry.intersectionRatio < 1 && (edge === 'top' ? box.top <= bounds.top + 1 : box.bottom >= bounds.bottom - 1),
+        );
+      },
+      { root, threshold: [1], rootMargin: edge === 'top' ? '-1px 0px 0px 0px' : '0px 0px -1px 0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [edge]);
+  return [ref, stuck] as const;
+}
+
+function StepRail({ index, failed, sticky }: { index: number; failed: boolean; sticky: boolean }) {
+  const [ref, stuck] = useStuck<HTMLOListElement>('top');
   return (
-    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm max-sm:gap-x-2" aria-label="Import steps">
+    <ol
+      ref={ref}
+      className={cn(
+        '-my-2 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-transparent py-2 text-sm max-sm:gap-x-2',
+        sticky && 'sticky top-0 z-10 bg-surface',
+        sticky && stuck && 'border-border',
+      )}
+      aria-label="Import steps"
+    >
       {STEPS.map((label, i) => {
-        const state: StepState = i < index ? 'done' : i === index ? 'current' : 'upcoming';
+        const done = i < index;
+        const current = i === index;
+        const stopped = current && failed;
         return (
           <li key={label} className="flex items-center gap-3 max-sm:gap-2">
             {i > 0 ? (
@@ -160,16 +201,35 @@ function StepRail({ index }: { index: number }) {
             ) : null}
             <span
               className={cn(
-                'flex items-center gap-1.5',
-                state === 'current' ? 'font-medium text-text' : 'text-text-secondary',
+                'flex items-center gap-2',
+                current ? 'font-medium' : 'text-text-secondary',
+                current && (stopped ? 'text-danger-fg' : 'text-text'),
               )}
-              aria-current={state === 'current' ? 'step' : undefined}
+              aria-current={current ? 'step' : undefined}
             >
-              <span aria-hidden className="grid w-3.5 place-items-center tabular">
-                {state === 'done' ? <Check className="size-3.5" strokeWidth={2.5} /> : i + 1}
+              <span
+                aria-hidden
+                className={cn(
+                  'grid size-5 flex-none place-items-center rounded-full text-2xs font-semibold tabular',
+                  done && 'text-text-secondary ring-1 ring-border-strong ring-inset',
+                  current && (stopped ? 'bg-danger-fg text-surface' : 'bg-ink text-ink-fg'),
+                  !done && !current && 'bg-inset text-text-secondary',
+                )}
+              >
+                {done ? (
+                  <Check className="size-3" strokeWidth={2.5} />
+                ) : stopped ? (
+                  <X className="size-3" strokeWidth={3} />
+                ) : (
+                  i + 1
+                )}
               </span>
               {label}
-              {state === 'done' ? <span className="sr-only">, done</span> : null}
+              {done ? (
+                <span className="sr-only"> (done)</span>
+              ) : stopped ? (
+                <span className="sr-only"> (stopped)</span>
+              ) : null}
             </span>
           </li>
         );
@@ -197,7 +257,7 @@ function PickStep({ error, onPick }: { error: string | null; onPick: (file: File
         }}
         data-dropzone
         className={cn(
-          'flex flex-col items-start gap-3 rounded-md border border-dashed px-5 py-6 transition-colors',
+          'flex flex-col items-start gap-3 rounded-md border border-dashed px-5 py-6 transition-colors dark:border-border-strong',
           over && 'border-solid border-text-secondary bg-hover',
         )}
       >
@@ -220,12 +280,12 @@ function PickStep({ error, onPick }: { error: string | null; onPick: (file: File
               </>
             )}
           </p>
-          <p className="text-sm text-text-secondary">
+          <p className="max-w-[72ch] text-sm text-pretty text-text-secondary">
             Saved as UTF-8 with a header row; commas or semicolons. Up to {formatCount(CSV_IMPORT_MAX_ROWS)} rows and{' '}
             {formatBytes(CSV_IMPORT_MAX_BYTES)}. Nothing is created until you start the import.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
+        <Button size="sm" onClick={() => input.current?.click()}>
           Choose file
         </Button>
         <input
@@ -262,8 +322,10 @@ function UploadingStep({ step, onCancel }: { step: Extract<Step, { kind: 'upload
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-medium">{step.file.name}</span>
           <span className="text-xs text-text-secondary tabular">
-            {PHASE[step.phase]}
-            {step.phase === 'uploading' ? ` ${Math.round(ratio * 100)}%` : null} · {formatBytes(step.file.size)}
+            {PHASE[step.phase]}{' '}
+            {step.phase === 'uploading'
+              ? `${formatBytes(step.loaded)} of ${formatBytes(step.total)}`
+              : `· ${formatBytes(step.file.size)}`}
           </span>
         </div>
         {step.phase === 'reading' ? null : (
@@ -309,14 +371,15 @@ function MapStep({ project, projectName, preview, onChecked, onRestart, onStarte
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="font-medium">{job.filename}</span>
         <span className="text-sm text-text-secondary tabular">
-          {rows(job.total_rows ?? 0)} · {formatBytes(job.size_bytes)}
+          {rows(job.total_rows ?? 0)} · {formatCount(job.headers?.length ?? 0)}{' '}
+          {job.headers?.length === 1 ? 'column' : 'columns'} · {formatBytes(job.size_bytes)}
         </span>
         <TextButton className="text-sm" onClick={onRestart} disabled={busy}>
           Choose another file
         </TextButton>
       </div>
 
-      <p className="text-sm text-text-secondary">
+      <p className="max-w-[72ch] text-sm text-pretty text-text-secondary">
         Pick the field each column fills. Columns named like a field are matched already; a column left on{' '}
         <span className="text-text">Don’t import</span> is ignored.
       </p>
@@ -337,8 +400,12 @@ function MapStep({ project, projectName, preview, onChecked, onRestart, onStarte
 
       {current ? <DryRunResult project={project} projectName={projectName} run={current} /> : null}
 
-      <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t bg-surface py-3">
-        {dryRun.error ? <FormAlert title="The dry run did not finish.">{dryRun.error.message}</FormAlert> : null}
+      <StepFooter>
+        {dryRun.error ? (
+          <FormAlert title="The dry run did not finish.">
+            {dryRun.error.message} Your column choices are kept; run it again.
+          </FormAlert>
+        ) : null}
         {start.error ? <FormAlert title="The import did not start.">{start.error.message}</FormAlert> : null}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {current ? (
@@ -358,7 +425,7 @@ function MapStep({ project, projectName, preview, onChecked, onRestart, onStarte
             onClick={runDry}
             disabled={busy || !titled}
             pending={dryRun.isPending}
-            pendingLabel="Checking rows…"
+            pendingLabel="Checking…"
           >
             {current ? 'Dry run again' : 'Dry run'}
           </PendingButton>
@@ -370,14 +437,31 @@ function MapStep({ project, projectName, preview, onChecked, onRestart, onStarte
                 : 'Checks every row and creates nothing.'}
           </span>
         </div>
-      </div>
+      </StepFooter>
+    </div>
+  );
+}
+
+/** The step's actions after a hairline; pinned to the viewport while the step is taller than it, with a fade over what scrolls under. */
+function StepFooter({ children }: { children: ReactNode }) {
+  const [ref, stuck] = useStuck<HTMLDivElement>('bottom');
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'sticky bottom-0 z-10 mt-2 flex flex-col gap-3 border-t bg-surface py-4',
+        "before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-linear-to-t before:from-surface before:to-transparent before:opacity-0 before:transition-opacity before:content-['']",
+        stuck && 'before:opacity-100',
+      )}
+    >
+      {children}
     </div>
   );
 }
 
 function DryRunResult({ project, projectName, run }: { project: string; projectName: string; run: ImportDryRun }) {
   return (
-    <section aria-label="Dry run" className="flex flex-col gap-5 pt-2">
+    <section aria-label="Dry run" className="flex scroll-mt-14 flex-col gap-5 pt-2">
       <div className="flex flex-col gap-3">
         <Figures
           items={[
@@ -386,7 +470,7 @@ function DryRunResult({ project, projectName, run }: { project: string; projectN
             { label: 'Will fail', value: run.failed_rows, tone: 'danger' },
           ]}
         />
-        <p className="text-sm text-text-secondary">
+        <p className="max-w-[72ch] text-sm text-pretty text-text-secondary">
           {run.failed_rows === 0
             ? 'Every row would become an issue.'
             : run.valid_rows === 0
@@ -394,11 +478,11 @@ function DryRunResult({ project, projectName, run }: { project: string; projectN
               : 'Rows that fail are skipped and listed again after the import; the rest are created.'}
         </p>
       </div>
-      <UnknownValues project={project} projectName={projectName} values={run.unknown_values} />
+      <UnknownValues project={project} projectName={projectName} run={run} />
       {run.errors.length > 0 ? (
         <div className="flex flex-col gap-2">
           <GroupHeading>Rows that fail</GroupHeading>
-          <ImportErrorsTable errors={run.errors} failed={run.failed_rows} />
+          <ImportErrorsTable errors={run.errors} failed={run.failed_rows} accepted={run.unknown_values.length === 0} />
         </div>
       ) : null}
     </section>
@@ -408,7 +492,7 @@ function DryRunResult({ project, projectName, run }: { project: string; projectN
 interface StartedStepProps {
   project: string;
   id: number;
-  onFinished: (finished: boolean) => void;
+  onFinished: (outcome: Outcome) => void;
   onAnother: () => void;
 }
 
@@ -418,7 +502,7 @@ function StartedStep({ project, id, onFinished, onAnother }: StartedStepProps) {
   const status = job.data?.status;
 
   useEffect(() => {
-    const done = status === 'completed' || status === 'failed';
+    const done = status === 'completed' || status === 'failed' ? status : null;
     onFinished(done);
     if (done) refresh();
     // Once per finished import.
@@ -464,51 +548,38 @@ function StartedStep({ project, id, onFinished, onAnother }: StartedStepProps) {
     );
   }
 
-  if (data.status === 'failed') {
-    const missed = notReached(data);
-    return (
-      <div className="flex flex-col gap-4">
-        <FormAlert title={`The import of ${data.filename} stopped.`}>
-          {data.error?.message ?? 'Rows already imported are kept.'}
-        </FormAlert>
-        <Figures
-          items={[
-            { label: 'Created', value: data.created_issues },
-            { label: 'Failed', value: data.failed_rows, tone: 'danger' },
-            { label: 'Not reached', value: missed },
-          ]}
-        />
-        <div className="flex flex-wrap gap-2">
-          {data.created_issues > 0 ? view : null}
-          {another}
-        </div>
-        {data.errors.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <GroupHeading>Rows that failed</GroupHeading>
-            <ImportErrorsTable errors={data.errors} failed={data.failed_rows} />
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
+  const failed = data.status === 'failed';
   return (
     <div className="flex flex-col gap-4">
-      <FormAlert tone="success" title={`Imported ${issues(data.created_issues)} from ${data.filename}.`}>
-        {data.failed_rows > 0
-          ? `${rows(data.failed_rows)} failed and were skipped. Fix them in the file and import just those rows.`
-          : 'Every row became an issue.'}
-      </FormAlert>
-      <div className="flex flex-wrap gap-2">
-        {view}
-        {another}
-      </div>
+      {failed ? (
+        <FormAlert title={`The import of ${data.filename} stopped.`}>{stoppedSummary(data)}</FormAlert>
+      ) : (
+        <div className="flex gap-2.5" role="status">
+          <CheckCircle2 className="mt-[3px] size-icon-sm flex-none text-success-fg" aria-hidden />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <p className="font-medium">
+              Imported {issues(data.created_issues)} from {data.filename}.
+            </p>
+            <p className="max-w-[72ch] text-sm text-pretty text-text-secondary">
+              {data.failed_rows > 0
+                ? `${rows(data.failed_rows)} failed and were skipped. Fix them in the file and import just those rows.`
+                : 'Every row became an issue.'}
+            </p>
+          </div>
+        </div>
+      )}
+      <ResultFigures job={data} />
       {data.errors.length > 0 ? (
         <div className="flex flex-col gap-2">
           <GroupHeading>Rows that failed</GroupHeading>
-          <ImportErrorsTable errors={data.errors} failed={data.failed_rows} />
+          <ImportErrorsTable errors={data.errors} failed={data.failed_rows} accepted />
         </div>
       ) : null}
+      {/* The figures' own rule already ends the summary when no table follows it. */}
+      <div className={cn('flex flex-wrap gap-2', data.errors.length > 0 && 'mt-2 border-t pt-4')}>
+        {data.created_issues > 0 ? view : null}
+        {another}
+      </div>
     </div>
   );
 }

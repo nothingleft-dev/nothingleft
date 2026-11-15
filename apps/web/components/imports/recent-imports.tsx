@@ -11,7 +11,7 @@ import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus, type JobTone } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
-import { ImportErrorsTable, ImportProgress, issues, notReached, rows } from '@components/imports/import-results';
+import { ImportErrorsTable, ImportProgress, issues, rows, stoppedSummary } from '@components/imports/import-results';
 import { isImportRunning, useImports } from '@hooks/use-imports';
 import { cn } from '@lib/utils';
 import { formatCount } from '@lib/numbers';
@@ -22,14 +22,16 @@ const STATUS: Record<ImportStatus, [JobTone, string]> = {
   queued: ['waiting', 'Queued'],
   running: ['moving', 'Importing'],
   completed: ['done', 'Done'],
-  failed: ['failed', 'Failed'],
+  failed: ['failed', 'Stopped'],
   expired: ['gone', 'Expired'],
 };
 
-// Below 56rem the importer moves into the opened row; below 48rem each import reads as two lines.
+// Below 56rem the uploader moves into the opened row; below 48rem each import reads as two lines.
 const GRID =
-  'grid grid-cols-[16px_minmax(0,1fr)_112px_64px_72px_56px_minmax(168px,208px)_128px] items-center gap-x-6 px-3 @max-4xl:grid-cols-[16px_minmax(0,1fr)_112px_64px_72px_56px_128px] @max-3xl:grid-cols-[16px_minmax(0,1fr)_auto] @max-3xl:gap-x-3';
+  'grid grid-cols-[16px_minmax(0,1fr)_104px_64px_72px_56px_208px_128px] items-center gap-x-6 px-3 @max-4xl:grid-cols-[16px_minmax(0,1fr)_104px_64px_72px_56px_128px] @max-3xl:grid-cols-[16px_minmax(0,1fr)_auto] @max-3xl:gap-x-3';
 const WIDE = '@max-3xl:hidden';
+// The numbers end right-aligned; the text after them starts a little further off so the two do not read as one run.
+const AFTER_NUMBERS = 'pl-2 @max-4xl:pl-0';
 
 interface RecentImportsProps {
   project: string;
@@ -69,8 +71,8 @@ export function RecentImports({ project, onContinue }: RecentImportsProps) {
           <span className="text-right">Rows</span>
           <span className="text-right">Created</span>
           <span className="text-right">Failed</span>
-          <span className="@max-4xl:hidden">Imported by</span>
-          <span>Uploaded</span>
+          <span className={cn(AFTER_NUMBERS, '@max-4xl:hidden')}>Uploaded by</span>
+          <span className="@max-4xl:pl-2">Uploaded</span>
         </div>
         <ul className="divide-y divide-border-subtle border-t border-border-subtle @max-3xl:border-t-0">
           {jobs.map(job => (
@@ -119,22 +121,20 @@ function ImportRow({ job, expanded, onToggle, onContinue }: ImportRowProps) {
         <span className={cn(WIDE, 'text-right text-text-secondary tabular')}>
           {ran ? count(job.created_issues) : count(null)}
         </span>
-        <span
-          className={cn(WIDE, 'text-right tabular', job.failed_rows > 0 ? 'text-danger-fg' : 'text-text-secondary')}
-        >
+        <span className={cn(WIDE, 'text-right tabular', job.failed_rows > 0 ? 'text-text' : 'text-text-secondary')}>
           {ran ? count(job.failed_rows) : count(null)}
         </span>
-        <PersonName person={job.created_by} className="text-text-secondary @max-4xl:hidden" />
-        <RelativeTime value={job.created_at} className={cn(WIDE, 'text-text-secondary')} />
+        <PersonName person={job.created_by} className={cn(AFTER_NUMBERS, 'text-text-secondary @max-4xl:hidden')} />
+        <RelativeTime value={job.created_at} className={cn(WIDE, 'text-text-secondary @max-4xl:pl-2')} />
         <span className="col-span-2 col-start-2 hidden text-xs text-text-secondary tabular @max-3xl:block">
           <CompactCounts job={job} ran={ran} />
-          <RelativeTime value={job.created_at} />
+          <RelativeTime value={job.created_at} className="whitespace-nowrap" />
         </span>
       </button>
       {expanded ? (
-        <div className="flex flex-col gap-3 border-t border-border-subtle bg-app/50 px-9 py-4 @max-3xl:px-3">
+        <div className="flex flex-col gap-3 border-t border-border-subtle bg-app/50 py-4 pr-3 pl-9 @max-3xl:pl-3">
           <p className="hidden text-sm text-text-secondary @max-4xl:block">
-            Imported by <PersonName person={job.created_by} className="text-text" />
+            Uploaded by <PersonName person={job.created_by} className="text-text" />
           </p>
           <ImportDetail job={job} onContinue={onContinue} />
         </div>
@@ -170,10 +170,8 @@ function ImportDetail({ job, onContinue }: { job: ImportJob; onContinue: () => v
     case 'failed':
       return (
         <>
-          <FormAlert title="The import stopped.">
-            {job.error?.message} {stoppedCounts(job)}
-          </FormAlert>
-          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} />
+          <FormAlert title="The import stopped.">{stoppedSummary(job)}</FormAlert>
+          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} accepted />
         </>
       );
     default:
@@ -183,7 +181,7 @@ function ImportDetail({ job, onContinue }: { job: ImportJob; onContinue: () => v
             {issues(job.created_issues)} created
             {job.failed_rows > 0 ? `; ${rows(job.failed_rows)} failed and were skipped.` : ', every row.'}
           </p>
-          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} />
+          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} accepted />
         </>
       );
   }
@@ -200,7 +198,7 @@ function CompactCounts({ job, ran }: { job: ImportJob; ran: boolean }) {
       {ran && job.failed_rows > 0 ? (
         <>
           {parts.length > 0 ? ' · ' : null}
-          <span className="text-danger-fg">{formatCount(job.failed_rows)} failed</span>
+          <span className="text-text">{formatCount(job.failed_rows)} failed</span>
         </>
       ) : null}
       {parts.length > 0 || (ran && job.failed_rows > 0) ? ' · ' : null}
@@ -208,21 +206,22 @@ function CompactCounts({ job, ran }: { job: ImportJob; ran: boolean }) {
   );
 }
 
-function stoppedCounts(job: ImportJob) {
-  const missed = notReached(job);
-  const created = job.created_issues > 0 ? `${issues(job.created_issues)} were created before it stopped` : null;
-  const skipped = missed > 0 ? `${rows(missed)} were not reached` : null;
-  const sentence = [created, skipped].filter(Boolean).join('; ');
-  return sentence ? `${sentence}.` : null;
-}
-
-function RecentSkeleton() {
+export function RecentSkeleton() {
   return (
     <div className="@container rounded-md border" role="status" aria-label="Loading imports">
       <div className={cn(GRID, WIDE, 'h-7 rounded-t-md border-b border-border-subtle bg-app')}>
         <span />
+        <Skeleton className="h-2.5 w-8" />
         <Skeleton className="h-2.5 w-10" />
-        <Skeleton className="h-2.5 w-12" />
+        <Skeleton className="ml-auto h-2.5 w-8" />
+        <Skeleton className="ml-auto h-2.5 w-11" />
+        <Skeleton className="ml-auto h-2.5 w-9" />
+        <div className={cn(AFTER_NUMBERS, '@max-4xl:hidden')}>
+          <Skeleton className="h-2.5 w-16" />
+        </div>
+        <div className="@max-4xl:pl-2">
+          <Skeleton className="h-2.5 w-14" />
+        </div>
       </div>
       <div className="divide-y divide-border-subtle">
         {Array.from({ length: 3 }, (_, i) => (
@@ -233,8 +232,12 @@ function RecentSkeleton() {
             <Skeleton className={cn(WIDE, 'ml-auto h-3 w-8')} />
             <Skeleton className={cn(WIDE, 'ml-auto h-3 w-8')} />
             <Skeleton className={cn(WIDE, 'ml-auto h-3 w-6')} />
-            <Skeleton className="h-3 w-24 @max-4xl:hidden" />
-            <Skeleton className={cn(WIDE, 'h-3 w-20')} />
+            <div className={cn(AFTER_NUMBERS, '@max-4xl:hidden')}>
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className={cn(WIDE, '@max-4xl:pl-2')}>
+              <Skeleton className="h-3 w-20" />
+            </div>
           </div>
         ))}
       </div>

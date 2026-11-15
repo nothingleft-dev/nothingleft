@@ -48,12 +48,16 @@ export function ColumnMapping({
     onChange(next);
   };
 
+  const longest = Math.max(18, ...headers.map(h => h.length));
+
   return (
     <div className="overflow-x-auto rounded-md border">
       <table className="w-full min-w-[720px] table-fixed text-sm">
         <thead className="bg-app text-left text-xs text-text-secondary">
           <tr>
-            <th className="h-7 w-[28%] px-3 font-medium">Column in the file</th>
+            <th className="h-7 px-3 font-medium" style={{ width: `clamp(160px, calc(${longest}ch + 24px), 280px)` }}>
+              Column in the file
+            </th>
             <th className="px-3 font-medium">First rows</th>
             <th className="w-64 px-3 font-medium">Imports as</th>
           </tr>

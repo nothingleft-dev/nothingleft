@@ -769,8 +769,9 @@ Built in 6d; the product rules are [manual/import-export.md](./manual/import-exp
 - **Mapping** keeps the API's direction, field → header, and draws it per header. A field takes one
   column, so choosing it again moves it. Changing any column sets the dry run aside: *Import N
   issues* appears only for a dry run of the mapping on screen. *Dry run* stays disabled until a column
-  maps to Title, with the reason beside it; the step's action bar sits after the dry-run result and
-  sticks to the bottom of the viewport while the step is longer than the screen. A started import is followed with
+  maps to Title, with the reason beside it; the step's action bar sits after the dry-run result; the
+  step rail sticks to the top of the page and the action bar to the bottom while a step is taller than
+  the screen, and content scrolling under the bar fades out. A started import is followed with
   `useImport` at `POLL.job`; finishing invalidates issues, tags and the agile caches once.
 - **Exports** list at `POLL.job` while one is queued or running, else `POLL.admin`. *Export
   organisation* puts the answer first in the list by id; when the id was already there (one pending
