@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@components/ui/button';
+import { PendingButton } from '@components/pending-button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { IssuePage } from '@components/issues/issue-page';
 import { useIssue } from '@hooks/use-issues';
+import { errorDetail } from '@components/query-state';
+import { RateLimitReload } from '@components/rate-limit';
+import { useRateLimit } from '@hooks/use-rate-limit';
 import { isApiError } from '@lib/api/errors';
-import { cn } from '@lib/utils';
 
 interface IssueModalProps {
   issueKey: string | null;
@@ -37,20 +40,27 @@ interface IssueModalContentProps {
 function IssueModalContent({ issueKey, onClose, onClosed }: IssueModalContentProps) {
   const issue = useIssue(issueKey);
   const missing = issue.isError && isApiError(issue.error) && issue.error.isNotFound;
+  // Nothing loaded: one centred message, at the width the skeleton had, so the frame does not jump.
+  const failed = issue.isError && !missing && !issue.data;
 
   return (
     <DialogContent
       onOpenAutoFocus={e => e.preventDefault()}
       onCloseAutoFocus={onClosed}
-      className={cn(
-        'overflow-y-auto p-6 pt-8 [--dialog-top:24px]',
-        missing ? 'sm:max-w-md' : 'sm:max-w-[min(1240px,calc(100%-48px))]',
-      )}
+      className="max-h-[calc(100dvh-48px)]! overflow-y-auto p-6 pt-8 [--dialog-top:24px] sm:max-w-[min(1240px,calc(100%-48px))]"
     >
       <DialogTitle className="sr-only">{issueKey}</DialogTitle>
       <DialogDescription className="sr-only">The issue, editable in place.</DialogDescription>
       {missing ? (
         <ModalNotFound issueKey={issueKey} onClose={onClose} />
+      ) : failed ? (
+        <ModalLoadError
+          issueKey={issueKey}
+          error={issue.error}
+          retrying={issue.isFetching}
+          onRetry={() => void issue.refetch()}
+          onClose={onClose}
+        />
       ) : (
         <>
           <Tooltip>
@@ -67,25 +77,76 @@ function IssueModalContent({ issueKey, onClose, onClosed }: IssueModalContentPro
             </TooltipTrigger>
             <TooltipContent>Open in a new tab</TooltipContent>
           </Tooltip>
-          {/* A failure has no title row to sit beside the corner icons, so it starts below them. */}
-          <div className={cn(issue.isError && 'pt-6')}>
-            <IssuePage issueKey={issueKey} variant="modal" />
-          </div>
+          <IssuePage issueKey={issueKey} variant="modal" />
         </>
       )}
     </DialogContent>
   );
 }
 
+interface ModalMessageProps {
+  issueKey: string;
+  title: string;
+  children: ReactNode;
+  actions: ReactNode;
+}
+
+function ModalMessage({ issueKey, title, children, actions }: ModalMessageProps) {
+  return (
+    <div role="alert" className="mx-auto flex min-h-80 w-full max-w-md flex-col justify-center gap-3">
+      <p className="font-mono text-2xs text-text-secondary">{issueKey}</p>
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+      <p className="text-text-secondary">{children}</p>
+      <div className="flex justify-end gap-2 pt-2">{actions}</div>
+    </div>
+  );
+}
+
 function ModalNotFound({ issueKey, onClose }: { issueKey: string; onClose: () => void }) {
   return (
-    <div role="alert" className="flex flex-col items-start gap-3 pr-8">
-      <p className="font-mono text-2xs text-text-muted">{issueKey}</p>
-      <h2 className="text-lg font-semibold tracking-tight">This issue does not exist</h2>
-      <p className="text-text-secondary">The key may be wrong, or the issue is in a project you cannot open.</p>
-      <Button type="button" variant="outline" onClick={onClose}>
-        Close
-      </Button>
-    </div>
+    <ModalMessage
+      issueKey={issueKey}
+      title="This issue does not exist"
+      actions={
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      The key may be wrong, or the issue is in a project you cannot open.
+    </ModalMessage>
+  );
+}
+
+interface ModalLoadErrorProps {
+  issueKey: string;
+  error: unknown;
+  retrying: boolean;
+  onRetry: () => void;
+  onClose: () => void;
+}
+
+function ModalLoadError({ issueKey, error, retrying, onRetry, onClose }: ModalLoadErrorProps) {
+  const { secondsLeft } = useRateLimit();
+  const limited = secondsLeft > 0;
+  return (
+    <ModalMessage
+      issueKey={issueKey}
+      title="This issue could not be loaded"
+      actions={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          {limited ? null : (
+            <PendingButton type="button" pending={retrying} pendingLabel="Loading…" onClick={onRetry}>
+              Try again
+            </PendingButton>
+          )}
+        </>
+      }
+    >
+      {limited ? <RateLimitReload /> : (errorDetail(error) ?? 'Something went wrong on our side.')}
+    </ModalMessage>
   );
 }

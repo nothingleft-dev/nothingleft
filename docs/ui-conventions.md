@@ -281,14 +281,18 @@ Opened with `c` or *Create issue* in the top bar (decided 24 Sep 2026):
   a row until the issue is created. The quick dialog leaves links to the issue page
   (owner, 24 Sep 2026). Tags and links are sent with the create request, so a refused
   link creates nothing.
-- One row of compact chips — Type, Priority, Status, Assignees, Estimation, Start date,
-  Due date, Sprint, Story points — each showing the project default or the empty label until
-  changed. Sprint defaults to the project's running sprint (owner, 3 Nov 2026), so new work
+- Compact chips in two fixed rows — Type, Priority, Status, Assignees; then Estimation, Start
+  date, Due date, Sprint, Story points — and the type's custom fields under a *Custom fields*
+  label. Each shows the project default or its field name until changed; a field with nothing
+  set is a dashed chip with `+`. Sprint defaults to the project's running sprint (owner, 3 Nov 2026), so new work
   lands on the board; choosing *Unscheduled* sends it to the backlog instead. With no sprint
   running it starts unscheduled. The API keeps no default: a create without `sprint` stays
   unscheduled.
 - An expand button opens the same draft at `/new-issue`, a full page with the text on
-  the left and the issue page's field column on the right.
+  the left and the issue page's field column on the right. Below 1100 px Cancel and Create
+  issue stay pinned to the bottom of the window.
+- Create issue stays disabled until the title has text, and says so in its tooltip. A create
+  that fails on our side says so above the footer and keeps the draft; the button is the retry.
 - `⌘/Ctrl + Enter` creates. A toast names the new key with an *Open* action; *Create
   more* keeps the dialog open for the next one.
 

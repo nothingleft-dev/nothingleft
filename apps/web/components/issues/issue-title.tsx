@@ -23,7 +23,7 @@ export function IssueTitle({ issue, canEdit }: { issue: Issue; canEdit: boolean 
             <button
               type="button"
               onClick={() => setDraft(issue.title)}
-              className="-mx-1 cursor-text rounded-sm px-1 text-left underline decoration-border-strong decoration-dotted decoration-2 underline-offset-[6px] hover:bg-hover hover:decoration-text-secondary"
+              className="-mx-1 cursor-text rounded-sm px-1 text-left underline decoration-border-strong decoration-dotted decoration-1 underline-offset-[6px] hover:bg-hover hover:decoration-text-secondary"
             >
               {issue.title}
             </button>

@@ -25,7 +25,7 @@ import {
   DraftText,
   NoWritableProject,
 } from '@components/issues/draft-fields';
-import { parkDraft, useIssueDraft } from '@components/issues/use-issue-draft';
+import { parkDraft, useIssueDraft, type IssueDraft } from '@components/issues/use-issue-draft';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
 import { PendingButton } from '@components/pending-button';
@@ -53,6 +53,7 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
         },
       );
       if (!createMore) onOpenChange(false);
+      else requestAnimationFrame(() => document.getElementById('create-issue-title')?.focus());
     },
   });
 
@@ -73,7 +74,7 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
               <span className="text-text-muted">/</span>
             </>
           )}
-          <DialogTitle className="text-sm font-medium">{draft.parent ? 'New subtask' : 'New issue'}</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">{draft.parent ? 'New subtask' : 'New issue'}</DialogTitle>
           {draft.parent ? <DraftParentChip draft={draft} /> : null}
           <DialogDescription id="create-issue-description" className="sr-only">
             Only a title is required. Everything else starts at the project&apos;s defaults.
@@ -123,7 +124,7 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
               }
             }}
           >
-            <DialogBody className="m-0 p-0">
+            <DialogBody className="m-0 p-0" aria-busy={draft.pending}>
               <div className="px-4 pt-3">
                 <DraftText draft={draft} />
               </div>
@@ -134,19 +135,10 @@ export function CreateIssueDialog({ open, onOpenChange, routeProject, parent = n
               ) : null}
             </DialogBody>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t px-4 py-3">
+              <DraftError draft={draft} className="basis-full" />
               <CreateMoreToggle on={createMore} onChange={setCreateMore} />
-              <DraftError draft={draft} />
-              <PendingButton
-                type="submit"
-                className="ml-auto gap-2"
-                disabled={!draft.canSubmit}
-                pending={draft.pending || draft.uploader.busy}
-                pendingLabel={draft.pending ? 'Creating…' : 'Uploading…'}
-                after={<ShortcutHint />}
-              >
-                Create issue
-              </PendingButton>
+              <CreateButton draft={draft} className="ml-auto" />
             </div>
           </form>
         )}
@@ -173,6 +165,30 @@ function CreateMoreToggle({ on, onChange }: { on: boolean; onChange: (on: boolea
       </span>
       Create more
     </button>
+  );
+}
+
+/** A disabled button cannot say why, so the wrapper carries the reason while the title is empty. */
+export function CreateButton({ draft, className }: { draft: IssueDraft; className?: string }) {
+  const untitled = draft.title.trim() === '' && !draft.pending;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={untitled ? 0 : undefined} className={cn('inline-flex rounded-md', className)}>
+          <PendingButton
+            type="submit"
+            className="gap-2"
+            disabled={!draft.canSubmit}
+            pending={draft.pending || draft.uploader.busy}
+            pendingLabel={draft.pending ? 'Creating…' : 'Uploading…'}
+            after={<ShortcutHint />}
+          >
+            Create issue
+          </PendingButton>
+        </span>
+      </TooltipTrigger>
+      {untitled ? <TooltipContent>Add a title to create the issue.</TooltipContent> : null}
+    </Tooltip>
   );
 }
 

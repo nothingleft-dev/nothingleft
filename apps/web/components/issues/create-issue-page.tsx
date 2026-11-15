@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@components/ui/button';
 import { PageTitle } from '@components/page-title';
-import { ShortcutHint } from '@components/issues/create-issue-dialog';
+import { CreateButton } from '@components/issues/create-issue-dialog';
 import {
   DraftError,
   DraftPanel,
@@ -15,7 +15,6 @@ import {
 } from '@components/issues/draft-fields';
 import { takeParkedDraft, useIssueDraft } from '@components/issues/use-issue-draft';
 import { issuePath } from '@lib/issue-path';
-import { PendingButton } from '@components/pending-button';
 
 /** The create form with room to write: text on the left, the issue page's field column on the right. */
 export function CreateIssuePage({ projectKey }: { projectKey: string | null }) {
@@ -55,10 +54,9 @@ export function CreateIssuePage({ projectKey }: { projectKey: string | null }) {
         }
       }}
     >
-      <div className="flex min-w-0 max-w-[900px] flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 max-w-[900px] flex-col gap-4" aria-busy={draft.pending}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <PageTitle>New issue</PageTitle>
-          <span className="text-text-muted">in</span>
           <DraftProjectPicker draft={draft} />
           {draft.parent ? <DraftParentChip draft={draft} /> : null}
         </div>
@@ -70,22 +68,14 @@ export function CreateIssuePage({ projectKey }: { projectKey: string | null }) {
       >
         {draft.project ? <DraftPanel draft={draft} project={draft.project} /> : null}
       </aside>
-      <div className="flex min-w-0 max-w-[900px] flex-wrap items-center justify-end gap-x-4 gap-y-2 min-[1100px]:col-start-1 min-[1100px]:row-start-2">
+      {/* Below the two-column width the fields push the actions out of view, so they pin to the bottom. */}
+      <div className="sticky bottom-0 z-10 -mx-page-x flex min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-2 border-t bg-background px-page-x py-3 max-md:-mx-page-x-mobile max-md:px-page-x-mobile min-[1100px]:static min-[1100px]:col-start-1 min-[1100px]:row-start-2 min-[1100px]:mx-0 min-[1100px]:max-w-[900px] min-[1100px]:border-0 min-[1100px]:bg-transparent min-[1100px]:p-0">
         <DraftError draft={draft} />
         <div className="flex flex-none items-center gap-2">
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Cancel
           </Button>
-          <PendingButton
-            type="submit"
-            className="gap-2"
-            disabled={!draft.canSubmit}
-            pending={draft.pending || draft.uploader.busy}
-            pendingLabel={draft.pending ? 'Creating…' : 'Uploading…'}
-            after={<ShortcutHint />}
-          >
-            Create issue
-          </PendingButton>
+          <CreateButton draft={draft} />
         </div>
       </div>
     </form>

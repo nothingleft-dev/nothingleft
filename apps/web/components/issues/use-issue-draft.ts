@@ -160,7 +160,7 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
   // A refusal says what to change; a fault on our side or the network's can only be retried.
   const fault = create.error !== null && !(isApiError(create.error) && create.error.status < 500);
   const failure = fault
-    ? 'Not created. Your draft is kept, so try again.'
+    ? 'Could not create the issue. Something went wrong on our side; your draft is kept.'
     : (error.summary ?? Object.values(error.fields)[0] ?? null);
   const size = checkMarkdownSize(description);
 

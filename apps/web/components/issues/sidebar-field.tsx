@@ -12,8 +12,9 @@ interface SidebarFieldProps {
   /** Muted like an empty label, never blank — ui-conventions.md § Empty values. */
   empty?: boolean;
   mono?: boolean;
-  /** A red asterisk after the label: the create form's required custom fields. */
+  /** An asterisk after the label: the create form's required custom fields; red once a create left it empty. */
   required?: boolean;
+  invalid?: boolean;
   aside?: ReactNode;
   /** The popover body. Absent or disabled renders a read-only row. */
   editor?: ReactNode;
@@ -36,15 +37,18 @@ function Body({
   empty,
   mono,
   required,
+  invalid,
   aside,
   editable,
 }: Omit<SidebarFieldProps, 'editor'> & { editable?: boolean }) {
   return (
     <>
-      <span className="col-start-1 flex items-center gap-1.5 text-2xs text-text-muted">
+      <span
+        className={cn('col-start-1 flex items-center gap-1.5 text-2xs text-text-muted', invalid && 'text-danger-fg')}
+      >
         {label}
         {required ? (
-          <span aria-label="required" className="-ml-1 text-danger-fg">
+          <span aria-label="required" className="-ml-1">
             *
           </span>
         ) : null}
