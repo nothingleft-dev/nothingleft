@@ -1163,7 +1163,8 @@ Two kinds, and the choice is not a matter of taste
 | Anything after that — a route change, a list, a panel, a row, a stat                        | `<PageSkeleton>` / `<RowsSkeleton>` / `<TextSkeleton>` or a bespoke skeleton shaped like the content | The layout is known; keep it stable and fill it in |
 
 `app/(app)/loading.tsx` is the default route skeleton; a page with a distinct
-shape adds its own `loading.tsx` beside it. Inside a component, branch on the
+shape adds its own `loading.tsx` beside it, rendering the same skeleton the page shows in place
+(issue lists: `IssueListSkeleton`), so the route fallback and the page never swap skeletons. Inside a component, branch on the
 hook's `isPending` and render the skeleton in the same slot the content will
 occupy. Never a spinner, never a blank.
 

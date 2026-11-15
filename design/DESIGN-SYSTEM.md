@@ -377,7 +377,8 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
   `apps/web/components/shell/brand.tsx` so they follow the in-app theme. The favicon,
   `apps/web/app/icon.svg`, is the small drawing and follows `prefers-color-scheme`.
 - **Full-page loader**: the mark at 40 px with its bars burning down one by one, shortest
-  first, then returning. Static under `prefers-reduced-motion`.
+  first, then returning. Static under `prefers-reduced-motion`. On the page surface; its label
+  (_Checking your session_) shows under the mark after one second.
 - The same accent period closes every page title (`My work.` `Projects.` `Issues.`),
   implemented as `h1::after`. Never on content titles such as an issue's summary.
 
@@ -915,7 +916,9 @@ action that touches only the actor gets a success toast with Undo instead of a d
 warning banner tops every page with a countdown from `Retry-After`; reads wait for
 it and finish by themselves, so a page keeps what it shows instead of an error; a read with
 nothing loaded yet shows its load notice in the warning tone with the countdown and no _Try again_. A refused save
-shares one error toast whose Retry unlocks at zero; it is never resent without a click. The
+shares one error toast that takes the failed action as its title, with the countdown in its body and
+_Try again_ level with the title like any toast action, unlocking at zero; it is never resent
+without a click. Every countdown reads _Try again in 0:42_. The
 sign-in, sign-up and reset forms show no toast: their inline alert reads _Too many attempts._ with
 the countdown, and the submit button stays disabled until it ends.
 If the shell itself could not load, a full-page version says the same in the same words, with
@@ -927,8 +930,11 @@ offers to widen or clear; loading keeps the layout with skeleton bars shaped lik
 (a table skeleton has the table's header row; a form skeleton has labels over fields); a read
 that failed says so with **Try again** and is never shown as empty or as zero. A missing or
 denied resource renders the 404 inside the shell: page-width, the `404` eyebrow, one sentence,
-one way forward (_Go home_). Outside the shell (unknown URL, render failure) the same block
-centres in the viewport. The error page says what happened, that saved work is safe, and
+one way forward (_Go home_). An unknown address inside the app renders that 404 inside the shell.
+The eyebrow carries its 14 px icon (`404` muted, `Error` and `Connection` in danger ink, _Request
+limit_ in warning ink with its timer) and the title ends in the accent period. Outside the shell
+(render failure, server unreachable, request limit at boot) the block starts at 30 % of the
+viewport height, with the 20 px mark top-left linking home. The error page says what happened, that saved work is safe, and
 offers _Reload the page_; it never prints the exception. Denied and missing both render `404`.
 Every full-page state (404, error, server unreachable, request limit) is one template: a 440 px
 column with an eyebrow (`404`, `Error`, `Connection`, or the warning-ink _Request limit_ with its

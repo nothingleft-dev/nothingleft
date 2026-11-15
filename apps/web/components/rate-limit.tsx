@@ -15,6 +15,8 @@ function Countdown({ seconds }: { seconds: number }) {
 /** The shell could not start because its first requests were limited; it starts by itself at zero. */
 export function RateLimitScreen({ onRetry }: { onRetry?: () => void }) {
   const { secondsLeft, perMinute } = useRateLimit();
+  // The shell hands over a retry only once the session request has been refused.
+  const refused = onRetry !== undefined;
   const retry = useRef(onRetry);
   useEffect(() => {
     retry.current = onRetry;
@@ -26,29 +28,33 @@ export function RateLimitScreen({ onRetry }: { onRetry?: () => void }) {
   return (
     <CentredState>
       <FullPageState
-        eyebrow={
-          <span className="flex items-center gap-1.5 text-warning-fg">
-            <Timer aria-hidden className="size-icon-sm" />
-            Request limit
-          </span>
-        }
+        eyebrow="Request limit"
         title="You have hit the request limit"
         actions={
-          <Button onClick={onRetry} disabled={!onRetry || secondsLeft > 0}>
-            {secondsLeft > 0 ? (
-              <span>
-                Try again in <Countdown seconds={secondsLeft} />
-              </span>
-            ) : (
-              'Try again'
-            )}
-          </Button>
+          <>
+            <Button onClick={onRetry} disabled={!onRetry || secondsLeft > 0}>
+              <TryAgainLabel seconds={secondsLeft} />
+            </Button>
+            {refused ? (
+              <span className="text-xs text-text-secondary">Still paused: the server refused the last try.</span>
+            ) : null}
+          </>
         }
       >
-        Your session sent {perMinute ? `more than ${perMinute} requests` : 'too many requests'} in a minute, so the
-        server paused it. Nothing was lost, and the app loads again by itself.
+        The app sent {perMinute ? `more than ${perMinute} requests` : 'too many requests'} in a minute, so the server
+        paused it. Nothing was lost, and the app loads again by itself.
       </FullPageState>
     </CentredState>
+  );
+}
+
+function TryAgainLabel({ seconds }: { seconds: number }) {
+  return seconds > 0 ? (
+    <span>
+      Try again in <Countdown seconds={seconds} />
+    </span>
+  ) : (
+    'Try again'
   );
 }
 
@@ -72,8 +78,7 @@ export function RateLimitBanner() {
         <span className="font-medium">
           You have hit the request limit{perMinute ? ` of ${perMinute} a minute` : ''}.
         </span>{' '}
-        Pages load again by themselves in <Countdown seconds={secondsLeft} />; a change you make before then is not
-        saved.
+        Everything loads again by itself in <Countdown seconds={secondsLeft} />; a change made before then is not saved.
       </p>
     </div>
   );
@@ -101,40 +106,37 @@ export function RateLimitWait() {
   );
 }
 
-/** The body of the one toast refused saves share; Retry unlocks at zero. */
-export function RateLimitToastBody({ onRetry }: { onRetry: (() => void) | null }) {
+/** The detail of the one toast refused saves share; the countdown lives here so the action stays short. */
+export function RateLimitToastBody() {
   const { secondsLeft } = useRateLimit();
-  const waiting = secondsLeft > 0;
   return (
-    <span className="flex flex-col items-start gap-2">
-      <span>
-        Too many requests in the last minute; nothing was changed.
-        {onRetry ? null : waiting ? (
-          <>
-            {' '}
-            Try again in <Countdown seconds={secondsLeft} />.
-          </>
-        ) : (
-          ' You can try again now.'
-        )}
-      </span>
-      {onRetry ? (
-        <Button
-          size="xs"
-          variant="outline"
-          className="h-control-sm px-2.5 text-text"
-          disabled={waiting}
-          onClick={onRetry}
-        >
-          {waiting ? (
-            <span>
-              Retry in <Countdown seconds={secondsLeft} />
-            </span>
-          ) : (
-            'Retry'
-          )}
-        </Button>
-      ) : null}
-    </span>
+    <>
+      You have hit the request limit; nothing was changed.{' '}
+      {secondsLeft > 0 ? (
+        <>
+          Try again in <Countdown seconds={secondsLeft} />.
+        </>
+      ) : (
+        'You can try again now.'
+      )}
+    </>
+  );
+}
+
+/** The toast's one action, level with its title like every toast action; it unlocks at zero. */
+export function RateLimitToastAction({ onRetry }: { onRetry: () => void }) {
+  const waiting = useRateLimit().secondsLeft > 0;
+  return (
+    <Button
+      data-button
+      size="xs"
+      variant="outline"
+      disabled={waiting}
+      // The toast library's own rule gives every action a pointer, and it outranks the utilities.
+      style={waiting ? { cursor: 'default' } : undefined}
+      onClick={onRetry}
+    >
+      Try again
+    </Button>
   );
 }

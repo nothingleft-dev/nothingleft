@@ -50,6 +50,7 @@ export function redirectToSignIn() {
   const here = window.location.pathname + window.location.search;
   const target = new URL(SIGN_IN_PATH, window.location.origin);
   target.searchParams.set('next', here);
+  target.searchParams.set('ended', '1');
   window.location.assign(target.toString());
 }
 

@@ -23,6 +23,7 @@ export function SignInForm() {
   const params = useSearchParams();
   const next = params.get('next');
   const deactivated = params.get('deactivated') === '1';
+  const ended = params.get('ended') === '1';
   const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const [expired, setExpired] = useState<string | null>(null);
 
@@ -64,7 +65,14 @@ export function SignInForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AuthHeading title="Sign in" lede="Welcome back. Use the email you signed up with." />
+      <AuthHeading
+        title="Sign in"
+        lede={
+          ended
+            ? 'Your session ended. Sign in again to go back to where you were.'
+            : 'Welcome back. Use the email you signed up with.'
+        }
+      />
 
       <ProviderButtons verb="sign in" />
 

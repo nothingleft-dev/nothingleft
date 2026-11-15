@@ -528,9 +528,9 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
         onConfirm={onDelete}
       >
         <p>
-          <span className="font-medium text-text">{issue.title}</span> leaves {issue.project.name} for everyone straight
-          away. A Project Admin can restore it from the project&apos;s deleted issues for 14 days; after that it is
-          gone, with its history.
+          <span className="font-medium text-text">{issue.title}</span> is removed from {issue.project.name} for
+          everyone. A Project Admin can restore it from deleted issues for 14 days; after that it is deleted with its
+          history.
         </p>
       </ConfirmDialog>
     </DropdownMenu>
@@ -671,9 +671,14 @@ function IssueNotFound({ issueKey }: { issueKey: string }) {
         )
       }
     >
-      {found
-        ? `There is no issue ${issueKey} in ${found.name} that you can open. A deleted issue can be restored by a Project Admin for 14 days.`
-        : 'The key may be wrong, or the issue is in a project you cannot open. Your data is unaffected.'}
+      {found ? (
+        <>
+          There is no issue <span className="font-mono">{issueKey}</span> in {found.name} that you can open. A deleted
+          issue can be restored by a Project Admin for 14 days.
+        </>
+      ) : (
+        'The key may be mistyped, or the issue is in a project you cannot open.'
+      )}
     </FullPageState>
   );
 }
