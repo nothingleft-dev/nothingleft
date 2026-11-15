@@ -143,14 +143,14 @@ function CheckYourInbox({ address, next }: { address: string | null; next: Route
       ) : null}
 
       <Button asChild className="w-full">
-        <Link href={next}>Continue to Nothing Left</Link>
+        <Link href={next}>Continue while you wait</Link>
       </Button>
 
       <div className="flex items-baseline justify-between gap-3 border-t pt-4">
         <span className="text-xs text-text-secondary">Nothing arrived?</span>
         {waiting ? (
           <span className="text-xs text-text-secondary">
-            Resend in <span className="tabular">{cooldown}s</span>
+            Resend email in <span className="tabular">{cooldown}s</span>
           </span>
         ) : (
           <button type="button" onClick={() => resend.mutate()} className={cn(INLINE_LINK, 'text-xs')}>

@@ -47,7 +47,8 @@ export function ProfileStep({ user }: { user: Me }) {
       {blocked ? (
         <VerifyGate
           user={user}
-          reason="You can finish your profile now; the address needs confirming before the organisation step."
+          title="Confirm your email before step 2"
+          reason="Finish this step meanwhile; creating your organisation waits for the confirmation."
         />
       ) : null}
 
@@ -63,9 +64,9 @@ export function ProfileStep({ user }: { user: Me }) {
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-text-secondary">Photo</span>
+          <span className="text-sm font-medium text-text-secondary">Photo</span>
           <AvatarPicker user={user} />
-          <p className="text-xs text-text-muted">
+          <p className="text-sm text-text-secondary">
             Optional. We use your Gravatar or initials until you upload a photo.
           </p>
         </div>
@@ -82,7 +83,7 @@ export function ProfileStep({ user }: { user: Me }) {
         />
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-text-secondary">Time zone</span>
+          <span className="text-sm font-medium text-text-secondary">Time zone</span>
           <TimezonePicker value={timezone} onChange={setTimezone} />
           <ZoneExample timeZone={timezone} />
         </div>

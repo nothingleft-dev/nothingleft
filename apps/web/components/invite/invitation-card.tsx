@@ -17,7 +17,7 @@ export function InvitationCard({ preview }: { preview: InvitationPreview }) {
           {preview.project ? <p className="line-clamp-2 text-xs text-text-secondary">{preview.project.name}</p> : null}
         </div>
       </div>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-6 gap-y-2.5 border-t pt-4 text-sm">
+      <dl className="grid grid-cols-[6rem_minmax(0,1fr)] items-baseline gap-x-4 gap-y-2.5 border-t pt-4 text-sm">
         <dt className="text-text-secondary">Invited by</dt>
         <dd className="min-w-0 text-text">{preview.invited_by.name}</dd>
         <dt className="text-text-secondary">Role</dt>

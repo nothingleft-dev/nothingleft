@@ -16,7 +16,15 @@ const RESEND_COOLDOWN_SECONDS = 30;
 /** A password account cannot create or join an organisation until it verifies — auth-and-tenancy.md § Flows. */
 export const needsVerification = (user: Me) => user.email_verified_at === null;
 
-export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
+export function VerifyGate({
+  user,
+  title = 'Confirm your email first',
+  reason,
+}: {
+  user: Me;
+  title?: string;
+  reason?: string;
+}) {
   const client = useQueryClient();
   const [cooldown, setCooldown] = useState(0);
   const resend = useMutation({
@@ -36,11 +44,11 @@ export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
   return (
     <div className="flex flex-col gap-4 rounded-md border bg-surface p-4">
       <div className="flex gap-3">
-        <span className="grid size-9 flex-none place-items-center rounded-md border bg-app text-text-secondary">
+        <span className="grid size-10 flex-none place-items-center rounded-md border bg-surface text-text-secondary">
           <MailCheck className="size-icon" />
         </span>
         <div className="flex flex-col gap-1">
-          <p className="font-medium">Confirm your email first</p>
+          <p className="font-medium">{title}</p>
           <p className="text-sm leading-6 text-text-secondary">
             We sent a link to <span className="font-medium text-text">{user.email}</span>. It works for 24 hours.{' '}
             {reason ?? 'Confirm your email to create your organisation.'}
@@ -68,14 +76,14 @@ export function VerifyGate({ user, reason }: { user: Me; reason?: string }) {
         </PendingButton>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
           disabled={cooldown > 0 || resend.isPending}
           onClick={() => resend.mutate()}
         >
           {cooldown > 0 ? (
             <>
-              Resend in <span className="tabular">{cooldown}s</span>
+              Resend email in <span className="tabular">{cooldown}s</span>
             </>
           ) : (
             'Resend email'

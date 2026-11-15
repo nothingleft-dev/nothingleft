@@ -65,6 +65,7 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
       </label>
 
       <div
+        data-slot="form-input"
         className={cn(
           'flex min-h-control flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1.5',
           'focus-within:border-border-strong focus-within:shadow-(--focus-ring)',
@@ -111,7 +112,7 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
           onPaste={onPaste}
           onBlur={() => commit(draft)}
           placeholder={value.length === 0 ? 'jordan@company.com, sam@company.com' : full ? '' : 'Add another'}
-          className="h-6 min-w-[180px] flex-1 bg-transparent pl-1 text-sm text-text outline-none placeholder:text-text-muted focus-visible:shadow-none"
+          className="h-6 min-w-[180px] flex-1 bg-transparent pl-1 text-[length:inherit] text-text outline-none placeholder:text-text-muted focus-visible:shadow-none"
         />
       </div>
 

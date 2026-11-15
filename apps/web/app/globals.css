@@ -1760,8 +1760,12 @@
     font-size: var(--text-md);
   }
 
-  .comfortable-form [data-slot='button']:not([data-size^='icon']) {
-    min-height: 40px;
+  /* Buttons stand level with the 44px fields beside them; small and icon buttons keep their size. */
+  .comfortable-form
+    :is([data-slot='button'], [data-variant][data-size]):not([data-size^='icon']):not([data-size='sm']):not(
+      [data-size='xs']
+    ) {
+    min-height: 44px;
   }
 }
 

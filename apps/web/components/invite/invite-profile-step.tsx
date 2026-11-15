@@ -53,10 +53,10 @@ export function InviteProfileStep({ user, accepted, projectName, stepNumber, ste
     <StepPanel
       eyebrow={`Step ${stepNumber} of ${stepCount}`}
       title={`You’re in ${organization.name}`}
-      lede="One last look at how you appear to everyone else here. All of it can be changed later."
+      lede={`${project_key ? `You joined ${organization.name} and its project ${projectName ?? project_key}. ` : ''}Check how you appear to everyone here; all of it can be changed later.`}
       footer={
         <PendingButton type="submit" form="invite-profile" pending={isPending} pendingLabel="Saving…">
-          {project_key ? `Open ${projectName ?? project_key}` : 'Go to your projects'}
+          {project_key ? `Save and open ${projectName ?? project_key}` : 'Save and go to your projects'}
         </PendingButton>
       }
     >
@@ -73,7 +73,7 @@ export function InviteProfileStep({ user, accepted, projectName, stepNumber, ste
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-text-secondary">Photo</span>
+          <span className="text-sm font-medium text-text-secondary">Photo</span>
           <AvatarPicker user={user} />
         </div>
 

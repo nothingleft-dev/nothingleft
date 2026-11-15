@@ -12,6 +12,9 @@ import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
 
+// Only an uploaded photo has anything to remove; a provider picture, Gravatar or the generated mark stays.
+const isUploaded = (url: string | null) => url !== null && url.includes('/web/avatar/');
+
 const isAllowed = (type: string): type is (typeof AVATAR_MIME_TYPES)[number] =>
   (AVATAR_MIME_TYPES as readonly string[]).includes(type);
 
@@ -54,15 +57,17 @@ export function AvatarPicker({ user, size = 'md' }: { user: Me; size?: 'md' | 'l
         >
           Upload
         </PendingButton>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={remove.isPending || !user.avatar_url}
-          onClick={() => remove.mutate(undefined, { onSuccess: () => toast.success('Photo removed.') })}
-        >
-          Remove
-        </Button>
+        {isUploaded(user.avatar_url) ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={remove.isPending}
+            onClick={() => remove.mutate(undefined, { onSuccess: () => toast.success('Photo removed.') })}
+          >
+            Remove
+          </Button>
+        ) : null}
       </div>
 
       <input

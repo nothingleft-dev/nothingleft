@@ -109,6 +109,7 @@ export function TransferFlow({ token }: { token: string }) {
       footer={
         <>
           <PendingButton
+            className="min-w-24"
             onClick={() => accept.mutate(token, { onSuccess: setAccepted })}
             disabled={pending}
             pending={accept.isPending}
@@ -118,6 +119,7 @@ export function TransferFlow({ token }: { token: string }) {
           </PendingButton>
           <PendingButton
             variant="outline"
+            className="min-w-24"
             onClick={() => decline.mutate(token, { onSuccess: () => setDeclined(true) })}
             disabled={pending}
             pending={decline.isPending}
@@ -151,7 +153,7 @@ function TransferCard({ transfer }: { transfer: OwnershipTransfer }) {
           <p className="truncate font-mono text-xs text-text-secondary">{transfer.organization.slug}</p>
         </div>
       </div>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-6 gap-y-2.5 border-t pt-4 text-sm">
+      <dl className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 border-t pt-4 text-sm">
         <dt className="text-text-secondary">From</dt>
         <dd className="flex min-w-0 items-center gap-2">
           <MemberAvatar member={transfer.from} />

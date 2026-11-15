@@ -3,76 +3,82 @@ import type { CSSProperties } from 'react';
 export function InsightsArt() {
   return (
     <div className="ap-stage" aria-hidden="true">
-      <div className="ap-c" style={{ left: '2%', top: '6%', width: '46%', padding: '14px' }}>
-        <div className="ap-xs ap-muted">Closed this week</div>
-        <div className="ap-big" style={{ margin: '6px 0 10px' }}>
-          38{' '}
-          <span className="ap-xs ap-muted" style={{ fontWeight: '400' }}>
-            issues
-          </span>
-        </div>
-        <div className="ap-bars">
-          <i style={{ height: '30%' }}></i>
-          <i style={{ height: '45%' }}></i>
-          <i className="ap-on" style={{ height: '70%' }}></i>
-          <i style={{ height: '38%' }}></i>
-          <i className="ap-on" style={{ height: '100%' }}></i>
-        </div>
-      </div>
-      <div className="ap-c" style={{ left: '52%', top: '26%', width: '46%', padding: '14px' }}>
-        <div className="ap-xs ap-muted" style={{ marginBottom: '10px' }}>
-          Open by status
-        </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div
-            className="ap-ring"
-            data-l="24"
-            style={{ '--p': 58, width: '76px', height: '76px' } as CSSProperties}
-          ></div>
-          <div style={{ flex: '1', display: 'grid', gap: '7px' }} className="ap-xs">
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span className="ap-dot"></span>
-              <span className="ap-muted" style={{ flex: '1' }}>
-                Open
+      <div style={{ position: 'absolute', inset: '6% 0 0', display: 'flex', gap: '12px' }}>
+        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="ap-c" style={{ position: 'relative', padding: '14px' }}>
+            <div className="ap-xs ap-muted">Closed this week</div>
+            <div className="ap-big" style={{ margin: '6px 0 10px' }}>
+              38{' '}
+              <span className="ap-xs ap-muted" style={{ fontWeight: '400' }}>
+                issues
               </span>
-              <span className="ap-m">9</span>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span className="ap-dot ap-a"></span>
-              <span className="ap-muted" style={{ flex: '1' }}>
-                In Progress
-              </span>
-              <span className="ap-m">11</span>
+            <div className="ap-bars">
+              <i style={{ height: '30%' }}></i>
+              <i style={{ height: '45%' }}></i>
+              <i className="ap-on" style={{ height: '70%' }}></i>
+              <i style={{ height: '38%' }}></i>
+              <i className="ap-on" style={{ height: '100%' }}></i>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span className="ap-dot" style={{ background: 'var(--panel-ink)' }}></span>
-              <span className="ap-muted" style={{ flex: '1' }}>
-                Fixed
-              </span>
-              <span className="ap-m">4</span>
+          </div>
+          <div className="ap-c" style={{ position: 'relative', padding: '14px' }}>
+            <div className="ap-xs ap-muted">Time logged</div>
+            <div className="ap-big" style={{ margin: '6px 0 4px' }}>
+              14h 20m
+            </div>
+            <div className="ap-xs ap-muted" style={{ marginBottom: '10px' }}>
+              of 20h planned · Sprint 08
+            </div>
+            <div className="ap-track">
+              <i style={{ width: '72%' }}></i>
             </div>
           </div>
         </div>
-      </div>
-      <div className="ap-c" style={{ left: '4%', top: '46%', width: '48%', padding: '14px' }}>
-        <div className="ap-xs ap-muted">Time logged</div>
-        <div className="ap-big" style={{ margin: '6px 0 4px' }}>
-          14h 20m
-        </div>
-        <div className="ap-xs ap-muted" style={{ marginBottom: '10px' }}>
-          of 20h planned · Sprint 08
-        </div>
-        <div className="ap-track">
-          <i style={{ width: '72%' }}></i>
-        </div>
-      </div>
-      <div className="ap-c" style={{ left: '52%', top: '64%', width: '48%', padding: '14px' }}>
-        <div className="ap-xs ap-muted" style={{ marginBottom: '8px' }}>
-          Task completion
-        </div>
-        <div className="ap-big">92%</div>
-        <div className="ap-track" style={{ marginTop: '10px' }}>
-          <i style={{ width: '92%' }}></i>
+        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '56px' }}>
+          <div className="ap-c" style={{ position: 'relative', padding: '14px' }}>
+            <div className="ap-xs ap-muted" style={{ marginBottom: '10px' }}>
+              Open by status
+            </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div
+                className="ap-ring"
+                data-l="24"
+                style={{ '--p': 58, width: '76px', height: '76px' } as CSSProperties}
+              ></div>
+              <div style={{ flex: '1', display: 'grid', gap: '7px' }} className="ap-xs">
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span className="ap-dot"></span>
+                  <span className="ap-muted" style={{ flex: '1' }}>
+                    Open
+                  </span>
+                  <span className="ap-m">9</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span className="ap-dot ap-a"></span>
+                  <span className="ap-muted" style={{ flex: '1' }}>
+                    In Progress
+                  </span>
+                  <span className="ap-m">11</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span className="ap-dot" style={{ background: 'var(--panel-ink)' }}></span>
+                  <span className="ap-muted" style={{ flex: '1' }}>
+                    Fixed
+                  </span>
+                  <span className="ap-m">4</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="ap-c" style={{ position: 'relative', padding: '14px' }}>
+            <div className="ap-xs ap-muted" style={{ marginBottom: '8px' }}>
+              Task completion
+            </div>
+            <div className="ap-big">92%</div>
+            <div className="ap-track" style={{ marginTop: '10px' }}>
+              <i style={{ width: '92%' }}></i>
+            </div>
+          </div>
         </div>
       </div>
     </div>

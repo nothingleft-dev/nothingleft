@@ -32,6 +32,7 @@ export function AcceptCard({ preview, user, onAccept, onDecline, isPending, erro
         <>
           <PendingButton
             type="button"
+            className="min-w-24"
             onClick={onAccept}
             disabled={blocked}
             pending={isPending}
@@ -39,7 +40,7 @@ export function AcceptCard({ preview, user, onAccept, onDecline, isPending, erro
           >
             Accept
           </PendingButton>
-          <Button type="button" variant="outline" onClick={onDecline} disabled={isPending}>
+          <Button type="button" variant="outline" className="min-w-24" onClick={onDecline} disabled={isPending}>
             Decline
           </Button>
         </>

@@ -14,14 +14,14 @@ const PANELS: Record<PanelVariant, { headline: string; body: string; stats: [Sta
     body: 'Issues, boards, time and reports – and the same API behind all of it, so an agent on MCP can do anything a person can.',
     stats: [
       { value: '9', word: 'Reports', caption: 'Burndown, Gantt & time' },
-      { value: '∞', word: 'Views', caption: 'Saved, shared & personal' },
+      { value: '1', word: 'API', caption: 'For the app, agents & scripts' },
     ],
   },
   signup: {
     headline: 'Your agent works the tracker too.',
     body: 'Create an organisation and bring your agent on day one. Every call goes through the same API and permissions as the app, and your first twenty people are free.',
     stats: [
-      { value: '244', word: 'API', caption: 'Documented operations' },
+      { value: '244', word: 'Operations', caption: 'In the documented API' },
       { value: '87', word: 'Tools', caption: 'MCP, same permissions' },
     ],
   },

@@ -63,7 +63,12 @@ export function WelcomeFlow({ step }: { step: WelcomeStepId }) {
   }
 
   return (
-    <FlowShell steps={WELCOME_STEPS} current={INDEX[step]} email={user?.email ?? null} intro={WELCOME_INTRO}>
+    <FlowShell
+      steps={WELCOME_STEPS}
+      current={misplaced ? (slug === null ? 1 : 2) : INDEX[step]}
+      email={user?.email ?? null}
+      intro={WELCOME_INTRO}
+    >
       {misplaced ? (
         <StepSkeleton fields={2} />
       ) : step === 'profile' && user ? (

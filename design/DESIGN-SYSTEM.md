@@ -757,7 +757,7 @@ appear over ours. Validation runs against the same Zod schema in `packages/types
 the API validates with, and each message is ours. This is CLAUDE.md rule 10 applied to
 validation as well as to controls.
 
-Inputs are 32 px, bordered, on `--bg-surface`, with the label above in 13 px secondary
+Inputs, pickers and buttons are 44 px (the comfortable form), bordered, on `--bg-surface`, with the label above in 13 px secondary
 ink. Password fields carry a show/hide eye. A field in error gets a `--danger-fg`
 border and its message directly beneath — never a tooltip.
 
@@ -841,9 +841,11 @@ decorative panel is replaced by a **step rail** that answers exactly that.
 - **Rail prose is `--text-secondary` at 14px, never `--text-muted`.** Muted measures
   3.97:1 on `--bg-app` in dark and 3.16:1 in light; a paragraph somebody has to read
   before deciding what to type cannot be set in it. Muted is for a timestamp.
-- **Heading 26/600**, one lede line at 15 under it, fields at 32, and a footer above a
+- **Heading 26/600**, one lede line at 15 under it, fields at 44, and a footer above a
   hairline: `← Back` as a ghost button, the ink primary beside it, and a skip as a plain
-  text link pushed to the far right where it is visible but not competing.
+  text link pushed to the far right. On the invite step there is one filled button at a time:
+  *Send invitations* while addresses wait, *Finish* once somebody is invited; until then the
+  footer offers only *Skip for now*. The step's footer is sticky, with a fade above it.
 - **The eyebrow is sentence case.** `Step 2 of 4` at 14px secondary — not
   `STEP 2 OF 4`, because § 4 has no caps-and-tracking eyebrows anywhere in this product.
 - **Below `lg`** the rail collapses to one line on `--bg-app` with a bottom hairline, and

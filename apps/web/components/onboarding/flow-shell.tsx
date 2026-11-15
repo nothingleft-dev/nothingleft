@@ -63,11 +63,11 @@ export function FlowShell({ steps, current, email, intro, children }: FlowShellP
 
   return (
     <FlowFrame email={email}>
-      <div className="mx-auto flex w-full max-w-[1120px] flex-1 items-start gap-12 px-6 py-10 max-lg:flex-col max-lg:gap-0 max-lg:p-0">
+      <div className="mx-auto flex w-full max-w-[968px] flex-1 items-start gap-12 px-6 py-10 max-lg:flex-col max-lg:gap-0 max-lg:p-0">
         {/* An inset block on the page itself, not a floating card inside another card:
             one edge, not three. */}
         <aside className="w-[312px] flex-none rounded-lg bg-app p-7 max-lg:hidden" aria-label="Setup steps">
-          <p className="mb-8 text-sm leading-[22px] text-text-secondary">{intro}</p>
+          <p className="mb-8 text-sm leading-[22px] text-pretty text-text-secondary">{intro}</p>
           <StepRail steps={steps} current={current} />
         </aside>
 
@@ -81,8 +81,8 @@ export function FlowShell({ steps, current, email, intro, children }: FlowShellP
           </span>
         </div>
 
-        <main className="comfortable-form w-full min-w-0 flex-1 py-4 max-lg:px-page-x-mobile max-lg:py-6">
-          <div className="max-w-[560px]">{children}</div>
+        <main className="comfortable-form w-full min-w-0 flex-1 pt-7 pb-4 max-lg:px-page-x-mobile max-lg:py-6">
+          <div className="max-w-[560px] max-lg:max-w-none">{children}</div>
         </main>
       </div>
     </FlowFrame>

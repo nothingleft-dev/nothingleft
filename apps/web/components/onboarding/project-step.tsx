@@ -89,7 +89,7 @@ export function ProjectStep() {
                   create.reset();
                 }}
               >
-                Use {suggestion} instead
+                Use <span className="font-mono">{suggestion}</span> instead
               </button>
             ) : null
           }

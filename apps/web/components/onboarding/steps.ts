@@ -28,4 +28,4 @@ export const WELCOME_STEPS: readonly FlowStep[] = [
   },
 ];
 
-export const WELCOME_INTRO = 'Set up your workspace in four short steps. You can adjust your settings later.';
+export const WELCOME_INTRO = 'Four short steps to your workspace. You can change any of it later.';

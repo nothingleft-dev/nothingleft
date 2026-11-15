@@ -91,8 +91,11 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
 
         {fixedEmail ? (
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-text-secondary">Email</span>
-            <div className="flex h-control items-center gap-2 rounded-md border bg-inset px-3 text-text-secondary">
+            <span className="text-sm font-medium text-text-secondary">Email</span>
+            <div
+              data-slot="form-input"
+              className="flex h-control items-center gap-2 rounded-md border bg-inset px-3 text-text-secondary"
+            >
               <span className="min-w-0 flex-1 truncate" title={fixedEmail}>
                 {fixedEmail}
               </span>
@@ -138,7 +141,7 @@ export function InviteSignUp({ token, preview, stepCount, onSignedUp }: InviteSi
 
         <PendingButton
           type="submit"
-          className="mt-1 h-auto max-w-full self-start py-2 whitespace-normal"
+          className="mt-1 h-auto w-full py-2 whitespace-normal"
           pending={form.isPending}
           pendingLabel="Creating your account…"
           disabled={form.waiting}

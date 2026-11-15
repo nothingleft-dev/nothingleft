@@ -151,8 +151,10 @@ current one, else the most recently joined (decided 24 Sep 2026, 1c).
 Web decisions (24 Sep 2026, 1c web half): the landing is the app's `/` route,
 and signing in with no `next=` goes there. `project` opens the project's issue
 list; `project_list` opens `/projects`. `org_switcher` renders a page listing
-the organisations with the preferred one marked; choosing one switches the
-session and opens `/dashboard`, the same place the sidebar switcher goes.
+the organisations with the preferred one marked; the organisation the session is already in
+leads the list, tagged *Current*, and the lede names it, so the page agrees with the sidebar
+switcher. Choosing one switches the session and opens `/dashboard`, the same place the sidebar
+switcher goes.
 `welcome` opens `/welcome`.
 `no_org` renders the sentence above inside the shell with two actions —
 *Create an organisation* (the welcome flow's organisation step) and a field for

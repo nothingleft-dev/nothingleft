@@ -32,7 +32,9 @@ export function StepPanel({ eyebrow, title, lede, children, footer, stickyFooter
         <div
           className={cn(
             'flex flex-wrap items-center gap-3 border-t pt-6',
-            stickyFooter && 'sticky bottom-0 z-10 -mb-4 bg-surface pt-5 pb-4 max-lg:-mb-6 max-lg:pb-6',
+            stickyFooter &&
+              'sticky bottom-0 z-10 -mb-4 bg-surface pt-5 pb-4 max-lg:-mb-6 max-lg:pb-6 ' +
+                'before:pointer-events-none before:absolute before:inset-x-0 before:bottom-[calc(100%+1px)] before:h-8 before:bg-linear-to-b before:from-transparent before:to-surface',
           )}
         >
           {footer}

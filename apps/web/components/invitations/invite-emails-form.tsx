@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   EMAIL_INVITATION_BATCH_MAX,
@@ -40,6 +40,8 @@ interface InviteEmailsFormProps {
   seats?: Seats | undefined;
   onSent?: () => void;
   submitLabel?: string;
+  submitVariant?: 'default' | 'outline';
+  onPendingChange?: (count: number) => void;
 }
 
 export function InviteEmailsForm({
@@ -48,6 +50,8 @@ export function InviteEmailsForm({
   seats,
   onSent,
   submitLabel = 'Send invitations',
+  submitVariant = 'default',
+  onPendingChange,
 }: InviteEmailsFormProps) {
   const [emails, setEmails] = useState<string[]>([]);
   const [orgRole, setOrgRole] = useState<OrgRole>('member');
@@ -55,6 +59,8 @@ export function InviteEmailsForm({
   const invite = useInviteByEmail(scope);
   const error = useApiError(invite.error, []);
   const isProject = scope.kind === 'project';
+
+  useEffect(() => onPendingChange?.(emails.length), [emails.length, onPendingChange]);
 
   return (
     <form
@@ -109,7 +115,13 @@ export function InviteEmailsForm({
       {seats && emails.length > 0 ? <SeatNotice seats={seats} /> : null}
 
       <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-start">
-        <PendingButton type="submit" disabled={emails.length === 0} pending={invite.isPending} pendingLabel="Sending…">
+        <PendingButton
+          type="submit"
+          variant={submitVariant}
+          disabled={emails.length === 0}
+          pending={invite.isPending}
+          pendingLabel="Sending…"
+        >
           {submitLabel}
         </PendingButton>
         <span className="text-xs text-text-secondary">Invitations expire in 14 days and work once.</span>
