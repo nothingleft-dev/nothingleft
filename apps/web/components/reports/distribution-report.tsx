@@ -157,7 +157,7 @@ export function DistributionReport({ name }: { name: DistributionName }) {
             value={sort}
             options={[
               { value: 'count', label: 'Most first' },
-              { value: 'name', label: 'A–Z' },
+              { value: 'name', label: 'Field order' },
             ]}
             onChange={v => state.set({ sort: v === 'name' ? 'name' : null })}
           />
