@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Timer } from 'lucide-react';
 import { Button } from '@components/ui/button';
+import { CentredState, FullPageState } from '@components/full-page-state';
 import { useRateLimit } from '@hooks/use-rate-limit';
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -13,7 +14,7 @@ function Countdown({ seconds }: { seconds: number }) {
 
 /** The shell could not start because its first requests were limited; it starts by itself at zero. */
 export function RateLimitScreen({ onRetry }: { onRetry?: () => void }) {
-  const { secondsLeft, totalSeconds, perMinute } = useRateLimit();
+  const { secondsLeft, perMinute } = useRateLimit();
   const retry = useRef(onRetry);
   useEffect(() => {
     retry.current = onRetry;
@@ -21,48 +22,46 @@ export function RateLimitScreen({ onRetry }: { onRetry?: () => void }) {
   useEffect(() => {
     if (secondsLeft === 0) retry.current?.();
   }, [secondsLeft]);
-  const progress = totalSeconds ? (totalSeconds - secondsLeft) / totalSeconds : 1;
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-app px-page-x-mobile">
-      <div className="flex w-full max-w-sm flex-col items-start gap-3">
-        <span aria-hidden className="grid size-9 place-items-center rounded-md bg-warning-bg text-warning-fg">
-          <Timer className="size-icon" />
-        </span>
-        <h1 className="text-xl font-semibold tracking-tight">You’re moving faster than the limit</h1>
-        <p className="text-text-secondary">
-          Your session sent {perMinute ? `more than ${perMinute} requests` : 'too many requests'} in the last minute, so
-          the server is pausing it briefly. Nothing was lost.{' '}
-          {secondsLeft > 0 ? (
-            <>
-              This page picks up again in <Countdown seconds={secondsLeft} />.
-            </>
-          ) : (
-            'Picking up again now.'
-          )}
-        </p>
-        <div aria-hidden className="h-1 w-full overflow-hidden rounded-full bg-inset">
-          <div
-            className="h-full bg-text-muted transition-[width] duration-300 ease-linear"
-            style={{ width: `${progress * 100}%` }}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          {onRetry ? (
-            <Button onClick={onRetry} disabled={secondsLeft > 0}>
-              Try again
-            </Button>
-          ) : null}
-          <span className="text-xs text-text-muted">Reloads by itself</span>
-        </div>
-      </div>
-    </main>
+    <CentredState>
+      <FullPageState
+        eyebrow={
+          <span className="flex items-center gap-1.5 text-warning-fg">
+            <Timer aria-hidden className="size-icon-sm" />
+            Request limit
+          </span>
+        }
+        title="You have hit the request limit"
+        actions={
+          <Button onClick={onRetry} disabled={!onRetry || secondsLeft > 0}>
+            {secondsLeft > 0 ? (
+              <span>
+                Try again in <Countdown seconds={secondsLeft} />
+              </span>
+            ) : (
+              'Try again'
+            )}
+          </Button>
+        }
+      >
+        Your session sent {perMinute ? `more than ${perMinute} requests` : 'too many requests'} in a minute, so the
+        server paused it. Nothing was lost, and the app loads again by itself.
+      </FullPageState>
+    </CentredState>
   );
 }
 
 export function RateLimitBanner() {
   const { secondsLeft, perMinute } = useRateLimit();
-  if (secondsLeft === 0) return null;
+  const limited = secondsLeft > 0;
+  // Reads wait for the limit instead of failing; a skeleton that kept pulsing would say they are loading.
+  useEffect(() => {
+    if (!limited) return;
+    document.documentElement.dataset.rateLimited = '';
+    return () => void delete document.documentElement.dataset.rateLimited;
+  }, [limited]);
+  if (!limited) return null;
   return (
     <div
       role="status"
@@ -70,8 +69,11 @@ export function RateLimitBanner() {
     >
       <Timer className="mt-0.5 size-icon-sm flex-none" />
       <p className="flex-1 text-xs leading-5">
-        <span className="font-medium">You’ve hit the request limit{perMinute ? ` of ${perMinute} a minute` : ''}.</span>{' '}
-        Pages reload by themselves in <Countdown seconds={secondsLeft} />; a change you make before then is not saved.
+        <span className="font-medium">
+          You have hit the request limit{perMinute ? ` of ${perMinute} a minute` : ''}.
+        </span>{' '}
+        Pages load again by themselves in <Countdown seconds={secondsLeft} />; a change you make before then is not
+        saved.
       </p>
     </div>
   );
@@ -102,21 +104,35 @@ export function RateLimitWait() {
 /** The body of the one toast refused saves share; Retry unlocks at zero. */
 export function RateLimitToastBody({ onRetry }: { onRetry: (() => void) | null }) {
   const { secondsLeft } = useRateLimit();
+  const waiting = secondsLeft > 0;
   return (
-    <span className="flex items-center gap-3">
-      <span className="flex-1">
-        Too many requests in the last minute; nothing was changed.{' '}
-        {secondsLeft > 0 ? (
+    <span className="flex flex-col items-start gap-2">
+      <span>
+        Too many requests in the last minute; nothing was changed.
+        {onRetry ? null : waiting ? (
           <>
-            {onRetry ? 'Retry' : 'Try again'} in <Countdown seconds={secondsLeft} />.
+            {' '}
+            Try again in <Countdown seconds={secondsLeft} />.
           </>
-        ) : onRetry ? null : (
-          'You can try again now.'
+        ) : (
+          ' You can try again now.'
         )}
       </span>
       {onRetry ? (
-        <Button size="sm" variant="outline" disabled={secondsLeft > 0} onClick={onRetry}>
-          Retry
+        <Button
+          size="xs"
+          variant="outline"
+          className="h-control-sm px-2.5 text-text"
+          disabled={waiting}
+          onClick={onRetry}
+        >
+          {waiting ? (
+            <span>
+              Retry in <Countdown seconds={secondsLeft} />
+            </span>
+          ) : (
+            'Retry'
+          )}
         </Button>
       ) : null}
     </span>

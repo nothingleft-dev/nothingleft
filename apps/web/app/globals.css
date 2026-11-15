@@ -1287,7 +1287,13 @@
   --radius: var(--radius-lg);
 }
 
+/* 320 px keeps a toast in the issue page's rail at 1440 instead of over the main column's composer. */
+[data-sonner-toaster] {
+  --width: 320px !important;
+}
+
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  align-items: flex-start;
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 20px;
@@ -1295,8 +1301,24 @@
   box-shadow: var(--shadow-popover);
 }
 
+[data-sonner-toaster] [data-sonner-toast][data-styled='true']:focus-visible {
+  box-shadow: var(--shadow-popover), var(--focus-ring);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
+  font-weight: 500;
+  line-height: 20px;
+}
+
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {
+  font-size: 13px;
+  line-height: 18px;
   color: var(--text-secondary);
+}
+
+/* On the title's first line, not the block's middle: a two-line toast otherwise floats its icon. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-icon] {
+  margin-top: 2px;
 }
 
 [data-sonner-toaster] [data-sonner-toast][data-type='success'] [data-icon] {
@@ -1311,18 +1333,28 @@
   color: var(--danger-fg);
 }
 
+/* The one action (Undo, Try again) is secondary: an outline, never a second filled button beside Create issue. */
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
+  /* Centred on the title's line, so a one-line toast reads level and a longer one keeps it beside the title. */
+  align-self: flex-start;
+  margin-top: -3px;
   height: var(--control-sm);
   padding: 0 10px;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--ink);
-  color: var(--ink-fg);
+  background: transparent;
+  color: var(--text);
   font-size: 13px;
   font-weight: 500;
 }
 
 [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]:hover {
-  background: var(--ink-hover);
+  background: var(--bg-hover);
+}
+
+/* Reads wait out the request limit instead of loading; the banner says so, and a pulse would contradict it. */
+[data-rate-limited] [data-slot='skeleton'] {
+  animation: none;
 }
 
 /* One focus ring (DESIGN § 3.2): the primitives' own ring utilities would otherwise stack on it. */

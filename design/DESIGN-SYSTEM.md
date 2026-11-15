@@ -854,7 +854,8 @@ palette tokens the product already uses.
 **Toasts** (`.toast`): bottom-right, newest at the bottom, at most three. One optional
 action — Undo, Retry, Open — never two. Used only for things that happened *away* from
 the pointer; an inline edit you just made needs no toast. `role="status"` for success /
-info, `role="alert"` for warning / error.
+info, `role="alert"` for warning / error. A toast is 320 px wide, its icon on the title's first
+line; its one action is a small outline button level with the title, never a filled one.
 
 An error toast's title names the action that failed, in the voice of the button that started
 it: "Could not export the issues", "Could not delete Sprint 14". The API's message is the
@@ -901,8 +902,9 @@ nothing loaded yet shows its load notice in the warning tone with the countdown 
 shares one error toast whose Retry unlocks at zero; it is never resent without a click. The
 sign-in, sign-up and reset forms show no toast: their inline alert reads _Too many attempts._ with
 the countdown, and the submit button stays disabled until it ends.
-If the shell itself could not load, a full-page version of the same counts down and
-reloads.
+If the shell itself could not load, a full-page version says the same in the same words, with
+_Try again_ locked and counting down until it reloads by itself. While the limit lasts, skeletons
+stop pulsing.
 
 **Empty / loading / error**: an empty result names the query that produced it and
 offers to widen or clear; loading keeps the layout with skeleton bars shaped like the content
@@ -912,6 +914,10 @@ denied resource renders the 404 inside the shell: page-width, the `404` eyebrow,
 one way forward (_Go home_). Outside the shell (unknown URL, render failure) the same block
 centres in the viewport. The error page says what happened, that saved work is safe, and
 offers _Reload the page_; it never prints the exception. Denied and missing both render `404`.
+Every full-page state (404, error, server unreachable, request limit) is one template: a 440 px
+column with an eyebrow (`404`, `Error`, `Connection`, or the warning-ink _Request limit_ with its
+timer), a 22/600 title, one sentence or two, then one filled action and at most one secondary
+link. In-page alerts take an outline _Try again_ in the page's ink.
 
 **Words**: no "Oops", "Sorry", "successfully", or exclamation marks. Title = what
 happened. Detail = cause, current truth, way out. Buttons repeat the title's verb.

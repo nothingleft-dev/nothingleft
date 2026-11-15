@@ -20,7 +20,7 @@ export interface QueryLike<T> {
 
 export function RetryButton({ onRetry, size = 'sm' }: { onRetry: () => void; size?: 'sm' | 'xs' }) {
   return (
-    <Button type="button" variant="outline" size={size} className="flex-none" onClick={onRetry}>
+    <Button type="button" variant="outline" size={size} className="flex-none text-text" onClick={onRetry}>
       Try again
     </Button>
   );

@@ -1,24 +1,36 @@
 'use client';
 
+import Link from 'next/link';
 import { Button } from '@components/ui/button';
+import { CentredState, FullPageState, SECONDARY_LINK } from '@components/full-page-state';
 import { isApiError } from '@lib/api/errors';
 
 export default function ErrorPage({ error }: { error: Error & { digest?: string } }) {
   const reference = isApiError(error) ? error.requestId : (error.digest ?? null);
   return (
-    <main className="grid min-h-dvh place-items-center bg-app px-page-x-mobile">
-      <div className="flex max-w-sm flex-col items-start gap-3">
-        <p className="font-mono text-2xs text-text-muted">Error</p>
-        <h1 className="text-xl font-semibold tracking-tight">This page stopped working</h1>
-        <p className="text-text-secondary">
-          A fault in the app stopped the page from drawing. Everything you saved is safe; only an edit you had not saved
-          yet may need typing again.
-        </p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Reload the page
-        </Button>
-        {reference ? <p className="font-mono text-2xs text-text-muted">Reference {reference}</p> : null}
-      </div>
-    </main>
+    <CentredState>
+      <FullPageState
+        eyebrow="Error"
+        title="This page stopped working"
+        actions={
+          <>
+            <Button onClick={() => window.location.reload()}>Reload the page</Button>
+            <Link href="/" className={SECONDARY_LINK}>
+              Go home
+            </Link>
+          </>
+        }
+        footer={
+          reference ? (
+            <>
+              Reference <span className="font-mono select-all">{reference}</span>
+            </>
+          ) : null
+        }
+      >
+        Something broke while showing this page. Everything you saved is safe; an edit you had not saved yet may need
+        typing again.
+      </FullPageState>
+    </CentredState>
   );
 }
