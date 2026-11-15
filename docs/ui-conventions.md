@@ -97,7 +97,7 @@ MCP, so a human and an agent describe the field identically.
 | Start Date | `No start date` |
 | Estimation | `?` |
 | Spent time | `?` (owner, 25 Sep 2026: the same as Estimation) |
-| Story points | `Not estimated` |
+| Story points | `?` (like Estimation: every empty estimate reads the same) |
 | Sprint | `Unscheduled` |
 | Custom field | per-field `empty_label`, defaulting to `No <field name>` (see below) |
 
@@ -224,7 +224,7 @@ save read as one entry rather than a stream of one-liners:
 ```
 Alex Lee · Updated 3 months ago
     Estimation:    ? → 4h
-    Story points:  Not estimated → 5
+    Story points:  ? → 5
     Priority:      Normal → Major
 ```
 
@@ -251,7 +251,7 @@ Assignees show avatars; Priority and Type show their coloured letter badge
 alongside the name. Tags are not in the sidebar — they sit under the title.
 
 Empty values render as their configured label in the same muted style as a
-real value, never as a blank: `No due date`, `Not estimated`, `?` for an
+real value, never as a blank: `No due date`, `Unassigned`, `?` for an
 unset duration.
 
 **Deleting an issue** asks first — *Delete PP-123?*, naming the issue and stating that it

@@ -104,7 +104,7 @@ the days left underneath.
 
 The figures are recorded every night and when the sprint starts and finishes, so the chart
 shows how the sprint really went even after issues are edited later; today's point is read
-live and labelled with its figure. **Scope added after the start is its own line**, so *we
+live and labelled with its figure; a day with no recorded figure is bridged by a dashed line. **Scope added after the start is its own line**, so *we
 finished nothing* and *they added 30 points on Tuesday* look different. Days still to come are
 shaded. A sprint that has not started yet has no figures. Choose the project and the sprint at
 the top; **Daily figures** under the chart lists every day's numbers, with scope change and

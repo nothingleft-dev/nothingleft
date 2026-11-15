@@ -42,7 +42,7 @@ the sprint really went even after issues are edited later.
 
 Any issue can carry story points, a whole number from 0 to 999. An issue with subtasks
 also shows the points of everything beneath it added up. Set them, and the sprint, in the
-issue's sidebar or when you create it; an issue without points reads _Not estimated_, one
+issue's sidebar or when you create it; an issue without points reads _?_, one
 in no sprint _Unscheduled_. The issue list can show a _Story points_ and a _Sprint_
 column and group by sprint. Search them with
 `story points: 3 .. 8`, or find the unpointed ones with `story points: {No story points}`.

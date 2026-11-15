@@ -29,7 +29,7 @@ it is fixed, because every key already handed out would stop working.
 | Assignee             | Any number of people                          | `Unassigned`                   |
 | Estimation           | A duration                                    | `?`                            |
 | Spent time           | The time logged on the issue and its subtasks | `?`                            |
-| Story points         | A whole number, 0–999                         | `Not estimated`                |
+| Story points         | A whole number, 0–999                         | `?`                            |
 | Sprint               | The one sprint the issue is planned into      | `Unscheduled`                  |
 | Start date, Due date | Calendar dates                                | `No start date`, `No due date` |
 | Parent               | The issue this one is a subtask of            | - (none)                       |

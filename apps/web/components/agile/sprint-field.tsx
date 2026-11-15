@@ -10,7 +10,6 @@ import { sprintDatesLabel } from '@components/agile/sprint-dates';
 import { cn } from '@lib/utils';
 
 export const UNSCHEDULED = 'Unscheduled';
-export const NOT_ESTIMATED = 'Not estimated';
 
 /** Sprints an issue can go into: the active one first, then the planned; completed ones take no issues. */
 export const assignableSprints = (sprints: readonly Sprint[]) => [

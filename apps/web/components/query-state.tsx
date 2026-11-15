@@ -26,6 +26,9 @@ export function RetryButton({ onRetry, size = 'sm' }: { onRetry: () => void; siz
   );
 }
 
+// As wide as its sentence, so Try again stays beside what it answers on a wide page.
+const LOAD_ERROR_WIDTH = 'w-fit max-w-[min(100%,48rem)]';
+
 /** Nothing loaded: says so in place of the content, never an empty list or a zero. */
 export function LoadError({
   children,
@@ -40,13 +43,17 @@ export function LoadError({
   // Under the request limit a retry would only be refused again; refused reads reload by themselves when it lifts.
   if (secondsLeft > 0) {
     return (
-      <FormAlert tone="warning" title={children}>
+      <FormAlert tone="warning" title={children} className={LOAD_ERROR_WIDTH}>
         <RateLimitReload />
       </FormAlert>
     );
   }
   return (
-    <FormAlert title={children} action={onRetry ? <RetryButton onRetry={onRetry} /> : undefined}>
+    <FormAlert
+      title={children}
+      action={onRetry ? <RetryButton onRetry={onRetry} /> : undefined}
+      className={LOAD_ERROR_WIDTH}
+    >
       {detail}
     </FormAlert>
   );

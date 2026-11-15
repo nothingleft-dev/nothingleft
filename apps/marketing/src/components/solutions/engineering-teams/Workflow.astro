@@ -4,7 +4,7 @@ import { STANDUP_PROMPT, STORY, WORKFLOW_STEPS } from '@lib/solutions/engineerin
 const BAR_WIDTHS = [40, 34, 28, 22, 16, 10];
 const total = WORKFLOW_STEPS.length;
 const pointsText = (points: number | null) =>
-  points === null ? 'Not estimated' : `${points} ${points === 1 ? 'point' : 'points'}`;
+  points === null ? '?' : `${points} ${points === 1 ? 'point' : 'points'}`;
 const priorityLetter = STORY.priority.charAt(0);
 const lead = STORY.reporter;
 const dev = STORY.developer;
@@ -105,7 +105,7 @@ const reproduction = STORY.develop.comment.text.split(/(@\w+|ACME-\d+)/);
                 <dt>Sprint</dt>
                 <dd class="empty">{STORY.report.sprint ?? 'Unscheduled'}</dd>
                 <dt>Story points</dt>
-                <dd class="empty">{STORY.report.points ?? 'Not estimated'}</dd>
+                <dd class="empty">{STORY.report.points ?? '?'}</dd>
               </dl>
             </div>
             <div class="activity">

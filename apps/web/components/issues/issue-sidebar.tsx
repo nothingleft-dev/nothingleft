@@ -14,7 +14,7 @@ import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-ma
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
 import { SidebarField } from '@components/issues/sidebar-field';
 import { DevelopmentField } from '@components/git/development-field';
-import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
+import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import type { TimeTracking } from '@components/issues/issue-activity';
 import { RailHeading, SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
 import { useCustomFields } from '@hooks/use-custom-fields';
@@ -360,7 +360,7 @@ export function IssueSidebar({
           />
         }
       >
-        {issue.story_points === null ? NOT_ESTIMATED : <span className="tabular">{issue.story_points}</span>}
+        {issue.story_points === null ? '?' : <span className="tabular">{issue.story_points}</span>}
       </SidebarField>
       {issue.story_points_rollup !== null ? (
         <p className="-mt-1.5 px-2 pb-1 text-2xs text-text-secondary">

@@ -23,23 +23,25 @@ function useFocusSearch(global: React.RefObject<GlobalSearchHandle | null>) {
   };
 }
 
-function CreateIssueButton({ onClick, placeholder = false }: { onClick?: () => void; placeholder?: boolean }) {
+function CreateIssueButton({ onClick, slot }: { onClick?: () => void; slot?: 'loading' | 'empty' }) {
   const button = (
-    <Button
-      onClick={onClick}
-      tabIndex={placeholder ? -1 : undefined}
-      className={placeholder ? 'invisible gap-2' : 'gap-2'}
-    >
+    <Button onClick={onClick} tabIndex={slot ? -1 : undefined} className={slot ? 'invisible gap-2' : 'gap-2'}>
       Create issue
       <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80 max-lg:hidden">c</Kbd>
     </Button>
   );
-  // While the roles load, a skeleton of the button's own width holds its place, so the search box never moves.
-  if (placeholder)
+  // The button's own width is held while roles load and for someone who may not create, so the search box never moves.
+  if (slot === 'loading')
     return (
       <Skeleton aria-hidden className="max-md:hidden">
         {button}
       </Skeleton>
+    );
+  if (slot === 'empty')
+    return (
+      <div aria-hidden className="max-md:hidden">
+        {button}
+      </div>
     );
   return <div className="max-md:hidden">{button}</div>;
 }
@@ -74,8 +76,8 @@ export function Topbar({ navigation, inOrganization }: { navigation?: ReactNode;
             <Plus className="size-icon" />
           </Button>
         </>
-      ) : inOrganization && roles.isPending && pathname !== '/new-issue' ? (
-        <CreateIssueButton placeholder />
+      ) : inOrganization ? (
+        <CreateIssueButton slot={roles.isPending && pathname !== '/new-issue' ? 'loading' : 'empty'} />
       ) : null}
 
       <div className="flex items-center gap-2 max-md:gap-1">

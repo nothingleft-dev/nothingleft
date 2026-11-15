@@ -421,7 +421,7 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
   gives way first, truncating (full text in its tooltip) to about ten characters, and the current
   crumb is capped at 16rem. A project crumb loading its name is a text skeleton, never the key.
   Below 1024px the trail is the parent and the page; on phones it is the page alone. A top-level page (Home, Inbox, My issues, Settings, …) shows no trail: its title names it. A missing article ends the trail at Knowledge base; a key that did not load has no copy button.
-- **Create issue** keeps its place as a skeleton of its exact width while the viewer's roles load, so the search box never moves. The Inbox pill caps at `99+` in the top bar and the sidebar alike. Keycaps (`/`, `c`) show from 1024 px; on a page with its own query bar the box shows no `/`, because `/` goes to that bar. The placeholder's prose is in Inter and only its example query in mono. On phones search is an icon that opens the box over the top bar, and Create issue is a `+` icon.
+- **Create issue** keeps its place as a skeleton of its exact width while the viewer's roles load, and as an empty slot of that width for someone who may not create an issue and on `/new-issue`, so the search box never moves. The Inbox pill caps at `99+` in the top bar and the sidebar alike. Keycaps (`/`, `c`) show from 1024 px; on a page with its own query bar the box shows no `/`, because `/` goes to that bar. The placeholder's prose is in Inter and only its example query in mono. On phones search is an icon that opens the box over the top bar, and Create issue is a `+` icon.
 - **Placeholders** ellipsize, never clip under a kbd. Below 1024px the search box and the query
   bar show the short form: the example query alone (`Search · tag: rca`, `assignee: me
   #Unresolved`).
@@ -562,7 +562,7 @@ three equal actions.
 ### Load error
 A read that failed with nothing loaded: the inline alert (§ 9, danger tint and icon) with the
 sentence _"The members could not be loaded."_, the server's reason under it when there is one,
-and an outline small **Try again** button on the right. Never the empty-state frame,
+and an outline small **Try again** button at its end. The alert is as wide as its sentence (at most 48rem), so the button stays beside what it answers on a wide page. Never the empty-state frame,
 never an empty list, never `0` (a failed figure is `–`). A failed refresh keeps what loaded
 under a one-line warning-ink notice with the same button. Code: `components/query-state.tsx`
 (`LoadError`, `StaleNotice`, `QueryState`).

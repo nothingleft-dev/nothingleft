@@ -22,7 +22,7 @@ import { MarkdownSizeNote } from '@components/issues/markdown-size-note';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
 import { SidebarField } from '@components/issues/sidebar-field';
-import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
+import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { draftSprint, draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
 import { ProjectMark } from '@components/projects/project-mark';
@@ -240,7 +240,7 @@ function useFieldSpecs(
           <span className="font-mono text-xs tabular">{fields.story_points}</span>
         ) : null,
       prefix: 'Story points',
-      panelEmpty: NOT_ESTIMATED,
+      panelEmpty: '?',
       editor: close => (
         <StoryPointsEditor
           value={fields.story_points ?? null}

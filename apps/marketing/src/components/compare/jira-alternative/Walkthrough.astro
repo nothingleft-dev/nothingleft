@@ -34,7 +34,7 @@ const BAR_WIDTHS = [40, 33, 26, 19, 12];
 const total = STEPS.length;
 
 const points = (value: number | null) =>
-  value === null ? 'Not estimated' : `${value} ${value === 1 ? 'point' : 'points'}`;
+  value === null ? '?' : `${value} ${value === 1 ? 'point' : 'points'}`;
 
 const last = burndown.days.length - 1;
 const x = (index: number) => (index / last) * 100;

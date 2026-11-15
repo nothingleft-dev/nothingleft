@@ -15,12 +15,14 @@ export function FormAlert({
   title,
   children,
   action,
+  className,
 }: {
   tone?: 'danger' | 'warning' | 'success';
   title: ReactNode;
   children?: ReactNode;
   /** A real button on the right, e.g. `<RetryButton>`. */
   action?: ReactNode;
+  className?: string;
 }) {
   const danger = tone === 'danger';
   const Icon = danger ? AlertCircle : tone === 'warning' ? TriangleAlert : CheckCircle2;
@@ -35,6 +37,7 @@ export function FormAlert({
         tone === 'warning' &&
           'border-warning-fg/25 bg-[color-mix(in_oklab,var(--warning-bg)_50%,var(--bg-surface))] text-warning-fg',
         tone === 'success' && 'border-success-fg/25 bg-success-fg/10 text-success-fg',
+        className,
       )}
     >
       <div className="flex min-w-0 flex-1 basis-56 gap-2.5">

@@ -292,7 +292,13 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
       ? unitTicks(peak * 1.05, unit, calendarOf(data))
       : niceTicks(peak * 1.05, undefined, { minStep: data.unit === 'points' ? 0 : 1 });
   const top = ticks.at(-1)!;
-  const rows = data.days.map(d => ({ ...d, shade: d.working_day ? null : top }));
+  // The bridges join recorded days across a day with no figure (a missed nightly snapshot), dashed under the real lines.
+  const rows = data.days.map(d => ({
+    ...d,
+    shade: d.working_day ? null : top,
+    remainingBridge: d.remaining,
+    scopeBridge: d.scope,
+  }));
   // The live point is today in the snapshots' own days, which the viewer's calendar can be a day off.
   const today = data.days.find(d => d.live)?.date ?? null;
   const latest = latestDay(data);
@@ -345,6 +351,27 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
           label={{ value: 'Today', position: 'insideTopLeft', fill: 'var(--text-muted)', fontSize: 11 }}
         />
       ) : null}
+      <Line
+        dataKey="scopeBridge"
+        type="stepAfter"
+        stroke={SCOPE.fill}
+        strokeWidth={1.5}
+        strokeDasharray="3 3"
+        connectNulls
+        dot={false}
+        activeDot={false}
+        isAnimationActive={false}
+      />
+      <Line
+        dataKey="remainingBridge"
+        stroke={REMAINING.fill}
+        strokeWidth={1.5}
+        strokeDasharray="3 3"
+        connectNulls
+        dot={false}
+        activeDot={false}
+        isAnimationActive={false}
+      />
       <Line
         dataKey="scope"
         type="stepAfter"

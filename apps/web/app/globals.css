@@ -1425,10 +1425,24 @@
 [data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='secondary']):is(
     :disabled,
     [aria-disabled='true']
-  ):not([data-pending]),
-[data-slot='button'][data-variant='outline']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
+  ):not([data-pending]) {
   /* Translucent so it reads on the page, a card and a dialog alike. */
   background: var(--bg-active);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+/* One control height (DESIGN § 5): buttons, pickers and inputs at the primitive's default size share --control
+   with the form inputs beside them; [data-variant] also catches a button a trigger renders as. A size a caller
+   chose (another h-*) is left alone. */
+[data-variant][data-size='default'].h-9,
+[data-slot='input'].h-9 {
+  height: var(--control);
+}
+
+/* A disabled outline button stays an outline: a grey fill would make it heavier than the enabled ones beside it. */
+[data-slot='button'][data-variant='outline']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
+  background: transparent;
   border-color: var(--border);
   box-shadow: none;
 }

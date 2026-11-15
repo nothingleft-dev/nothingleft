@@ -126,7 +126,7 @@ function snapshotValue(field: string, value: unknown, calendar: WorkCalendar, na
     case 'due_date':
       return typeof value === 'string' ? formatCalendarDate(value) : 'No due date';
     case 'story_points':
-      return typeof value === 'number' ? value : 'Not estimated';
+      return typeof value === 'number' ? value : '?';
     default:
       return typeof value === 'string' ? value : '--';
   }
