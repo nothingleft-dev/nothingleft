@@ -33,14 +33,12 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
         aria-describedby={undefined}
         className="h-dvh w-[min(320px,calc(100vw-32px))] gap-0 bg-app"
       >
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <SheetTitle>Navigation</SheetTitle>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close navigation">
-              <X className="size-5" />
-            </Button>
-          </SheetClose>
-        </div>
+        <SheetTitle className="sr-only">Navigation</SheetTitle>
+        <SheetClose asChild>
+          <Button variant="ghost" size="icon" aria-label="Close navigation" className="absolute top-1.5 right-2 z-10">
+            <X className="size-5" />
+          </Button>
+        </SheetClose>
         <div className="min-h-0 flex-1">
           <Sidebar
             collapsed={false}

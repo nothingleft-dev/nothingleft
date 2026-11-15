@@ -411,8 +411,7 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
   plus a 2px accent bar at the far left. Projects expand inline to Issues / Board /
   Backlog / Reports / Knowledge base; the project key is its own column so it is never
   confused with the org. Saved views list below with a neutral dot and count.
-  Footer: Settings, Shortcuts (`?`), the current user (avatar + name,
-  opens profile/account), and **Collapse**. Collapsed = icons only, tooltips on hover.
+  A list cut off by the footer fades at its edge, and the current page's row scrolls into view. Footer: Organisation, Settings, Shortcuts (keyboard icon, `?`), the current user (avatar + name + ⇅, opens the account menu), and **Collapse**; every row's label starts on the same line. While a list loads it shows as many skeleton rows as it had last time. With no current organisation the sidebar keeps Home (the organisation chooser), Inbox, Settings, Shortcuts and the account, and says to choose an organisation; the top bar drops search and Create issue. Collapsed = icons only, tooltips on hover.
 - **Top bar** holds: breadcrumb, the search/query input (`/`), Create issue (`c`), the Inbox
   icon with the unread count on an accent pill (in the top bar as well as the sidebar, so
   it survives a collapsed sidebar and phones), theme toggle. The search input is set in mono because it *is* the query language;
@@ -421,9 +420,8 @@ to 0ms under `prefers-reduced-motion`. No page-load animation.
   `Projects / Partner Portal / … / Restoring a failed sync`. Short labels never shrink; a long name
   gives way first, truncating (full text in its tooltip) to about ten characters, and the current
   crumb is capped at 16rem. A project crumb loading its name is a text skeleton, never the key.
-  Below 1024px the trail is the parent and the page; on phones it is the page alone.
-- **Create issue** keeps its place as a skeleton while the viewer's roles load, so the search box
-  never moves.
+  Below 1024px the trail is the parent and the page; on phones it is the page alone. A top-level page (Home, Inbox, My issues, Settings, …) shows no trail: its title names it. A missing article ends the trail at Knowledge base; a key that did not load has no copy button.
+- **Create issue** keeps its place as a skeleton of its exact width while the viewer's roles load, so the search box never moves. The Inbox pill caps at `99+` in the top bar and the sidebar alike. Keycaps (`/`, `c`) show from 1024 px; on a page with its own query bar the box shows no `/`, because `/` goes to that bar. The placeholder's prose is in Inter and only its example query in mono. On phones search is an icon that opens the box over the top bar, and Create issue is a `+` icon.
 - **Placeholders** ellipsize, never clip under a kbd. Below 1024px the search box and the query
   bar show the short form: the example query alone (`Search · tag: rca`, `assignee: me
   #Unresolved`).

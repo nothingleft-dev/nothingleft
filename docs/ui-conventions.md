@@ -620,7 +620,7 @@ at the same settings.
 | `/` | Focus search |
 | `c` | Create issue |
 | `g` then `i` / `b` / `r` | Go to issues / board / reports |
-| `g` then `d` / `p` / `m` | Go to dashboard / projects / my issues |
+| `g` then `d` / `p` / `m` | Go to home / projects / my issues |
 | `Tab` | Complete first search suggestion |
 | `e` | Edit description |
 | `a` | Assign |

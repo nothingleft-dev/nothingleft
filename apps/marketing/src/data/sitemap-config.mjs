@@ -46,7 +46,7 @@ export const SITEMAP_PAGES = {
   '/docs/storage': { lastmod: '2026-11-15T00:23:00+05:30' },
   '/docs/self-hosting': { lastmod: '2026-10-26T00:11:14+05:30' },
   '/docs/self-hosting-aws': { lastmod: '2026-10-26T00:11:14+05:30' },
-  '/docs/keyboard-shortcuts': { lastmod: '2026-10-13T11:11:10+05:30' },
+  '/docs/keyboard-shortcuts': { lastmod: '2026-11-15T09:13:00+05:30' },
   '/docs/api': { lastmod: '2026-10-13T11:11:10+05:30' },
 };
 

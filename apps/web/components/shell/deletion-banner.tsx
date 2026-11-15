@@ -13,6 +13,11 @@ export function DeletionBanner({ organization }: { organization: Organization })
   const deletion = organization.deletion;
   if (!deletion) return null;
   const isOwner = organization.membership.is_owner;
+  const cancelDeletion = () =>
+    cancel.mutate(undefined, {
+      onSuccess: () => toast.success(`${organization.name} will not be deleted.`),
+      onError: error => toastError('Could not cancel the deletion', error, { retry: cancelDeletion }),
+    });
 
   return (
     <div
@@ -28,21 +33,14 @@ export function DeletionBanner({ organization }: { organization: Organization })
           ? 'Everyone can keep working until then. Cancel to keep it; nothing is lost.'
           : 'Everyone can keep working until then. Export anything you need, or ask the Owner to cancel.'}
       </p>
-      {isOwner ? (
-        <button
-          type="button"
-          disabled={cancel.isPending}
-          onClick={() =>
-            cancel.mutate(undefined, {
-              onSuccess: () => toast.success(`${organization.name} will not be deleted.`),
-              onError: error => toastError('Could not cancel the deletion', error),
-            })
-          }
-          className="action-link flex-none text-xs leading-5 font-medium"
-        >
-          {cancel.isPending ? 'Cancelling…' : 'Cancel deletion'}
+      {!isOwner ? null : cancel.isPending ? (
+        // Pending, not unavailable: it keeps the banner's ink rather than the disabled grey.
+        <span className="flex-none text-xs leading-5 font-medium">Cancelling…</span>
+      ) : (
+        <button type="button" onClick={cancelDeletion} className="action-link flex-none text-xs leading-5 font-medium">
+          Cancel deletion
         </button>
-      ) : null}
+      )}
     </div>
   );
 }

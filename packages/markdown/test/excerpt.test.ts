@@ -35,6 +35,11 @@ describe('markdownExcerpt', () => {
     ).toBe('Invoice exports stopped. Move every partner · Keep the old feed · Then retry it');
   });
 
+  test('a cut after punctuation drops it before the ellipsis', () => {
+    const out = markdownExcerpt(long, [], 60);
+    expect(out).toMatch(/[a-z]…$/);
+  });
+
   test('a document of headings alone still has an excerpt', () => {
     expect(markdownExcerpt('# Only a title')).toBe('Only a title');
   });

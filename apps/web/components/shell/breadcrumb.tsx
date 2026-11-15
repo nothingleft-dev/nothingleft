@@ -2,15 +2,13 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Fragment } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { parseIssueKey } from '@nothingleft/format';
-import type { Issue } from '@nothingleft/types';
 import { CopyIssueButton } from '@components/issues/copy-issue';
 import { useArticle } from '@hooks/use-articles';
+import { useIssue } from '@hooks/use-issues';
 import { useProject } from '@hooks/use-projects';
-import { queryKeys } from '@lib/query/keys';
 import { isReportName, reportDef } from '@lib/reports/registry';
 import { cn } from '@lib/utils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
@@ -33,7 +31,6 @@ const ROOTS: Record<string, string> = {
   articles: 'Knowledge base',
   reports: 'Reports',
   timesheets: 'Timesheets',
-  git: 'Organisation',
 };
 
 const SECTIONS: Record<string, string> = {
@@ -88,6 +85,14 @@ function crumbsFor(pathname: string): Crumb[] {
     ];
   }
 
+  if (first === 'git') {
+    return [
+      { label: 'Organisation', href: '/organization' as Route },
+      { label: 'Integrations', href: '/organization?tab=integrations' as Route },
+      { label: 'GitHub' },
+    ];
+  }
+
   if (first === 'reports' && rest[0] && isReportName(rest[0])) {
     return [{ ...root, href: '/reports' as Route }, { label: reportDef(rest[0]).title }];
   }
@@ -104,25 +109,34 @@ function useNamedCrumbs(crumbs: Crumb[]): Crumb[] {
   return crumbs.map(c => (c === keyCrumb ? { ...c, label: project.data.name, mono: false } : c));
 }
 
+// The same query the issue page runs, so it shares the cache; a key that failed to load has nothing to copy.
 function CopyKey({ value }: { value: string }) {
-  const client = useQueryClient();
-  return <CopyIssueButton issueKey={value} title={() => client.getQueryData<Issue>(queryKeys.issue(value))?.title} />;
+  const issue = useIssue(value);
+  if (issue.isError) return null;
+  return <CopyIssueButton issueKey={value} title={() => issue.data?.title} />;
 }
 
 // An article's crumbs are its place in the tree, read from the article the page already loaded.
 function useArticleCrumbs(pathname: string, crumbs: Crumb[]): Crumb[] {
   const [first, projectKey, section, slug] = pathname.split('/').filter(Boolean);
-  const inArticle = first === 'projects' && section === 'articles' && slug !== undefined && projectKey !== undefined;
+  const deletedView = useSearchParams().get('view') === 'deleted';
+  const inKnowledgeBase = first === 'projects' && section === 'articles' && projectKey !== undefined;
+  const inArticle = inKnowledgeBase && slug !== undefined;
   const project = projectKey?.toUpperCase() ?? '';
   const article = useArticle(project, inArticle ? decodeURIComponent(slug) : null);
+  const base = `/projects/${project}/articles` as Route;
+  if (inKnowledgeBase && !inArticle && deletedView) {
+    return [...crumbs.slice(0, -1), { label: 'Knowledge base', href: base }, { label: 'Deleted articles' }];
+  }
   if (!inArticle) return crumbs;
-  const base = `/projects/${project}/articles`;
+  // A missing article ends the trail at the knowledge base; its address is not a title.
+  if (article.isError) return crumbs.map((c, i) => (i === crumbs.length - 1 ? { label: c.label } : c));
   const trail: Crumb[] = article.data
     ? [
         ...article.data.path.map(p => ({ label: p.title, href: `${base}/${p.slug}` as Route })),
         { label: article.data.title },
       ]
-    : [{ label: decodeURIComponent(slug) }];
+    : [{ label: '', loading: true }];
   return [...crumbs, ...trail];
 }
 
@@ -168,7 +182,10 @@ function FoldMenu({ crumbs }: { crumbs: Crumb[] }) {
 
 export function Breadcrumb() {
   const pathname = usePathname();
-  const shown = fold(useArticleCrumbs(pathname, useNamedCrumbs(crumbsFor(pathname))));
+  const crumbs = useArticleCrumbs(pathname, useNamedCrumbs(crumbsFor(pathname)));
+  // A top-level page names itself in its own title; the trail starts one level down.
+  if (crumbs.length === 1) return null;
+  const shown = fold(crumbs);
   const last = shown.length - 1;
   return (
     <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-medium whitespace-nowrap">

@@ -5,7 +5,7 @@ import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import { Check, ChevronRight } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
-import { NavItem } from '@components/shell/nav-item';
+import { ACTIVE_BAR, NavItem } from '@components/shell/nav-item';
 import { ProjectMark } from '@components/projects/project-mark';
 import {
   DropdownMenu,
@@ -117,8 +117,8 @@ function CollapsedProject({
           onPointerEnter={event => event.pointerType === 'mouse' && show()}
           onPointerLeave={event => event.pointerType === 'mouse' && hide()}
           className={cn(
-            'flex h-control w-full items-center justify-center rounded-sm hover:bg-hover data-[state=open]:bg-hover',
-            within && 'bg-active',
+            'relative flex h-control w-full items-center justify-center rounded-sm hover:bg-hover data-[state=open]:bg-hover',
+            within && cn('bg-active', ACTIVE_BAR),
           )}
         >
           {mark}

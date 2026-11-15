@@ -70,5 +70,7 @@ export function markdownExcerpt(markdown: string, terms: readonly string[] = [],
   const end = Math.min(text.length, start + length);
   const cut = end < text.length ? text.lastIndexOf(' ', end) : end;
   const body = text.slice(start, cut > start ? cut : end).trim();
-  return `${start > 0 ? '…' : ''}${body}${end < text.length ? '…' : ''}`;
+  if (end >= text.length) return `${start > 0 ? '…' : ''}${body}`;
+  // A cut that lands after a full stop would read `onboarding.…`.
+  return `${start > 0 ? '…' : ''}${body.replace(/[\s.,;:!?·]+$/, '')}…`;
 }

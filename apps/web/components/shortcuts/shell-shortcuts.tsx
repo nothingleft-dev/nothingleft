@@ -46,12 +46,23 @@ export function ShellShortcuts() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent
+        className="sm:max-w-3xl"
+        // The panel itself takes focus, so the close button does not open wearing a focus ring.
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Keyboard shortcuts</DialogTitle>
           <DialogDescription className="text-xs text-text-secondary">
             Single keys work anywhere outside a text field.{' '}
-            <Link href="/shortcuts" onClick={() => setOpen(false)} className="text-brand-text hover:underline">
+            <Link
+              href="/shortcuts"
+              onClick={() => setOpen(false)}
+              className="action-link rounded-xs font-medium text-text-secondary hover:text-text"
+            >
               Open as a page
             </Link>
           </DialogDescription>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, type ReactNode } from 'react';
+import { Plus } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@components/ui/button';
 import { Kbd } from '@components/kbd';
@@ -22,34 +23,62 @@ function useFocusSearch(global: React.RefObject<GlobalSearchHandle | null>) {
   };
 }
 
-export function Topbar({ navigation }: { navigation?: ReactNode }) {
+function CreateIssueButton({ onClick, placeholder = false }: { onClick?: () => void; placeholder?: boolean }) {
+  const button = (
+    <Button
+      onClick={onClick}
+      tabIndex={placeholder ? -1 : undefined}
+      className={placeholder ? 'invisible gap-2' : 'gap-2'}
+    >
+      Create issue
+      <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80 max-lg:hidden">c</Kbd>
+    </Button>
+  );
+  // While the roles load, a skeleton of the button's own width holds its place, so the search box never moves.
+  if (placeholder)
+    return (
+      <Skeleton aria-hidden className="max-md:hidden">
+        {button}
+      </Skeleton>
+    );
+  return <div className="max-md:hidden">{button}</div>;
+}
+
+export function Topbar({ navigation, inOrganization }: { navigation?: ReactNode; inOrganization: boolean }) {
   const { openCreateIssue } = useCreateIssueDialog();
   const globalSearch = useRef<GlobalSearchHandle>(null);
   const focusSearch = useFocusSearch(globalSearch);
-  useShortcut('/', focusSearch);
+  useShortcut('/', focusSearch, inOrganization);
   const pathname = usePathname();
   const roles = useProjectRoles();
-  const canCreate = roles.writable.length > 0 && pathname !== '/new-issue';
+  const canCreate = inOrganization && roles.writable.length > 0 && pathname !== '/new-issue';
   return (
-    <header className="flex h-topbar flex-none items-center gap-3 border-b px-page-x max-md:px-page-x-mobile">
+    <header className="flex h-topbar flex-none items-center gap-3 border-b px-page-x max-md:gap-1 max-md:px-page-x-mobile">
       {navigation}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 max-md:pl-1">
         <Breadcrumb />
       </div>
 
-      <GlobalSearch ref={globalSearch} />
+      {inOrganization ? <GlobalSearch ref={globalSearch} /> : null}
 
       {canCreate ? (
-        <Button onClick={() => openCreateIssue()} className="gap-2 max-md:hidden">
-          Create issue
-          <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">c</Kbd>
-        </Button>
-      ) : roles.isPending ? (
-        // Holds the button's place so the search box does not move when the roles arrive.
-        <Skeleton className="h-9 w-[8.5rem] max-md:hidden" />
+        <>
+          <CreateIssueButton onClick={() => openCreateIssue()} />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Create issue"
+            onClick={() => openCreateIssue()}
+            className="md:hidden"
+          >
+            <Plus className="size-icon" />
+          </Button>
+        </>
+      ) : inOrganization && roles.isPending && pathname !== '/new-issue' ? (
+        <CreateIssueButton placeholder />
       ) : null}
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2 max-md:gap-1">
         <InboxButton />
         <ThemeToggle />
       </div>
