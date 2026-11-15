@@ -121,7 +121,8 @@ Layout follows the reference screenshots.
 **Header:** breadcrumb `Projects / <Project> / Issues / PROJ-123` with a
 copy-key button. Below it, provenance: *"Created by X about 2 months ago ·
 Updated by Y 12 days ago"*. Right side: star (favourite, implies watch) and
-vote with count.
+vote with count. A reader who cannot edit sees one line under Activity saying so and who can give
+edit access.
 
 **Title row:** title, then inline actions — edit, tag, link, and an overflow
 menu (move, clone, delete, copy link, watch). For someone who may edit it, the title wears the

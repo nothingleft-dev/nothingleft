@@ -12,7 +12,7 @@ import { Meter } from '@components/dashboard/meter';
 import { Duration } from '@components/duration';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
-import { SidebarField } from '@components/issues/sidebar-field';
+import { FIELD_PERSON_TEXT, FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
 import { DevelopmentField } from '@components/git/development-field';
 import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import type { TimeTracking } from '@components/issues/issue-activity';
@@ -253,7 +253,7 @@ export function IssueSidebar({
             <PersonName
               person={issue.assignees[0]!}
               avatar
-              className="[&>span]:whitespace-normal [&>span]:[overflow-wrap:anywhere]"
+              className={cn('[&>span]:whitespace-normal [&>span]:[overflow-wrap:anywhere]', FIELD_PERSON_TEXT)}
             />
           ) : (
             <AssigneeStack assignees={issue.assignees} withName={false} className="text-sm" />
@@ -299,6 +299,7 @@ export function IssueSidebar({
           {issue.due_date ? (
             <span
               className={cn(
+                FIELD_TEXT,
                 dueTone === 'overdue' && 'font-medium text-danger-fg',
                 dueTone === 'today' && 'font-medium text-text',
               )}
@@ -360,7 +361,7 @@ export function IssueSidebar({
           />
         }
       >
-        {issue.story_points === null ? '?' : <span className="tabular">{issue.story_points}</span>}
+        {issue.story_points === null ? '?' : <span className={cn('tabular', FIELD_TEXT)}>{issue.story_points}</span>}
       </SidebarField>
       {issue.story_points_rollup !== null ? (
         <p className="-mt-1.5 px-2 pb-1 text-2xs text-text-secondary">
@@ -398,7 +399,11 @@ export function IssueSidebar({
               />
             }
           >
-            {issue.estimate_minutes === null ? '?' : <Duration minutes={issue.estimate_minutes} calendar={calendar} />}
+            {issue.estimate_minutes === null ? (
+              '?'
+            ) : (
+              <Duration minutes={issue.estimate_minutes} calendar={calendar} className={FIELD_TEXT} />
+            )}
           </SidebarField>
           <SpentTimeField
             issue={issue}
@@ -512,7 +517,7 @@ function SpentTimeField({ issue, label, calendar, onLogTime }: SpentTimeFieldPro
           </span>
         ) : null}
       </span>
-      {estimate !== null && estimate > 0 ? (
+      {spent > 0 && estimate !== null && estimate > 0 ? (
         <div className={cn('col-span-2 mt-1', over && 'c-red')}>
           <Meter
             ratio={ratio}

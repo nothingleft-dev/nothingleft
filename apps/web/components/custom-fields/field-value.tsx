@@ -3,7 +3,7 @@ import type { CustomFieldOptionRef, IssueCustomFieldValue, MemberRef } from '@no
 import { Duration } from '@components/duration';
 import { PersonName } from '@components/former-member-chip';
 import { AssigneeStack } from '@components/issues/assignee-stack';
-import { MemberAvatar } from '@components/issues/member-avatar';
+import { FIELD_PERSON_TEXT, FIELD_TEXT } from '@components/issues/sidebar-field';
 import { formatCalendarDate, formatCalendarDateShort, formatDateTime } from '@lib/datetime';
 import { cn } from '@lib/utils';
 
@@ -48,10 +48,20 @@ function OptionDot({ option }: { option: CustomFieldOptionRef }) {
 }
 
 function Person({ person }: { person: MemberRef }) {
+  return <PersonName person={person} avatar className={FIELD_PERSON_TEXT} />;
+}
+
+/** A break chance after every `/`, so a long address wraps between its segments, not inside a word. */
+function UrlText({ url }: { url: string }) {
+  const parts = url.split(/(?<=\/)/);
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5">
-      <MemberAvatar member={person} className="size-5" />
-      <PersonName person={person} />
+    <span className={cn('min-w-0 [overflow-wrap:break-word]', FIELD_TEXT)}>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 ? <wbr /> : null}
+        </span>
+      ))}
     </span>
   );
 }
@@ -68,29 +78,34 @@ interface FieldValueProps {
 
 export function FieldValue({ entry, calendar, variant, timeZone, decimals }: FieldValueProps) {
   const cell = variant === 'cell';
-  if (isEmptyValue(entry)) return <>{cell ? '--' : entry.empty_label}</>;
+  if (isEmptyValue(entry)) return cell ? <>--</> : <span className={FIELD_TEXT}>{entry.empty_label}</span>;
+  const text = cell ? undefined : FIELD_TEXT;
 
   switch (entry.type) {
-    case 'text':
     case 'url':
-      return <span className={cn('min-w-0', cell ? 'truncate' : '[overflow-wrap:anywhere]')}>{entry.value}</span>;
+      if (!cell) return <UrlText url={entry.value ?? ''} />;
+      return <span className="min-w-0 truncate">{entry.value}</span>;
+    case 'text':
+      return <span className={cn('min-w-0', cell ? 'truncate' : '[overflow-wrap:anywhere]', text)}>{entry.value}</span>;
     case 'markdown':
       return <span className="min-w-0 truncate">{markdownPreview(entry.value ?? '')}</span>;
     case 'number':
     case 'integer':
       return (
-        <span className="tabular">
+        <span className={cn('tabular', text)}>
           {entry.type === 'number' && decimals !== undefined ? entry.value!.toFixed(decimals) : entry.value}
         </span>
       );
     case 'duration':
-      return <Duration minutes={entry.value ?? 0} calendar={calendar} />;
+      return <Duration minutes={entry.value ?? 0} calendar={calendar} className={text} />;
     case 'date':
-      return <>{cell ? formatCalendarDateShort(entry.value!) : formatCalendarDate(entry.value!)}</>;
+      return (
+        <span className={text}>{cell ? formatCalendarDateShort(entry.value!) : formatCalendarDate(entry.value!)}</span>
+      );
     case 'datetime':
-      return <>{formatDateTime(entry.value!, timeZone)}</>;
+      return <span className={text}>{formatDateTime(entry.value!, timeZone)}</span>;
     case 'checkbox':
-      return <>{entry.value ? 'Yes' : 'No'}</>;
+      return <span className={text}>{entry.value ? 'Yes' : 'No'}</span>;
     case 'select':
       return cell ? <OptionDot option={entry.value!} /> : <OptionChip option={entry.value!} />;
     case 'multi_select':

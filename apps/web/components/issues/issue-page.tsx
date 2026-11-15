@@ -59,6 +59,7 @@ import { useDeleteIssue, useIssue, useIssueSignal, useRestoreIssue } from '@hook
 import { useOrganization } from '@hooks/use-organizations';
 import { useProject } from '@hooks/use-projects';
 import { useRecordRecentlyViewed } from '@hooks/use-recently-viewed';
+import { useRateLimit } from '@hooks/use-rate-limit';
 import { useSession } from '@hooks/use-session';
 import { useShortcut } from '@hooks/use-shortcut';
 import { isApiError } from '@lib/api/errors';
@@ -135,13 +136,14 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
     return <IssueNotFound issueKey={issueKey} />;
   }
   if (issue.isError) {
-    return (
-      <div className={PAGE_GRID}>
+    if (modal) {
+      return (
         <LoadError onRetry={() => void issue.refetch()} detail={errorDetail(issue.error)}>
           This issue could not be loaded.
         </LoadError>
-      </div>
-    );
+      );
+    }
+    return <IssueLoadError issueKey={issueKey} error={issue.error} onRetry={() => void issue.refetch()} />;
   }
   // The role decides the title's action strip and so its wrap: drawn without it, the page jumps when it lands.
   if (issue.isPending || project.isPending) return <IssueSkeleton />;
@@ -188,7 +190,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
           <div className="flex items-start gap-4 max-sm:flex-col max-sm:gap-1">
             <IssueTitle issue={data} canEdit={canEdit} />
-            <div className="mt-0.5 flex flex-none items-center gap-0.5">
+            <div className="mt-0.5 flex flex-none items-center gap-0.5 max-sm:-ml-3.5">
               {canEdit ? (
                 <>
                   <IconAction label="Edit description" shortcut="e" onClick={() => setEditingDescription(true)}>
@@ -278,6 +280,11 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
             onTabChange={setActivityTab}
             timeZone={timeZone}
           />
+          {role && !canEdit && !archived ? (
+            <p className="mt-6 text-xs text-text-secondary">
+              You can read this issue but not change it. A Project Admin can give you edit access.
+            </p>
+          ) : null}
         </div>
 
         {canEdit ? (
@@ -564,6 +571,15 @@ function IssueSkeleton() {
           <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
           <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
         </div>
+        <div className="mt-8 flex h-control items-center border-b">
+          <Skeleton className="h-3.5 w-12" />
+        </div>
+        <Skeleton className="mt-4 h-3.5 w-full max-w-[56ch]" />
+        <div className="mt-8 flex h-control items-center gap-5 border-b">
+          {['w-14', 'w-8', 'w-20', 'w-20', 'w-14'].map((width, i) => (
+            <Skeleton key={i} className={cn('h-3.5', width)} />
+          ))}
+        </div>
       </div>
       <div className="flex flex-col gap-0.5">
         {Array.from({ length: 8 }, (_, i) => (
@@ -578,6 +594,44 @@ function IssueSkeleton() {
         ))}
       </div>
     </div>
+  );
+}
+
+function IssueLoadError({ issueKey, error, onRetry }: { issueKey: string; error: unknown; onRetry: () => void }) {
+  const projectKey = parseIssueKey(issueKey)?.projectKey ?? null;
+  const project = useProject(projectKey);
+  const { secondsLeft } = useRateLimit();
+  const limited = secondsLeft > 0;
+  const back = project.data ? (
+    <Link href={`/projects/${project.data.key}/issues` as Route} className={SECONDARY_LINK}>
+      Back to {project.data.name} issues
+    </Link>
+  ) : null;
+
+  return (
+    <FullPageState
+      className="pt-12"
+      eyebrow={limited ? 'Request limit' : 'Error'}
+      title={
+        <>
+          <span className="font-mono">{issueKey}</span> could not be loaded
+        </>
+      }
+      actions={
+        limited ? (
+          (back ?? <span />)
+        ) : (
+          <>
+            <Button onClick={onRetry}>Try again</Button>
+            {back}
+          </>
+        )
+      }
+    >
+      {limited
+        ? 'The request limit paused it. It loads again by itself when the limit lifts.'
+        : (errorDetail(error) ?? 'Something went wrong on our side.')}
+    </FullPageState>
   );
 }
 

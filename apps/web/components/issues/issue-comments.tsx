@@ -336,7 +336,7 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
                 </Button>
               )}
               {onLogTime ? (
-                <Button size="sm" variant="outline" className="ml-auto" onClick={onLogTime}>
+                <Button size="sm" variant="ghost" className="ml-auto text-text-secondary" onClick={onLogTime}>
                   <Timer /> Add spent time
                 </Button>
               ) : null}

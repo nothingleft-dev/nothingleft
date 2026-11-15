@@ -565,8 +565,11 @@ A read that failed with nothing loaded: the inline alert (§ 9, danger tint and 
 sentence _"The members could not be loaded."_, the server's reason under it when there is one,
 and an outline small **Try again** button at its end. The alert is as wide as its sentence (at most 48rem), so the button stays beside what it answers on a wide page. Never the empty-state frame,
 never an empty list, never `0` (a failed figure is `–`). A failed refresh keeps what loaded
-under a one-line warning-ink notice with the same button. Code: `components/query-state.tsx`
-(`LoadError`, `StaleNotice`, `QueryState`).
+under a one-line warning-ink notice with the same button. A page whose one subject failed to load
+(an issue) uses the full-page template, as its 404 does: key in the heading, the reason, Try again
+and the way back; under the request limit it drops Try again and says it loads by itself, while the
+shell banner keeps the countdown. Code: `components/query-state.tsx` (`LoadError`, `StaleNotice`,
+`QueryState`).
 
 ### Refreshing
 Content kept on screen while a new answer loads steps its ink down one level (`--text` →
@@ -714,8 +717,8 @@ Rail editors open below their row, aligned to its right edge, so they never cove
 row's action (`+` on Spent time, ⋯ on Development) sits on the label line. A long markdown value
 shows eight lines, fades and offers Show all.
 
-In both, an editable value wears a dotted hairline underline in `--border-strong` as its standing
-cue, and hover adds the `--bg-hover` surface, darkens the rule and shows a small pencil
+In both, an editable value's words wear a dotted hairline underline in `--border-strong` as their
+standing cue (never its badge, dot, avatar or a bare `?`), and hover adds the `--bg-hover` surface, darkens the rule and shows a small pencil
 beside the label. A surface that only appears on hover leaves people unsure what they
 can change. Read-only rows carry none of it. Empty values
 render their configured label in muted text: `No severity`, `No customer`.

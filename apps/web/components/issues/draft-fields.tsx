@@ -22,7 +22,7 @@ import { TagChip, TagPicker } from '@components/issues/issue-tags';
 import { MarkdownSizeNote } from '@components/issues/markdown-size-note';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
-import { SidebarField } from '@components/issues/sidebar-field';
+import { FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
 import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { draftSprint, draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
@@ -238,7 +238,7 @@ function useFieldSpecs(
       label: 'Story points',
       value:
         fields.story_points !== undefined ? (
-          <span className="font-mono text-xs tabular">{fields.story_points}</span>
+          <span className={cn('font-mono text-xs tabular', FIELD_TEXT)}>{fields.story_points}</span>
         ) : null,
       prefix: 'Story points',
       panelEmpty: '?',
@@ -320,7 +320,7 @@ function draftDisplay(
       return <DraftDuration typed={value as number | string} calendar={calendar} />;
     case 'number':
     case 'integer':
-      return <span className="font-mono text-xs tabular">{String(value)}</span>;
+      return <span className={cn('font-mono text-xs tabular', FIELD_TEXT)}>{String(value)}</span>;
     case 'markdown':
       return <span className="max-w-48 truncate">{markdownPreview(String(value))}</span>;
     default:
@@ -331,9 +331,9 @@ function draftDisplay(
 function DraftDuration({ typed, calendar }: { typed: number | string; calendar: WorkCalendar }) {
   const minutes = typeof typed === 'number' ? typed : parseDuration(typed, calendar);
   return minutes === null ? (
-    <span className="font-mono text-xs tabular">{String(typed)}</span>
+    <span className={cn('font-mono text-xs tabular', FIELD_TEXT)}>{String(typed)}</span>
   ) : (
-    <Duration minutes={minutes} calendar={calendar} className="text-xs [word-spacing:-0.25em]" />
+    <Duration minutes={minutes} calendar={calendar} className={cn('text-xs [word-spacing:-0.25em]', FIELD_TEXT)} />
   );
 }
 

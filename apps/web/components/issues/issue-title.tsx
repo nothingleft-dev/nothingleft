@@ -6,8 +6,10 @@ import { TitleInput } from '@components/title-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { useUpdateIssue } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
+import { cn } from '@lib/utils';
 
-const titleClass = 'flex-1 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]';
+const titleSize = 'text-2xl font-semibold tracking-tight max-sm:text-xl';
+const titleClass = cn('flex-1 [overflow-wrap:anywhere]', titleSize);
 
 export function IssueTitle({ issue, canEdit }: { issue: Issue; canEdit: boolean }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -23,7 +25,8 @@ export function IssueTitle({ issue, canEdit }: { issue: Issue; canEdit: boolean 
             <button
               type="button"
               onClick={() => setDraft(issue.title)}
-              className="-mx-1 cursor-text rounded-sm px-1 text-left underline decoration-border-strong decoration-dotted decoration-1 underline-offset-[6px] hover:bg-hover hover:decoration-text-secondary"
+              // The edit field's border is held here in transparent, so opening it moves no text.
+              className="-mx-[5px] block max-w-[calc(100%+10px)] cursor-text rounded-sm border border-transparent px-1 text-left underline decoration-border-strong decoration-dotted decoration-1 underline-offset-[6px] hover:bg-hover hover:decoration-text-secondary"
             >
               {issue.title}
             </button>
@@ -75,7 +78,10 @@ export function IssueTitle({ issue, canEdit }: { issue: Issue; canEdit: boolean 
         }}
         data-slot="input"
         aria-invalid={Boolean(error)}
-        className="-mx-1 block w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text [overflow-wrap:anywhere]"
+        className={cn(
+          '-mx-[5px] block w-[calc(100%+10px)] rounded-sm border border-border-strong bg-surface px-1 text-text [overflow-wrap:anywhere]',
+          titleSize,
+        )}
       />
       {error ? <p className="mt-1 text-xs text-danger-fg">{error}</p> : null}
     </div>

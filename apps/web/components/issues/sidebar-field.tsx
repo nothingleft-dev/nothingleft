@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactNode } from 'react';
 import { Pencil } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { useMediaQuery } from '@hooks/use-media-query';
@@ -24,6 +24,31 @@ interface SidebarFieldProps {
   contentClassName?: string;
   /** `strip`: one cell of the key-field strip under the title, its mark inline rather than aside. */
   variant?: 'rail' | 'strip';
+}
+
+const EMPTY_FIGURE = '?';
+
+/**
+ * The dotted rule under an editable value's words, its standing cue (design § 8b): on the text only, so
+ * letter badges, dots, avatars and a bare `?` carry no stub. Hover darkens it.
+ */
+export const FIELD_TEXT =
+  '[[data-editable]_&]:underline [[data-editable]_&]:decoration-border-strong [[data-editable]_&]:decoration-dotted [[data-editable]_&]:underline-offset-[5px] group-hover/field:decoration-text-secondary';
+
+/** The same rule for the name beside a person's avatar (`PersonName`'s second child). */
+export const FIELD_PERSON_TEXT =
+  '[[data-editable]_&>:nth-child(2)]:underline [[data-editable]_&>:nth-child(2)]:decoration-border-strong [[data-editable]_&>:nth-child(2)]:decoration-dotted [[data-editable]_&>:nth-child(2)]:underline-offset-[5px] group-hover/field:[&>:nth-child(2)]:decoration-text-secondary';
+
+function underlineText(children: ReactNode): ReactNode {
+  return Children.map(children, child => {
+    if (isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment) {
+      return underlineText(child.props.children);
+    }
+    if ((typeof child === 'string' && child !== EMPTY_FIGURE) || typeof child === 'number') {
+      return <span className={FIELD_TEXT}>{child}</span>;
+    }
+    return child;
+  });
 }
 
 const ROW_CLASS = {
@@ -60,16 +85,14 @@ function Body({
         ) : null}
       </span>
       <span
+        data-editable={editable || undefined}
         className={cn(
           'col-start-1 flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-text',
           empty && 'text-text-muted',
           mono && !empty && 'font-mono text-xs tabular',
-          // The dotted rule under an editable value is the standing cue; hover adds the surface.
-          editable &&
-            'underline decoration-border-strong decoration-dotted underline-offset-[5px] group-hover/field:decoration-text-secondary',
         )}
       >
-        {children}
+        {underlineText(children)}
       </span>
       {aside ? <span className="col-start-2 row-start-1 -my-1 flex items-center">{aside}</span> : null}
     </>

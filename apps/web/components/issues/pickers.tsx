@@ -41,7 +41,7 @@ function PickerFailure({ onRetry, message }: { onRetry: () => void; message: str
     <div role="alert" className="flex items-center justify-between gap-2 px-3 py-3 text-xs text-text-secondary">
       {message}
       <Button type="button" variant="outline" size="xs" onClick={onRetry}>
-        Retry
+        Try again
       </Button>
     </div>
   );
@@ -191,11 +191,17 @@ export function EstimateEditor({ value, calendar, error, onSave, label = 'Estima
       />
       <p className={cn('text-2xs', invalid || error ? 'text-danger-fg' : 'text-text-secondary')}>
         {error ??
-          (invalid
-            ? 'Write it as 1w 1d 1h 1m, or any part of that.'
-            : minutes === null
-              ? `Empty clears ${label === 'Estimation' ? 'the estimate' : label}.`
-              : `Stored as ${formatDuration(minutes, calendar)}.`)}
+          (invalid ? (
+            <>
+              Write it as <span className="font-mono">1w 1d 1h 1m</span>, or any part of that.
+            </>
+          ) : minutes === null ? (
+            `Empty clears ${label === 'Estimation' ? 'the estimate' : label}.`
+          ) : (
+            <>
+              Stored as <span className="font-mono">{formatDuration(minutes, calendar)}</span>.
+            </>
+          ))}
       </p>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={invalid}>

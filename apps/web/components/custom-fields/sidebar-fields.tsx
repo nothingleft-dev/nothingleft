@@ -6,7 +6,7 @@ import type { CustomField, CustomFieldValueInput, Issue, IssueCustomFieldValue }
 import { Button } from '@components/ui/button';
 import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { Switch } from '@components/ui/switch';
-import { LoadMore } from '@components/text-button';
+import { LoadMore, TextButton } from '@components/text-button';
 import { Markdown } from '@components/markdown/markdown';
 import { SidebarField, useRailPopoverAlign } from '@components/issues/sidebar-field';
 import { FieldValue, isEmptyValue } from '@components/custom-fields/field-value';
@@ -40,7 +40,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
   const fields = useCustomFields(projectKey);
   const [open, setOpen] = useState<string | null>(null);
   const [draft, setDraft] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, RowFailure>>({});
   const needsPeople = canEdit && issue.custom_fields.some(e => e.type === 'user' || e.type === 'multi_user');
   const people = useProjectAssignees(needsPeople ? projectKey : null);
   const calendar = useWorkCalendar();
@@ -51,10 +51,10 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
   const entries = issue.custom_fields.filter(e => !bySlug.get(e.slug)?.time_role);
   if (entries.length === 0) return null;
 
-  const setError = (slug: string, message: string | null) =>
+  const setError = (slug: string, failure: RowFailure | null) =>
     setErrors(current => {
       const next = { ...current };
-      if (message) next[slug] = message;
+      if (failure) next[slug] = failure;
       else delete next[slug];
       return next;
     });
@@ -74,7 +74,12 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
       },
       {
         onSuccess: () => closeOnSuccess && setOpen(current => (current === entry.slug ? null : current)),
-        onError: error => setError(entry.slug, isApiError(error) ? error.message : 'Could not save.'),
+        onError: error =>
+          setError(entry.slug, {
+            message: isApiError(error) ? error.message : 'Could not save.',
+            // A refused value would only be refused again; a fault on our side or the network is worth repeating.
+            retry: isApiError(error) && error.status < 500 ? undefined : () => save(entry, value, closeOnSuccess),
+          }),
       },
     );
   };
@@ -98,14 +103,16 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
       <RailHeading>Fields</RailHeading>
       {entries.map(entry => {
         const field = bySlug.get(entry.slug);
-        const error = errors[entry.slug] ?? null;
+        const failure = errors[entry.slug] ?? null;
+        const error = failure?.message ?? null;
+        const rowError = <RowError name={entry.name} failure={failure} />;
         const editable = canEdit && field !== undefined;
 
         if (entry.type === 'checkbox') {
           return (
             <div key={entry.slug}>
               <CheckboxRow entry={entry} editable={editable} onChange={on => save(entry, on, false)} />
-              <RowError message={error} />
+              {rowError}
             </div>
           );
         }
@@ -122,7 +129,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
                 onOpenChange={next => openRow(entry, next)}
                 onSave={value => save(entry, value, true)}
               />
-              {open === entry.slug ? null : <RowError message={error} />}
+              {open === entry.slug ? null : rowError}
             </div>
           );
         }
@@ -168,7 +175,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
                 decimals={field?.config.decimals}
               />
             </SidebarField>
-            {open === entry.slug && !closesOnPick(entry.type) ? null : <RowError message={error} />}
+            {open === entry.slug && !closesOnPick(entry.type) ? null : rowError}
           </div>
         );
       })}
@@ -176,10 +183,23 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
   );
 }
 
-function RowError({ message }: { message: string | null }) {
-  return message ? (
+interface RowFailure {
+  message: string;
+  retry?: (() => void) | undefined;
+}
+
+function RowError({ name, failure }: { name: string; failure: RowFailure | null }) {
+  return failure ? (
     <p role="alert" className="-mt-1 px-2 pb-1 text-2xs text-danger-fg">
-      {message}
+      Could not save {name}. {failure.message}
+      {failure.retry ? (
+        <>
+          {' '}
+          <TextButton onClick={failure.retry} className="text-2xs">
+            Try again
+          </TextButton>
+        </>
+      ) : null}
     </p>
   ) : null;
 }

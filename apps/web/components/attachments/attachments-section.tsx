@@ -150,7 +150,7 @@ export function AttachmentsSection({
       ) : null}
 
       {loading ? (
-        <div className="flex flex-col gap-3 py-3" role="status" aria-label="Loading attachments">
+        <div className="flex flex-col gap-3 pt-3" role="status" aria-label="Loading attachments">
           <div className={IMAGE_GRID}>
             {[0, 1, 2].map(i => (
               <Skeleton key={i} className="h-[142px] w-full" />
@@ -161,11 +161,11 @@ export function AttachmentsSection({
           </div>
         </div>
       ) : shown.length === 0 && hidden.length > 0 ? (
-        <p className="py-3 text-xs text-text-secondary">
+        <p className="pt-3 text-xs text-text-secondary">
           Every file here is already shown in the description or a comment.
         </p>
       ) : (
-        <div className="flex flex-col gap-3 py-3">
+        <div className="flex flex-col gap-3 pt-3">
           {images.length > 0 ? (
             <ul className={IMAGE_GRID} aria-label="Images">
               {images.map(file => (
