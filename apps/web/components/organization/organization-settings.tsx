@@ -132,7 +132,7 @@ function OrganizationTabs({ organization, user, tab, isAdmin }: OrganizationTabs
     // The storage tab's file list is a table of seven columns; the other tabs are forms.
     <div className="flex flex-col gap-5">
       {isAdmin ? <SeatBanner seats={organization.seats} /> : null}
-      {tab === 'storage' ? null : <StorageBanner storage={organization.storage} withLink={false} />}
+      {tab === 'storage' ? null : <StorageBanner storage={organization.storage} />}
 
       {tab === 'general' ? <GeneralTab organization={organization} isAdmin={isAdmin} /> : null}
       {tab === 'members' ? <MembersTab organization={organization} isAdmin={isAdmin} /> : null}

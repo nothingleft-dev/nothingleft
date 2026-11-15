@@ -12,7 +12,8 @@ export function Duration({
   className?: string;
 }) {
   return (
-    <span className={cn('font-mono tabular', className)}>
+    // A mono space is a full cell wide, so `1d 2h` read as two gaps; a tighter word space keeps it one value.
+    <span className={cn('font-mono tabular [word-spacing:-0.3em]', className)}>
       {minutes === 0 ? '0m' : formatDuration(minutes, calendar)}
     </span>
   );

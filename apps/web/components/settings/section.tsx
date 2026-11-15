@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@lib/utils';
 
 export function SettingsSection({
   title,
@@ -13,7 +14,7 @@ export function SettingsSection({
 }) {
   return (
     <section className="flex flex-col gap-3 border-b pb-5 last:border-b-0">
-      <header className="flex items-start gap-4 max-sm:flex-col max-sm:gap-3">
+      <header className={cn('flex gap-4 max-sm:flex-col max-sm:gap-3', description ? 'items-start' : 'items-center')}>
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 className="font-semibold">{title}</h2>
           {description ? <p className="max-w-[72ch] text-sm text-pretty text-text-secondary">{description}</p> : null}
