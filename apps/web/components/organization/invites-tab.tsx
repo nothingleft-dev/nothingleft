@@ -37,13 +37,6 @@ export function InvitesTab({ organization }: { organization: Organization }) {
         <InviteEmailsForm scope={scope} canGrantOrgAdmin seats={organization.seats} />
       </SettingsSection>
 
-      <SettingsSection
-        title="Share links"
-        description="Anyone with the link can join with the selected role. Replacing a link makes the old one stop working."
-      >
-        <ShareLinks scope={scope} orgSlug={organization.slug} />
-      </SettingsSection>
-
       <SettingsSection title="Email invitations" description="Everything sent, in every state.">
         {invitations.isPending ? (
           <TableSkeleton columns={INVITE_COLUMNS} rows={4} rowClassName="h-row-lg" />
@@ -114,6 +107,13 @@ export function InvitesTab({ organization }: { organization: Organization }) {
             </table>
           </div>
         )}
+      </SettingsSection>
+
+      <SettingsSection
+        title="Share links"
+        description="Anyone with a link joins as a Member. Replacing a link makes the old one stop working."
+      >
+        <ShareLinks scope={scope} orgSlug={organization.slug} />
       </SettingsSection>
     </div>
   );

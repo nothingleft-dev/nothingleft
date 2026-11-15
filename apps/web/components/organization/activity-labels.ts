@@ -343,3 +343,55 @@ export function activityDetail(row: OrgActivity): DetailPart[] | null {
       return null;
   }
 }
+
+/**
+ * The audit log names the person or address acted on in the headline (`added @tom to NM`),
+ * so its detail line carries only what is left (`As Contributor`).
+ */
+export function auditLine(row: OrgActivity): { headline: DetailPart[]; detail: DetailPart[] | null } {
+  const o = values(row.old_value);
+  const n = values(row.new_value);
+  const project = row.target_type === 'project_member';
+  const as = (role: string | null): DetailPart[] | null => (role ? [`As ${role}`] : null);
+  const was = (role: string | null): DetailPart[] | null => (role ? [`Was ${role}`] : null);
+
+  switch (row.kind) {
+    case 'member_invited': {
+      const email = text(n, 'email');
+      if (!email) break;
+      const role = projectRole(text(n, 'project_role')) ?? orgRole(text(n, 'org_role'));
+      const where = inProject(text(n, 'project_key'));
+      return {
+        headline: [`invited ${email}`],
+        detail: role ? [`As ${role}`, ...where] : where.length > 0 ? ['In ', ...where.slice(1)] : null,
+      };
+    }
+    case 'member_joined': {
+      const username = text(n, 'username');
+      const key = text(n, 'project_key');
+      if (projectJoin(row) !== 'other' || !username || !key) break;
+      return { headline: [`added @${username} to `, { code: key }], detail: as(projectRole(text(n, 'project_role'))) };
+    }
+    case 'member_removed': {
+      const username = text(o, 'username');
+      if (!username) break;
+      const key = text(o, 'project_key');
+      return project && key
+        ? { headline: [`removed @${username} from `, { code: key }], detail: was(projectRole(text(o, 'project_role'))) }
+        : { headline: [`removed @${username}`], detail: was(orgRole(text(o, 'org_role'))) };
+    }
+    case 'role_changed': {
+      const username = text(n, 'username') ?? text(o, 'username');
+      if (!username) break;
+      const key = text(n, 'project_key');
+      const label = project ? projectRole : orgRole;
+      const before = label(text(o, project ? 'project_role' : 'org_role'));
+      const after = label(text(n, project ? 'project_role' : 'org_role'));
+      return {
+        headline: [`changed @${username}’s role`, ...(project && key ? [' in ', { code: key }] : [])],
+        detail: before && after ? [`${before} → ${after}`] : null,
+      };
+    }
+  }
+  return { headline: [activityLabel(row)], detail: activityDetail(row) };
+}

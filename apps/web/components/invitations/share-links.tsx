@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Link2, RefreshCw, Users } from 'lucide-react';
+import { Link2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { PROJECT_ROLES, type Invitation, type OrgRole, type ProjectRole } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -133,18 +133,25 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
 
   return (
     <li className="flex flex-col gap-2 px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-sm bg-inset px-2 py-1 font-mono text-xs text-text-secondary">
+      <div className="flex items-center gap-1 max-sm:flex-wrap">
+        <code className="mr-1 min-w-0 flex-1 truncate rounded-sm bg-inset max-sm:basis-full px-2 py-1 font-mono text-xs text-text-secondary">
           {link.url ?? 'Hidden'}
         </code>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Copy link" onClick={() => void copy()}>
-              {copied ? <Check className="size-icon-sm text-success-fg" /> : <Copy className="size-icon-sm" />}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Copy link"
+              className="min-w-18"
+              onClick={() => void copy()}
+            >
+              {copied ? 'Copied' : 'Copy'}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{copied ? 'Copied' : 'Copy link'}</TooltipContent>
+          <TooltipContent>{copied ? 'Copied' : 'Copy to the clipboard'}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -152,7 +159,7 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="sm"
               aria-label="Replace link"
               disabled={rotate.isPending}
               onClick={() =>
@@ -161,10 +168,10 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
                 })
               }
             >
-              <RefreshCw className="size-icon-sm" />
+              Replace
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Replace link: the old address stops working</TooltipContent>
+          <TooltipContent>Issue a new address; the old one stops working</TooltipContent>
         </Tooltip>
 
         <Button

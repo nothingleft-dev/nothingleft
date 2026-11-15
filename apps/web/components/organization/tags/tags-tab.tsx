@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreHorizontal, Search } from 'lucide-react';
+import { Merge, MoreHorizontal, Search } from 'lucide-react';
 import type { Tag } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -16,9 +16,9 @@ import { useDebounced } from '@hooks/use-debounced';
 import { MANAGED_TAGS_PAGE, useManagedTags } from '@hooks/use-tags';
 import { cn } from '@lib/utils';
 
-// The chip column holds the longest name a tag can have, so every count starts at one x.
-const ROW =
-  'grid min-h-row grid-cols-[minmax(0,24rem)_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 px-3 py-1.5 max-sm:grid-cols-[minmax(0,1fr)_auto]';
+const COLUMNS =
+  'grid grid-cols-[minmax(0,1fr)_8rem_4.5rem] items-center gap-x-4 px-3 max-sm:grid-cols-[minmax(0,1fr)_4.5rem]';
+const ROW = `${COLUMNS} min-h-row gap-y-0.5 py-1.5`;
 
 type Open =
   { kind: 'edit'; tag: Tag } | { kind: 'merge'; tags: Tag[]; into: Tag | null } | { kind: 'delete'; tag: Tag };
@@ -37,10 +37,10 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
   return (
     <SettingsSection
       title="Tags"
-      description="One vocabulary for every project, shared by issues and knowledge base articles. Counts cover the whole organisation."
+      description="One vocabulary for every project, shared by issues and knowledge base articles. A tag is created by adding it to an issue or an article; rename, recolour, merge or delete it here."
     >
       <div className={cn('flex flex-wrap items-center gap-3', none && 'hidden')}>
-        <label className="relative max-w-xs min-w-48 flex-1">
+        <label className="relative max-w-xs min-w-48 flex-1 max-sm:max-w-none max-sm:basis-full">
           <span className="sr-only">Search tags</span>
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-icon-sm -translate-y-1/2 text-text-muted" />
           <input
@@ -56,6 +56,17 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
             {total > tags.length ? `${tags.length} of ${tagCount(total)}` : tagCount(total)}
           </span>
         ) : null}
+        {orgAdmin && total > 1 ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setOpen({ kind: 'merge', tags: [], into: null })}
+          >
+            <Merge className="size-icon-sm" />
+            Merge tags
+          </Button>
+        ) : null}
       </div>
 
       {list.isPending ? (
@@ -69,7 +80,7 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
           title={`No tag matches “${q}”.`}
           description="Search looks at tag names. Clear it to see every tag."
           action={
-            <Button variant="outline" size="xs" onClick={() => setText('')}>
+            <Button variant="outline" size="sm" onClick={() => setText('')}>
               Clear the search
             </Button>
           }
@@ -80,21 +91,21 @@ export function TagsTab({ orgAdmin }: { orgAdmin: boolean }) {
           description="Tags appear here once someone adds one to an issue or an article, with how many of each use it."
         />
       ) : (
-        <ul
-          className={cn('divide-y divide-border-subtle rounded-md border', list.isPlaceholderData && 'is-stale')}
-          aria-label="Tags"
-        >
-          {tags.map(tag => (
-            <TagRow
-              key={tag.slug}
-              tag={tag}
-              orgAdmin={orgAdmin}
-              onEdit={() => setOpen({ kind: 'edit', tag })}
-              onMerge={() => setOpen({ kind: 'merge', tags: [tag], into: null })}
-              onDelete={() => setOpen({ kind: 'delete', tag })}
-            />
-          ))}
-        </ul>
+        <div className={cn('overflow-hidden rounded-md border', list.isPlaceholderData && 'is-stale')}>
+          <TagsHeader />
+          <ul className="divide-y divide-border-subtle" aria-label="Tags">
+            {tags.map(tag => (
+              <TagRow
+                key={tag.slug}
+                tag={tag}
+                orgAdmin={orgAdmin}
+                onEdit={() => setOpen({ kind: 'edit', tag })}
+                onMerge={() => setOpen({ kind: 'merge', tags: [tag], into: null })}
+                onDelete={() => setOpen({ kind: 'delete', tag })}
+              />
+            ))}
+          </ul>
+        </div>
       )}
 
       {total > MANAGED_TAGS_PAGE && !q ? (
@@ -139,10 +150,10 @@ function TagRow({ tag, orgAdmin, onEdit, onMerge, onDelete }: TagRowProps) {
       <span className="min-w-0 overflow-hidden whitespace-nowrap" title={tag.name}>
         <TagChip tag={tag} />
       </span>
-      <span className="min-w-0 truncate text-sm text-text-secondary tabular max-sm:col-start-1 max-sm:row-start-2 max-sm:text-xs">
+      <span className="min-w-0 truncate text-right text-xs text-text-secondary tabular max-sm:col-start-1 max-sm:row-start-2 max-sm:text-left">
         {usage ?? 'Unused'}
       </span>
-      <span className="flex items-center gap-1 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1">
+      <span className="flex items-center justify-end gap-1 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1">
         <Button variant="ghost" size="xs" onClick={onEdit} aria-label={`Rename or recolour ${tag.name}`}>
           Edit
         </Button>
@@ -166,16 +177,28 @@ function TagRow({ tag, orgAdmin, onEdit, onMerge, onDelete }: TagRowProps) {
   );
 }
 
+function TagsHeader() {
+  return (
+    <div className={cn(COLUMNS, 'h-7 border-b bg-app text-2xs font-medium text-text-secondary')} aria-hidden>
+      <span>Tag</span>
+      <span className="text-right max-sm:hidden">Used on</span>
+    </div>
+  );
+}
+
 function TagsSkeleton() {
   return (
-    <div className="divide-y divide-border-subtle rounded-md border" role="status" aria-label="Loading tags">
-      {Array.from({ length: 8 }, (_, i) => (
-        <div key={i} className={ROW}>
-          <Skeleton className="h-5 rounded-sm" style={{ width: `${48 + ((i * 23) % 56)}px` }} />
-          <Skeleton className="h-3 w-24 max-sm:col-start-1 max-sm:row-start-2" />
-          <Skeleton className="h-3 w-16 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1" />
-        </div>
-      ))}
+    <div className="overflow-hidden rounded-md border" role="status" aria-label="Loading tags">
+      <TagsHeader />
+      <div className="divide-y divide-border-subtle">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className={ROW}>
+            <Skeleton className="h-5 rounded-sm" style={{ width: `${48 + ((i * 23) % 56)}px` }} />
+            <Skeleton className="ml-auto h-3 w-16 max-sm:col-start-1 max-sm:row-start-2 max-sm:ml-0" />
+            <Skeleton className="ml-auto h-3 w-12 max-sm:col-start-2 max-sm:row-span-2 max-sm:row-start-1" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

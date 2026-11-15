@@ -14,8 +14,7 @@ import { RelativeTime } from '@components/relative-time';
 import { DatePicker } from '@components/date-picker';
 import {
   ACTIVITY_LABELS,
-  activityDetail,
-  activityLabel,
+  auditLine,
   isSystemActivity,
   systemSentence,
   type DetailPart,
@@ -98,14 +97,14 @@ export function AuditTab({ organization }: { organization: Organization }) {
           title={filtered ? 'Nothing matches those filters.' : 'Nothing has happened yet.'}
           description={
             !filtered
-              ? 'Every invitation, role change and project change is recorded here, permanently and without coalescing.'
+              ? 'Invitations, role changes and project changes appear here. Entries are never edited or merged.'
               : filters.from !== undefined || filters.to !== undefined
                 ? 'Widen the dates, or clear the filters to see everything.'
                 : 'Clear the filters to see everything.'
           }
           action={
             filtered ? (
-              <Button variant="outline" size="xs" onClick={() => setFilters({})}>
+              <Button variant="outline" size="sm" onClick={() => setFilters({})}>
                 Clear the filters
               </Button>
             ) : undefined
@@ -115,13 +114,13 @@ export function AuditTab({ organization }: { organization: Organization }) {
         <>
           <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
             {rows.map(row => {
-              const detail = activityDetail(row);
+              const { headline, detail } = auditLine(row);
               return (
-                <li key={row.id} className="flex min-h-row-lg items-center gap-3 px-3 py-2">
-                  <ActivityAvatar row={row} className="size-avatar" />
+                <li key={row.id} className="flex min-h-row-lg items-center gap-3 px-3 py-1">
+                  <ActivityAvatar row={row} className="size-avatar max-sm:mt-0.5 max-sm:self-start" />
 
-                  <div className="flex min-w-0 flex-1 flex-col leading-5">
-                    <span className="truncate max-sm:whitespace-normal">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate leading-5 max-sm:whitespace-normal">
                       {isSystemActivity(row) ? (
                         systemSentence(row)
                       ) : (
@@ -131,7 +130,7 @@ export function AuditTab({ organization }: { organization: Organization }) {
                           ) : (
                             <span className="font-medium">Somebody no longer here</span>
                           )}{' '}
-                          {activityLabel(row)}
+                          <Parts parts={headline} code="text-xs" />
                         </>
                       )}
                     </span>
@@ -287,16 +286,24 @@ function FilterText({ label, value, fallback }: { label: string; value: string |
 
 function Detail({ parts }: { parts: DetailPart[] }) {
   return (
-    <span className="truncate text-xs text-text-secondary max-sm:whitespace-normal max-sm:break-words">
+    <span className="truncate text-xs leading-4 text-text-secondary max-sm:whitespace-normal max-sm:break-words">
+      <Parts parts={parts} code="text-2xs" />
+    </span>
+  );
+}
+
+function Parts({ parts, code }: { parts: DetailPart[]; code: string }) {
+  return (
+    <>
       {parts.map((part, i) =>
         typeof part === 'string' ? (
           part
         ) : (
-          <code key={i} className="font-mono text-2xs">
+          <code key={i} className={`font-mono ${code}`}>
             {part.code}
           </code>
         ),
       )}
-    </span>
+    </>
   );
 }

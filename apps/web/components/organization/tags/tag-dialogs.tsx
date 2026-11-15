@@ -29,7 +29,6 @@ import { useDeleteTag, useManagedTags, useMergeTags, useUpdateTag } from '@hooks
 import { isApiError } from '@lib/api/errors';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
-import { cn } from '@lib/utils';
 
 interface EditTagDialogProps {
   tag: Tag;
@@ -152,13 +151,7 @@ const MERGE_ROW = 'grid h-row grid-cols-[minmax(0,13rem)_minmax(0,1fr)_auto] ite
 
 const describe = (tag: Tag) => tagUsage(tag) ?? 'unused';
 
-function tagOption(tag: Tag): ReportOption {
-  return {
-    value: tag.slug,
-    label: tag.name,
-    mark: <span className={`l-${tag.color} size-2.5 shrink-0 rounded-full bg-c-solid`} aria-hidden />,
-  };
-}
+const tagOption = (tag: Tag): ReportOption => ({ value: tag.slug, label: tag.name });
 
 interface MergeTagsDialogProps {
   initial: { tags: Tag[]; into: Tag | null };
@@ -196,7 +189,7 @@ export function MergeTagsDialog({ initial, onClose }: MergeTagsDialogProps) {
         <DialogHeader>
           <DialogTitle>Merge tags</DialogTitle>
           <DialogDescription>
-            Issues and articles with any of these tags get the one you keep instead, once each.
+            Every issue and article with one of these tags gets the kept tag in its place, never twice.
           </DialogDescription>
         </DialogHeader>
 
@@ -237,7 +230,7 @@ export function MergeTagsDialog({ initial, onClose }: MergeTagsDialogProps) {
                 </li>
               ))}
               {into ? (
-                <li className={cn(MERGE_ROW, 'bg-app')}>
+                <li className={MERGE_ROW}>
                   <span className="min-w-0 overflow-hidden whitespace-nowrap" title={into.name}>
                     <TagChip tag={into} />
                   </span>

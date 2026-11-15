@@ -37,7 +37,8 @@ has some; a line under the table names the ones they have none of. Sessions and 
 **Reassign** offers only the people who can be assigned in every project that
 holds one of the open issues. If nobody qualifies, the dialog says so and
 **Leave unassigned** is the only choice; assign them afterwards. When an issue has several assignees,
-the removed person is replaced by the one you chose, or simply taken off.
+the removed person is replaced by the one you chose, or simply taken off. If the person you pick
+cannot take the open issues, the reason shows under the picker; choosing someone else clears it.
 
 Each reassigned issue gets an ordinary entry in its history, under the name of
 the admin who removed the member:

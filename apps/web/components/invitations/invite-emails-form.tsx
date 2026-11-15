@@ -19,6 +19,7 @@ import { useInviteByEmail } from '@hooks/use-invitations';
 import type { InviteScope } from '@lib/api/invitations';
 import { ORG_ROLE_HINTS, ORG_ROLE_LABELS, PROJECT_ROLE_HINTS, PROJECT_ROLE_LABELS } from '@lib/roles';
 import { PendingButton } from '@components/pending-button';
+import { cn } from '@lib/utils';
 
 const ORG_OPTIONS: ChoiceOption<OrgRole>[] = ORG_ROLES.map(value => ({
   value,
@@ -58,7 +59,7 @@ export function InviteEmailsForm({
   return (
     <form
       noValidate
-      className="flex max-w-2xl flex-col gap-4"
+      className="flex max-w-xl flex-col gap-4"
       onSubmit={event => {
         event.preventDefault();
         if (emails.length === 0) return;
@@ -82,7 +83,7 @@ export function InviteEmailsForm({
 
       <EmailChips value={emails} onChange={setEmails} max={EMAIL_INVITATION_BATCH_MAX} disabled={invite.isPending} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={cn('grid gap-4', isProject && canGrantOrgAdmin && 'sm:grid-cols-2')}>
         {isProject ? (
           <ChoiceSelect
             label="Role in this project"

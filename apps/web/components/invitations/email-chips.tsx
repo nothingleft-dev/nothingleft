@@ -114,8 +114,10 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
 
       {rejected.length > 0 ? (
         <p className="text-xs text-danger-fg">
-          {rejected.length === 1 ? 'That is not an email address' : 'Those are not email addresses'}:{' '}
-          {rejected.join(', ')}
+          {rejected.length === 1
+            ? 'That is not an email address, so it will not be sent'
+            : 'Those are not email addresses, so they will not be sent'}
+          : {rejected.join(', ')}
         </p>
       ) : (
         <p className="text-sm text-text-secondary">

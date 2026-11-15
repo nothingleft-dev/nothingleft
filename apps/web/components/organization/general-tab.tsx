@@ -96,7 +96,7 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
               className="font-mono"
               value={slug}
               error={local.problems['slug'] ?? error.fields['slug']}
-              hint="Used to identify this workspace. Changing it breaks existing links and integrations that use the old ID."
+              hint="Changing it breaks links and integrations that use the old ID."
               onChange={e => {
                 setSlug(e.target.value);
                 local.clear('slug');
@@ -153,7 +153,7 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
 
 function OwnerSection({ organization }: { organization: Organization }) {
   return (
-    <SettingsSection title="Owner" description="The one role that cannot be changed from this screen.">
+    <SettingsSection title="Owner" description="Only the owner can hand the organisation on, from Danger zone.">
       <p className="text-sm text-text-secondary">
         <PersonName person={organization.owner} className="font-medium text-text" />{' '}
         <span className="font-mono text-xs">@{organization.owner.username}</span> · created{' '}

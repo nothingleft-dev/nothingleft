@@ -50,7 +50,7 @@ Anyone you add joins the organisation and the new project in one step. There are
 | Way           | How it works                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- |
 | By email      | Type addresses, pick a **Role in this project** and a **Role in the organisation**, and choose **Send invitations** |
-| By share link | Copy a link that anyone can use to join. You can revoke it at any time                                              |
+| By share link | Copy a link that anyone can use to join as a Member. **Replace** issues a new address and stops the old one; **Revoke** ends it |
 
 Organisation roles are **Org Admin** and **Member**; project roles are **Project Admin**,
 **Contributor** and **Observer**. What each can do is in [Permissions](./permissions.md).

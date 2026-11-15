@@ -36,7 +36,13 @@ interface RemoveMemberDialogProps {
 export function RemoveMemberDialog({ organization, member, onClose }: RemoveMemberDialogProps) {
   return (
     <Dialog open={member !== null} onOpenChange={open => (open ? null : onClose())}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent
+        className="sm:max-w-2xl"
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          (event.currentTarget as HTMLElement).focus();
+        }}
+      >
         {member ? (
           <RemovalForm key={member.username} organization={organization} member={member} onClose={onClose} />
         ) : null}
@@ -95,7 +101,13 @@ function RemovalForm({
     );
   };
 
-  const fieldError = error.fields['reassign_to'] ?? error.fields['transfer_views_to'];
+  // A refusal is about the choice it was sent with; a new choice clears it.
+  const choose =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      if (remove.isError) remove.reset();
+    };
   const absent = data ? KEPT.filter(row => (data[row.key] ?? 0) === 0).map(row => row.none) : [];
 
   return (
@@ -110,11 +122,11 @@ function RemovalForm({
         </DialogDescription>
       </DialogHeader>
 
-      {error.summary || fieldError ? (
+      {error.summary ? (
         <FormAlert
           title={remove.error ? `${member.name} was not removed.` : 'What removal changes could not be loaded.'}
         >
-          {error.summary ?? fieldError}
+          {error.summary}
         </FormAlert>
       ) : null}
 
@@ -129,11 +141,14 @@ function RemovalForm({
                   <MemberPicker
                     people={candidates}
                     value={reassignTo}
-                    onChange={setReassignTo}
+                    onChange={choose(setReassignTo)}
                     placeholder="Choose a member"
                     label="Reassign open issues to"
+                    invalid={error.fields['reassign_to'] !== undefined}
                   />
-                  {reassignTo === null ? (
+                  {error.fields['reassign_to'] ? (
+                    <FieldProblem>{error.fields['reassign_to']}</FieldProblem>
+                  ) : reassignTo === null ? (
                     <span className="text-xs text-text-secondary">
                       Choose who takes{' '}
                       {data!.open_assigned === 1 ? 'the open issue' : `the ${data!.open_assigned} open issues`}, or
@@ -157,7 +172,7 @@ function RemovalForm({
             ) : (
               <Choice
                 value={issues}
-                onChange={v => setIssueChoice(v as IssueChoice)}
+                onChange={choose((v: string) => setIssueChoice(v as IssueChoice))}
                 label="Open issues"
                 options={[
                   { value: 'reassign', label: 'Reassign' },
@@ -187,12 +202,15 @@ function RemovalForm({
                   <MemberPicker
                     people={transferTargets}
                     value={transferTo}
-                    onChange={setTransferTo}
+                    onChange={choose(setTransferTo)}
                     placeholder="Choose a member"
                     label="Transfer saved views to"
                     loading={everyone.isPending}
+                    invalid={error.fields['transfer_views_to'] !== undefined}
                   />
-                  {transferTo === null ? (
+                  {error.fields['transfer_views_to'] ? (
+                    <FieldProblem>{error.fields['transfer_views_to']}</FieldProblem>
+                  ) : transferTo === null ? (
                     <span className="text-xs text-text-secondary">
                       {data!.saved_views === 1
                         ? 'Choose who gets the saved view, or delete it.'
@@ -210,7 +228,7 @@ function RemovalForm({
             ) : (
               <Choice
                 value={viewChoice}
-                onChange={v => setViewChoice(v as ViewChoice)}
+                onChange={choose((v: string) => setViewChoice(v as ViewChoice))}
                 label="Saved views"
                 options={[
                   { value: 'delete', label: 'Delete' },
@@ -220,10 +238,10 @@ function RemovalForm({
             )}
           </Row>
           <Row label="Active sessions" count={data?.sessions}>
-            <Revoked count={data?.sessions} />
+            <Revoked count={data?.sessions} outcome="Signed out on removal" />
           </Row>
           <Row label="Access tokens" count={data?.access_tokens} last>
-            <Revoked count={data?.access_tokens} />
+            <Revoked count={data?.access_tokens} outcome="Revoked on removal" />
           </Row>
         </div>
         {absent.length > 0 ? (
@@ -293,8 +311,16 @@ const KEPT = [
 const listOf = (items: readonly string[]) =>
   items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
 
-function Revoked({ count }: { count: number | undefined }) {
-  return count === 0 ? <Unchanged>None to revoke</Unchanged> : <span>Access revoked</span>;
+function Revoked({ count, outcome }: { count: number | undefined; outcome: string }) {
+  return count === 0 ? <Unchanged>None to revoke</Unchanged> : <span className="text-text-secondary">{outcome}</span>;
+}
+
+function FieldProblem({ children }: { children: ReactNode }) {
+  return (
+    <span role="alert" className="text-xs text-danger-fg">
+      {children}
+    </span>
+  );
 }
 
 function Unchanged({ children = 'Unchanged' }: { children?: ReactNode }) {

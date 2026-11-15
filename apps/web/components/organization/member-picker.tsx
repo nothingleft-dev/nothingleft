@@ -18,9 +18,19 @@ interface MemberPickerProps {
   label: string;
   loading?: boolean;
   disabled?: boolean;
+  invalid?: boolean;
 }
 
-export function MemberPicker({ people, value, onChange, placeholder, label, loading, disabled }: MemberPickerProps) {
+export function MemberPicker({
+  people,
+  value,
+  onChange,
+  placeholder,
+  label,
+  loading,
+  disabled,
+  invalid,
+}: MemberPickerProps) {
   const [open, setOpen] = useState(false);
   const selected = people.find(p => p.username === value);
 
@@ -34,6 +44,7 @@ export function MemberPicker({ people, value, onChange, placeholder, label, load
           aria-expanded={open}
           aria-label={label}
           disabled={disabled}
+          aria-invalid={invalid || undefined}
           className="w-full min-w-0 justify-between font-normal"
         >
           {selected ? (

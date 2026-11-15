@@ -5,7 +5,8 @@ knowledge base articles. `rca` on a failed payment and `rca` on the write-up aft
 same tag, and `tag: rca` finds both. Adding tags to an issue is described in
 [Issues](./issues.md#tags), and to an article in [Knowledge base](./knowledge-base.md).
 
-This page is about looking after the vocabulary itself.
+A tag is created by adding it to an issue or an article. Org Admins can merge several at once with
+**Merge tags** above the list. This page is about looking after the vocabulary itself.
 
 ## Seeing every tag
 
