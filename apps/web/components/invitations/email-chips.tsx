@@ -68,6 +68,8 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
         className={cn(
           'flex min-h-control flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1.5',
           'focus-within:border-border-strong focus-within:shadow-(--focus-ring)',
+          rejected.length > 0 &&
+            'border-danger-fg focus-within:border-danger-fg focus-within:shadow-[0_0_0_2px_color-mix(in_oklab,var(--danger-fg)_25%,transparent)]',
           disabled && 'opacity-50',
         )}
       >
@@ -99,6 +101,7 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
         <input
           id={id}
           value={draft}
+          aria-invalid={rejected.length > 0 || undefined}
           disabled={disabled || full}
           onChange={e => {
             setDraft(e.target.value);

@@ -92,8 +92,8 @@ Review to Fixed*, or why it would leave it alone - and changes nothing.
 ## When things change around a rule
 
 - **You rename a status**: every rule that sets it follows the new name.
-- **You archive or delete the status a rule sets**: the rule is marked *status missing* and skips
-  until you point it at another status.
+- **You archive or delete the status a rule sets**: the rule shows *Status missing* under its
+  trigger and skips every run until you pick another status.
 - **The project is archived**: rules skip, and the run log says so.
 - **A webhook delivery is replayed**: rules run only when the replay asks for them, and only for
   what the replay itself changes - a pull request already recorded as merged does not count as
@@ -103,7 +103,7 @@ Review to Fixed*, or why it would leave it alone - and changes nothing.
 ## Limits
 
 The free plan allows 10 automations per project. At the limit, *New automation* is unavailable
-and says how many are in use; delete one to add another. See [Limits and billing](./limits-and-billing.md).
+and the editor says how many are in use; delete one to add another. See [Limits and billing](./limits-and-billing.md).
 
 ## Asking an agent
 

@@ -38,11 +38,24 @@ export function TemplateCards({ projectKey, gitEnabled }: { projectKey: string; 
 
   if (templates.isPending) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2">
+      <ul
+        className="divide-y divide-border-subtle rounded-md border"
+        role="status"
+        aria-label="Loading suggested rules"
+      >
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-36" />
+          <li key={i} className={TEMPLATE_ROW}>
+            <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-3 w-2/3" />
+            </span>
+            <span className="flex flex-none items-center gap-2">
+              <Skeleton className="h-control w-44" />
+              <Skeleton className="h-control w-20" />
+            </span>
+          </li>
         ))}
-      </div>
+      </ul>
     );
   }
   if (templates.isError) {
@@ -54,11 +67,11 @@ export function TemplateCards({ projectKey, gitEnabled }: { projectKey: string; 
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <ul className="divide-y divide-border-subtle rounded-md border">
       {shown.map(template => (
         <TemplateCard key={template.key} projectKey={projectKey} template={template} />
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -66,11 +79,13 @@ function TemplateCard({ projectKey, template }: { projectKey: string; template: 
   const [status, setStatus] = useState<string | null>(template.automation.action_params.status);
   const create = useCreateAutomation(projectKey);
   return (
-    <div className="flex flex-col gap-2 rounded-md border p-4">
-      <p className="font-medium">{template.name}</p>
-      <p className="text-xs text-text-secondary">{template.description}</p>
-      {template.needs_status && !status ? <NeedsStatus projectKey={projectKey} /> : null}
-      <div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
+    <li className={TEMPLATE_ROW}>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="font-medium">{template.name}</p>
+        <p className="text-xs text-text-secondary">{template.description}</p>
+        {template.needs_status && !status ? <NeedsStatus projectKey={projectKey} /> : null}
+      </div>
+      <div className="flex flex-none items-center gap-2">
         <StatusPicker projectKey={projectKey} value={status} onChange={setStatus} label={`${template.name}: status`} />
         <PendingButton
           size="sm"
@@ -91,9 +106,11 @@ function TemplateCard({ projectKey, template }: { projectKey: string; template: 
           Add rule
         </PendingButton>
       </div>
-    </div>
+    </li>
   );
 }
+
+const TEMPLATE_ROW = 'flex items-center gap-x-6 gap-y-3 px-4 py-3 max-sm:flex-col max-sm:items-start';
 
 /** Offered once, right after a project's first repository is linked: tick, pick a status, create. */
 export function TemplateOffer({ projectKey, onDone }: { projectKey: string; onDone: () => void }) {

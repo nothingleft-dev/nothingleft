@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { ConfirmDialog } from '@components/confirm-dialog';
+import { EmptyState } from '@components/empty-state';
 import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
@@ -63,7 +64,7 @@ export function RepositoriesSettings({
     <>
       <SettingsSection
         title="Linked repositories"
-        description="Branches, commits and pull requests in these repositories that name one of this project’s issues show on that issue."
+        description="Branches, commits and pull requests that name one of this project’s issues show on that issue. Merged into and Every project belong to the repository, so every project it is linked to shares them."
         actions={
           canEdit && orgSlug && !(repositories.isError && !repositories.data) ? (
             <LinkRepositoryPicker
@@ -107,25 +108,24 @@ export function RepositoriesSettings({
 function NoRepository({ projectKey, canEdit }: { projectKey: string; canEdit: boolean }) {
   const lower = projectKey.toLowerCase();
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-dashed px-4 py-5">
-      <p className="font-medium">No repository is linked yet.</p>
-      <p className="text-xs text-text-secondary">
-        {canEdit
-          ? 'Link one and every issue of this project can show its development. Then name an issue in any of three places:'
-          : 'Once a Project Admin links one, name an issue in any of three places and it shows on the issue:'}
-      </p>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
-        <dt className="text-text-secondary">A branch name</dt>
-        <dd className="font-mono">feat/{lower}-12-login</dd>
-        <dt className="text-text-secondary">A commit message</dt>
-        <dd className="font-mono">{projectKey}-12: keep the return path</dd>
-        <dt className="text-text-secondary">A pull request title or description</dt>
-        <dd className="font-mono">Fixes {projectKey}-12</dd>
-      </dl>
-      <p className="text-xs text-text-secondary">
-        Nothing git-related shows anywhere in the project until a repository is linked.
-      </p>
-    </div>
+    <EmptyState
+      title="No repository is linked yet."
+      description={
+        canEdit
+          ? 'Link one and every issue of this project can show its development. Name an issue in any of these places:'
+          : 'Once a Project Admin links one, name an issue in any of these places and it shows on the issue:'
+      }
+      action={
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
+          <dt className="text-text-secondary">A branch name</dt>
+          <dd className="font-mono">feat/{lower}-12-login</dd>
+          <dt className="text-text-secondary">A commit message</dt>
+          <dd className="font-mono">{projectKey}-12: keep the return path</dd>
+          <dt className="text-text-secondary">A pull request title or description</dt>
+          <dd className="font-mono">Fixes {projectKey}-12</dd>
+        </dl>
+      }
+    />
   );
 }
 
@@ -203,14 +203,15 @@ function RepositoryRow({
           <HueDot hue={webhook.hue} />
           {webhook.label}
         </span>
-        <span className="ml-auto flex items-center gap-3">
-          <BackfillState repository={repository} />
-          {canEdit ? (
-            <Button variant="ghost" size="xs" className="text-text-secondary" onClick={() => setConfirming(true)}>
-              <Unlink /> Unlink
-            </Button>
-          ) : null}
+        <span aria-hidden className="text-xs text-text-muted">
+          ·
         </span>
+        <BackfillState repository={repository} />
+        {canEdit ? (
+          <Button variant="ghost" size="xs" className="ml-auto text-text-secondary" onClick={() => setConfirming(true)}>
+            <Unlink /> Unlink
+          </Button>
+        ) : null}
       </div>
 
       <dl className="grid items-center gap-x-4 gap-y-1.5 text-xs sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-y-2.5">
@@ -241,16 +242,16 @@ function RepositoryRow({
           </span>
         </dd>
       </dl>
-      <p className="text-2xs text-text-muted">
-        Merged into and Every project are shared by every project this repository is linked to
-        {shared.length > 0 ? ` (also ${shared.join(', ')})` : ''}. Linked
+      <p className="text-2xs text-text-secondary">
         {repository.linked_by ? (
           <>
-            {' '}
-            by <PersonName person={repository.linked_by} />
+            Linked by <PersonName person={repository.linked_by} /> ·{' '}
           </>
-        ) : null}{' '}
-        <RelativeTime value={repository.linked_at} className="text-text-muted" />.
+        ) : (
+          'Linked '
+        )}
+        <RelativeTime value={repository.linked_at} />
+        {shared.length > 0 ? ` · Also linked to ${shared.join(', ')}` : null}
       </p>
 
       <ConfirmDialog
@@ -301,6 +302,8 @@ function LinkRepositoryPicker({
   const query = useDebounced(q.trim(), 300);
   const available = useGitRepositories(orgSlug, { project: projectKey, ...(query ? { q: query } : {}) }, open);
   const link = useLinkRepository(projectKey);
+  const projects = useProjects({ archived: 'false' }, open);
+  const projectName = (key: string) => projects.data?.find(p => p.key === key)?.name ?? key;
 
   const groups = useMemo(() => {
     const taken = new Set(linked.map(r => `${r.connection} ${r.full_name}`));
@@ -362,7 +365,12 @@ function LinkRepositoryPicker({
                     <ProviderGlyph provider={repository.provider} className="text-text-muted" />
                     <span className="min-w-0 flex-1 truncate font-mono text-xs">{repository.full_name}</span>
                     {repository.projects.length > 0 ? (
-                      <span className="text-2xs text-text-muted">Also linked to {repository.projects.join(', ')}</span>
+                      <span
+                        className="max-w-[45%] truncate text-2xs text-text-secondary"
+                        title={repository.projects.join(', ')}
+                      >
+                        Also in {repository.projects.map(projectName).join(', ')}
+                      </span>
                     ) : null}
                   </CommandItem>
                 ))}

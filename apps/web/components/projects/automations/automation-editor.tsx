@@ -37,6 +37,7 @@ interface AutomationEditorProps {
   gitEnabled: boolean;
   target: EditorTarget | null;
   readOnly?: boolean;
+  limitNote?: string | null;
   onClose: () => void;
 }
 
@@ -46,6 +47,7 @@ export function AutomationEditor({
   gitEnabled,
   target,
   readOnly = false,
+  limitNote = null,
   onClose,
 }: AutomationEditorProps) {
   return (
@@ -60,6 +62,7 @@ export function AutomationEditor({
             catalogue={catalogue}
             gitEnabled={gitEnabled}
             target={target}
+            limitNote={limitNote}
             onClose={onClose}
           />
         ) : null}
@@ -91,9 +94,11 @@ function EditorForm({
   catalogue,
   gitEnabled,
   target,
+  limitNote,
   onClose,
 }: AutomationEditorProps & { target: EditorTarget }) {
   const rule = 'rule' in target ? target.rule : null;
+  const blocked = !rule && Boolean(limitNote);
   const [trigger, setTrigger] = useState<AutomationTrigger | null>(
     rule?.trigger ?? ('trigger' in target ? target.trigger : null),
   );
@@ -173,15 +178,36 @@ function EditorForm({
       className="flex h-full min-h-0 flex-col"
     >
       <SheetHeader className="border-b px-5 py-4">
-        <SheetTitle>{rule ? `Edit ${rule.name}` : 'New automation'}</SheetTitle>
+        <SheetTitle>{rule ? `Edit “${rule.name}”` : 'New automation'}</SheetTitle>
         <SheetDescription>
-          When something happens, if the issue fits, set its status. A change an automation makes never fires another
-          one.
+          When something happens, if the issue fits, set its status. A change made by a rule never triggers another
+          rule.
         </SheetDescription>
       </SheetHeader>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-5">
+        {blocked ? <FormAlert tone="warning" title={limitNote!} /> : null}
         {errors.form ? <FormAlert title={errors.form} /> : null}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="automation-name" className="text-text-secondary">
+            Name
+          </Label>
+          <Input
+            id="automation-name"
+            value={name}
+            placeholder="e.g. Close on a fixing commit"
+            aria-invalid={errors.name !== undefined}
+            onChange={event => {
+              setName(event.target.value);
+              setErrors({ ...errors, name: undefined });
+            }}
+          />
+          <p className={cn('text-xs', errors.name ? 'text-danger-fg' : 'text-text-secondary')}>
+            {errors.name ??
+              'Shown in the issue’s history beside each change the rule makes. Left empty, it is named after the rule.'}
+          </p>
+        </div>
 
         <Step title="When">
           <TriggerPicker
@@ -235,26 +261,6 @@ function EditorForm({
           {errors.status ? <p className="text-xs text-danger-fg">{errors.status}</p> : null}
         </Step>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="automation-name" className="text-text-secondary">
-            Name
-          </Label>
-          <Input
-            id="automation-name"
-            value={name}
-            placeholder="e.g. Close on a fixing commit"
-            aria-invalid={errors.name !== undefined}
-            onChange={event => {
-              setName(event.target.value);
-              setErrors({ ...errors, name: undefined });
-            }}
-          />
-          <p className={cn('text-xs', errors.name ? 'text-danger-fg' : 'text-text-secondary')}>
-            {errors.name ??
-              'Shown in the issue’s history beside each change the rule makes. Left empty, it is named after the rule.'}
-          </p>
-        </div>
-
         {rule ? (
           <div className="flex flex-col gap-1 rounded-md bg-inset px-3 py-2.5 text-xs">
             <span className="font-medium text-text-secondary">As saved</span>
@@ -267,7 +273,7 @@ function EditorForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <PendingButton type="submit" disabled={!trigger || !status} pending={pending} pendingLabel="Saving…">
+        <PendingButton type="submit" disabled={!trigger || !status || blocked} pending={pending} pendingLabel="Saving…">
           {rule ? 'Save changes' : 'Create automation'}
         </PendingButton>
       </SheetFooter>
@@ -324,7 +330,7 @@ function RuleSummary({
 
 function Step({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-2.5">
+    <section className="flex flex-col gap-2.5 border-t pt-5">
       <h3 className="text-sm font-semibold">{title}</h3>
       {children}
     </section>

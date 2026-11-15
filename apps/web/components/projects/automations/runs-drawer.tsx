@@ -12,9 +12,12 @@ import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { TextButton } from '@components/text-button';
 import { HueChip } from '@components/git/git-marks';
+import { StatusDot } from '@components/issues/value-marks';
 import { useAutomationRuns } from '@hooks/use-automations';
+import { useSchemaValues } from '@hooks/use-project-schema';
 import { RUN_RESULT, SKIP_REASON } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
+import { cn } from '@lib/utils';
 
 const PAGE = 50;
 
@@ -60,7 +63,7 @@ function Runs({ projectKey, target }: { projectKey: string; target: RunsTarget }
   return (
     <div className="flex h-full min-h-0 flex-col">
       <SheetHeader className="border-b px-5 py-4">
-        <SheetTitle>{target.automation ? `Runs of ${target.automation}` : 'Automation runs'}</SheetTitle>
+        <SheetTitle>{target.automation ? `Runs of “${target.automation}”` : 'Automation runs'}</SheetTitle>
         <SheetDescription>
           Every time {scope ? `${scope}` : 'a rule of this project'} looked at an issue in the last 90 days: what it
           changed, or why it left the issue alone.
@@ -83,22 +86,25 @@ function Runs({ projectKey, target }: { projectKey: string; target: RunsTarget }
             />
           </div>
         ) : (
-          <table className="w-full table-fixed text-sm">
-            <thead className="sticky top-0 bg-app text-left text-2xs text-text-secondary">
-              <tr>
-                <th className="h-7 w-32 pr-4 pl-5 font-medium">When</th>
-                <th className="w-20 pr-4 font-medium">Issue</th>
-                {target.automation ? null : <th className="w-44 pr-4 font-medium">Rule</th>}
-                <th className="w-48 pr-4 font-medium">Result</th>
-                <th className="pr-5 font-medium">Because</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle">
+          <div className="text-sm">
+            <div
+              aria-hidden
+              className={cn(
+                rowGrid(!target.automation),
+                'sticky top-0 z-10 h-7 items-center bg-app text-2xs font-medium text-text-secondary max-sm:hidden',
+              )}
+            >
+              <span>When</span>
+              <span>Issue</span>
+              {target.automation ? null : <span>Rule</span>}
+              <span>What happened</span>
+            </div>
+            <ul className="divide-y divide-border-subtle">
               {rows.map(run => (
-                <RunRow key={run.id} run={run} withRule={!target.automation} />
+                <RunRow key={run.id} projectKey={projectKey} run={run} withRule={!target.automation} />
               ))}
-            </tbody>
-          </table>
+            </ul>
+          </div>
         )}
       </div>
       {total > PAGE ? (
@@ -132,43 +138,70 @@ function changeOf(run: AutomationRun): { from: string; to: string } | null {
   return status && typeof status.to === 'string' ? { from: String(status.from ?? ''), to: status.to } : null;
 }
 
-function RunRow({ run, withRule }: { run: AutomationRun; withRule: boolean }) {
+function rowGrid(withRule: boolean) {
+  return cn(
+    'grid gap-x-4 gap-y-1 px-5',
+    withRule ? 'sm:grid-cols-[6.5rem_4.5rem_13rem_minmax(0,1fr)]' : 'sm:grid-cols-[6.5rem_4.5rem_minmax(0,1fr)]',
+  );
+}
+
+function StatusName({ projectKey, name }: { projectKey: string; name: string }) {
+  const statuses = useSchemaValues(projectKey, 'statuses');
+  const status = statuses.data?.find(s => s.name.toLowerCase() === name.toLowerCase());
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {status ? <StatusDot category={status.category} color={status.color} /> : null}
+      {name}
+    </span>
+  );
+}
+
+function RunRow({ projectKey, run, withRule }: { projectKey: string; run: AutomationRun; withRule: boolean }) {
   const { label, hue } = RUN_RESULT[run.result];
   const change = changeOf(run);
   const note = change ? null : run.reason ? SKIP_REASON[run.reason] : run.result === 'failed' ? FAILED_NOTE : null;
+  const key = (
+    <Link
+      href={`/issue/${run.issue}` as Route}
+      className="font-mono text-xs text-text underline-offset-3 hover:underline"
+    >
+      {run.issue}
+    </Link>
+  );
   return (
-    <tr className="align-top">
-      <td className="py-2.5 pr-4 pl-5">
-        <RelativeTime value={run.created_at} className="text-xs whitespace-nowrap tabular" />
-      </td>
-      <td className="py-2.5 pr-4">
-        <Link href={`/issue/${run.issue}` as Route} className="font-mono text-xs hover:underline">
-          {run.issue}
-        </Link>
-      </td>
+    <li className={cn(rowGrid(withRule), 'py-2.5 text-xs leading-5')}>
+      <RelativeTime value={run.created_at} className="whitespace-nowrap text-text-secondary tabular max-sm:hidden" />
+      <span className="max-sm:hidden">{key}</span>
+      <span className="flex items-center gap-1.5 text-text-secondary sm:hidden">
+        {key} · <RelativeTime value={run.created_at} className="tabular" />
+      </span>
       {withRule ? (
-        <td className="py-2.5 pr-4 text-xs">
-          <span className="line-clamp-2" title={run.automation}>
-            {run.automation}
-          </span>
-        </td>
+        <span className="line-clamp-2" title={run.automation}>
+          {run.automation}
+        </span>
       ) : null}
-      <td className="py-2.5 pr-4">
-        <span className="flex flex-col items-start gap-1">
+      <span className="flex min-w-0 flex-col gap-1 max-sm:pt-0.5">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <HueChip hue={hue}>{label}</HueChip>
           {change ? (
-            <span className="text-xs text-text">
-              {change.from} → <b className="font-medium">{change.to}</b>
+            <span className="inline-flex flex-wrap items-center gap-x-1.5 text-text">
+              <StatusName projectKey={projectKey} name={change.from} />
+              <span aria-label="to" className="text-text-muted">
+                →
+              </span>
+              <b className="font-medium">
+                <StatusName projectKey={projectKey} name={change.to} />
+              </b>
             </span>
           ) : note ? (
-            <span className="text-xs text-text-secondary">{note}</span>
+            <span className="text-text-secondary">{note}</span>
           ) : null}
         </span>
-      </td>
-      <td className="py-2.5 pr-5 text-xs text-text-secondary">
-        <Cause text={run.cause} />
-      </td>
-    </tr>
+        <span className="text-text-secondary">
+          <Cause text={run.cause} />
+        </span>
+      </span>
+    </li>
   );
 }
 
@@ -184,11 +217,11 @@ function Cause({ text }: { text: string }) {
   }, [text, open]);
   return (
     <span className="flex flex-col items-start gap-1">
-      <span ref={ref} className={open ? '[overflow-wrap:anywhere]' : 'line-clamp-3 [overflow-wrap:anywhere]'}>
+      <span ref={ref} className={open ? '[overflow-wrap:anywhere]' : 'line-clamp-2 [overflow-wrap:anywhere]'}>
         {text}
       </span>
       {clamped ? (
-        <TextButton className="text-xs" aria-expanded={open} onClick={() => setOpen(v => !v)}>
+        <TextButton aria-expanded={open} onClick={() => setOpen(v => !v)}>
           {open ? 'Show less' : 'Show all'}
         </TextButton>
       ) : null}
@@ -198,57 +231,29 @@ function Cause({ text }: { text: string }) {
 
 function RunsSkeleton({ withRule }: { withRule: boolean }) {
   return (
-    <table className="w-full table-fixed" role="status" aria-label="Loading runs">
-      <thead className="bg-app">
-        <tr>
-          <th className="h-7 w-32 pr-4 pl-5">
-            <Skeleton className="h-2.5 w-10" />
-          </th>
-          <th className="w-20 pr-4">
-            <Skeleton className="h-2.5 w-10" />
-          </th>
-          {withRule ? (
-            <th className="w-44 pr-4">
-              <Skeleton className="h-2.5 w-10" />
-            </th>
-          ) : null}
-          <th className="w-48 pr-4">
-            <Skeleton className="h-2.5 w-12" />
-          </th>
-          <th className="pr-5">
-            <Skeleton className="h-2.5 w-14" />
-          </th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-border-subtle">
-        {Array.from({ length: 6 }, (_, i) => (
-          <tr key={i} className="align-top">
-            <td className="py-3 pr-4 pl-5">
-              <Skeleton className="h-3 w-20" />
-            </td>
-            <td className="py-3 pr-4">
-              <Skeleton className="h-3 w-10" />
-            </td>
-            {withRule ? (
-              <td className="py-3 pr-4">
-                <Skeleton className="h-3 w-32" />
-              </td>
-            ) : null}
-            <td className="py-3 pr-4">
-              <span className="flex flex-col gap-1.5">
+    <div role="status" aria-label="Loading runs">
+      <div className={cn(rowGrid(withRule), 'h-7 items-center bg-app max-sm:hidden')}>
+        <Skeleton className="h-2.5 w-10" />
+        <Skeleton className="h-2.5 w-10" />
+        {withRule ? <Skeleton className="h-2.5 w-10" /> : null}
+        <Skeleton className="h-2.5 w-20" />
+      </div>
+      <div className="divide-y divide-border-subtle">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className={cn(rowGrid(withRule), 'py-2.5')}>
+            <Skeleton className="my-1 h-3 w-20 max-sm:hidden" />
+            <Skeleton className="my-1 h-3 w-10" />
+            {withRule ? <Skeleton className="my-1 h-3 w-32" /> : null}
+            <span className="flex flex-col gap-1.5">
+              <span className="flex items-center gap-2">
                 <Skeleton className="h-5 w-16" />
                 <Skeleton className="h-3 w-28" />
               </span>
-            </td>
-            <td className="py-3 pr-5">
-              <span className="flex flex-col gap-1.5">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-              </span>
-            </td>
-          </tr>
+              <Skeleton className="h-3 w-3/4" />
+            </span>
+          </div>
         ))}
-      </tbody>
-    </table>
+      </div>
+    </div>
   );
 }

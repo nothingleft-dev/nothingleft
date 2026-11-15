@@ -48,14 +48,14 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
   const links = (invitations.data ?? []).filter(i => i.kind === 'link' && i.status !== 'revoked');
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-xl flex-col gap-4">
       {error.summary ? <FormAlert title="The link was not created.">{error.summary}</FormAlert> : null}
 
       <div className={cn('flex flex-wrap items-end gap-3', invitations.isError && !invitations.data && 'hidden')}>
         {scope.kind === 'project' ? (
-          <div className="w-[240px]">
+          <div className="w-[260px] max-w-full">
             <ChoiceSelect
-              label="Link grants"
+              label="Role for people who join by link"
               value={projectRole}
               options={PROJECT_OPTIONS}
               onChange={setProjectRole}
@@ -79,7 +79,7 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
           }
         >
           <Link2 className="size-icon-sm" />
-          {links.length === 0 ? 'Create a share link' : 'Create link'}
+          Create link
         </PendingButton>
       </div>
       {invitations.isPending ? (
