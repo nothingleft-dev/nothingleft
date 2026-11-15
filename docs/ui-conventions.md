@@ -485,10 +485,16 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
   sprint sections always list every issue. Rows are dragged by a grip, so the title stays
   a link. _New sprint_ leaves _Add N unresolved issues_ unticked: carrying issues out of
   a running sprint is a choice, not a default. Sprint headers keep fixed slots, right-aligned:
-  the stats (`4 of 15 resolved · 8 of 37 points`, or _No issues_), a progress bar that is always
-  drawn, and, for Project Admins, one primary action (_Finish sprint_ / _Start sprint_) with the
-  ⋯ menu (_Edit sprint_, _Open its board_, _Delete sprint_). A planned sprint that cannot start
-  yet says _Finish Sprint 08 first_ in that slot. The board link lives in the page header only.
+  the stats (`4 of 15 resolved · 8 of 37 points`, or _No issues_), a progress bar (none for a
+  sprint with no issues; one with no estimates reads `? points`), and, for Project Admins, one
+  action with the ⋯ menu (_Edit sprint_, _Open board_, _Delete sprint_): _Finish sprint_ on the
+  running sprint, _Start sprint_ on the next planned one only (disabled, with the reason in its
+  tooltip, while another runs). Later planned sprints offer _Start sprint_ in their ⋯ menu when
+  nothing runs, and _Start sprint_ says when the start moves (_It starts today, 15 Nov, not the
+  planned 16 Nov._). The board link lives in the page header only. An archived project opens with
+  a one-line archived notice, an Observer's with a read-only line; a row with several assignees
+  shows their avatars and `N people`. The page shows one skeleton until the sprints, roles and
+  project are known, then every section at once.
   An unestimated row shows `?` in the points chip. A filtered backlog counts `N of M`, and a
   filter that matches nothing offers _Clear filter_. _New sprint_ suggests the next name in the
   series. _Finish sprint_ preselects the next planned sprint (else the backlog) and asks nothing

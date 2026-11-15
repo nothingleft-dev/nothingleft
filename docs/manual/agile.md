@@ -76,9 +76,11 @@ resolved. The backlog is last.
   unresolved issues from “…”_ to bring over what is still open in the running sprint (or
   the last planned one).
 - **Start sprint** takes today as the first day unless you pick another, and asks for the
-  last day if the sprint has none. Only one sprint runs at a time.
-- **Finish sprint** lists the backlog and every planned sprint; pick where the unfinished
-  issues go. Nothing is chosen for you.
+  last day if the sprint has none, and says so when the start moves from the planned day. Only
+  one sprint runs at a time: the next planned sprint offers it in its header, later ones in their
+  ⋯ menu.
+- **Finish sprint** lists the backlog and every planned sprint, with the next planned sprint (or
+  the backlog) already picked for the unfinished issues; pick another if you like.
 - A sprint's **⋯** menu edits its name, goal and dates (a running sprint keeps its dates)
   or deletes a planned one.
 

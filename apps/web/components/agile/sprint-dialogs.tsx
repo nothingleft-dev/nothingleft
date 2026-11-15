@@ -24,7 +24,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { sprintDatesLabel } from '@components/agile/sprint-dates';
 import { useApiError } from '@hooks/use-api-error';
 import { useCreateSprint, useDeleteSprint, useFinishSprint, useStartSprint, useUpdateSprint } from '@hooks/use-sprints';
-import { todayCalendarDate } from '@lib/datetime';
+import { formatCalendarDateShort, todayCalendarDate } from '@lib/datetime';
 import { listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
@@ -90,7 +90,7 @@ function ScheduleField({ value, onChange, locked }: { value: Range; onChange: (r
               <span className={cn(!value.from && !value.to && 'text-text-secondary')}>{label}</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-[284px] p-3">
+          <PopoverContent side="top" align="start" className="w-[284px] p-3">
             <p className="mb-2 text-2xs text-text-secondary">
               {picking ? 'Now pick the last day.' : 'Pick the first day, then the last.'}
             </p>
@@ -133,7 +133,7 @@ function GoalField({ value, onChange, error }: { value: string; onChange: (v: st
         rows={3}
         placeholder="What this sprint is for, in a sentence or two. Markdown works."
         aria-invalid={Boolean(error)}
-        className="min-h-20 w-full resize-y rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg"
+        className="field-sizing-content max-h-60 min-h-20 w-full resize-none rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg"
       />
       {error ? <p className="text-xs text-danger-fg">{error}</p> : null}
     </div>
@@ -208,7 +208,7 @@ function SprintForm({
       onSuccess: s => {
         toast.success(
           carry && carryCount > 0 ? `Planned ${s.name} with ${plural(carryCount, 'issue')}.` : `Planned ${s.name}.`,
-          { action: { label: 'Show', onClick: () => scrollToSprint(s.name) } },
+          { action: { label: 'Show sprint', onClick: () => scrollToSprint(s.name) } },
         );
         onClose();
       },
@@ -247,7 +247,13 @@ function SprintForm({
           error={nameError}
           errorAction={
             error.code === 'sprint.name_taken' && suggestedName && suggestedName !== name.trim() ? (
-              <Button type="button" size="xs" variant="outline" onClick={() => setName(suggestedName)}>
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                className="text-text"
+                onClick={() => setName(suggestedName)}
+              >
                 Use “{suggestedName}”
               </Button>
             ) : undefined
@@ -333,6 +339,11 @@ function StartForm({
   const error = useApiError(start.error, ['start_date', 'end_date']);
   const [range, setRange] = useState<Range>({ from: todayCalendarDate(timeZone), to: sprint.end_date });
   const { issues, points } = sprint.progress;
+  const today = todayCalendarDate(timeZone);
+  const startsWhen =
+    sprint.start_date && sprint.start_date !== today
+      ? `It starts today, ${formatCalendarDateShort(today)}, not the planned ${formatCalendarDateShort(sprint.start_date)}.`
+      : 'It starts today.';
 
   const submit = () => {
     if (!range.from || !range.to) return;
@@ -353,8 +364,7 @@ function StartForm({
         <DialogTitle>Start {sprint.name}</DialogTitle>
         <DialogDescription>
           {plural(issues, 'issue')}
-          {points > 0 ? `, ${plural(points, 'point')}` : ''}.{' '}
-          {sprint.end_date ? 'It starts today; change the dates if needed.' : 'It starts today; pick its last day.'}
+          {points > 0 ? `, ${plural(points, 'point')}` : ''}. {startsWhen}
         </DialogDescription>
       </DialogHeader>
       {error.summary ? <FormAlert title={error.summary} /> : null}
@@ -448,7 +458,7 @@ function FinishForm({
       </DialogHeader>
       {gone ? (
         <FormAlert title={`${sprint.name} is no longer running.`}>
-          Someone finished it a moment ago. The backlog behind this dialog shows the latest state.
+          Someone finished it a moment ago. Close this to see the sprints as they are now.
         </FormAlert>
       ) : error.summary ? (
         <FormAlert title={error.summary} />
@@ -458,14 +468,14 @@ function FinishForm({
           value={target}
           onValueChange={setTarget}
           aria-label="Move unfinished issues to"
-          className="flex flex-col gap-0 rounded-md border"
+          className="flex flex-col gap-0 overflow-hidden rounded-md border"
         >
           {[{ value: BACKLOG_TARGET, label: 'The backlog', hint: 'Unplanned, at the bottom in their current order.' }]
             .concat(planned.map(s => ({ value: s.slug, label: s.name, hint: `Planned · ${sprintDatesLabel(s)}` })))
             .map(option => (
               <label
                 key={option.value}
-                className="flex cursor-pointer items-start gap-3 border-b px-3 py-2.5 last:border-b-0 hover:bg-hover"
+                className="flex cursor-pointer items-start gap-3 border-b px-3 py-2.5 last:border-b-0 hover:bg-hover has-[[data-state=checked]]:bg-active"
               >
                 <RadioGroupItem value={option.value} className="mt-0.5" />
                 <span className="flex flex-col">
@@ -495,7 +505,7 @@ export function DeleteSprintDialog({ projectKey, sprint, onOpenChange }: SprintA
     <ConfirmDialog
       open={sprint !== null}
       onOpenChange={onOpenChange}
-      title={sprint ? `Delete sprint ${sprint.name}?` : 'Delete sprint?'}
+      title={sprint ? `Delete “${sprint.name}”?` : 'Delete sprint?'}
       confirmLabel="Delete sprint"
       pendingLabel="Deleting…"
       pending={remove.isPending}
