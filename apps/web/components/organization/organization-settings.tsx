@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import type { Me, Organization } from '@nothingleft/types';
@@ -156,7 +157,7 @@ function NoOrganization() {
       description="Create one, or open an invitation link somebody sent you. Nothing is lost - your account and your settings are still here."
       action={
         <Button asChild>
-          <a href="/welcome/organization">Create an organisation</a>
+          <Link href="/welcome/organization">Create an organisation</Link>
         </Button>
       }
     />
