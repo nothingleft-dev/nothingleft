@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Bot, CalendarClock, CheckCheck, ChevronDown, CircleX, FileText, GitMerge, IterationCw } from 'lucide-react';
+import { Bot, CalendarClock, CalendarRange, Check, ChevronDown, CircleX, FileText, GitMerge } from 'lucide-react';
 import type { Notification, NotificationGroup } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -12,22 +12,28 @@ import { FormerMemberChip } from '@components/former-member-chip';
 import { IssueKey } from '@components/issue-key';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { RelativeTime } from '@components/relative-time';
-import { TextButton, LoadMore } from '@components/text-button';
+import { LoadMore } from '@components/text-button';
 import { subjectRef, useSubjectNotifications, type MarkTarget } from '@hooks/use-notifications';
 import { useOpenNotification } from '@hooks/use-open-notification';
 import { formatRelativeShort, type Instant } from '@lib/datetime';
 import { DUE_KINDS } from '@lib/notifications/kinds';
+import { plural } from '@lib/numbers';
 import { cn } from '@lib/utils';
+
+export type EntryTarget = Exclude<MarkTarget, { how: 'all' }>;
 
 interface EntryProps {
   group: NotificationGroup;
   showOrganization: boolean;
-  onMark: (target: MarkTarget) => void;
+  onMark: (target: EntryTarget) => void;
 }
 
-// Every row is the same grid: dot · key column · text · place · time · action. The key column is
-// sized in the key's own font, so a title after an icon starts where a title after a key does.
-const keyColumn = 'flex min-w-[8ch] flex-none items-center font-mono text-2xs max-sm:min-w-[6ch]';
+// Every row is the same grid: dot · key column · text · count · place · time · action. The key column is
+// sized in the key's own font, so a title after an icon starts where a title after a key does. On a
+// phone it gives its width to the title and the key moves into the second line.
+const keyColumn = 'flex min-w-[8ch] flex-none items-center font-mono text-2xs max-sm:hidden';
+const placeColumn = 'w-48 flex-none max-md:hidden xl:w-64';
+const countColumn = 'flex w-10 flex-none max-sm:w-auto';
 
 function UnreadDot({ unread, label }: { unread: boolean; label: string }) {
   return (
@@ -44,8 +50,8 @@ function UnreadDot({ unread, label }: { unread: boolean; label: string }) {
 
 function SubjectMark({ group }: { group: NotificationGroup }) {
   const { subject } = group;
-  if (subject.type === 'issue') return <IssueKey issueKey={subject.key} column className="max-sm:min-w-[6ch]" />;
-  const Icon = subject.type === 'article' ? FileText : IterationCw;
+  if (subject.type === 'issue') return <IssueKey issueKey={subject.key} column className="max-sm:hidden" />;
+  const Icon = subject.type === 'article' ? FileText : CalendarRange;
   return (
     <span className={keyColumn}>
       <Icon
@@ -59,6 +65,10 @@ function SubjectMark({ group }: { group: NotificationGroup }) {
 const titleOf = (group: NotificationGroup) =>
   group.subject.type === 'sprint' ? group.subject.name : group.subject.title;
 
+/** What a toast calls the subject: its key, or its title when it has none. */
+export const subjectName = (group: NotificationGroup) =>
+  group.subject.type === 'issue' ? group.subject.key : titleOf(group);
+
 function MarkButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Tooltip>
@@ -70,10 +80,10 @@ function MarkButton({ label, onClick }: { label: string; onClick: () => void }) 
           onClick={onClick}
           className="text-text-muted group-hover/row:text-text-secondary hover:text-text"
         >
-          <CheckCheck className="size-icon-sm" />
+          <Check className="size-icon-sm" />
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="left">{label}</TooltipContent>
+      <TooltipContent side="top">{label}</TooltipContent>
     </Tooltip>
   );
 }
@@ -115,7 +125,7 @@ export function InboxEntry({ group, showOrganization, onMark }: EntryProps) {
   return (
     <li className="border-b border-border-subtle">
       <div className="group/row relative flex items-start gap-2 px-2 py-2 hover:bg-hover">
-        <UnreadDot unread={unread} label={`${group.unread_count} unread`} />
+        <UnreadDot unread={unread && !open} label={`${group.unread_count} unread`} />
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex h-5 min-w-0 items-center gap-2">
@@ -123,7 +133,7 @@ export function InboxEntry({ group, showOrganization, onMark }: EntryProps) {
             <Link
               href={group.path as Route}
               onClick={event =>
-                openLink(event, org.slug, group.path, unread ? () => onMark({ how: 'entry', group }) : undefined)
+                openLink(event, org, group.path, unread ? () => onMark({ how: 'entry', group }) : undefined)
               }
               className={cn(
                 'min-w-0 truncate after:absolute after:inset-0',
@@ -132,40 +142,32 @@ export function InboxEntry({ group, showOrganization, onMark }: EntryProps) {
             >
               {titleOf(group)}
             </Link>
-            {expandable ? (
-              <button
-                type="button"
-                aria-expanded={open}
-                aria-label={open ? `Hide the ${group.count} notifications` : `Show the ${group.count} notifications`}
-                onClick={() => setOpen(v => !v)}
-                className="relative z-10 inline-flex h-4.5 flex-none items-center gap-0.5 rounded-xs border pr-0.5 pl-1 text-2xs leading-4 tabular text-text-secondary hover:border-border-strong hover:text-text"
-              >
-                {group.count}
-                <ChevronDown className={cn('size-3 transition-transform duration-200', open && 'rotate-180')} />
-              </button>
+          </span>
+          <span className="flex h-5 min-w-0 items-center gap-2 text-xs text-text-secondary">
+            <span className={keyColumn}>{latest && !open ? <LineMark notification={latest} /> : null}</span>
+            {group.subject.type === 'issue' ? <IssueKey issueKey={group.subject.key} className="sm:hidden" /> : null}
+            {open ? (
+              <span className="min-w-0 truncate">
+                {plural(group.count, 'notification')}
+                {unread ? `, ${group.unread_count} unread` : null}
+              </span>
+            ) : latest ? (
+              <>
+                <span className="min-w-0 truncate">
+                  {latest.summary}
+                  <PullRequestTitle notification={latest} />
+                </span>
+                {latest.actor?.former_member ? <FormerMemberChip /> : null}
+              </>
             ) : null}
           </span>
-          {latest && !open ? (
-            <span className="flex min-w-0 items-center gap-2 text-xs text-text-secondary">
-              <span className={keyColumn}>
-                {latest.actor === null && SYSTEM_KINDS.includes(latest.kind) ? (
-                  <SystemMark notification={latest} />
-                ) : null}
-              </span>
-              <span className="min-w-0 truncate">
-                {latest.summary}
-                <PullRequestTitle notification={latest} />
-              </span>
-              {latest.actor?.former_member ? <FormerMemberChip /> : null}
-            </span>
-          ) : null}
         </div>
 
         <div className="relative z-10 flex h-5 flex-none items-center gap-2 pl-2">
-          <span
-            title={place}
-            className={cn('truncate text-xs text-text-secondary max-md:hidden', showOrganization ? 'w-56' : 'w-40')}
-          >
+          <span className={countColumn}>
+            {expandable ? <CountChip count={group.count} open={open} onToggle={() => setOpen(v => !v)} /> : null}
+          </span>
+          <span title={place} className={cn(placeColumn, 'truncate text-xs text-text-secondary')}>
             {place}
           </span>
           <RowEnd
@@ -180,6 +182,28 @@ export function InboxEntry({ group, showOrganization, onMark }: EntryProps) {
   );
 }
 
+/** The entry's total, which also opens its lines in place. */
+function CountChip({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+  const label = open ? `Hide the ${count} notifications` : `Show the ${count} notifications`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={label}
+          onClick={onToggle}
+          className="inline-flex h-4.5 items-center gap-0.5 rounded-xs border pr-0.5 pl-1 text-2xs leading-4 tabular text-text-secondary hover:border-border-strong hover:text-text"
+        >
+          {count}
+          <ChevronDown className={cn('size-3 transition-transform duration-200', open && 'rotate-180')} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Lines up with an entry's text: past the dot and the key column. */
 function UnderTitle({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -191,12 +215,13 @@ function UnderTitle({ children, className }: { children: ReactNode; className?: 
   );
 }
 
-function EntryLines({ group, onMark }: { group: NotificationGroup; onMark: (target: MarkTarget) => void }) {
+function EntryLines({ group, onMark }: { group: NotificationGroup; onMark: (target: EntryTarget) => void }) {
   const [all, setAll] = useState(false);
   const ref = subjectRef(group.subject);
   const more = ref !== null && group.count > group.notifications.length;
   const full = useSubjectNotifications(all ? ref : null);
   const lines = all && full.data ? full.data.pages.flatMap(p => p.data) : group.notifications;
+  const hidden = group.count - group.notifications.length;
 
   return (
     <div className="pb-2">
@@ -207,15 +232,17 @@ function EntryLines({ group, onMark }: { group: NotificationGroup; onMark: (targ
         {all && full.isPending ? <LineSkeletons rows={3} /> : null}
       </ul>
       {all && full.isError ? (
-        <UnderTitle className="h-7 text-xs">
+        <UnderTitle className="mt-1 text-xs">
           <span className="text-danger-fg">Could not load the rest.</span>
-          <TextButton onClick={() => void full.refetch()}>Retry</TextButton>
+          <Button variant="outline" size="xs" onClick={() => void full.refetch()}>
+            Try again
+          </Button>
         </UnderTitle>
       ) : null}
       {more && !all ? (
         <UnderTitle className="mt-1">
           <LoadMore size="xs" onClick={() => setAll(true)}>
-            Show all {group.count}
+            Show {hidden} more
           </LoadMore>
         </UnderTitle>
       ) : null}
@@ -261,6 +288,7 @@ export function PullRequestTitle({ notification }: { notification: Notification 
   return <span className="text-text-muted"> · {title}</span>;
 }
 
+/** Who or what the line is from: the actor's avatar, a system mark, or the calendar for a date. */
 function LineMark({ notification }: { notification: Notification }) {
   if (notification.actor) return <MemberAvatar member={notification.actor} className="size-5 flex-none" />;
   if (SYSTEM_KINDS.includes(notification.kind)) return <SystemMark notification={notification} />;
@@ -283,11 +311,10 @@ export function NotificationLine({
 }: {
   notification: Notification;
   group: NotificationGroup;
-  onMark: (target: MarkTarget) => void;
+  onMark: (target: EntryTarget) => void;
 }) {
   const openLink = useOpenNotification();
   const unread = notification.read_at === null;
-  const org = group.subject.organization.slug;
 
   return (
     <li className="group/row relative flex items-start gap-2 px-2 py-[5px] hover:bg-hover">
@@ -300,7 +327,7 @@ export function NotificationLine({
         onClick={event =>
           openLink(
             event,
-            org,
+            group.subject.organization,
             notification.path,
             unread ? () => onMark({ how: 'one', group, notification }) : undefined,
           )
@@ -345,9 +372,13 @@ function LineSkeletons({ rows }: { rows: number }) {
 }
 
 /** Drawn with the entry's own boxes, so nothing moves when the list arrives. */
-export function InboxEntrySkeletons({ rows = 6 }: { rows?: number }) {
+export function InboxEntrySkeletons({ rows = 6, more = false }: { rows?: number; more?: boolean }) {
   return (
-    <ul className="flex flex-col border-t" role="status" aria-label="Loading your inbox">
+    <ul
+      className={cn('flex flex-col', !more && 'border-t')}
+      role="status"
+      aria-label={more ? 'Loading more of your inbox' : 'Loading your inbox'}
+    >
       {Array.from({ length: rows }, (_, i) => (
         <li key={i} className="border-b border-border-subtle" aria-hidden>
           <div className="flex items-start gap-2 px-2 py-2">
@@ -359,13 +390,16 @@ export function InboxEntrySkeletons({ rows = 6 }: { rows?: number }) {
                 </span>
                 <Skeleton className="h-3" style={{ width: `${30 + ((i * 13) % 30)}%` }} />
               </span>
-              <span className="flex h-4.5 min-w-0 items-center gap-2">
-                <span className={keyColumn} />
+              <span className="flex h-5 min-w-0 items-center gap-2">
+                <span className={keyColumn}>
+                  <Skeleton className="size-5 rounded-full" />
+                </span>
                 <Skeleton className="h-2.5" style={{ width: `${40 + ((i * 17) % 30)}%` }} />
               </span>
             </div>
             <div className="flex h-5 flex-none items-center gap-2 pl-2">
-              <span className="w-40 max-md:hidden">
+              <span className={countColumn} />
+              <span className={placeColumn}>
                 <Skeleton className="h-3 w-24" />
               </span>
               <span className="flex w-24 justify-end max-sm:w-8">

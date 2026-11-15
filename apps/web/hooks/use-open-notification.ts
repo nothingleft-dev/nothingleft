@@ -18,18 +18,18 @@ export function useOpenNotification() {
   const current = session.status === 'signed-in' ? session.user.current_organization_slug : null;
   const switchTo = useSwitchOrganization();
 
-  return (event: MouseEvent, org: string, path: string, onOpen?: () => void) => {
-    if (org === current) {
+  return (event: MouseEvent, org: { slug: string; name: string }, path: string, onOpen?: () => void) => {
+    if (org.slug === current) {
       onOpen?.();
       return;
     }
     event.preventDefault();
-    switchTo.mutate(org, {
+    switchTo.mutate(org.slug, {
       onSuccess: () => {
         onOpen?.();
         router.push(path as Route);
       },
-      onError: error => toastError('Could not open the organisation', error),
+      onError: error => toastError(`Could not open ${org.name}`, error),
     });
   };
 }

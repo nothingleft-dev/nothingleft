@@ -58,8 +58,10 @@ from.
 Open it from **Inbox** in the sidebar or the inbox icon at the top of every page.
 
 - **One entry per issue.** Twelve changes to ACME-12 are one entry with twelve lines, newest
-  first, not twelve rows. The count beside an entry's title opens its lines in place; **Show all**
-  lists every one when there are more than ten. Articles are entries too, and a sprint starting
+  first, not twelve rows. The count at the end of an entry's first line opens its lines in place;
+  **Show N more** lists the rest when there are more than ten. The second line of an entry shows
+  who it came from: their avatar, or a mark for a merge, a failing check, an automation or a due
+  date. Articles are entries too, and a sprint starting
   or finishing is an entry of its own.
 - **Opening marks read.** Click a line to go to what it is about and mark that notification
   read; click the entry's title to open the issue or article and mark the whole entry read. An

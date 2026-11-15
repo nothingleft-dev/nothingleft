@@ -58,7 +58,7 @@ export function InboxPreview() {
           <ul className="flex flex-col">
             {entries.map(group => {
               const unreadHere = group.unread_count > 0;
-              const org = group.subject.organization.slug;
+              const org = group.subject.organization;
               return (
                 <li key={entryId(group)} className="border-b border-border-subtle last:border-b-0">
                   <Link

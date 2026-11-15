@@ -10,7 +10,7 @@ import { EmptyState } from '@components/empty-state';
 import { LoadError, errorDetail } from '@components/query-state';
 import { PageHeader } from '@components/page-header';
 import { ReportMultiPicker, ReportPicker, type ReportOption } from '@components/reports/report-picker';
-import { InboxEntry, InboxEntrySkeletons } from '@components/notifications/inbox-entry';
+import { InboxEntry, InboxEntrySkeletons, subjectName, type EntryTarget } from '@components/notifications/inbox-entry';
 import { entryId, useInbox, useMarkRead, useNotificationFacets, useUnreadCount } from '@hooks/use-notifications';
 import type { InboxFilter } from '@lib/api/notifications';
 import { ProjectMark } from '@components/projects/project-mark';
@@ -19,6 +19,7 @@ import { AREA_LABELS, KIND_FILTERS, kindsOf, parseKindFilters } from '@lib/notif
 import { toastError } from '@components/toast-error';
 import { plural } from '@lib/numbers';
 import { LoadMore } from '@components/text-button';
+import { cn } from '@lib/utils';
 
 interface InboxState {
   kinds: string[];
@@ -81,7 +82,10 @@ export function InboxPage() {
   const unreadMeta = () => {
     if (!unread.data || inbox.isError || emptyInbox) return undefined;
     if (unreadTotal === 0) return 'Nothing unread';
-    if (!narrowed) return `${unreadTotal} unread`;
+    if (!narrowed)
+      return severalOrgs
+        ? `${unreadTotal} unread across ${organizations.length} organisations`
+        : `${unreadTotal} unread`;
     const orgOnly = state.org !== null && state.project === null && state.kinds.length === 0;
     const matching = orgOnly
       ? (unread.data.organizations.find(o => o.slug === state.org)?.count ?? 0)
@@ -91,9 +95,10 @@ export function InboxPage() {
     return matching === null ? undefined : `${matching} of ${unreadTotal} unread`;
   };
 
-  const onMark = (target: Parameters<typeof mark.mutate>[0]) =>
+  const onMark = (target: EntryTarget) =>
     mark.mutate(target, {
-      onError: error => toastError('Could not mark it read', error, { retry: () => onMark(target) }),
+      onError: error =>
+        toastError(`Could not mark ${subjectName(target.group)} read`, error, { retry: () => onMark(target) }),
     });
 
   const markAll = () =>
@@ -114,19 +119,35 @@ export function InboxPage() {
         title="Inbox"
         meta={unreadMeta()}
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={nothingUnreadHere || inbox.isError || mark.isPending}
-            onClick={markAll}
-            title={narrowed ? 'Marks everything that matches the filters' : undefined}
-          >
-            {narrowed ? 'Mark all matching read' : 'Mark all read'}
-          </Button>
+          emptyInbox ? undefined : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={nothingUnreadHere || inbox.isError || mark.isPending}
+              onClick={markAll}
+              title={narrowed ? 'Marks everything that matches the filters' : undefined}
+            >
+              {/* Both labels share one cell, so the button keeps its width when a filter changes it. */}
+              <span className="grid justify-items-center">
+                <span className="col-start-1 row-start-1">{narrowed ? 'Mark matching read' : 'Mark all read'}</span>
+                <span aria-hidden className="invisible col-start-1 row-start-1">
+                  {narrowed ? 'Mark all read' : 'Mark matching read'}
+                </span>
+              </span>
+            </Button>
+          )
         }
       />
 
-      <InboxFilters state={state} set={set} facets={facets.data} loading={facets.isPending} severalOrgs={severalOrgs} />
+      {emptyInbox ? null : (
+        <InboxFilters
+          state={state}
+          set={set}
+          facets={facets.data}
+          loading={facets.isPending}
+          severalOrgs={severalOrgs}
+        />
+      )}
 
       {inbox.isPending ? (
         <InboxEntrySkeletons />
@@ -140,7 +161,7 @@ export function InboxPage() {
         ) : (
           <EmptyState
             title="Nothing in your inbox."
-            description="Assignments, mentions and comments on issues you watch arrive here, about ten minutes after they happen."
+            description="Assignments, mentions, comments, sprints and articles that concern you arrive here. Changes to issues wait ten minutes first, in case they are undone."
             action={
               <Button asChild variant="outline" size="sm">
                 <Link href={'/settings?tab=notifications' as Route}>Notification settings</Link>
@@ -149,16 +170,22 @@ export function InboxPage() {
           />
         )
       ) : (
-        <>
+        <div>
           <ul className="flex flex-col border-t">
             {entries.map(group => (
               <InboxEntry key={entryId(group)} group={group} showOrganization={severalOrgs} onMark={onMark} />
             ))}
           </ul>
+          {inbox.isFetchingNextPage ? <InboxEntrySkeletons rows={3} more /> : null}
           {inbox.hasNextPage ? (
-            <LoadMore pending={inbox.isFetchingNextPage} onClick={() => void inbox.fetchNextPage()} />
+            <LoadMore
+              pending={inbox.isFetchingNextPage}
+              pendingLabel="Load more"
+              onClick={() => void inbox.fetchNextPage()}
+              className="mt-4"
+            />
           ) : null}
-        </>
+        </div>
       )}
     </div>
   );
@@ -192,7 +219,8 @@ function InboxFilters({
     { value: '', label: 'All' },
     ...projects.map(p => ({
       value: projectValue(p.organization.slug, p.key),
-      label: `${p.name} (${p.key})`,
+      label: p.name,
+      hint: p.key,
       group: severalOrgs ? p.organization.name : undefined,
       mark: <ProjectMark project={p} size="xs" />,
     })),
@@ -203,8 +231,10 @@ function InboxFilters({
     ...(facets?.organizations ?? []).map(o => ({ value: o.slug, label: o.name })),
   ];
 
+  // A chosen project or organisation reads its slug until the facets name it; the longer name can wrap the row.
+  const naming = loading && (state.project !== null || state.org !== null);
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={cn('flex flex-wrap items-center gap-2', naming && 'invisible')}>
       {severalOrgs ? (
         <ReportPicker
           label="Organisation"
