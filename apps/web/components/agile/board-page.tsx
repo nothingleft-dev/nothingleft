@@ -1,6 +1,15 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject, type UIEvent } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+  type UIEvent,
+} from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -21,14 +30,15 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import {
+  Check,
   ChevronDown,
   ChevronRight,
-  FoldHorizontal,
+  ChevronsLeftRight,
+  ChevronsRightLeft,
   Info,
   ListOrdered,
   Settings,
   SquareKanban,
-  UnfoldHorizontal,
 } from 'lucide-react';
 import {
   BOARD_CARDS_MAX,
@@ -120,6 +130,8 @@ function boardDistribution(view: BoardView): BoardValueCount[] {
   for (const lane of view.lanes)
     for (const cell of lane.cells)
       for (const card of cell.cards) counts.set(card[field].name, (counts.get(card[field].name) ?? 0) + 1);
+  // A truncated board holds only some cards; a one-value column's count is exact.
+  for (const c of view.columns) if (c.values.length === 1) counts.set(c.values[0]!.name, c.count);
   for (const u of view.unmapped) counts.set(u.name, (counts.get(u.name) ?? 0) + u.count);
   const values = [...view.columns.flatMap(c => c.values), ...view.unmapped];
   return values.map(v => ({ name: v.name, color: v.color, category: null, count: counts.get(v.name) ?? 0 }));
@@ -143,48 +155,56 @@ function MoreValues({ values, className }: { values: readonly BoardValueCount[];
             +{values.length} more
           </button>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{values.map(v => `${v.name} ${v.count}`).join(' · ')}</TooltipContent>
+        <TooltipContent side="bottom">
+          {values.map(v => `${v.name} ${formatCount(v.count)}`).join(' · ')}
+        </TooltipContent>
       </Tooltip>
     </li>
   );
 }
 
 /** The strip as wide as its one-line legend: the largest values, the rest behind `+N more`. */
-function BoardStrip({ view }: { view: BoardView }) {
+function BoardStrip({ view, filtered }: { view: BoardView; filtered: boolean }) {
   const values = boardDistribution(view);
   const shown = values.filter(v => v.count > 0);
   const rank = new Map([...shown].sort((a, b) => b.count - a.count).map((v, i) => [v.name, i]));
   const beyond = (max: number) => shown.filter(v => rank.get(v.name)! >= max);
+  if (shown.length === 0) {
+    return (
+      <div className="flex w-[220px] flex-col gap-2">
+        <span aria-hidden className="h-1.5 rounded-[3px] bg-inset" />
+        <span className="text-2xs text-text-muted">{filtered ? 'No card matches the filter' : 'No cards yet'}</span>
+      </div>
+    );
+  }
   return (
     <div className="flex max-w-full min-w-[220px] flex-col gap-2">
       <StatusDistribution statuses={values} field={view.board.column_field} noun="cards" legend={false} />
-      {shown.length > 0 ? (
-        <ul className="flex min-w-0 items-center gap-x-2.5 text-2xs whitespace-nowrap text-text-secondary">
-          {shown
-            .filter(v => rank.get(v.name)! < LEGEND_MAX)
-            .map(v => (
-              <li
-                key={v.name}
+      <ul className="flex min-w-0 items-center gap-x-2.5 text-2xs whitespace-nowrap text-text-secondary">
+        {shown
+          .filter(v => rank.get(v.name)! < LEGEND_MAX)
+          .map(v => (
+            <li
+              key={v.name}
+              className={cn(
+                'inline-flex min-w-0 items-center gap-1.5',
+                rank.get(v.name)! >= LEGEND_MAX_PHONE && 'max-sm:hidden',
+              )}
+            >
+              <i
                 className={cn(
-                  'inline-flex min-w-0 items-center gap-1.5',
-                  rank.get(v.name)! >= LEGEND_MAX_PHONE && 'max-sm:hidden',
+                  'inline-block size-1.5 flex-none rounded-full',
+                  `l-${v.color}`,
+                  LEGEND_TEXTURE[v.category ?? ''] ?? 'bg-c-solid',
                 )}
-              >
-                <i
-                  className={cn(
-                    'inline-block size-1.5 flex-none rounded-full',
-                    `l-${v.color}`,
-                    LEGEND_TEXTURE[v.category ?? ''] ?? 'bg-c-solid',
-                  )}
-                />
-                <span className="max-w-48 truncate">{v.name}</span>
-                <b className="font-medium tabular text-text">{v.count}</b>
-              </li>
-            ))}
-          <MoreValues values={beyond(LEGEND_MAX_PHONE)} className="sm:hidden" />
-          <MoreValues values={beyond(LEGEND_MAX)} className="max-sm:hidden" />
-        </ul>
-      ) : null}
+              />
+              <span className="max-w-48 truncate">{v.name}</span>
+              <b className="font-medium tabular text-text">{formatCount(v.count)}</b>
+            </li>
+          ))}
+        <MoreValues values={beyond(LEGEND_MAX_PHONE)} className="sm:hidden" />
+        <MoreValues values={beyond(LEGEND_MAX)} className="max-sm:hidden" />
+      </ul>
     </div>
   );
 }
@@ -252,12 +272,17 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
   if (failed) notFoundOn404(view.error);
 
   const data = view.data ?? (problem ? (lastGood?.key === viewKey ? lastGood.view : unfiltered.data) : undefined);
-  const current = data?.sprint ?? null;
-  const openIssues = data?.scope === 'open';
+  // A board that failed still names the sprint it was asked for, from the sprint list.
+  const asked =
+    sprints.data?.find(s => (target === BOARD_CURRENT_SPRINT ? s.state === 'active' : s.slug === target)) ?? null;
+  const current = data ? data.sprint : failed ? asked : null;
+  const openIssues = data ? data.scope === 'open' : failed && target === BOARD_OPEN_ISSUES;
   const planned = (sprints.data ?? []).filter(s => s.state === 'planned');
+  const [nextPlanned] = planned;
   const listed = boards.data?.find(b => b.slug === boardSlug) ?? null;
   const nothingMatches = data !== undefined && q.trim() !== '' && data.lanes.every(l => l.count === 0);
-  const strip = data && !nothingMatches ? <BoardStrip view={data} /> : null;
+  const strip = data ? <BoardStrip view={data} filtered={q.trim() !== ''} /> : null;
+  const resolving = !data && !failed;
 
   return (
     <div className="flex h-[calc(100dvh-var(--topbar)-40px)] min-h-[480px] flex-col gap-3">
@@ -287,13 +312,13 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
         </div>
       </div>
 
-      <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 border-y py-2', failed && 'hidden')}>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y py-2">
         <SprintPicker
           sprints={sprints.data ?? []}
           current={current}
           openIssues={openIssues}
           loading={sprints.isPending}
-          resolving={!data && view.isPending}
+          resolving={resolving && view.isPending}
           onPick={s => goToSprint(s.state === 'active' ? BOARD_CURRENT_SPRINT : s.slug)}
           onPickOpen={() => goToSprint(BOARD_OPEN_ISSUES)}
         />
@@ -307,13 +332,13 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
                 Not started
               </span>
             ) : null}
-            {canManage && current.state === 'planned' ? (
+            {canManage && data && current.state === 'planned' ? (
               <StartButton
                 blockedBy={(sprints.data ?? []).find(s => s.state === 'active')?.name ?? null}
                 onClick={() => setStarting(current)}
               />
             ) : null}
-            {canManage && current.state === 'active' ? (
+            {canManage && data && current.state === 'active' ? (
               <Button size="sm" variant="outline" onClick={() => setFinishing(current)}>
                 Finish sprint
               </Button>
@@ -326,10 +351,12 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
               </span>
             ) : null}
           </>
+        ) : resolving ? (
+          <SprintRowSkeleton />
         ) : null}
       </div>
 
-      <div className={cn('max-w-2xl', (failed || (data && !current && !openIssues)) && 'hidden')}>
+      <div className={cn((failed || (data && !current && !openIssues)) && 'hidden')}>
         <QueryBar value={q} onCommit={commit} problem={problem} placeholder="Filter cards · assignee: me type: Bug" />
       </div>
 
@@ -339,11 +366,9 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
       {data?.truncated ? <TruncatedNotice view={data} /> : null}
 
       {failed ? (
-        <div className="min-h-0 flex-1 rounded-md border bg-app p-3">
-          <LoadError onRetry={() => void view.refetch()} detail={errorDetail(view.error)}>
-            This board could not be loaded.
-          </LoadError>
-        </div>
+        <LoadError onRetry={() => void view.refetch()} detail={errorDetail(view.error)}>
+          This board could not be loaded.
+        </LoadError>
       ) : view.isPending || !data ? (
         <BoardSkeleton columns={listed?.columns ?? null} />
       ) : current === null && !openIssues ? (
@@ -351,22 +376,20 @@ export function BoardPage({ projectKey, boardSlug, sprint, base }: BoardPageProp
           className="max-w-xl"
           title={`${data.board.project.name} has no active sprint.`}
           description={
-            planned.length > 0
-              ? `${plural(planned.length, 'sprint is', 'sprints are')} planned. Open one to see its board.`
+            nextPlanned
+              ? `${nextPlanned.name} is planned next${planned.length > 1 ? `; ${plural(planned.length - 1, 'more is', 'more are')} in the sprint picker` : ''}.`
               : 'The board shows the active sprint; nothing is running right now.'
           }
           action={
-            <div className="flex flex-wrap gap-2">
-              {planned.slice(0, 3).map(s => (
-                <Button key={s.slug} size="sm" variant="outline" onClick={() => goToSprint(s.slug)}>
-                  Show {s.name}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {nextPlanned ? (
+                <Button size="sm" onClick={() => goToSprint(nextPlanned.slug)}>
+                  Open {nextPlanned.name}
                 </Button>
-              ))}
-              <Button size="sm" variant={planned.length > 0 ? 'ghost' : 'outline'} asChild>
-                <Link href={`/projects/${projectKey}/backlog` as Route}>
-                  {planned.length > 0 ? 'Open the backlog' : 'Plan one from the backlog'}
-                </Link>
-              </Button>
+              ) : null}
+              <Link href={`/projects/${projectKey}/backlog` as Route} className="action-link text-sm">
+                {nextPlanned ? 'Open the backlog' : 'Plan one from the backlog'}
+              </Link>
             </div>
           }
         />
@@ -635,40 +658,95 @@ function laneHint(board: Board): string {
   return 'A card stays in its lane.';
 }
 
-function columnsPastRightEdge(el: HTMLElement): HTMLElement[] {
+/**
+ * The columns past the right edge, from the one the rail names: the first wholly out of sight, or the
+ * cut one when every other column fits.
+ */
+function columnsToReveal(el: HTMLElement): HTMLElement[] {
   const right = el.scrollLeft + el.clientWidth;
-  return [...el.querySelectorAll<HTMLElement>('[data-column-header]')].filter(
+  const past = [...el.querySelectorAll<HTMLElement>('[data-column-header]')].filter(
     h => h.offsetLeft + h.offsetWidth > right + 1,
   );
+  const hidden = past.findIndex(h => h.offsetLeft >= right - 1);
+  return hidden > 0 ? past.slice(hidden) : past;
 }
 
-/** Columns cut off at the right edge of the board, and whether it is scrolled away from the left. */
+interface HiddenColumn {
+  name: string;
+  count: string;
+}
+
+/** The columns cut off at the right edge of the board, and whether it is scrolled away from the left. */
 function useOverflowColumns(scroller: RefObject<HTMLDivElement | null>) {
-  const [edges, setEdges] = useState({ left: false, hidden: 0 });
-  const read = (el: HTMLElement) => {
+  const [edges, setEdges] = useState<{ left: boolean; hidden: HiddenColumn[] }>({ left: false, hidden: [] });
+  const read = useCallback((el: HTMLElement) => {
     const left = el.scrollLeft > 0;
-    const hidden = columnsPastRightEdge(el).length;
-    setEdges(e => (e.left === left && e.hidden === hidden ? e : { left, hidden }));
-  };
+    const hidden = columnsToReveal(el).map(h => ({
+      name: h.dataset.columnHeader ?? '',
+      count: h.dataset.columnCount ?? '',
+    }));
+    const same = (a: HiddenColumn[]) =>
+      a.map(c => c.name + c.count).join() === hidden.map(c => c.name + c.count).join();
+    setEdges(e => (e.left === left && same(e.hidden) ? e : { left, hidden }));
+  }, []);
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => {
-      const left = el.scrollLeft > 0;
-      const hidden = columnsPastRightEdge(el).length;
-      setEdges(e => (e.left === left && e.hidden === hidden ? e : { left, hidden }));
-    });
+    const observer = new ResizeObserver(() => read(el));
     observer.observe(el);
     if (el.firstElementChild) observer.observe(el.firstElementChild);
     return () => observer.disconnect();
-  }, [scroller]);
+  }, [scroller, read]);
   const revealNext = () => {
     const el = scroller.current;
-    const next = el ? columnsPastRightEdge(el)[0] : undefined;
+    const next = el ? columnsToReveal(el)[0] : undefined;
     if (el && next)
       el.scrollBy({ left: next.offsetLeft + next.offsetWidth - el.scrollLeft - el.clientWidth, behavior: 'smooth' });
   };
   return { ...edges, onScroll: (e: UIEvent<HTMLElement>) => read(e.currentTarget), revealNext };
+}
+
+const RIGHT_FADE = '48px';
+const LEFT_FADE = '12px';
+
+function edgeMask(left: boolean, right: boolean): string | undefined {
+  if (!left && !right) return undefined;
+  const from = left ? `transparent, #000 ${LEFT_FADE}` : '#000';
+  const to = right ? `#000 calc(100% - ${RIGHT_FADE}), transparent` : '#000';
+  return `linear-gradient(to right, ${from}, ${to})`;
+}
+
+/** Stands where the next hidden column would be: its name and count, read like a collapsed column. */
+function OverflowRail({ hidden, onReveal }: { hidden: readonly HiddenColumn[]; onReveal: () => void }) {
+  const [next] = hidden;
+  if (!next) return null;
+  const rest = hidden.length - 1;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onReveal}
+          aria-label={`Scroll to ${next.name}${rest > 0 ? ` and ${plural(rest, 'more column')}` : ''}`}
+          className="group/rail flex w-10 flex-none flex-col border-l bg-app text-text-secondary"
+        >
+          <span className="flex h-10 flex-none items-center justify-center border-b bg-surface group-hover/rail:bg-hover">
+            <ChevronRight aria-hidden className="size-icon-sm text-text-muted group-hover/rail:text-text" />
+          </span>
+          <span className="flex min-h-0 flex-1 justify-center overflow-hidden py-3 text-xs font-medium group-hover/rail:text-text">
+            <span className="whitespace-nowrap [writing-mode:vertical-rl]">
+              {next.name} · {next.count}
+              {rest > 0 ? <span className="font-normal text-text-muted"> · +{rest} more</span> : null}
+            </span>
+          </span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="left">
+        Scroll to {next.name}
+        {rest > 0 ? ` · ${plural(rest, 'more column')} after it` : ''}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function BoardGrid({
@@ -723,10 +801,13 @@ function BoardGrid({
   const lastLane = lanes.at(-1);
   const lastRowIsCells = lastLane !== undefined && !closedLanes.has(lastLane.key ?? lastLane.kind);
   const refused = dragging !== null && over !== null && over.lane !== dragging.lane;
+  const loaded = new Map<string, number>();
+  for (const lane of view.lanes)
+    for (const cell of lane.cells) loaded.set(cell.column, (loaded.get(cell.column) ?? 0) + cell.cards.length);
 
   const send = (vars: Parameters<typeof move.mutate>[0]) =>
     move.mutate(vars, {
-      onError: error => toastError(`Could not move ${vars.card.key} to ${vars.to}`, error, { retry: () => send(vars) }),
+      onError: error => toastError(`Could not move ${vars.card.key}`, error, { retry: () => send(vars) }),
     });
 
   const onDragStart = (event: DragStartEvent) => setDragging(event.active.data.current as CardData);
@@ -755,11 +836,12 @@ function BoardGrid({
         setOver(null);
       }}
     >
-      <div className="relative flex min-h-0 max-w-full flex-1 self-start">
+      <div className="flex min-h-0 max-w-full flex-1 self-start overflow-hidden rounded-md border bg-app">
         <div
           ref={scroller}
           onScroll={overflow.onScroll}
-          className="relative min-w-0 flex-1 overflow-auto rounded-md border bg-app"
+          className="relative min-w-0 flex-1 overflow-auto [scrollbar-color:var(--border-strong)_transparent] [scrollbar-width:thin]"
+          style={{ maskImage: edgeMask(overflow.left, overflow.hidden.length > 0) }}
         >
           <div
             className="grid min-h-full w-full"
@@ -769,6 +851,8 @@ function BoardGrid({
               <ColumnHeader
                 key={column.name}
                 column={column}
+                loaded={loaded.get(column.name) ?? 0}
+                truncated={view.truncated}
                 collapsed={collapsed.has(column.name)}
                 filtered={filtered}
                 edge={column.name === lastColumn}
@@ -849,28 +933,7 @@ function BoardGrid({
             })}
           </div>
         </div>
-        {overflow.left ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-px left-px z-20 w-6 rounded-l-md bg-linear-to-r from-app to-transparent"
-          />
-        ) : null}
-        {overflow.hidden > 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={overflow.revealNext}
-                aria-label={`Show ${plural(overflow.hidden, 'more column')}`}
-                className="absolute inset-y-px right-px z-20 flex w-7 flex-col items-center gap-0.5 rounded-r-md bg-linear-to-l from-app via-app/85 to-transparent pt-2 text-text-secondary hover:text-text"
-              >
-                <span className="text-2xs font-medium tabular">+{overflow.hidden}</span>
-                <ChevronRight aria-hidden className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left">{plural(overflow.hidden, 'more column')}</TooltipContent>
-          </Tooltip>
-        ) : null}
+        <OverflowRail hidden={overflow.hidden} onReveal={overflow.revealNext} />
       </div>
       <DragOverlay dropAnimation={null}>
         {dragging ? (
@@ -904,12 +967,17 @@ function wipSummary(column: BoardViewColumn): string | null {
 
 function ColumnHeader({
   column,
+  loaded,
+  truncated,
   collapsed,
   filtered,
   edge,
   onToggle,
 }: {
   column: BoardViewColumn;
+  /** Cards the board holds for this column; fewer than `count` when the board is truncated. */
+  loaded: number;
+  truncated: boolean;
   collapsed: boolean;
   filtered: boolean;
   /** The rightmost column: the frame draws its right edge. */
@@ -923,6 +991,9 @@ function ColumnHeader({
   ]
     .filter(Boolean)
     .join(' · ');
+  const cut = truncated && loaded < column.count;
+  const narrowed = filtered && column.count !== column.total;
+  const header = { 'data-column-header': column.name, 'data-column-count': formatCount(column.count) };
 
   if (collapsed) {
     return (
@@ -930,7 +1001,7 @@ function ColumnHeader({
         <TooltipTrigger asChild>
           <button
             type="button"
-            data-column-header
+            {...header}
             onClick={onToggle}
             aria-label={`Expand ${column.name}`}
             className={cn(
@@ -938,7 +1009,7 @@ function ColumnHeader({
               !edge && 'border-r',
             )}
           >
-            <UnfoldHorizontal
+            <ChevronsLeftRight
               aria-hidden
               className={cn(
                 'size-3.5 text-text-muted',
@@ -957,29 +1028,23 @@ function ColumnHeader({
 
   return (
     <div
-      data-column-header
+      {...header}
       className={cn(
-        'sticky top-0 z-10 flex h-10 min-w-0 items-center gap-2 border-b bg-surface px-2',
+        'group/column sticky top-0 z-10 flex h-10 min-w-0 items-center gap-2 border-b bg-surface pr-1 pl-3',
         !edge && 'border-r',
         column.over_wip_max && 'shadow-[inset_0_-2px_0_var(--danger-fg)]',
         column.under_wip_min && 'shadow-[inset_0_-2px_0_var(--warning-fg)]',
       )}
     >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon-xs" aria-label={`Collapse ${column.name}`} onClick={onToggle}>
-            <FoldHorizontal className="size-3.5 text-text-muted" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Collapse column</TooltipContent>
-      </Tooltip>
       <span className="truncate font-medium">{column.name}</span>
       {column.resolved ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="c-green rounded-xs bg-c-bg px-1 text-2xs leading-4 font-medium text-c-fg">resolved</span>
+            <span aria-label="Counts as resolved" className="flex-none text-text-muted">
+              <Check aria-hidden className="size-3.5" />
+            </span>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Cards here count as resolved</TooltipContent>
+          <TooltipContent side="top">Cards here count as resolved</TooltipContent>
         </Tooltip>
       ) : null}
       <span className="ml-auto flex flex-none items-center gap-2 text-xs tabular">
@@ -996,7 +1061,7 @@ function ColumnHeader({
                 {limits}
               </span>
             </TooltipTrigger>
-            <TooltipContent side="bottom">{wip}</TooltipContent>
+            <TooltipContent side="top">{wip}</TooltipContent>
           </Tooltip>
         ) : null}
         <Tooltip>
@@ -1008,16 +1073,34 @@ function ColumnHeader({
                 column.under_wip_min && 'c-amber bg-c-bg text-c-fg',
               )}
             >
-              {filtered && column.count !== column.total
-                ? `${formatCount(column.count)} of ${formatCount(column.total)}`
-                : formatCount(column.count)}
+              {cut
+                ? `${formatCount(loaded)} of ${formatCount(column.count)}`
+                : narrowed
+                  ? `${formatCount(column.count)} of ${formatCount(column.total)}`
+                  : formatCount(column.count)}
             </span>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            {filtered
-              ? `${column.count} matching the filter, ${column.total} in the column`
-              : `${plural(column.total, 'card')}`}
+          <TooltipContent side="top">
+            {cut
+              ? `${formatCount(loaded)} shown of ${plural(column.count, 'card')}; narrow the filter to see the rest`
+              : filtered
+                ? `${formatCount(column.count)} matching the filter, ${formatCount(column.total)} in the column`
+                : plural(column.total, 'card')}
           </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label={`Collapse ${column.name}`}
+              onClick={onToggle}
+              className="reveal group-hover/column:opacity-100"
+            >
+              <ChevronsRightLeft className="size-3.5 text-text-muted" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Collapse column</TooltipContent>
         </Tooltip>
       </span>
     </div>
@@ -1140,7 +1223,7 @@ function Cell({
           )}
         >
           {column.name} ·{' '}
-          {whole && column.over_wip_max && column.wip_max !== null ? `${count}/${column.wip_max}` : count}
+          {whole && column.over_wip_max && column.wip_max !== null ? `${count} (max ${column.wip_max})` : count}
         </span>
       </div>
     );
@@ -1149,7 +1232,7 @@ function Cell({
     <div
       ref={setNodeRef}
       className={cn(
-        'group/cell flex min-h-16 flex-col gap-2 p-2 transition-colors',
+        'group/cell flex min-h-14 flex-col gap-2 p-2 transition-colors',
         borders,
         target && 'bg-selected',
         refused && 'outline-1 -outline-offset-4 outline-danger-fg outline-dashed',
@@ -1232,5 +1315,21 @@ function BoardSkeleton({ columns }: { columns: readonly BoardColumn[] | null }) 
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** The sprint row's dates, strip and points, held at their size until the board says which sprint it shows. */
+function SprintRowSkeleton() {
+  return (
+    <>
+      <Skeleton className="h-3.5 w-[140px]" />
+      <span className="flex w-72 flex-col gap-2 max-sm:hidden">
+        <Skeleton className="h-1.5 w-full" />
+        <span className="flex h-4 items-center">
+          <Skeleton className="h-2.5 w-3/4" />
+        </span>
+      </span>
+      <Skeleton className="h-3.5 w-24 max-sm:hidden sm:ml-auto" />
+    </>
   );
 }

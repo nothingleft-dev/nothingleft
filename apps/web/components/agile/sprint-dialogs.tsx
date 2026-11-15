@@ -353,8 +353,8 @@ function StartForm({
         <DialogTitle>Start {sprint.name}</DialogTitle>
         <DialogDescription>
           {plural(issues, 'issue')}
-          {points > 0 ? `, ${points} story points` : ''}. It starts today unless you pick another day, and it needs an
-          end date for the countdown.
+          {points > 0 ? `, ${plural(points, 'point')}` : ''}.{' '}
+          {sprint.end_date ? 'It starts today; change the dates if needed.' : 'It starts today; pick its last day.'}
         </DialogDescription>
       </DialogHeader>
       {error.summary ? <FormAlert title={error.summary} /> : null}
@@ -440,10 +440,10 @@ function FinishForm({
         <DialogTitle>Finish {sprint.name}</DialogTitle>
         <DialogDescription>
           {issues === 0
-            ? 'It has no issues. Finishing it closes it with an empty record.'
+            ? 'It has no issues, so it closes empty.'
             : unfinished === 0
-              ? `${issues === 1 ? 'Its issue is' : `All ${formatCount(issues)} issues are`} resolved${pointsNote}. They stay with the sprint as its record.`
-              : `${formatCount(resolved_issues)} resolved${pointsNote} stay with it as its record. Choose where the ${plural(unfinished, 'unfinished issue goes', 'unfinished issues go')}.`}
+              ? `${issues === 1 ? 'Its issue is' : `All ${formatCount(issues)} issues are`} resolved${pointsNote} and stay in ${sprint.name}.`
+              : `${plural(resolved_issues, 'resolved issue')}${pointsNote} ${resolved_issues === 1 ? 'stays' : 'stay'} in ${sprint.name}. Choose where the ${plural(unfinished, 'unfinished issue goes', 'unfinished issues go')}.`}
         </DialogDescription>
       </DialogHeader>
       {gone ? (

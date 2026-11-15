@@ -465,8 +465,17 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 - **Column width** (owner, 2 Nov 2026): each column is 280–380 px. Columns widen to fill the
   window up to 380 px and never narrow past 280 px; a board with more columns than fit scrolls
   sideways instead of squeezing its cards. A collapsed column is 40 px.
-- **Column counts** read `count` alone, or `count of total` when a filter hides cards;
-  WIP limits show as `min 2 · max 4`, red over the maximum, amber under the minimum.
+- **More columns than fit**: a 40 px rail beside the board names the next hidden column and its
+  count, read like a collapsed column (`Done · 4 · +2 more`); clicking it scrolls that column into
+  view. The cut column fades at the edge.
+- **Column counts** read `count` alone, or `count of total` when a filter hides cards or the
+  board was cut short (`45 of 1,229`); WIP limits show as `min 2 · max 4`, red over the maximum,
+  amber under the minimum. A collapsed column over its maximum reads `To do · 6 (max 4)`.
+- **Column headers**: name, a check when the column counts as resolved, WIP limits, the count;
+  the collapse control follows the count and shows on hover or focus.
+- **A board that fails to load** keeps the sprint row (from the sprint list) and shows the inline
+  load error under it, no empty frame. **No running sprint**: the next planned sprint is the one
+  primary action (_Open Sprint 1_), the backlog a link.
 - **The strip follows the column field** (owner, 26 Sep 2026): by status on a status board,
   by priority or type on those boards, so it summarises what the columns show.
 - **Page actions are outlined buttons with an icon** (_Backlog_, _Board settings_, _Board_),

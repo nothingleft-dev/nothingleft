@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowRight, MoreHorizontal, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Board } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -38,6 +38,9 @@ interface BoardSettingsProps {
   canEdit: boolean;
 }
 
+// Past this many boards the list scrolls, so the chosen board's columns stay near the top of the page.
+const LIST_ROWS = 6;
+
 const SWIMLANE_SUMMARY: Record<Board['swimlane_by'], (b: Board) => string> = {
   none: () => 'No swimlanes',
   values: b => `Swimlanes by ${b.swimlane_field ?? 'value'}`,
@@ -55,6 +58,16 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
   const [naming, setNaming] = useState<{ mode: 'create' } | { mode: 'rename'; board: Board } | null>(null);
   const [deleting, setDeleting] = useState<Board | null>(null);
   const remove = useDeleteBoard(projectKey);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // A long list scrolls inside its frame; the chosen board stays in sight there.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const row = list?.querySelector<HTMLElement>('[aria-current="true"]')?.closest('li');
+    if (!list || !row) return;
+    if (row.offsetTop < list.scrollTop || row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight)
+      list.scrollTop = row.offsetTop - list.clientHeight / 2 + row.offsetHeight / 2;
+  }, [selected?.slug, list.length]);
 
   const select = (slug: string | null) =>
     router.replace(
@@ -87,14 +100,21 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
             description={canEdit ? 'Create one to follow a sprint as columns of cards.' : undefined}
           />
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Boards">
+          <ul
+            ref={listRef}
+            className={cn(
+              'relative flex flex-col divide-y divide-border-subtle rounded-md border',
+              list.length > LIST_ROWS && 'scroll-fade max-h-[calc(var(--row)*6.5)] overflow-y-auto',
+            )}
+            aria-label="Boards"
+          >
             {list.map(b => {
               const active = b.slug === selected?.slug;
               return (
                 <li
                   key={b.slug}
                   className={cn(
-                    'relative flex h-row items-center gap-2 pr-1',
+                    'relative flex h-row flex-none items-center gap-2 pr-1',
                     active && 'bg-active before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand',
                   )}
                 >
@@ -107,15 +127,24 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
                     <span className="truncate font-medium" title={b.name}>
                       {b.name}
                     </span>
-                    <span className="hidden truncate font-mono text-2xs text-text-muted sm:block" title={b.slug}>
+                    <span
+                      className={cn(
+                        'hidden truncate font-mono text-2xs sm:block',
+                        active ? 'text-text-secondary' : 'text-text-muted',
+                      )}
+                      title={b.slug}
+                    >
                       {b.slug}
                     </span>
                     <span className="hidden truncate text-xs whitespace-nowrap text-text-secondary sm:block">
                       {plural(b.columns.length, 'column')} · {SWIMLANE_SUMMARY[b.swimlane_by](b)}
                     </span>
                   </button>
-                  <Button asChild variant="ghost" size="sm" className="text-text-secondary">
-                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>View board</Link>
+                  <Button asChild variant="ghost" size="sm" className="text-text-secondary hover:text-text">
+                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>
+                      View board
+                      <ArrowRight />
+                    </Link>
                   </Button>
                   {canEdit ? (
                     <DropdownMenu>

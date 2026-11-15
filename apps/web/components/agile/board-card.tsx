@@ -1,7 +1,7 @@
 'use client';
 
 import { useSchemaValues } from '@hooks/use-project-schema';
-import { useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
+import { useId, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { toast } from 'sonner';
 import { ListChecks, Plus } from 'lucide-react';
 import type {
@@ -106,7 +106,8 @@ export function BoardCard({
     <article
       className={cn(
         `l-${card.priority.color} flex flex-col gap-2 rounded-md border bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong`,
-        raised && 'border-l-[3px] border-l-c-solid hover:border-l-c-solid',
+        // Drawn inside the 1 px border, so a raised card's text starts where every other card's does.
+        raised && 'border-l-c-solid shadow-[inset_2px_0_0_var(--c-solid)] hover:border-l-c-solid',
         dragging && 'opacity-40',
         overlay && 'rotate-1 shadow-lg',
       )}
@@ -115,7 +116,7 @@ export function BoardCard({
         <a href={`/issue/${card.key}`} target="_blank" rel="noopener" {...own} className="mr-1.5 hover:underline">
           <IssueKey issueKey={card.key} resolved={card.resolved} />
         </a>
-        <span className={cn(card.resolved && 'text-text-muted line-through')}>{card.title}</span>
+        <span className={cn('font-medium', card.resolved && 'text-text-muted line-through')}>{card.title}</span>
       </p>
 
       {shown.length > 0 ? (
@@ -384,13 +385,14 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const create = useCreateIssue();
+  const hintId = useId();
 
   if (!open) {
     return (
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-start text-text-secondary reveal group-hover/cell:opacity-100"
+        className="-mt-1 h-7 w-full justify-start text-text-secondary reveal group-hover/cell:opacity-100"
         onClick={() => setOpen(true)}
       >
         <Plus />
@@ -438,10 +440,14 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
           }
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Title, then ↵"
+        placeholder="Issue title"
         aria-label="New card title"
+        aria-describedby={hintId}
         className="w-full resize-none bg-transparent px-1 py-0.5 text-sm leading-5 text-text placeholder:text-text-muted focus-visible:shadow-none"
       />
+      <p id={hintId} className="-mt-1 px-1 text-2xs text-text-muted">
+        Enter to create · Esc to cancel
+      </p>
       <div className="flex gap-1">
         <PendingButton
           type="submit"
