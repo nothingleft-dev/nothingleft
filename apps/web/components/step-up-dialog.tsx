@@ -129,7 +129,7 @@ export function StepUpDialog({
                   autoComplete="one-time-code"
                   autoCapitalize="none"
                   spellCheck={false}
-                  className="font-mono"
+                  className="w-48 font-mono tabular"
                   hint="The 6-digit code from your authenticator app, or one of your recovery codes."
                   value={code}
                   error={missing.code ?? parsed.fields['code']}

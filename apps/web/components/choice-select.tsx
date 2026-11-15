@@ -76,7 +76,7 @@ export function ChoiceSelect<T extends string>({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-(--radix-popover-trigger-width) min-w-[min(280px,calc(100vw-32px))] max-w-[calc(100vw-32px)] p-0"
+          className="w-(--radix-popover-trigger-width) min-w-[min(320px,calc(100vw-32px))] max-w-[calc(100vw-32px)] p-0"
           align={align}
         >
           <PickerCommand>

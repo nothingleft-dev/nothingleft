@@ -1396,38 +1396,40 @@
   display: block !important;
 }
 
-/* Disabled is a state of its own, legible on its own fill — not the enabled control at half opacity. */
-[data-slot='button']:disabled,
-[data-slot='button'][aria-disabled='true'] {
+/* Disabled is a state of its own, legible on its own fill — not the enabled control at half opacity. A button that a
+   trigger renders as (tooltip, popover) carries the trigger's slot, so these match its variant and size as well. */
+:is([data-slot='button'], [data-variant][data-size]):disabled,
+:is([data-slot='button'], [data-variant][data-size])[aria-disabled='true'] {
   opacity: 1;
 }
 
 /* Secondary ink: the grey fill already says disabled, and muted ink drops under 4.5:1 on it in dialogs. */
-[data-slot='button']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
+:is([data-slot='button'], [data-variant][data-size]):is(:disabled, [aria-disabled='true']):not([data-pending]) {
   color: var(--text-secondary);
 }
 
 /* A shortcut hint drawn for the filled button's ink would vanish on the disabled grey; it takes the button's ink. */
-[data-slot='button']:is(:disabled, [aria-disabled='true']):not([data-pending]) kbd {
+:is([data-slot='button'], [data-variant][data-size]):is(:disabled, [aria-disabled='true']):not([data-pending]) kbd {
   color: inherit;
   background: transparent;
   border-color: currentColor;
 }
 
-[data-slot='button']:disabled {
+:is([data-slot='button'], [data-variant][data-size]):disabled {
   pointer-events: auto;
   cursor: not-allowed;
 }
 
 /* Pending is not disabled: the action is running, so the button keeps its own fill and ink. */
-[data-slot='button'][data-pending] {
+:is([data-slot='button'], [data-variant][data-size])[data-pending] {
   cursor: progress;
 }
 
-[data-slot='button']:is([data-variant='default'], [data-variant='destructive'], [data-variant='secondary']):is(
-    :disabled,
-    [aria-disabled='true']
-  ):not([data-pending]) {
+:is([data-slot='button'], [data-variant][data-size]):is(
+    [data-variant='default'],
+    [data-variant='destructive'],
+    [data-variant='secondary']
+  ):is(:disabled, [aria-disabled='true']):not([data-pending]) {
   /* Translucent so it reads on the page, a card and a dialog alike. */
   background: var(--bg-active);
   border-color: var(--border);
@@ -1443,7 +1445,9 @@
 }
 
 /* A disabled outline button stays an outline: a grey fill would make it heavier than the enabled ones beside it. */
-[data-slot='button'][data-variant='outline']:is(:disabled, [aria-disabled='true']):not([data-pending]) {
+:is([data-slot='button'], [data-variant][data-size])[data-variant='outline']:is(:disabled, [aria-disabled='true']):not(
+    [data-pending]
+  ) {
   background: transparent;
   border-color: var(--border);
   box-shadow: none;
