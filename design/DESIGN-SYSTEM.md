@@ -651,15 +651,21 @@ Route: `/projects/PP/issues?q=…` (also `/issues?q=…` across projects). **The
 1. **Query bar** (36 px, mono): the live query in the product's search language,
    attributes in secondary ink, values in primary. `/` focuses. Right: `Save view`.
    Autocomplete drops below in groups — Attributes (with plain-language description),
-   Values (grouped by source), Saved searches, Recent — footer *Press ⇥ to complete the
-   first item*.
-2. **View tabs**: saved views as pills with counts; the active one filled. Right:
-   `Group by ▾`, `Columns ▾`, export.
+   Values (grouped by source), Saved searches, Recent — footer *⇥ completes the highlighted
+   item · ↵ runs the search*. A refused query shows its message and the valid values as one-click
+   chips in a popover under the bar, over the page, never pushing it down; the last results stay
+   under it, dimmed.
+2. **View tabs**: saved views as pills with counts; the active one filled. Tabs that do not fit
+   go behind *N more*; the open view always shows. The active view's actions are a ⋯ button after
+   the tabs. On a project's list an organisation-wide view shows *4 of 6* (in this project of
+   everywhere). Right: `Group by ▾`, `Columns ▾`, export.
 3. **Table**: sticky header; columns `☐ P T Key Title(+meta) Tags Status Assignee Due
    Updated`. Meta after the title in muted 12 px: subtasks `4/9`, comments, attachments.
    Group headers carry the status dot, filter-aware count, and `showing N` when
    truncated; resolved groups start collapsed. Checkboxes appear on hover; selecting
-   any row shows them all.
+   any row shows them all. When the columns are wider than the page the table scrolls sideways
+   under a frozen checkbox, P, T, key and title; the header still sticks and the right edge fades
+   while columns are hidden.
 4. **Bulk bar**: sticky at the bottom, only while a selection exists: `N selected · Set
    status · Set priority · Assign · Add tag | Move · More | Clear`.
 5. Inline edit: the status pill and assignee open a `command` picker in place.

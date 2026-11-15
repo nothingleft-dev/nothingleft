@@ -9,14 +9,7 @@ import {
   type IssueListItem,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Kbd } from '@components/kbd';
 import { IssueKey } from '@components/issue-key';
@@ -54,6 +47,20 @@ const ASSIGN_MODES = [
   { value: 'replace', label: 'Replace' },
 ] as const;
 
+/** One line per reason: the same refusal on five issues is said once, with their keys. */
+const failureGroups = (results: readonly BulkUpdateResult[]) => {
+  const groups = new Map<string, { reason: string; message: string; valid: string[]; keys: string[] }>();
+  for (const r of results) {
+    const message = r.error?.message ?? 'Refused.';
+    const valid = r.error?.valid_values ?? [];
+    const reason = `${message}\u0000${valid.join('\u0001')}`;
+    const group = groups.get(reason) ?? { reason, message, valid: [...valid], keys: [] };
+    group.keys.push(r.key);
+    groups.set(reason, group);
+  }
+  return [...groups.values()];
+};
+
 const dedupeByName = <T extends { name: string }>(values: readonly T[]) => {
   const seen = new Set<string>();
   return values.filter(v => (seen.has(v.name.toLowerCase()) ? false : (seen.add(v.name.toLowerCase()), true)));
@@ -89,7 +96,8 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
           setFailures({ results: failed, summary, updated, picker: from });
           onKeepFailed(failed.map(f => f.key));
         },
-        onError: error => toastError('Could not change the selected issues', error),
+        onError: error =>
+          toastError('Could not change the selected issues', error, { retry: () => run(changes, summary) }),
       },
     );
   };
@@ -103,7 +111,7 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
           {label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="start" className={cn('p-0', width)}>
+      <PopoverContent side="top" align="start" sideOffset={8} className={cn('p-0', width)}>
         {picker === key ? body : null}
       </PopoverContent>
     </Popover>
@@ -197,12 +205,19 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
             </DialogDescription>
           </DialogHeader>
           <ul className="flex max-h-[50vh] flex-col divide-y divide-border-subtle overflow-y-auto rounded-md border">
-            {(failures?.results ?? []).map(f => (
-              <li key={f.key} className="flex flex-col gap-0.5 px-3 py-2">
-                <IssueKey issueKey={f.key} />
-                <span className="text-xs text-danger-fg">{f.error?.message ?? 'Refused.'}</span>
-                {f.error?.valid_values && f.error.valid_values.length > 0 ? (
-                  <span className="text-2xs text-text-secondary">Valid: {f.error.valid_values.join(', ')}</span>
+            {failureGroups(failures?.results ?? []).map(group => (
+              <li key={group.reason} className="flex flex-col gap-1 px-3 py-2">
+                <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  {group.keys.map((key, i) => (
+                    <span key={key} className="inline-flex items-center">
+                      <IssueKey issueKey={key} />
+                      {i < group.keys.length - 1 ? <span className="text-text-muted">,</span> : null}
+                    </span>
+                  ))}
+                </span>
+                <span className="text-xs text-text">{group.message}</span>
+                {group.valid.length > 0 ? (
+                  <span className="text-2xs text-text-secondary">Valid: {group.valid.join(', ')}</span>
                 ) : null}
               </li>
             ))}

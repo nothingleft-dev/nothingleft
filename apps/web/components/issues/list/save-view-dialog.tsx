@@ -4,14 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { SavedView, SavedViewVisibility } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -88,6 +81,7 @@ function SaveViewForm({
   const visibilityOptions = VISIBILITY.map(o =>
     o.value === 'private' || canShare ? o : { ...o, hint: `${o.hint} Needs Contributor in a project.` },
   );
+  const braces = /[{}]/.test(name);
   const chosenProject = projectKey ?? projectOptions[0]?.value ?? null;
 
   const submit = () => {
@@ -119,7 +113,10 @@ function SaveViewForm({
           ) : (
             <>
               A view is a named search. It shows as a tab, and any query can use it as{' '}
-              <code className="font-mono text-xs">{viewReference(name.trim() || 'Blocking bugs')}</code>.
+              <code className="font-mono text-xs [font-variant-ligatures:none]">
+                {viewReference(name.trim() || 'Blocking bugs')}
+              </code>
+              .
             </>
           )}
         </DialogDescription>
@@ -142,13 +139,13 @@ function SaveViewForm({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Blocking bugs"
-          error={error.fields['name']}
-          hint="Case does not matter. Curly braces are not allowed."
+          error={braces ? 'A name cannot contain curly braces.' : error.fields['name']}
+          hint="Upper and lower case are the same name: Bugs and bugs are one view."
         />
         {existing ? null : (
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text-secondary">Query</span>
-            <code className="block rounded-md border bg-inset px-3 py-2 font-mono text-xs text-text-secondary [overflow-wrap:anywhere]">
+            <code className="block rounded-md border bg-inset px-3 py-2 font-mono text-xs text-text-secondary [font-variant-ligatures:none] [overflow-wrap:anywhere]">
               {query || '(everything)'}
               {sort ? ` sort by: ${sort}` : null}
             </code>
@@ -182,7 +179,7 @@ function SaveViewForm({
         <PendingButton
           type="submit"
           form="save-view"
-          disabled={name.trim() === '' || (visibility === 'project' && !chosenProject)}
+          disabled={name.trim() === '' || braces || (visibility === 'project' && !chosenProject)}
           pending={pending}
           pendingLabel="Saving…"
         >

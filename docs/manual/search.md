@@ -376,8 +376,9 @@ arrow keys and press Enter. Suggested values come only from projects you can ope
 The search runs when you press **Enter**, not on every keystroke, and the address
 bar then carries the query, so copying the address shares exactly what you see.
 Press `/` anywhere in the app to jump to the search bar. When a query is refused,
-the part at fault is underlined in the bar and the valid values, where there are
-any, appear beneath it as one-click replacements.
+the part at fault is underlined in the bar, and a note under the bar names the problem and
+offers the valid values, where there are any, as one-click replacements; the last results stay
+visible, dimmed, until the query runs again.
 
 ## Putting it together
 

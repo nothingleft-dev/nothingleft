@@ -16,7 +16,7 @@ import { isApiError } from '@lib/api/errors';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { LoadMore } from '@components/text-button';
 
-export const ARTICLE_QUERY_PLACEHOLDER = 'Search articles, or try tag: rca';
+export const ARTICLE_QUERY_PLACEHOLDER = 'Search articles · tag: rca';
 const RECENT_SORT = 'updated desc';
 
 interface ArticleResultsProps {

@@ -78,11 +78,6 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
   const deleteView = useDeleteSavedView();
   const exporter = useIssuesCsvExport();
 
-  const rows = useMemo(() => search.data?.pages.flatMap(p => p.data) ?? [], [search.data]);
-  const first = search.data?.pages[0];
-  const total = first?.meta.pagination?.total ?? null;
-  const groups = first?.meta.groups;
-
   const problem = useMemo<QueryProblem | null>(() => {
     const error = search.error;
     if (!error || !isApiError(error) || error.status !== 400) return null;
@@ -93,6 +88,17 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
         : null;
     return { message: error.message, span, validValues: error.validValues ?? [] };
   }, [search.error, base]);
+
+  // While a query is invalid, the last list that ran stays under it, dimmed and out of reach.
+  const [lastGood, setLastGood] = useState(search.data);
+  if (search.data && search.data !== lastGood) setLastGood(search.data);
+  const frozen = problem !== null && !search.data && lastGood !== undefined;
+  const data = search.data ?? (frozen ? lastGood : undefined);
+
+  const rows = useMemo(() => data?.pages.flatMap(p => p.data) ?? [], [data]);
+  const first = data?.pages[0];
+  const total = frozen ? null : (first?.meta.pagination?.total ?? null);
+  const groups = first?.meta.groups;
 
   const selectedRows = useMemo(() => rows.filter(r => selection.has(r.key)), [rows, selection]);
   const customColumns = useCustomColumns(project, rows);
@@ -135,8 +141,17 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
     update.mutate(
       { key, body, optimistic },
       {
-        onError: error =>
-          toastError(`Could not update ${key}`, error, { retry: () => onUpdate(key, body, optimistic) }),
+        onError: error => {
+          // Someone else changed the issue: sending the same change again would be refused again.
+          if (isApiError(error) && error.status === 409) {
+            toast.error(`Could not update ${key}`, {
+              description: `${key} changed since the list loaded.`,
+              action: { label: 'Reload', onClick: () => void search.refetch() },
+            });
+            return;
+          }
+          toastError(`Could not update ${key}`, error, { retry: () => onUpdate(key, body, optimistic) });
+        },
       },
     );
 
@@ -149,6 +164,27 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
   const projectEmpty = project !== undefined && projectQuery.data && total === 0 && fullQuery === '';
   const loading = search.isPending && !search.data;
   const hasTabs = withViews && views.length > 0;
+  const table = (
+    <IssueTable
+      rows={rows}
+      groups={groups}
+      groupBy={groupBy ?? null}
+      columns={shown}
+      total={total ?? rows.length}
+      hasMore={!frozen && search.hasNextPage}
+      loadingMore={search.isFetchingNextPage}
+      onLoadMore={() => void search.fetchNextPage()}
+      stale={search.isPlaceholderData}
+      selection={selection}
+      onSelectionChange={setSelection}
+      canEdit={roles.canEdit}
+      onUpdate={onUpdate}
+      sort={state.sort}
+      onSort={sort => navigate({ sort }, 'replace')}
+      today={today}
+      timeZone={timeZone}
+    />
+  );
   const scopeName = project ? (projectQuery.data?.name ?? project) : 'your projects';
 
   return (
@@ -167,13 +203,13 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
         problem={problem}
         base={base}
         autoFocus={wantsFocus}
-        onSaveView={withViews ? () => setSaving('new') : undefined}
+        onSaveView={withViews && !projectEmpty ? () => setSaving('new') : undefined}
         saveLabel={activeView && modified && activeView.can_edit ? 'Save as new view' : 'Save view'}
       />
 
-      {loading || rows.length > 0 || hasTabs ? (
+      {projectEmpty ? null : (
         <ListToolbar
-          controls={loading || rows.length > 0}
+          controls={!frozen && (loading || rows.length > 0)}
           tabs={
             hasTabs ? (
               <ViewTabs
@@ -199,7 +235,7 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
           exporting={exporter.isPending}
           importHref={project && roles.canAdmin(project) ? `/projects/${project}/import` : undefined}
         />
-      ) : null}
+      )}
 
       {search.isError && !problem && search.data ? (
         <StaleNotice onRetry={() => void search.refetch()}>
@@ -213,7 +249,13 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
         <LoadError onRetry={() => void search.refetch()} detail={errorDetail(search.error)}>
           The list could not be loaded.
         </LoadError>
-      ) : problem && !search.data ? null : projectEmpty ? (
+      ) : problem && !search.data ? (
+        frozen ? (
+          <div inert className="opacity-50">
+            {table}
+          </div>
+        ) : null
+      ) : projectEmpty ? (
         <FirstProjectEmptyState
           projectKey={project}
           projectName={projectQuery.data.name}
@@ -250,25 +292,7 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
           }
         />
       ) : (
-        <IssueTable
-          rows={rows}
-          groups={groups}
-          groupBy={groupBy ?? null}
-          columns={shown}
-          total={total ?? rows.length}
-          hasMore={search.hasNextPage}
-          loadingMore={search.isFetchingNextPage}
-          onLoadMore={() => void search.fetchNextPage()}
-          stale={search.isPlaceholderData}
-          selection={selection}
-          onSelectionChange={setSelection}
-          canEdit={roles.canEdit}
-          onUpdate={onUpdate}
-          sort={state.sort}
-          onSort={sort => navigate({ sort }, 'replace')}
-          today={today}
-          timeZone={timeZone}
-        />
+        table
       )}
 
       <BulkBar
@@ -313,8 +337,9 @@ export function IssueList({ project, base = '', title, views: withViews = true, 
             : deleting?.visibility === 'project'
               ? `Everyone in ${deleting.project?.name ?? 'the project'} loses this tab.`
               : 'Everyone in the organisation loses this tab.'}{' '}
-          Any search that still names it as <code className="font-mono">{viewReference(deleting?.name ?? '')}</code>{' '}
-          will report it as unknown.
+          Any search that still names it as{' '}
+          <code className="font-mono [font-variant-ligatures:none]">{viewReference(deleting?.name ?? '')}</code> will
+          report it as unknown.
         </p>
       </ConfirmDialog>
     </div>

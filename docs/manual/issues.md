@@ -370,9 +370,10 @@ search - works the same way.
   resolved statuses start collapsed; click a header to open or close it.
 - **Saved views** sit above the list as tabs, each with its count. Click one
   to run it; type past its query and the tab lets go. _Save view_ keeps the
-  current query, sort and columns under a name; the active tab's menu saves a
-  changed query back into it, renames or re-shares it, or deletes it - for
-  views you may change (see [Searching](./search.md#saved-searches)).
+  current query, sort and columns under a name; the **⋯** button after the tabs
+  saves a changed query back into the active view, renames or re-shares it, or
+  deletes it - for views you may change (see [Searching](./search.md#saved-searches)).
+  Views that do not fit wait behind **N more**.
 - **Edit in place**: click a status, the priority letter or the assignees to
   change them without opening the issue. Sort by clicking a column header;
   choose which columns show from the _Columns_ menu.

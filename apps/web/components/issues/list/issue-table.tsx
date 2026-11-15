@@ -14,9 +14,17 @@ import { Checkbox } from '@components/ui/checkbox';
 import { Skeleton } from '@components/ui/skeleton';
 import { LoadMore } from '@components/text-button';
 import { GROUP_GAP, GROUP_HEIGHT, GroupHeader } from '@components/issues/list/group-header';
-import { IssueRow, ROW_HEIGHT, type RowUpdate } from '@components/issues/list/issue-row';
+import { FROZEN_CELL, IssueRow, ROW_HEIGHT, type RowUpdate } from '@components/issues/list/issue-row';
 import { usePhone } from '@hooks/use-media-query';
-import { gridTemplate, tableMinWidth, type ColumnDef } from '@lib/issue-list/columns';
+import {
+  FROZEN_TRACKS,
+  TITLE_MIN,
+  TITLE_MIN_SCROLLING,
+  gridTemplate,
+  rowTemplate,
+  tableMinWidth,
+  type ColumnDef,
+} from '@lib/issue-list/columns';
 import { cn } from '@lib/utils';
 
 type Item =
@@ -67,20 +75,36 @@ export function IssueTable({
   timeZone,
 }: IssueTableProps) {
   const phone = usePhone();
-  const template = gridTemplate(columns);
-  const minWidth = tableMinWidth(columns);
-  // Only a table wider than the page scrolls sideways; its header then stops sticking, which is the price.
+  // A table wider than the page scrolls sideways under a frozen key and title; the header scrolls with it.
   const outerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(false);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const scrolls = wide && !phone;
+  const titleMin = scrolls ? TITLE_MIN_SCROLLING : TITLE_MIN;
+  const template = rowTemplate(columns, titleMin);
+  const minWidth = tableMinWidth(columns, titleMin);
+  const fitWidth = tableMinWidth(columns);
+  const syncScroll = () => {
+    const el = outerRef.current;
+    if (!el) return;
+    if (headerRef.current) headerRef.current.scrollLeft = el.scrollLeft;
+    const left = el.scrollLeft > 0;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setEdges(e => (e.left === left && e.right === right ? e : { left, right }));
+  };
   useEffect(() => {
     const el = outerRef.current;
     if (!el) return;
-    const measure = () => setWide(el.clientWidth < minWidth);
+    const measure = () => {
+      setWide(el.clientWidth < fitWidth);
+      syncScroll();
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [minWidth]);
+  }, [fitWidth]);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const lastPicked = useRef<string | null>(null);
 
@@ -189,7 +213,10 @@ export function IssueTable({
         <button
           type="button"
           onClick={() => onSort(active && direction === 'asc' ? `${key} desc` : active ? '' : `${key} asc`)}
-          className={cn('flex min-w-0 items-center gap-1 rounded-xs hover:text-text', active && 'text-text')}
+          className={cn(
+            '-mx-1 flex min-w-0 items-center gap-1 rounded-xs px-1 hover:bg-hover hover:text-text',
+            active && 'text-text',
+          )}
         >
           <span className="truncate">{def.label}</span>
           {active ? direction === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" /> : null}
@@ -200,141 +227,143 @@ export function IssueTable({
 
   return (
     <div
-      ref={outerRef}
       role="grid"
       aria-rowcount={total}
-      className={cn('relative', wide && !phone && 'scroll-fade-x overflow-x-auto', stale && 'is-stale')}
+      data-scrolled={scrolls && edges.left ? '' : undefined}
+      className={cn('relative', stale && 'is-stale')}
     >
-      <div style={wide && !phone ? { minWidth } : undefined}>
-        {phone ? null : (
+      {phone ? null : (
+        <div ref={headerRef} className={cn('sticky top-0 z-10 bg-surface', scrolls && 'overflow-hidden')}>
           <div
             role="row"
-            style={{ gridTemplateColumns: template }}
-            className="sticky top-0 z-10 grid h-row-dense items-center gap-2 border-b bg-surface px-2 text-2xs font-medium text-text-muted"
+            style={{ gridTemplateColumns: template, minWidth: scrolls ? minWidth : undefined }}
+            className="grid h-row-dense items-center gap-2 border-b pr-2 text-2xs font-medium text-text-muted"
           >
-            <span className="flex items-center">
-              <Checkbox
-                aria-label={allSelected ? 'Clear selection' : 'Select all loaded issues'}
-                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                onCheckedChange={checked => {
-                  const next = new Set(selection);
-                  for (const k of visibleKeys)
-                    if (checked === true) next.add(k);
-                    else next.delete(k);
-                  onSelectionChange(next);
-                }}
+            <div className={FROZEN_CELL} style={{ gridTemplateColumns: FROZEN_TRACKS }}>
+              <span className="flex items-center">
+                <Checkbox
+                  aria-label={allSelected ? 'Clear selection' : 'Select all loaded issues'}
+                  checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                  onCheckedChange={checked => {
+                    const next = new Set(selection);
+                    for (const k of visibleKeys)
+                      if (checked === true) next.add(k);
+                      else next.delete(k);
+                    onSelectionChange(next);
+                  }}
+                  className={cn(
+                    'bg-surface',
+                    !someSelected && 'reveal hover:opacity-100 [[role=grid]:hover_&]:opacity-100',
+                  )}
+                />
+              </span>
+              <button
+                type="button"
+                title="Priority"
+                aria-label="Priority"
+                onClick={() => onSort(nextSort(sort, 'priority'))}
                 className={cn(
-                  'bg-surface',
-                  !someSelected && 'reveal hover:opacity-100 [[role=grid]:hover_&]:opacity-100',
+                  '-mx-1 rounded-xs px-1 text-left hover:bg-hover hover:text-text',
+                  sort.startsWith('priority') && 'text-text',
                 )}
-              />
-            </span>
-            <button
-              type="button"
-              title="Priority"
-              onClick={() =>
-                onSort(
-                  sort.startsWith('priority') && !sort.endsWith(' desc')
-                    ? 'priority desc'
-                    : sort.startsWith('priority')
-                      ? ''
-                      : 'priority asc',
-                )
-              }
-              className={cn('rounded-xs hover:text-text', sort.startsWith('priority') && 'text-text')}
-            >
-              P
-            </button>
-            <button
-              type="button"
-              title="Type"
-              onClick={() =>
-                onSort(
-                  sort.startsWith('type') && !sort.endsWith(' desc')
-                    ? 'type desc'
-                    : sort.startsWith('type')
-                      ? ''
-                      : 'type asc',
-                )
-              }
-              className={cn('rounded-xs hover:text-text', sort.startsWith('type') && 'text-text')}
-            >
-              T
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onSort(
-                  sort.startsWith('key') && !sort.endsWith(' desc')
-                    ? 'key desc'
-                    : sort.startsWith('key')
-                      ? ''
-                      : 'key asc',
-                )
-              }
-              className={cn(
-                'flex items-center gap-1 rounded-xs text-left hover:text-text',
-                sort.startsWith('key') && 'text-text',
-              )}
-            >
-              Key
-              {sort.startsWith('key') ? (
-                sort.endsWith(' desc') ? (
-                  <ArrowDown className="size-3" />
-                ) : (
-                  <ArrowUp className="size-3" />
-                )
-              ) : null}
-            </button>
-            <span>Title</span>
+              >
+                P
+              </button>
+              <button
+                type="button"
+                title="Type"
+                aria-label="Type"
+                onClick={() => onSort(nextSort(sort, 'type'))}
+                className={cn(
+                  '-mx-1 rounded-xs px-1 text-left hover:bg-hover hover:text-text',
+                  sort.startsWith('type') && 'text-text',
+                )}
+              >
+                T
+              </button>
+              <button
+                type="button"
+                onClick={() => onSort(nextSort(sort, 'key'))}
+                className={cn(
+                  '-mx-1 flex items-center gap-1 rounded-xs px-1 text-left hover:bg-hover hover:text-text',
+                  sort.startsWith('key') && 'text-text',
+                )}
+              >
+                Key
+                {sort.startsWith('key') ? (
+                  sort.endsWith(' desc') ? (
+                    <ArrowDown className="size-3" />
+                  ) : (
+                    <ArrowUp className="size-3" />
+                  )
+                ) : null}
+              </button>
+              <span>Title</span>
+            </div>
             {columns.map(headerCell)}
           </div>
-        )}
+        </div>
+      )}
 
-        <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-          {virtualizer.getVirtualItems().map(virtualRow => {
-            const item = items[virtualRow.index]!;
-            const style = {
-              position: 'absolute' as const,
-              top: 0,
-              left: 0,
-              width: '100%',
-              transform: `translateY(${virtualRow.start - scrollMargin}px)`,
-            };
-            if (item.kind === 'group') {
+      <div
+        ref={outerRef}
+        data-table-scroll
+        onScroll={scrolls ? syncScroll : undefined}
+        className={cn(scrolls && 'overflow-x-auto')}
+      >
+        <div style={scrolls ? { minWidth } : undefined}>
+          <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+            {virtualizer.getVirtualItems().map(virtualRow => {
+              const item = items[virtualRow.index]!;
+              const style = {
+                position: 'absolute' as const,
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start - scrollMargin}px)`,
+              };
+              if (item.kind === 'group') {
+                return (
+                  <GroupHeader
+                    key={virtualRow.key}
+                    style={style}
+                    group={item.group}
+                    groupBy={groupBy!}
+                    category={item.category}
+                    loaded={item.rows.length}
+                    collapsed={item.collapsed}
+                    onToggle={() => setToggled(t => ({ ...t, [groupKey(item.group.value)]: !item.collapsed }))}
+                  />
+                );
+              }
               return (
-                <GroupHeader
+                <IssueRow
                   key={virtualRow.key}
                   style={style}
-                  group={item.group}
-                  groupBy={groupBy!}
-                  category={item.category}
-                  loaded={item.rows.length}
-                  collapsed={item.collapsed}
-                  onToggle={() => setToggled(t => ({ ...t, [groupKey(item.group.value)]: !item.collapsed }))}
+                  issue={item.issue}
+                  columns={columns}
+                  template={template}
+                  selected={selection.has(item.issue.key)}
+                  selecting={selection.size > 0}
+                  onSelect={select}
+                  canEdit={canEdit(item.issue.project.key)}
+                  onUpdate={onUpdate}
+                  today={today}
+                  timeZone={timeZone}
+                  phone={phone}
                 />
               );
-            }
-            return (
-              <IssueRow
-                key={virtualRow.key}
-                style={style}
-                issue={item.issue}
-                columns={columns}
-                template={template}
-                selected={selection.has(item.issue.key)}
-                selecting={selection.size > 0}
-                onSelect={select}
-                canEdit={canEdit(item.issue.project.key)}
-                onUpdate={onUpdate}
-                today={today}
-                timeZone={timeZone}
-                phone={phone}
-              />
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
+
+      {scrolls && edges.right ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 right-0 bottom-0 z-20 w-6 bg-linear-to-r from-transparent to-surface"
+        />
+      ) : null}
 
       {hasMore ? (
         <LoadMore
@@ -347,6 +376,10 @@ export function IssueTable({
     </div>
   );
 }
+
+/** A header click cycles ascending, descending, then off. */
+const nextSort = (sort: string, key: string) =>
+  sort.startsWith(key) && !sort.endsWith(' desc') ? `${key} desc` : sort.startsWith(key) ? '' : `${key} asc`;
 
 const PHONE_TEMPLATE = 'minmax(64px,auto) minmax(0,1fr) 7rem';
 

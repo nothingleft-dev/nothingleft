@@ -27,8 +27,13 @@ export function IssueListSkeleton({ title }: { title: string }) {
   return (
     <div className="flex flex-col gap-4" role="status" aria-label="Loading">
       <PageTitle>{title}</PageTitle>
-      <div className="flex h-control-lg items-center rounded-sm border border-border-strong bg-surface pl-3">
+      <div className="flex h-control-lg items-center gap-2 rounded-sm border border-border-strong bg-surface pl-3">
         <Search aria-hidden className="size-icon-sm flex-none text-text-muted" />
+        <span className="flex min-w-0 items-center truncate text-text-muted">
+          <span className="font-sans text-sm leading-none max-lg:hidden">Search or query</span>
+          <span className="px-1.5 font-sans text-sm leading-none max-lg:hidden">·</span>
+          <span className="truncate font-mono text-xs leading-none">assignee: me #Unresolved</span>
+        </span>
       </div>
       <div className="flex items-center gap-2 md:min-h-[30px]">
         <Skeleton className="h-3 w-16" />

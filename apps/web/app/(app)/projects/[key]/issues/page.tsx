@@ -15,5 +15,5 @@ export default async function Page({ params }: { params: Promise<Params> }) {
   const parsed = parseProjectKey(key);
   if (!parsed) notFound();
 
-  return <IssueList project={parsed} />;
+  return <IssueList project={parsed} title="Issues" />;
 }

@@ -20,6 +20,8 @@ export type ColumnId = BuiltinColumnId | `custom:${string}`;
 export interface ColumnDef {
   id: ColumnId;
   label: string;
+  /** The field's full name in menus, where the header's short label would differ from Group by's. */
+  name?: string;
   /** The grid track for this column. */
   width: string;
   align?: 'right';
@@ -35,8 +37,8 @@ export const COLUMNS: readonly ColumnDef[] = [
   { id: 'project', label: 'Project', width: '56px', csv: 'project' },
   { id: 'status', label: 'Status', width: '168px', csv: 'status', sort: 'status' },
   { id: 'assignee', label: 'Assignee', width: '140px', csv: 'assignees' },
-  { id: 'due', label: 'Due', width: '84px', csv: 'due_date', sort: '{due date}' },
-  { id: 'start', label: 'Start', width: '84px', csv: 'start_date', sort: '{start date}' },
+  { id: 'due', label: 'Due', name: 'Due date', width: '84px', csv: 'due_date', sort: '{due date}' },
+  { id: 'start', label: 'Start', name: 'Start date', width: '84px', csv: 'start_date', sort: '{start date}' },
   { id: 'sprint', label: 'Sprint', width: '112px', csv: 'sprint' },
   { id: 'updated', label: 'Updated', width: '92px', align: 'right', csv: 'updated_at', sort: 'updated' },
   { id: 'created', label: 'Created', width: '92px', align: 'right', csv: 'created_at', sort: 'created' },
@@ -119,13 +121,19 @@ export const FIXED_TRACKS = '28px 18px 18px 84px minmax(200px,1fr)';
 
 export const gridTemplate = (shown: readonly ColumnDef[]) => [FIXED_TRACKS, ...shown.map(c => c.width)].join(' ');
 
-/** The narrowest the table can be with a readable title: tracks, 8px gaps and the row's side padding. */
-export const tableMinWidth = (shown: readonly ColumnDef[]) =>
-  28 +
-  18 +
-  18 +
-  84 +
-  200 +
-  shown.reduce((sum, c) => sum + Number.parseInt(c.width, 10), 0) +
-  8 * (4 + shown.length) +
-  16;
+/** The same five tracks inside the one frozen cell that holds them while the table scrolls sideways. */
+export const FROZEN_TRACKS = '28px 18px 18px 84px minmax(0,1fr)';
+
+export const TITLE_MIN = 200;
+/** A table that scrolls sideways anyway can afford a title people can read. */
+export const TITLE_MIN_SCROLLING = 320;
+
+/** The frozen cell (its 8px inset, four fixed tracks, their gaps, the title) as one track, then the optional columns. */
+const frozenWidth = (titleMin: number) => 8 + 28 + 18 + 18 + 84 + 4 * 8 + titleMin;
+
+export const rowTemplate = (shown: readonly ColumnDef[], titleMin = TITLE_MIN) =>
+  [`minmax(${frozenWidth(titleMin)}px,1fr)`, ...shown.map(c => c.width)].join(' ');
+
+/** The narrowest the table can be with a readable title: the frozen cell, the columns, their gaps, the right inset. */
+export const tableMinWidth = (shown: readonly ColumnDef[], titleMin = TITLE_MIN) =>
+  frozenWidth(titleMin) + shown.reduce((sum, c) => sum + Number.parseInt(c.width, 10) + 8, 0) + 8;

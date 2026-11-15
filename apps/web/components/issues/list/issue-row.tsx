@@ -18,7 +18,7 @@ import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-ma
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
-import type { ColumnDef } from '@lib/issue-list/columns';
+import { FROZEN_TRACKS, type ColumnDef } from '@lib/issue-list/columns';
 import { DevelopmentBadge, summaryCounts } from '@components/git/git-marks';
 import { FieldValue } from '@components/custom-fields/field-value';
 import { formatCalendarDateShort } from '@lib/datetime';
@@ -44,6 +44,10 @@ interface IssueRowProps {
 }
 
 export const ROW_HEIGHT = 36;
+
+/** Checkbox, P, T, key and title stay put while the table scrolls sideways; the row's tint is painted over an opaque surface. */
+export const FROZEN_CELL =
+  'sticky left-0 z-[1] grid items-center gap-2 self-stretch bg-surface bg-[linear-gradient(var(--row-tint,transparent),var(--row-tint,transparent))] pl-2 [[data-scrolled]_&]:shadow-[1px_0_0_var(--border)]';
 
 export function IssueRow({
   issue,
@@ -204,41 +208,44 @@ export function IssueRow({
       onClick={open}
       style={{ ...style, gridTemplateColumns: template }}
       className={cn(
-        'group grid h-row cursor-pointer items-center gap-2 border-b border-border-subtle px-2 hover:bg-hover',
-        selected && 'bg-selected hover:bg-selected',
+        'group grid h-row cursor-pointer items-center gap-2 border-b border-border-subtle pr-2 hover:bg-hover hover:[--row-tint:var(--bg-hover)]',
+        selected &&
+          'bg-selected [--row-tint:var(--bg-selected)] hover:bg-selected hover:[--row-tint:var(--bg-selected)]',
       )}
     >
-      <span className="flex items-center" data-inline>
-        <Checkbox
-          checked={selected}
-          aria-label={`Select ${issue.key}`}
-          onClick={event => onSelect(issue.key, !selected, event.shiftKey)}
-          className={cn(
-            'bg-surface transition-opacity duration-(--dur-fast)',
-            !selected && !selecting && 'reveal group-hover:opacity-100',
-          )}
-        />
-      </span>
-      <PriorityCell issue={issue} canEdit={canEdit} onUpdate={onUpdate} dim={resolved} />
-      <TypeBadge type={issue.type} className={cn(resolved && 'opacity-55')} />
-      <Link href={href} className="min-w-0 rounded-xs hover:underline hover:decoration-border-strong">
-        <IssueKey issueKey={issue.key} resolved={resolved} />
-      </Link>
-      <span className="flex min-w-0 items-center">
-        <Link
-          href={href}
-          title={issue.title}
-          className={cn(
-            'truncate text-text',
-            resolved
-              ? 'text-text-muted line-through decoration-border-strong hover:text-text-secondary'
-              : 'underline-offset-2 hover:underline hover:decoration-border-strong',
-          )}
-        >
-          {issue.title}
+      <div className={FROZEN_CELL} style={{ gridTemplateColumns: FROZEN_TRACKS }}>
+        <span className="flex items-center" data-inline>
+          <Checkbox
+            checked={selected}
+            aria-label={`Select ${issue.key}`}
+            onClick={event => onSelect(issue.key, !selected, event.shiftKey)}
+            className={cn(
+              'bg-surface transition-opacity duration-(--dur-fast)',
+              !selected && !selecting && 'reveal group-hover:opacity-100',
+            )}
+          />
+        </span>
+        <PriorityCell issue={issue} canEdit={canEdit} onUpdate={onUpdate} dim={resolved} />
+        <TypeBadge type={issue.type} className={cn(resolved && 'opacity-55')} />
+        <Link href={href} className="min-w-0 rounded-xs hover:underline hover:decoration-border-strong">
+          <IssueKey issueKey={issue.key} resolved={resolved} />
         </Link>
-        {meta}
-      </span>
+        <span className="flex min-w-0 items-center pr-4">
+          <Link
+            href={href}
+            title={issue.title}
+            className={cn(
+              'truncate text-text',
+              resolved
+                ? 'text-text-muted line-through decoration-border-strong hover:text-text-secondary'
+                : 'underline-offset-2 hover:underline hover:decoration-border-strong',
+            )}
+          >
+            {issue.title}
+          </Link>
+          {meta}
+        </span>
+      </div>
       {columns.map(column => (
         <span
           key={column.id}
