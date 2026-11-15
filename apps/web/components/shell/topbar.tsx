@@ -62,7 +62,7 @@ export function Topbar({ navigation, inOrganization }: { navigation?: ReactNode;
   return (
     <header className="flex h-topbar flex-none items-center gap-3 border-b px-page-x max-md:gap-1 max-md:px-page-x-mobile">
       {navigation}
-      <div className="min-w-0 flex-1 max-md:pl-1">
+      <div className="min-w-0 flex-1 pr-3 max-md:pl-1 max-md:pr-0">
         <Breadcrumb />
       </div>
 
@@ -82,10 +82,13 @@ export function Topbar({ navigation, inOrganization }: { navigation?: ReactNode;
           </Button>
         </>
       ) : inOrganization ? (
-        <CreateIssueButton slot={roles.isPending && pathname !== '/new-issue' ? 'loading' : 'empty'} />
+        <>
+          <CreateIssueButton slot={roles.isPending && pathname !== '/new-issue' ? 'loading' : 'empty'} />
+          <div aria-hidden className="w-11 flex-none md:hidden" />
+        </>
       ) : null}
 
-      <div className="flex items-center gap-2 max-md:gap-1">
+      <div className="flex items-center gap-3 max-md:gap-1">
         <InboxButton />
         <ThemeToggle />
       </div>

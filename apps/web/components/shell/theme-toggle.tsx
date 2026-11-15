@@ -1,16 +1,17 @@
 'use client';
 
-import { Check, Monitor, Moon, Sun } from 'lucide-react';
+import { Check, Moon, Sun, SunMoon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { UserTheme } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { useUpdatePreferences } from '@hooks/use-me';
 
 const THEMES = [
   { value: 'light', label: 'Light', icon: Sun },
   { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
+  { value: 'system', label: 'System', icon: SunMoon },
 ] as const;
 
 export function ThemeToggle() {
@@ -27,18 +28,23 @@ export function ThemeToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Theme">
-          {chosen === 'system' ? (
-            <Monitor className="size-icon" />
-          ) : (
-            <>
-              <Sun className="size-icon dark:hidden" />
-              <Moon className="hidden size-icon dark:block" />
-            </>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Theme">
+              {chosen === 'system' ? (
+                <SunMoon className="size-icon" />
+              ) : (
+                <>
+                  <Sun className="size-icon dark:hidden" />
+                  <Moon className="hidden size-icon dark:block" />
+                </>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Theme</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end" className="min-w-36">
         {THEMES.map(({ value, label, icon: Icon }) => (
           <DropdownMenuItem

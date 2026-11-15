@@ -32,6 +32,11 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
         showCloseButton={false}
         aria-describedby={undefined}
         className="h-dvh w-[min(320px,calc(100vw-32px))] gap-0 bg-app"
+        // The sheet itself takes focus, so the logo link does not open looking hovered or selected.
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+        }}
       >
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <SheetClose asChild>

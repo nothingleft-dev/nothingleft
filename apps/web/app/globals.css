@@ -2817,3 +2817,8 @@ html:has([role='toolbar'][aria-label='Bulk actions']) [data-sonner-toaster][data
 [data-slot='dialog-header'] {
   text-align: left;
 }
+
+/* The close × centres on the title's first line, not above it. */
+[data-slot='dialog-close'] {
+  top: 1.25rem;
+}

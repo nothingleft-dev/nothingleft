@@ -127,7 +127,8 @@ function CollapsedProject({
       <DropdownMenuContent
         side="right"
         align="start"
-        sideOffset={6}
+        // Clear of the rail's hairline: the trigger sits 8px inside it.
+        sideOffset={16}
         className="min-w-48"
         onPointerEnter={hold}
         onPointerLeave={hide}

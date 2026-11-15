@@ -25,22 +25,28 @@ export function DeletionBanner({ organization }: { organization: Organization })
       className="mb-5 flex items-start gap-2.5 rounded-md border border-warning-fg/25 bg-warning-bg px-3 py-2.5 text-warning-fg"
     >
       <CalendarX className="mt-0.5 size-icon-sm flex-none" />
-      <p className="flex-1 text-xs leading-5">
-        <span className="font-medium">
-          {organization.name} will be deleted on {formatDate(deletion.deletes_at)}.
-        </span>{' '}
-        {isOwner
-          ? 'Everyone can keep working until then. Cancel to keep it; nothing is lost.'
-          : 'Everyone can keep working until then. Export anything you need, or ask the Owner to cancel.'}
-      </p>
-      {!isOwner ? null : cancel.isPending ? (
-        // Pending, not unavailable: it keeps the banner's ink rather than the disabled grey.
-        <span className="flex-none text-xs leading-5 font-medium">Cancelling…</span>
-      ) : (
-        <button type="button" onClick={cancelDeletion} className="action-link flex-none text-xs leading-5 font-medium">
-          Cancel deletion
-        </button>
-      )}
+      <div className="flex min-w-0 flex-1 items-start gap-x-4 gap-y-1.5 max-sm:flex-col">
+        <p className="flex-1 text-xs leading-5">
+          <span className="font-medium">
+            {organization.name} will be deleted on {formatDate(deletion.deletes_at)}.
+          </span>{' '}
+          {isOwner
+            ? 'Everyone can keep working until then. Cancel to keep it; nothing is lost.'
+            : 'Everyone can keep working until then. Export anything you need, or ask the Owner to cancel.'}
+        </p>
+        {!isOwner ? null : cancel.isPending ? (
+          // Pending, not unavailable: it keeps the banner's ink rather than the disabled grey.
+          <span className="flex-none text-xs leading-5 font-medium">Cancelling…</span>
+        ) : (
+          <button
+            type="button"
+            onClick={cancelDeletion}
+            className="action-link flex-none text-xs leading-5 font-medium"
+          >
+            Cancel deletion
+          </button>
+        )}
+      </div>
     </div>
   );
 }

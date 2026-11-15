@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Fragment } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState } from 'react';
 import { parseIssueKey } from '@nothingleft/format';
 import { CopyIssueButton } from '@components/issues/copy-issue';
 import { useArticle } from '@hooks/use-articles';
@@ -43,7 +43,8 @@ const SECTIONS: Record<string, string> = {
   import: 'Import',
 };
 
-type Crumb = { label: string; href?: Route; mono?: boolean; copy?: boolean; loading?: boolean };
+/** `project` marks the crumb that names a project by its key until the name arrives. */
+type Crumb = { label: string; href?: Route; mono?: boolean; copy?: boolean; loading?: boolean; project?: boolean };
 
 function crumbsFor(pathname: string): Crumb[] {
   const [first = 'dashboard', ...rest] = pathname.split('/').filter(Boolean);
@@ -55,7 +56,7 @@ function crumbsFor(pathname: string): Crumb[] {
     const project = parsed.projectKey;
     return [
       { label: 'Projects', href: '/projects' as Route },
-      { label: project, mono: true, href: `/projects/${project}` as Route },
+      { label: project, mono: true, project: true, href: `/projects/${project}` as Route },
       { label: 'Issues', href: `/projects/${project}/issues` as Route },
       { label: `${project}-${parsed.number}`, mono: true, copy: true },
     ];
@@ -68,6 +69,7 @@ function crumbsFor(pathname: string): Crumb[] {
       crumbs.push({
         label: projectKey.toUpperCase(),
         mono: true,
+        project: true,
         ...(section ? { href: `/projects/${projectKey}` as Route } : {}),
       });
     }
@@ -102,7 +104,7 @@ function crumbsFor(pathname: string): Crumb[] {
 
 // The route carries the project key; the crumb reads better as the name once it is known.
 function useNamedCrumbs(crumbs: Crumb[]): Crumb[] {
-  const keyCrumb = crumbs.find(c => c.mono && c.href?.startsWith('/projects/') && c.href.split('/').length === 3);
+  const keyCrumb = crumbs.find(c => c.project);
   const project = useProject(keyCrumb ? keyCrumb.label : null);
   if (!keyCrumb || project.isError) return crumbs;
   if (!project.data) return crumbs.map(c => (c === keyCrumb ? { ...c, loading: true } : c));
@@ -146,10 +148,43 @@ const SHORT_LABEL = 14;
 
 type Shown = { kind: 'crumb'; crumb: Crumb } | { kind: 'fold'; crumbs: Crumb[] };
 
-function fold(crumbs: Crumb[]): Shown[] {
+/** `tight` folds the second crumb too, so a long page title is not cut while an ancestor is. */
+function fold(crumbs: Crumb[], tight: boolean): Shown[] {
   const shown = (list: Crumb[]): Shown[] => list.map(crumb => ({ kind: 'crumb', crumb }));
   if (crumbs.length <= FOLD_AFTER) return shown(crumbs);
-  return [...shown(crumbs.slice(0, 2)), { kind: 'fold', crumbs: crumbs.slice(2, -1) }, ...shown(crumbs.slice(-1))];
+  const kept = tight ? 1 : 2;
+  return [
+    ...shown(crumbs.slice(0, kept)),
+    { kind: 'fold', crumbs: crumbs.slice(kept, -1) },
+    ...shown(crumbs.slice(-1)),
+  ];
+}
+
+// Rough widths at the trail's sizes; a guess is enough to decide whether the full trail fits.
+const SEPARATOR_PX = 21;
+const LABEL_CAP_PX = 256;
+const naturalWidth = (shown: Shown[]) =>
+  shown.reduce(
+    (sum, item, i) =>
+      sum +
+      (i > 0 ? SEPARATOR_PX : 0) +
+      (item.kind === 'fold'
+        ? 20
+        : Math.min(LABEL_CAP_PX, item.crumb.label.length * (item.crumb.mono ? 7.2 : 7.6)) + (item.crumb.copy ? 28 : 0)),
+    0,
+  );
+
+function useRoom(shown: boolean) {
+  const ref = useRef<HTMLElement>(null);
+  const [room, setRoom] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const box = ref.current?.parentElement;
+    if (!box) return;
+    const observer = new ResizeObserver(([entry]) => entry && setRoom(entry.contentRect.width));
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [shown]);
+  return [ref, room] as const;
 }
 
 function FoldMenu({ crumbs }: { crumbs: Crumb[] }) {
@@ -183,12 +218,14 @@ function FoldMenu({ crumbs }: { crumbs: Crumb[] }) {
 export function Breadcrumb() {
   const pathname = usePathname();
   const crumbs = useArticleCrumbs(pathname, useNamedCrumbs(crumbsFor(pathname)));
+  const [ref, room] = useRoom(crumbs.length > 1);
   // A top-level page names itself in its own title; the trail starts one level down.
   if (crumbs.length === 1) return null;
-  const shown = fold(crumbs);
+  const roomy = fold(crumbs, false);
+  const shown = room !== null && naturalWidth(roomy) > room ? fold(crumbs, true) : roomy;
   const last = shown.length - 1;
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-medium whitespace-nowrap">
+    <nav ref={ref} aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-medium whitespace-nowrap">
       {shown.map((item, i) => (
         <Fragment key={item.kind === 'fold' ? 'fold' : `${item.crumb.label}-${i}`}>
           {i > 0 ? (

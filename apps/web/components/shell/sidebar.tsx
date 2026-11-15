@@ -16,6 +16,7 @@ import {
   Settings,
   Star,
   UserCheck,
+  UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -57,10 +58,11 @@ interface SidebarProps {
 }
 
 // Set from script, not a scroll-driven animation: Firefox has none, and screenshots freeze one at its end.
+// The last few pixels are fully clear, so a row cut by the edge never shows as a stray sliver of colour.
 const EDGE_FADE =
-  '[&>[data-slot=scroll-area-viewport]]:[mask-image:linear-gradient(to_bottom,transparent,#000_var(--fade-top,0px),#000_calc(100%_-_var(--fade-bottom,0px)),transparent)]';
+  '[&>[data-slot=scroll-area-viewport]]:[mask-image:linear-gradient(to_bottom,transparent_var(--clear-top,0px),#000_var(--fade-top,0px),#000_calc(100%_-_var(--fade-bottom,0px)),transparent_calc(100%_-_var(--clear-bottom,0px)))] data-[scrolled]:shadow-[inset_0_1px_0_var(--border)]';
 
-/** Fades the list's edges while there is more past them. */
+/** Fades the list's edges while there is more past them, with a hairline under the header once it scrolls. */
 function useEdgeFade(root: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const el = root.current;
@@ -69,8 +71,11 @@ function useEdgeFade(root: RefObject<HTMLDivElement | null>) {
     const measure = () => {
       const above = viewport.scrollTop > 0;
       const below = viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - 1;
-      el.style.setProperty('--fade-top', above ? '1rem' : '0px');
-      el.style.setProperty('--fade-bottom', below ? '2rem' : '0px');
+      el.style.setProperty('--fade-top', above ? '1.5rem' : '0px');
+      el.style.setProperty('--clear-top', above ? '0.625rem' : '0px');
+      el.style.setProperty('--fade-bottom', below ? '1.5rem' : '0px');
+      el.style.setProperty('--clear-bottom', below ? '0.5rem' : '0px');
+      el.toggleAttribute('data-scrolled', above);
     };
     measure();
     viewport.addEventListener('scroll', measure, { passive: true });
@@ -87,7 +92,7 @@ function useEdgeFade(root: RefObject<HTMLDivElement | null>) {
 function SectionHead({ children, action, collapsed }: { children: string; action?: ReactNode; collapsed: boolean }) {
   if (collapsed) return <div className="my-2 border-t" />;
   return (
-    <div className="mt-3 flex h-control items-center px-2 text-xs font-medium text-text-muted">
+    <div className="mt-3 flex h-control items-center px-2 text-xs font-medium text-text-muted max-md:mt-1">
       <span className="flex-1">{children}</span>
       {action}
     </div>
@@ -141,6 +146,8 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
   const noOrg = data.noOrganization;
   const projectRows = useRememberedRows('projects', data.projectsState, data.projects.length, 3);
   const viewRows = useRememberedRows('views', data.savedViewsState, data.savedViews.length, 3);
+  // The list above is still loading, so its rows will push this one: an answer here would show and then move.
+  const viewsState = data.projectsState === 'loading' ? 'loading' : data.savedViewsState;
 
   const scroller = useRef<HTMLDivElement>(null);
   useEdgeFade(scroller);
@@ -183,6 +190,7 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
               icon={Inbox}
               collapsed={collapsed}
               trailing={<NavCount value={data.counts.inboxUnread} unread />}
+              dot={data.counts.inboxUnread > 0}
             />
             {collapsed ? null : (
               <Hint>
@@ -202,6 +210,7 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
                 icon={Inbox}
                 collapsed={collapsed}
                 trailing={<NavCount value={data.counts.inboxUnread} unread />}
+                dot={data.counts.inboxUnread > 0}
               />
               <NavItem
                 href="/my-issues"
@@ -256,13 +265,13 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
               <>
                 <SectionHead collapsed={collapsed}>Saved views</SectionHead>
                 <nav aria-label="Saved views" className="flex flex-col gap-px">
-                  {data.savedViews.map(v => (
+                  {(viewsState === 'loading' ? [] : data.savedViews).map(v => (
                     <SavedViewNavItem key={`${v.owner.username}/${v.name}`} view={v} />
                   ))}
                 </nav>
-                {data.savedViewsState === 'loading' ? (
+                {viewsState === 'loading' ? (
                   <NavSkeleton rows={viewRows} collapsed={collapsed} />
-                ) : data.savedViewsState === 'failed' ? (
+                ) : viewsState === 'failed' ? (
                   <Hint danger>Saved views did not load.</Hint>
                 ) : data.savedViews.length === 0 ? (
                   <Hint>Save a search to pin it here.</Hint>
@@ -352,7 +361,7 @@ function AccountMenu({ user, collapsed }: { user: Me | null; collapsed: boolean 
         ) : null}
         <DropdownMenuItem asChild>
           <Link href={'/settings?tab=profile' as Route}>
-            <Settings className="size-icon-sm" /> Account settings
+            <UserRound className="size-icon-sm" /> Profile
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem disabled={signOut.isPending} onSelect={() => signOut.mutate()}>

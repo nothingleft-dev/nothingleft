@@ -16,6 +16,7 @@ import type { GlobalSearchResult } from '@nothingleft/types';
 import { RetryButton } from '@components/query-state';
 import { Kbd } from '@components/kbd';
 import { Button } from '@components/ui/button';
+import { Skeleton } from '@components/ui/skeleton';
 import { IssueKey } from '@components/issue-key';
 import { DraftMark } from '@components/articles/draft-mark';
 import { articlePath } from '@components/articles/article-row';
@@ -115,16 +116,20 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
     router.push(href);
   };
 
+  const typing = text.trim() !== q;
+  // The first result is chosen until the arrows move, so ↵ always has something to open.
+  const chosen = hits.length === 0 ? -1 : Math.min(Math.max(active, 0), hits.length - 1);
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown' && hits.length > 0) {
       event.preventDefault();
-      setActive(i => (i + 1) % hits.length);
+      setActive((chosen + 1) % hits.length);
     } else if (event.key === 'ArrowUp' && hits.length > 0) {
       event.preventDefault();
-      setActive(i => (i <= 0 ? hits.length - 1 : i - 1));
+      setActive(chosen <= 0 ? hits.length - 1 : chosen - 1);
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const hit = hits[active];
+      const hit = typing ? undefined : hits[chosen];
       if (hit) go(hit.href);
       else if (text.trim()) go(listHref('/issues', text.trim()));
     } else if (event.key === 'Escape') {
@@ -134,12 +139,17 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
     }
   };
 
-  const typing = text.trim() !== q;
   const showPanel = open && text.trim() !== '';
   // Both groups refused the query: the API answers 400 and names the problem once.
   const refusal = isApiError(search.error) && search.error.status === 400 ? search.error.message : null;
 
   const issueCount = result?.issues.items.length ?? 0;
+  // Keys take the width of the longest one shown, so titles start right after them and still line up.
+  const keyWidth = `${Math.max(
+    4,
+    ...(result?.issues.items.map(i => i.key.length) ?? []),
+    ...(result?.articles.items.map(a => a.project.key.length) ?? []),
+  )}ch`;
   const articleStart = issueCount + (result && result.issues.total > issueCount ? 1 : 0);
 
   return (
@@ -215,17 +225,18 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
             className="absolute inset-x-0 top-full z-50 mt-1 max-h-[min(560px,70vh)] overflow-y-auto rounded-lg border bg-raised py-1 shadow-popover aria-busy:is-stale max-md:mx-2"
           >
             {!result && (search.isPending || typing) ? (
-              <PanelNote>Searching…</PanelNote>
+              <SearchingRows />
             ) : refusal ? (
               <div className="flex flex-col gap-0.5 px-3 py-2 text-xs">
                 <p className="text-danger-fg">{refusal}</p>
                 <p className="text-text-secondary">
-                  Search plain words, or a filter both lists take, such as <span className="font-mono">tag: rca</span>.
+                  Try plain words, or a field such as <span className="font-mono">tag: rca</span> or{' '}
+                  <span className="font-mono">assignee: me</span>.
                 </p>
               </div>
             ) : search.isError ? (
               <div className="flex items-center gap-3 px-3 py-1.5">
-                <p className="min-w-0 flex-1 text-xs text-danger-fg">The search could not run.</p>
+                <p className="min-w-0 flex-1 text-xs text-danger-fg">Search is unavailable right now.</p>
                 <RetryButton onRetry={() => void search.refetch()} size="xs" />
               </div>
             ) : result ? (
@@ -239,8 +250,10 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                   seeAll={
                     result.issues.total > result.issues.items.length ? (
                       <SeeAll
+                        keyWidth={keyWidth}
                         label={`See all ${result.issues.total} issues`}
-                        active={active === issueCount}
+                        active={chosen === issueCount}
+                        onHover={() => setActive(issueCount)}
                         onClick={() => go(listHref('/issues', q))}
                       />
                     ) : null
@@ -249,12 +262,14 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                   {result.issues.items.map((issue, i) => (
                     <Row
                       key={issue.key}
-                      active={active === i}
+                      active={chosen === i}
                       onHover={() => setActive(i)}
                       onClick={() => go(issuePath(issue))}
                     >
                       <TypeBadge type={issue.type} />
-                      <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
+                      <span className="flex-none font-mono text-2xs" style={{ width: keyWidth }}>
+                        <IssueKey issueKey={issue.key} resolved={issue.resolved} />
+                      </span>
                       <span className={cn('min-w-0 flex-1 truncate', issue.resolved && 'text-text-muted line-through')}>
                         {issue.title}
                       </span>
@@ -274,8 +289,10 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                   seeAll={
                     result.articles.total > result.articles.items.length ? (
                       <SeeAll
+                        keyWidth={keyWidth}
                         label={`See all ${result.articles.total} articles`}
-                        active={active === hits.length - 1}
+                        active={chosen === hits.length - 1}
+                        onHover={() => setActive(hits.length - 1)}
                         onClick={() => go(listHref('/articles', q))}
                       />
                     ) : null
@@ -286,7 +303,7 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                     return (
                       <Row
                         key={`${article.project.key}/${article.slug}`}
-                        active={active === i}
+                        active={chosen === i}
                         onHover={() => setActive(i)}
                         onClick={() => go(articlePath(article))}
                         top={Boolean(article.excerpt)}
@@ -294,8 +311,11 @@ export const GlobalSearch = forwardRef<GlobalSearchHandle>(function GlobalSearch
                         <span className="flex h-5 w-[18px] flex-none items-center justify-center">
                           <FileText className="size-icon-sm text-text-muted" />
                         </span>
-                        <span className="flex h-5 items-center">
-                          <IssueKey issueKey={article.project.key} column />
+                        <span
+                          className="flex h-5 flex-none items-center font-mono text-2xs"
+                          style={{ width: keyWidth }}
+                        >
+                          <IssueKey issueKey={article.project.key} />
                         </span>
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="flex min-w-0 items-center gap-1.5">
@@ -414,7 +434,8 @@ function Row({
       className={cn(
         'flex min-h-[34px] cursor-pointer gap-2.5 px-3 py-1 text-sm',
         top ? 'items-start' : 'items-center',
-        active && 'bg-hover',
+        // Resolved rows are muted, which is too faint on the selected fill.
+        active && 'bg-active [&_.line-through]:text-text-secondary',
       )}
     >
       {children}
@@ -423,24 +444,47 @@ function Row({
 }
 
 // The label starts on the title column of the rows above it: past the type slot and the key column.
-function SeeAll({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function SeeAll({
+  label,
+  keyWidth,
+  active,
+  onHover,
+  onClick,
+}: {
+  label: string;
+  keyWidth: string;
+  active: boolean;
+  onHover: () => void;
+  onClick: () => void;
+}) {
   return (
     <div
       role="option"
       aria-selected={active}
+      onMouseEnter={onHover}
       onClick={onClick}
-      className={cn(
-        'flex h-[30px] cursor-pointer items-center gap-2.5 px-3 text-xs hover:bg-hover',
-        active && 'bg-hover',
-      )}
+      className={cn('flex h-[30px] cursor-pointer items-center gap-2.5 px-3 text-xs', active && 'bg-active')}
     >
       <span className="w-[18px] flex-none" />
-      <IssueKey issueKey="" column className="invisible" />
+      <span className="flex-none font-mono text-2xs" style={{ width: keyWidth }} />
       <span className="text-brand-text">{label}</span>
     </div>
   );
 }
 
-function PanelNote({ children }: { children: React.ReactNode }) {
-  return <p className="px-3 py-2 text-xs text-text-secondary">{children}</p>;
+function SearchingRows() {
+  return (
+    <div aria-label="Searching" className="py-1">
+      <div className="px-3 pt-1 pb-0.5">
+        <Skeleton className="h-3 w-12" />
+      </div>
+      {[62, 48, 55].map(width => (
+        <div key={width} className="flex min-h-[34px] items-center gap-2.5 px-3 py-1">
+          <Skeleton className="size-[18px] flex-none rounded-xs" />
+          <Skeleton className="h-3 w-10 flex-none" />
+          <Skeleton className="h-3" style={{ width: `${width}%` }} />
+        </div>
+      ))}
+    </div>
+  );
 }

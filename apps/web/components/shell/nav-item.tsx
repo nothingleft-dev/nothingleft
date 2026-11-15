@@ -17,6 +17,8 @@ interface NavItemProps<T extends string> {
   /** Overrides the pathname match: a link whose identity lives in its query string. */
   active?: boolean;
   size?: 'default' | 'sub';
+  /** The collapsed rail has no room for a count, so an unread one becomes a dot on the icon. */
+  dot?: boolean;
 }
 
 export const ACTIVE_BAR =
@@ -56,6 +58,7 @@ export function NavItem<T extends string>({
   exact = false,
   active: activeOverride,
   size = 'default',
+  dot = false,
 }: NavItemProps<T>) {
   const pathname = usePathname();
   const active = activeOverride ?? (exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`));
@@ -67,12 +70,19 @@ export function NavItem<T extends string>({
       className={cn(
         NAV_ROW,
         size === 'sub' && 'h-7 text-xs max-md:h-control max-md:text-sm',
-        active && 'bg-active font-medium text-text [&_[data-nav-count]:not([data-unread])]:text-text-secondary',
-        active && size === 'default' && ACTIVE_BAR,
+        active &&
+          cn('bg-active font-medium text-text [&_[data-nav-count]:not([data-unread])]:text-text-secondary', ACTIVE_BAR),
         collapsed && 'justify-center px-0',
       )}
     >
-      {Icon ? <Icon className="size-icon flex-none" /> : null}
+      {Icon ? (
+        <span className="relative flex flex-none">
+          <Icon className="size-icon" />
+          {collapsed && dot ? (
+            <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-brand ring-2 ring-app" />
+          ) : null}
+        </span>
+      ) : null}
       {collapsed ? null : <span className="min-w-0 flex-1 truncate">{label}</span>}
       {collapsed ? null : trailing}
     </Link>
