@@ -30,10 +30,20 @@ import { EmptyState } from '@components/empty-state';
 import { LoadError, errorDetail } from '@components/query-state';
 import { LetterBadge } from '@components/letter-badge';
 import { LabelColorPicker } from '@components/label-color-picker';
-import { RowsSkeleton } from '@components/skeletons';
+import { Skeleton } from '@components/ui/skeleton';
 import { SettingsSection } from '@components/settings/section';
 import { ValueCommand } from '@components/issues/pickers';
-import { InlineRename, MarkFrame, ReorderGrip, RowChip, markButtonClass } from '@components/projects/value-row';
+import {
+  InlineRename,
+  MarkFrame,
+  ReorderGrip,
+  RowChip,
+  archivedLast,
+  listHeaderClass,
+  markButtonClass,
+  nameColumnClass,
+  rowCellClass,
+} from '@components/projects/value-row';
 import {
   useCreateSchemaValue,
   useDeleteSchemaValue,
@@ -59,7 +69,12 @@ interface TableCopy {
   title: string;
   description: string;
   noun: string;
+  plural: string;
+  /** The column caption over the names. */
+  column: string;
   placeholder: string;
+  /** What an empty list suggests adding. */
+  start: string;
 }
 
 const COPY: Record<SchemaTable, TableCopy> = {
@@ -68,26 +83,38 @@ const COPY: Record<SchemaTable, TableCopy> = {
     description:
       'Every issue is in exactly one. Done and Cancelled categories mark an issue resolved. Any status can follow any other.',
     noun: 'status',
+    plural: 'statuses',
+    column: 'Status',
     placeholder: 'Add a status',
+    start: 'Add them in the order work moves, for example Todo, In Progress, Done.',
   },
   priorities: {
     title: 'Priorities',
     description: 'Ordered from most to least urgent. The badge colour follows the priority everywhere it appears.',
     noun: 'priority',
+    plural: 'priorities',
+    column: 'Priority',
     placeholder: 'Add a priority',
+    start: 'Add them from most to least urgent, for example Urgent, High, Medium, Low.',
   },
   types: {
     title: 'Issue types',
     description: 'What kind of work an issue is. New issues start as the default type.',
     noun: 'type',
+    plural: 'types',
+    column: 'Type',
     placeholder: 'Add a type',
+    start: 'Add the kinds of work this project tracks, for example Bug, Feature, Task.',
   },
   'work-types': {
     title: 'Work types',
     description:
       'The kind of work a time entry records. New entries start as the default. Archived types stay on old entries but cannot be chosen.',
     noun: 'work type',
+    plural: 'work types',
+    column: 'Work type',
     placeholder: 'Add a work type',
+    start: 'Add the kinds of work time is logged against, for example Development, Review.',
   },
 };
 
@@ -125,16 +152,19 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
     null,
   );
 
-  const rows = ((values.data ?? []) as AnyValue[]).toSorted((a, b) => a.position - b.position);
+  const order = archivedLast((values.data ?? []) as AnyValue[]);
+  const rows = order.shown;
   const byName = new Map(rows.map(r => [r.name, r]));
+  const statuses = table === 'statuses';
 
   const patch = (name: string, body: AnyUpdate) =>
     update.mutate({ name, body } as never, { onError: error => toastError(`Could not update ${name}`, error) });
 
   const move = (name: string, to: number) => {
-    const from = rows.findIndex(r => r.name === name);
-    if (from < 0 || to < 0 || to >= rows.length || from === to) return;
-    patch(name, { position: to });
+    const from = order.live.findIndex(r => r.name === name);
+    const target = order.live[to];
+    if (from < 0 || !target || from === to) return;
+    patch(name, { position: order.positionOf(target) });
   };
 
   const onDelete = (name: string, moveTo?: string) =>
@@ -164,107 +194,127 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
   return (
     <SettingsSection title={copy.title} description={copy.description}>
       {values.isPending ? (
-        <RowsSkeleton rows={5} columns={['badge', 'title', 'meta']} />
+        <ValuesSkeleton category={statuses} canEdit={canEdit} />
       ) : values.isError && !values.data ? (
         <LoadError onRetry={() => void values.refetch()} detail={errorDetail(values.error)}>
           {`The ${copy.noun} list could not be loaded.`}
         </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState
-          title={`No ${copy.noun} yet.`}
-          description={canEdit ? 'Add the first one.' : 'A Project Admin can add them.'}
-          action={canEdit ? addForm : undefined}
-          className="[&>div]:w-full"
+          title={`No ${copy.plural} yet.`}
+          description={canEdit ? copy.start : `A Project Admin can add ${copy.plural}.`}
         />
       ) : (
-        <ol className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label={copy.title}>
-          {rows.map((row, index) => (
-            <li
-              key={row.name}
-              onKeyDown={canEdit ? e => onRowKey(e, row.name, index) : undefined}
-              onDragOver={
-                canEdit && dragging
-                  ? e => {
-                      e.preventDefault();
-                      setOverIndex(index);
-                    }
-                  : undefined
-              }
-              onDrop={
-                canEdit && dragging
-                  ? e => {
-                      e.preventDefault();
-                      move(dragging, index);
-                      setDragging(null);
-                      setOverIndex(null);
-                    }
-                  : undefined
-              }
-              className={cn(
-                'flex min-h-row items-center gap-2 px-2',
-                dragging === row.name && 'bg-inset',
-                overIndex === index && dragging !== row.name && 'bg-selected',
-                row.is_archived && 'text-text-secondary',
-              )}
-            >
-              {canEdit ? (
-                <ReorderGrip
-                  name={row.name}
-                  onDragStart={() => setDragging(row.name)}
-                  onDragEnd={() => {
-                    setDragging(null);
-                    setOverIndex(null);
-                  }}
-                />
-              ) : null}
-
-              <ValueMark
-                row={row}
-                canEdit={canEdit}
-                open={markOpen === row.name}
-                onOpenChange={o => setMarkOpen(o ? row.name : null)}
-                onChange={body => patch(row.name, body)}
-              />
-              <InlineRename
-                name={row.name}
-                canEdit={canEdit}
-                onRename={to => rename.mutateAsync({ name: row.name, to })}
-              />
-
-              <span className="ml-auto flex flex-none items-center gap-2">
-                {table === 'statuses' ? (
-                  <span className="flex w-28 justify-end max-sm:w-auto">
-                    {row.category ? (
-                      <CategoryLabel
-                        category={row.category}
-                        canEdit={canEdit}
-                        label={`${row.name} category`}
-                        onChange={c => patch(row.name, { category: c })}
+        <div className="flex flex-col rounded-md border">
+          {statuses ? (
+            <div aria-hidden className={listHeaderClass}>
+              <span className={cn('flex-none', canEdit ? 'w-[4.5rem]' : 'w-10')} />
+              <span className={cn(nameColumnClass, 'px-1')}>{copy.column}</span>
+              <span className="w-24 flex-none pl-1.5 sm:w-28">Category</span>
+            </div>
+          ) : null}
+          <ol className="flex flex-col divide-y divide-border-subtle" aria-label={copy.title}>
+            {rows.map((row, index) => {
+              const live = !row.is_archived;
+              const chip = row.is_default ? (
+                <RowChip>Default</RowChip>
+              ) : row.is_archived ? (
+                <RowChip>Archived</RowChip>
+              ) : null;
+              return (
+                <li
+                  key={row.name}
+                  onKeyDown={canEdit && live ? e => onRowKey(e, row.name, index) : undefined}
+                  onDragOver={
+                    canEdit && live && dragging
+                      ? e => {
+                          e.preventDefault();
+                          setOverIndex(index);
+                        }
+                      : undefined
+                  }
+                  onDrop={
+                    canEdit && live && dragging
+                      ? e => {
+                          e.preventDefault();
+                          move(dragging, index);
+                          setDragging(null);
+                          setOverIndex(null);
+                        }
+                      : undefined
+                  }
+                  className={cn(
+                    'flex min-h-row items-start gap-2 px-2',
+                    dragging === row.name && 'bg-inset',
+                    overIndex === index && dragging !== row.name && 'bg-selected',
+                    row.is_archived && 'text-text-secondary',
+                  )}
+                >
+                  {canEdit ? (
+                    <span className={cn(rowCellClass, 'max-sm:hidden')}>
+                      <ReorderGrip
+                        name={live ? row.name : null}
+                        onDragStart={() => setDragging(row.name)}
+                        onDragEnd={() => {
+                          setDragging(null);
+                          setOverIndex(null);
+                        }}
                       />
-                    ) : null}
+                    </span>
+                  ) : null}
+
+                  <span className={cn(rowCellClass, 'w-10')}>
+                    <ValueMark
+                      row={row}
+                      canEdit={canEdit}
+                      open={markOpen === row.name}
+                      onOpenChange={o => setMarkOpen(o ? row.name : null)}
+                      onChange={body => patch(row.name, body)}
+                    />
                   </span>
-                ) : null}
-                <span className="flex w-16 justify-start max-sm:w-auto">
-                  {row.is_default ? <RowChip>Default</RowChip> : row.is_archived ? <RowChip>Archived</RowChip> : null}
-                </span>
-                {canEdit ? (
-                  <RowMenu
-                    row={row}
-                    first={index === 0}
-                    last={index === rows.length - 1}
-                    onMove={by => move(row.name, index + by)}
-                    onPatch={body => patch(row.name, body)}
-                    onDelete={() => setDeleting({ name: row.name })}
-                    onEditMark={() => setMarkOpen(row.name)}
-                  />
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ol>
+                  <span className={cn(nameColumnClass, 'gap-2')}>
+                    <InlineRename
+                      name={row.name}
+                      canEdit={canEdit}
+                      onRename={to => rename.mutateAsync({ name: row.name, to })}
+                    />
+                    {chip ? <span className={cn(rowCellClass, 'sm:hidden')}>{chip}</span> : null}
+                  </span>
+
+                  {statuses ? (
+                    <span className={cn(rowCellClass, 'w-24 sm:w-28')}>
+                      {row.category ? (
+                        <CategoryLabel
+                          category={row.category}
+                          canEdit={canEdit}
+                          label={`${row.name} category`}
+                          onChange={c => patch(row.name, { category: c })}
+                        />
+                      ) : null}
+                    </span>
+                  ) : null}
+                  <span className={cn(rowCellClass, 'w-18 max-sm:hidden')}>{chip}</span>
+                  {canEdit ? (
+                    <span className={cn(rowCellClass, 'ml-auto')}>
+                      <RowMenu
+                        row={row}
+                        first={index === 0}
+                        last={index === order.live.length - 1}
+                        onMove={by => move(row.name, index + by)}
+                        onPatch={body => patch(row.name, body)}
+                        onDelete={() => setDeleting({ name: row.name })}
+                        onEditMark={() => setMarkOpen(row.name)}
+                      />
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
 
-      {canEdit && rows.length > 0 ? addForm : null}
+      {canEdit && !values.isPending && !(values.isError && !values.data) ? addForm : null}
 
       {deleting ? (
         <DeleteValueDialog
@@ -272,6 +322,7 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
           name={deleting.name}
           message={deleting.message}
           targets={deleting.targets}
+          valueNoun={copy.noun}
           markOf={name => {
             const row = byName.get(name);
             return row ? <PlainMark row={row} /> : null;
@@ -282,6 +333,49 @@ export function SchemaValues({ projectKey, table, canEdit, heading }: SchemaValu
         />
       ) : null}
     </SettingsSection>
+  );
+}
+
+const SKELETON_NAMES = [128, 184, 104, 216, 152];
+
+/** The list before it loads, on the rows' own columns, with the add row under it. */
+function ValuesSkeleton({ category, canEdit }: { category: boolean; canEdit: boolean }) {
+  return (
+    <div className="flex flex-col gap-4" aria-hidden>
+      <div className="flex flex-col rounded-md border">
+        {category ? (
+          <div className={listHeaderClass}>
+            <span className={cn('flex-none', canEdit ? 'w-[4.5rem]' : 'w-10')} />
+            <Skeleton className="h-3 w-12" />
+          </div>
+        ) : null}
+        <div className="flex flex-col divide-y divide-border-subtle">
+          {SKELETON_NAMES.map((width, i) => (
+            <div key={i} className="flex h-row items-center gap-2 px-2">
+              {canEdit ? <span className="size-6 flex-none" /> : null}
+              <span className={cn(rowCellClass, 'w-10 pl-1')}>
+                <Skeleton className="size-badge-letter rounded-xs" />
+              </span>
+              <span className={cn(nameColumnClass, 'px-1')}>
+                <Skeleton className="h-3.5" style={{ width }} />
+              </span>
+              {category ? (
+                <span className="w-24 flex-none pl-1.5 sm:w-28">
+                  <Skeleton className="h-3 w-[5.5rem]" />
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+      {canEdit ? (
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-control w-full rounded-md sm:max-w-xs" />
+          {category ? <Skeleton className="h-control w-32 flex-none rounded-md" /> : null}
+          <Skeleton className="h-control w-22 flex-none rounded-md" />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -410,7 +504,7 @@ function CategoryLabel({
   /** `field` is the add form's picker: a bordered control at input height. */
   variant?: 'row' | 'field';
 }) {
-  if (!canEdit) return <span className="px-2 text-xs text-text-secondary">{CATEGORY_LABELS[category]}</span>;
+  if (!canEdit) return <span className="px-1.5 text-xs text-text-secondary">{CATEGORY_LABELS[category]}</span>;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -485,17 +579,19 @@ function RowMenu({ row, first, last, onMove, onPatch, onDelete, onEditMark }: Ro
             {row.is_archived ? 'Unarchive' : 'Archive'}
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem disabled={first} onSelect={() => onMove(-1)}>
-              Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={last} onSelect={() => onMove(1)}>
-              Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        {row.is_archived ? null : (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem disabled={first} onSelect={() => onMove(-1)}>
+                Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={last} onSelect={() => onMove(1)}>
+                Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" disabled={row.is_default === true} onSelect={onDelete}>
           Delete
@@ -585,6 +681,8 @@ export interface DeleteValueDialogProps {
   onArchive?: () => void;
   /** What moves when the value goes: `issues`, or `time entries` for a work item attribute. */
   movedNoun?: string;
+  /** What the targets are, for the picker's search: `status`, `option`. */
+  valueNoun?: string;
 }
 
 export function DeleteValueDialog({
@@ -597,6 +695,7 @@ export function DeleteValueDialog({
   onConfirm,
   onArchive,
   movedNoun = 'issues',
+  valueNoun = 'value',
 }: DeleteValueDialogProps) {
   const [target, setTarget] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -637,7 +736,7 @@ export function DeleteValueDialog({
               </PopoverTrigger>
               <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
                 <ValueCommand
-                  placeholder="Find a value"
+                  placeholder={`Find a ${valueNoun}`}
                   selected={target}
                   options={targets.map(t => ({ name: t, mark: markOf?.(t) }))}
                   onSelect={t => {

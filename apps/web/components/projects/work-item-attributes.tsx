@@ -30,7 +30,16 @@ import { LetterBadge } from '@components/letter-badge';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { DeleteValueDialog, LetterForm, SchemaValues } from '@components/projects/schema-values';
-import { InlineRename, MarkFrame, ReorderGrip, RowChip, markButtonClass } from '@components/projects/value-row';
+import {
+  InlineRename,
+  MarkFrame,
+  ReorderGrip,
+  RowChip,
+  archivedLast,
+  markButtonClass,
+  nameColumnClass,
+  rowCellClass,
+} from '@components/projects/value-row';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { useApiError } from '@hooks/use-api-error';
 import { useSchemaValues } from '@hooks/use-project-schema';
@@ -76,13 +85,18 @@ export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesPr
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<number | null>(null);
 
-  const rows = (attributes.data ?? []).toSorted((a, b) => a.position - b.position);
+  const order = archivedLast(attributes.data ?? []);
+  const rows = order.shown;
   const chosen = rows.find(r => r.name === selected) ?? null;
   const atCap = rows.length >= WORK_ITEM_ATTRIBUTES_MAX;
 
   const move = (name: string, to: number) => {
-    if (to < 0 || to >= rows.length) return;
-    update.mutate({ name, body: { position: to } }, { onError: e => toastError(`Could not move ${name}`, e) });
+    const target = order.live[to];
+    if (!target || target.name === name) return;
+    update.mutate(
+      { name, body: { position: order.positionOf(target) } },
+      { onError: e => toastError(`Could not move ${name}`, e) },
+    );
   };
 
   const onRowKey = (event: KeyboardEvent, name: string, index: number) => {
@@ -156,7 +170,7 @@ export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesPr
             <span />
             <span className="flex min-w-0 items-center gap-2">
               <span className="truncate">Work type</span>
-              <RowChip>Built in</RowChip>
+              <RowChip className={selected === WORK_TYPE ? 'border-border-strong' : undefined}>Built in</RowChip>
             </span>
             <ValuesSummary names={(workTypes.data ?? []).filter(t => !t.is_archived).map(t => t.name)} />
           </div>
@@ -173,10 +187,10 @@ export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesPr
                 onClick={() => setSelected(attribute.name)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') setSelected(attribute.name);
-                  if (canEdit) onRowKey(e, attribute.name, index);
+                  if (canEdit && !attribute.is_archived) onRowKey(e, attribute.name, index);
                 }}
                 onDragOver={
-                  canEdit && dragging
+                  canEdit && dragging && !attribute.is_archived
                     ? e => {
                         e.preventDefault();
                         setOver(index);
@@ -184,7 +198,7 @@ export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesPr
                     : undefined
                 }
                 onDrop={
-                  canEdit && dragging
+                  canEdit && dragging && !attribute.is_archived
                     ? e => {
                         e.preventDefault();
                         if (dragging !== attribute.name) move(dragging, index);
@@ -203,7 +217,7 @@ export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesPr
               >
                 {canEdit ? (
                   <ReorderGrip
-                    name={attribute.name}
+                    name={attribute.is_archived ? null : attribute.name}
                     onDragStart={() => setDragging(attribute.name)}
                     onDragEnd={() => {
                       setDragging(null);
@@ -215,7 +229,11 @@ export function WorkItemAttributes({ projectKey, canEdit }: WorkItemAttributesPr
                 )}
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate">{attribute.name}</span>
-                  {attribute.is_archived ? <RowChip>Archived</RowChip> : null}
+                  {attribute.is_archived ? (
+                    <RowChip className={selected === attribute.name ? 'border-border-strong' : undefined}>
+                      Archived
+                    </RowChip>
+                  ) : null}
                 </span>
                 <ValuesSummary names={attribute.values.filter(v => !v.is_archived).map(v => v.name)} />
               </div>
@@ -286,7 +304,8 @@ function AttributePanel({
   const [deleting, setDeleting] = useState<{ name: string; message?: string; targets?: readonly string[] } | null>(
     null,
   );
-  const values = attribute.values.toSorted((a, b) => a.position - b.position);
+  const order = archivedLast(attribute.values);
+  const values = order.shown;
   const fail = (e: Error) => setError(e.message);
   const ok = () => setError(null);
 
@@ -294,8 +313,9 @@ function AttributePanel({
     updateValue.mutate({ name: attribute.name, value, body }, { onSuccess: ok, onError: fail });
 
   const moveValue = (value: string, to: number) => {
-    if (to < 0 || to >= values.length) return;
-    patchValue(value, { position: to });
+    const target = order.live[to];
+    if (!target || target.name === value) return;
+    patchValue(value, { position: order.positionOf(target) });
   };
 
   const onDeleteValue = (value: string, moveTo?: string) =>
@@ -410,7 +430,7 @@ function AttributePanel({
           <li
             key={value.name}
             onKeyDown={
-              canEdit
+              canEdit && !value.is_archived
                 ? e => {
                     if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
                     e.preventDefault();
@@ -418,9 +438,9 @@ function AttributePanel({
                   }
                 : undefined
             }
-            onDragOver={canEdit && dragging ? e => e.preventDefault() : undefined}
+            onDragOver={canEdit && dragging && !value.is_archived ? e => e.preventDefault() : undefined}
             onDrop={
-              canEdit && dragging
+              canEdit && dragging && !value.is_archived
                 ? e => {
                     e.preventDefault();
                     if (dragging !== value.name) moveValue(dragging, index);
@@ -429,28 +449,34 @@ function AttributePanel({
                 : undefined
             }
             className={cn(
-              'flex min-h-row items-center gap-2 px-2',
+              'flex min-h-row items-start gap-2 px-2',
               dragging === value.name && 'bg-inset',
               value.is_archived && 'text-text-secondary',
             )}
           >
             {canEdit ? (
-              <ReorderGrip
-                name={value.name}
-                onDragStart={() => setDragging(value.name)}
-                onDragEnd={() => setDragging(null)}
-              />
-            ) : null}
-            <ValueLetter
-              value={value}
-              canEdit={canEdit}
-              onChange={short_label => patchValue(value.name, { short_label })}
-            />
-            <InlineRename name={value.name} canEdit={canEdit} onRename={name => patchValue(value.name, { name })} />
-            <span className="ml-auto flex flex-none items-center gap-2">
-              <span className="flex w-16 justify-start max-sm:w-auto">
-                {value.is_archived ? <RowChip>Archived</RowChip> : null}
+              <span className={rowCellClass}>
+                <ReorderGrip
+                  name={value.is_archived ? null : value.name}
+                  onDragStart={() => setDragging(value.name)}
+                  onDragEnd={() => setDragging(null)}
+                />
               </span>
+            ) : null}
+            <span className={cn(rowCellClass, 'w-10')}>
+              <ValueLetter
+                value={value}
+                canEdit={canEdit}
+                onChange={short_label => patchValue(value.name, { short_label })}
+              />
+            </span>
+            <span className={nameColumnClass}>
+              <InlineRename name={value.name} canEdit={canEdit} onRename={name => patchValue(value.name, { name })} />
+            </span>
+            <span className={cn(rowCellClass, 'w-18 max-sm:w-auto')}>
+              {value.is_archived ? <RowChip>Archived</RowChip> : null}
+            </span>
+            <span className={cn(rowCellClass, 'ml-auto')}>
               {canEdit ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -467,20 +493,22 @@ function AttributePanel({
                     <DropdownMenuItem onSelect={() => patchValue(value.name, { is_archived: !value.is_archived })}>
                       {value.is_archived ? 'Unarchive' : 'Archive'}
                     </DropdownMenuItem>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuItem disabled={index === 0} onSelect={() => moveValue(value.name, index - 1)}>
-                          Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          disabled={index === values.length - 1}
-                          onSelect={() => moveValue(value.name, index + 1)}
-                        >
-                          Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                    {value.is_archived ? null : (
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem disabled={index === 0} onSelect={() => moveValue(value.name, index - 1)}>
+                            Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={index === order.live.length - 1}
+                            onSelect={() => moveValue(value.name, index + 1)}
+                          >
+                            Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       variant="destructive"
@@ -547,6 +575,7 @@ function AttributePanel({
           message={deleting.message}
           targets={deleting.targets}
           movedNoun="time entries"
+          valueNoun="value"
           markOf={name => {
             const v = values.find(x => x.name === name);
             return v ? <LetterBadge letter={v.short_label} label={v.name} variant="outlined" /> : null;

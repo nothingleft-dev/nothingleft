@@ -130,13 +130,16 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
         {tab === 'time-tracking' ? (
           <>
             <TimeTrackingSwitch project={project.data} canEdit={canEdit} />
-            <TimeFields project={project.data} canEdit={canEdit} />
+            {project.data.time_tracking_enabled ? (
+              <>
+                <TimeFields project={project.data} canEdit={canEdit} />
+                <WorkItemAttributes projectKey={projectKey} canEdit={canEdit} />
+              </>
+            ) : null}
           </>
         ) : null}
 
-        {schemaTable === 'work-types' ? (
-          <WorkItemAttributes projectKey={projectKey} canEdit={canEdit} />
-        ) : schemaTable ? (
+        {schemaTable && schemaTable !== 'work-types' ? (
           <SchemaValues key={schemaTable} projectKey={projectKey} table={schemaTable} canEdit={canEdit} />
         ) : null}
 
@@ -198,6 +201,9 @@ export function ProjectSettings({ projectKey }: { projectKey: string }) {
   );
 }
 
+const ARCHIVE_EFFECT =
+  'Archiving hides the project from the sidebar and the active list. Nothing is deleted, and everything stays readable.';
+
 function ArchiveSection({ project }: { project: Project }) {
   const [confirming, setConfirming] = useState(false);
   const archive = useArchiveProject();
@@ -205,11 +211,7 @@ function ArchiveSection({ project }: { project: Project }) {
   return (
     <SettingsSection
       title={project.is_archived ? 'Archived' : 'Archive'}
-      description={
-        project.is_archived
-          ? 'It keeps everything in it and stays readable; it just does not appear in the sidebar.'
-          : 'Takes it out of the sidebar and the active list. Nothing in it is deleted.'
-      }
+      description={project.is_archived ? `${ARCHIVE_EFFECT} Unarchiving puts it back.` : ARCHIVE_EFFECT}
       actions={
         project.is_archived ? (
           <Button
@@ -251,8 +253,7 @@ function ArchiveSection({ project }: { project: Project }) {
           )
         }
       >
-        <p>Its issues, boards and documents stay exactly where they are and stay readable.</p>
-        <p>It leaves the sidebar and the active project list. Unarchiving puts it back, whole.</p>
+        <p>{ARCHIVE_EFFECT} Unarchiving puts it back.</p>
       </ConfirmDialog>
     </SettingsSection>
   );
@@ -267,7 +268,7 @@ function ProjectSettingsSkeleton() {
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-3.5 w-8" />
         </div>
-        <div className="flex h-11 items-center gap-6 overflow-hidden border-b px-3">
+        <div className="flex h-11 items-center gap-6 overflow-hidden border-b">
           {[52, 60, 62, 40, 40, 92, 48, 88, 84, 50, 46, 96].map((width, i) => (
             <Skeleton key={i} className="h-3.5 flex-none" style={{ width }} />
           ))}
@@ -279,16 +280,22 @@ function ProjectSettingsSkeleton() {
           <Skeleton className="h-3.5 w-80 max-w-full" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {[0, 1].map(i => (
-            <div key={i} className="flex flex-col gap-2">
-              <Skeleton className="h-3.5 w-12" />
-              <Skeleton className="h-control w-full rounded-md" />
-            </div>
-          ))}
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-3.5 w-12" />
+            <Skeleton className="h-control w-full rounded-md" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-3.5 w-8" />
+            <span className="flex h-control items-center">
+              <Skeleton className="h-3.5 w-10" />
+            </span>
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/5" />
+          </div>
         </div>
         <div className="flex flex-col gap-2">
           <Skeleton className="h-3.5 w-24" />
-          <Skeleton className="h-24 w-full rounded-md" />
+          <Skeleton className="h-36 w-full rounded-md" />
         </div>
         <div className="flex flex-col gap-2">
           <Skeleton className="h-3.5 w-14" />
@@ -298,7 +305,7 @@ function ProjectSettingsSkeleton() {
             ))}
           </div>
         </div>
-        <Skeleton className="h-9 w-32 rounded-md" />
+        <Skeleton className="h-control w-32 rounded-md" />
       </div>
     </div>
   );

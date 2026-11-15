@@ -50,7 +50,7 @@ for a select, how many options), the types it applies to and how many issues hol
 the 50; at the limit, _New field_ is disabled until you archive or delete one. Drag a field's
 grip, or press **Alt + ↑/↓** on it, to reorder. Click a field's name to change it: the same
 dialog as _New field_, with the type and slug shown but fixed, and _Archive_ and _Delete_ at
-the bottom. Archived fields are listed apart, under the active ones. Everyone in the project
+the bottom. Archived fields stay in the list, after the active ones. Everyone in the project
 can see the tab; only a Project Admin can change it.
 
 ### The same slug in several projects
@@ -152,7 +152,8 @@ log.
 
 ## Time tracking: Estimation, Spent time and work item attributes
 
-In **Project settings → Time tracking**:
+In **Project settings → Time tracking** (the fields and attributes below show once time tracking is
+on):
 
 - **Estimation field.** By default the built-in _Estimation_. Choose a duration field instead
   and that field becomes the estimate: setting the estimate fills it, the issue's

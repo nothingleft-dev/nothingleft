@@ -24,7 +24,7 @@ import { SettingsSection } from '@components/settings/section';
 import { CustomFieldDialog, DeleteConsequences } from '@components/projects/custom-field-dialog';
 import { FIELD_TYPE_META, hasOptions } from '@components/custom-fields/field-types';
 import { useCustomFields, useDeleteCustomField, useUpdateCustomField } from '@hooks/use-custom-fields';
-import { ReorderGrip, RowChip } from '@components/projects/value-row';
+import { ReorderGrip, RowChip, archivedLast, listHeaderClass, nameColumnClass } from '@components/projects/value-row';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { plural } from '@lib/numbers';
@@ -43,9 +43,10 @@ export function CustomFieldsSettings({ projectKey, canEdit }: CustomFieldsSettin
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<number | null>(null);
 
-  const all = (fields.data ?? []).toSorted((a, b) => a.position - b.position);
-  const live = all.filter(f => !f.is_archived);
-  const archived = all.filter(f => f.is_archived);
+  const order = archivedLast(fields.data ?? []);
+  const { live, shown } = order;
+  const all = fields.data ?? [];
+  const archivedCount = shown.length - live.length;
   const atCap = live.length >= CUSTOM_FIELDS_MAX;
 
   const patch = (field: CustomField, body: Parameters<typeof update.mutate>[0]['body'], done?: string) =>
@@ -54,11 +55,10 @@ export function CustomFieldsSettings({ projectKey, canEdit }: CustomFieldsSettin
       { onSuccess: () => done && toast.success(done), onError: e => toastError(`Could not update ${field.name}`, e) },
     );
 
-  // Positions are across every field, archived included, so a move names the target's own position.
   const move = (field: CustomField, to: number) => {
     const target = live[to];
     if (!target || target.slug === field.slug) return;
-    patch(field, { position: all.indexOf(target) });
+    patch(field, { position: order.positionOf(target) });
   };
 
   const onRowKey = (event: KeyboardEvent, field: CustomField, index: number) => {
@@ -130,134 +130,94 @@ export function CustomFieldsSettings({ projectKey, canEdit }: CustomFieldsSettin
           }
         />
       ) : (
-        <>
-          {live.length > 0 ? (
-            <ol className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Custom fields">
-              {live.map((field, index) => (
-                <li
-                  key={field.slug}
-                  onKeyDown={canEdit ? e => onRowKey(e, field, index) : undefined}
-                  onDragOver={
-                    canEdit && dragging
-                      ? e => {
-                          e.preventDefault();
-                          setOver(index);
-                        }
-                      : undefined
-                  }
-                  onDrop={
-                    canEdit && dragging
-                      ? e => {
-                          e.preventDefault();
-                          const moving = live.find(f => f.slug === dragging);
-                          if (moving) move(moving, index);
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col rounded-md border">
+            <div aria-hidden className={listHeaderClass}>
+              <span className={cn('flex-none', canEdit ? 'w-14' : 'w-6')} />
+              <span className={cn(nameColumnClass, 'px-1 sm:max-w-[30rem]')}>Field</span>
+              <span className="w-40 flex-none max-lg:w-auto" />
+              <span className="w-36 flex-none max-md:hidden">Type</span>
+              <span className="w-32 flex-none max-lg:hidden">Applies to</span>
+              <span className="w-20 flex-none text-right max-md:hidden">Issues</span>
+              {canEdit ? <span className="ml-auto w-6 flex-none" /> : null}
+            </div>
+            <ol className="flex flex-col divide-y divide-border-subtle" aria-label="Custom fields">
+              {shown.map((field, index) => {
+                const isLive = !field.is_archived;
+                return (
+                  <li
+                    key={field.slug}
+                    onKeyDown={canEdit && isLive ? e => onRowKey(e, field, index) : undefined}
+                    onDragOver={
+                      canEdit && isLive && dragging
+                        ? e => {
+                            e.preventDefault();
+                            setOver(index);
+                          }
+                        : undefined
+                    }
+                    onDrop={
+                      canEdit && isLive && dragging
+                        ? e => {
+                            e.preventDefault();
+                            const moving = live.find(f => f.slug === dragging);
+                            if (moving) move(moving, index);
+                            setDragging(null);
+                            setOver(null);
+                          }
+                        : undefined
+                    }
+                    className={cn(
+                      'flex h-row items-center gap-2 px-2',
+                      dragging === field.slug && 'bg-inset',
+                      over === index && dragging !== field.slug && 'bg-selected',
+                      !isLive && 'text-text-secondary',
+                    )}
+                  >
+                    {canEdit ? (
+                      <ReorderGrip
+                        name={isLive ? field.name : null}
+                        onDragStart={() => setDragging(field.slug)}
+                        onDragEnd={() => {
                           setDragging(null);
                           setOver(null);
-                        }
-                      : undefined
-                  }
-                  className={cn(
-                    'flex h-row items-center gap-2 px-2',
-                    dragging === field.slug && 'bg-inset',
-                    over === index && dragging !== field.slug && 'bg-selected',
-                  )}
-                >
-                  {canEdit ? (
-                    <ReorderGrip
-                      name={field.name}
-                      onDragStart={() => setDragging(field.slug)}
-                      onDragEnd={() => {
-                        setDragging(null);
-                        setOver(null);
-                      }}
-                    />
-                  ) : null}
-                  <FieldRow
-                    field={field}
-                    canEdit={canEdit}
-                    onOpen={() => setEditing(field)}
-                    menu={
-                      canEdit ? (
-                        <FieldMenu
-                          field={field}
-                          first={index === 0}
-                          last={index === live.length - 1}
-                          onEdit={() => setEditing(field)}
-                          onMove={by => move(field, index + by)}
-                          onArchive={() =>
-                            patch(field, { is_archived: true }, `Archived ${field.name}. Its values are kept.`)
-                          }
-                          onDelete={() => setDeleting(field)}
-                        />
-                      ) : null
-                    }
-                  />
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="text-sm text-text-secondary">Every field is archived.</p>
-          )}
-
-          {archived.length > 0 ? (
-            <div className="flex flex-col gap-2 pt-3">
-              <div className="flex flex-col gap-0.5">
-                <h3 className="text-sm font-semibold">
-                  Archived <span className="font-normal text-text-secondary tabular">{archived.length}</span>
-                </h3>
-                <p className="text-sm text-text-secondary">
-                  Hidden from issues and pickers, still searchable, values kept. They do not count toward the{' '}
-                  {CUSTOM_FIELDS_MAX}.
-                </p>
-              </div>
-              <ol
-                className="flex flex-col divide-y divide-border-subtle rounded-md border"
-                aria-label="Archived fields"
-              >
-                {archived.map(field => (
-                  <li key={field.slug} className="flex h-row items-center gap-2 px-2 text-text-secondary">
-                    {canEdit ? <ReorderGrip name={null} /> : null}
+                        }}
+                      />
+                    ) : null}
                     <FieldRow
                       field={field}
                       canEdit={canEdit}
                       onOpen={() => setEditing(field)}
                       menu={
                         canEdit ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                aria-label={`Actions for ${field.name}`}
-                                className="text-text-secondary"
-                              >
-                                <MoreHorizontal />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                disabled={atCap}
-                                onSelect={() =>
-                                  patch(field, { is_archived: false }, `${field.name} is back on issues.`)
-                                }
-                              >
-                                Unarchive
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(field)}>
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <FieldMenu
+                            field={field}
+                            first={index === 0}
+                            last={index === live.length - 1}
+                            atCap={atCap}
+                            onEdit={() => setEditing(field)}
+                            onMove={by => move(field, index + by)}
+                            onArchive={() =>
+                              patch(field, { is_archived: true }, `Archived ${field.name}. Its values are kept.`)
+                            }
+                            onUnarchive={() => patch(field, { is_archived: false }, `${field.name} is back on issues.`)}
+                            onDelete={() => setDeleting(field)}
+                          />
                         ) : null
                       }
                     />
                   </li>
-                ))}
-              </ol>
-            </div>
+                );
+              })}
+            </ol>
+          </div>
+          {archivedCount > 0 ? (
+            <p className="max-w-[72ch] text-xs text-text-secondary">
+              Archived fields are hidden from issues and pickers but stay searchable and keep their values. They do not
+              count toward the {CUSTOM_FIELDS_MAX}.
+            </p>
           ) : null}
-        </>
+        </div>
       )}
 
       {editing ? (
@@ -331,23 +291,26 @@ function FieldRow({
         </TooltipTrigger>
         <TooltipContent>{meta.label}</TooltipContent>
       </Tooltip>
-      {name}
-      <span className="flex-none font-mono text-2xs text-text-secondary max-sm:hidden">{field.slug}</span>
-      <span className="ml-auto flex min-w-0 flex-none items-center gap-3 text-xs text-text-secondary">
-        <span className="flex gap-1.5">
-          {field.time_role ? <RowChip>{field.time_role === 'estimation' ? 'Estimation' : 'Spent time'}</RowChip> : null}
-          {field.is_required ? <RowChip>Required</RowChip> : null}
-        </span>
-        <span className="w-40 flex-none truncate max-md:hidden">
-          {meta.label}
-          {optionCount !== null ? <span className="tabular"> · {plural(optionCount, 'option')}</span> : null}
-        </span>
-        <span className="w-32 flex-none truncate max-lg:hidden" title={scope}>
-          {scope}
-        </span>
-        <span className="w-20 flex-none text-right tabular max-md:hidden">{plural(field.issue_count, 'issue')}</span>
-        <span className="w-6 flex-none">{menu}</span>
+      <span className={cn(nameColumnClass, 'items-center gap-2 sm:max-w-[30rem]')}>
+        {name}
+        <span className="min-w-0 truncate font-mono text-2xs text-text-secondary max-sm:hidden">{field.slug}</span>
       </span>
+      <span className="flex w-40 flex-none gap-1.5 max-lg:w-auto">
+        {field.is_archived ? <RowChip>Archived</RowChip> : null}
+        {field.time_role ? <RowChip>{field.time_role === 'estimation' ? 'Estimation' : 'Spent time'}</RowChip> : null}
+        {field.is_required ? <RowChip>Required</RowChip> : null}
+      </span>
+      <span className="w-36 flex-none truncate text-xs text-text-secondary max-md:hidden">
+        {meta.label}
+        {optionCount !== null ? <span className="tabular"> · {plural(optionCount, 'option')}</span> : null}
+      </span>
+      <span className="w-32 flex-none truncate text-xs text-text-secondary max-lg:hidden" title={scope}>
+        {scope}
+      </span>
+      <span className="w-20 flex-none text-right text-xs text-text-secondary tabular max-md:hidden">
+        {plural(field.issue_count, 'issue')}
+      </span>
+      {menu ? <span className="ml-auto w-6 flex-none">{menu}</span> : null}
     </>
   );
 }
@@ -356,17 +319,21 @@ function FieldMenu({
   field,
   first,
   last,
+  atCap,
   onEdit,
   onMove,
   onArchive,
+  onUnarchive,
   onDelete,
 }: {
   field: CustomField;
   first: boolean;
   last: boolean;
+  atCap: boolean;
   onEdit: () => void;
   onMove: (by: number) => void;
   onArchive: () => void;
+  onUnarchive: () => void;
   onDelete: () => void;
 }) {
   return (
@@ -378,20 +345,28 @@ function FieldMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem onSelect={() => window.setTimeout(onEdit, 0)}>Edit</DropdownMenuItem>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem disabled={first} onSelect={() => onMove(-1)}>
-              Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
+        {field.is_archived ? (
+          <DropdownMenuItem disabled={atCap} onSelect={onUnarchive}>
+            Unarchive
+          </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem disabled={first} onSelect={() => onMove(-1)}>
+                  Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={last} onSelect={() => onMove(1)}>
+                  Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem disabled={field.time_role !== null} onSelect={onArchive}>
+              {field.time_role ? 'Archive (used for time tracking)' : 'Archive'}
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={last} onSelect={() => onMove(1)}>
-              Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuItem disabled={field.time_role !== null} onSelect={onArchive}>
-          {field.time_role ? 'Archive (used for time tracking)' : 'Archive'}
-        </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => window.setTimeout(onDelete, 0)}>
           Delete

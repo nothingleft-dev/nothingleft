@@ -8,6 +8,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { PaletteSwatches } from '@components/palette-swatches';
 import { PendingButton } from '@components/pending-button';
 import { Markdown } from '@components/markdown/markdown';
+import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { ProjectMark } from '@components/projects/project-mark';
 import { useApiError } from '@hooks/use-api-error';
 import { useFieldProblems } from '@hooks/use-field-problems';
@@ -91,15 +92,16 @@ function GeneralEditor({ project }: { project: Project }) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={descriptionId} className="text-sm font-medium text-text-secondary">
+        <span id={descriptionId} className="text-sm font-medium text-text-secondary">
           Description
-        </label>
-        <textarea
-          id={descriptionId}
+        </span>
+        <MarkdownEditor
           value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="What this project is for. Markdown works."
-          className="field-sizing-content max-h-[calc(14lh+18px)] min-h-[calc(4lh+18px)] w-full resize-none rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted hover:border-border-strong focus:border-border-strong"
+          onChange={setDescription}
+          projectKey={project.key}
+          label="Description"
+          placeholder="What this project is for"
+          minHeight="min-h-24"
         />
       </div>
 

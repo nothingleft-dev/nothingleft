@@ -61,6 +61,30 @@ export function MarkFrame({ children }: { children: ReactNode }) {
 
 export const markButtonClass = 'group/mark flex-none rounded-sm';
 
+/** A list's column captions, above its rows and on the rows' own grid. */
+export const listHeaderClass =
+  'flex h-row-dense items-center gap-2 border-b px-2 text-2xs font-medium text-text-secondary max-sm:hidden';
+
+/** The name column of a value list: it grows to a reading width, so the columns after it stay beside it. */
+export const nameColumnClass = 'flex min-w-0 flex-1 basis-0 sm:max-w-[24rem]';
+
+/** A cell that sits on the row's first line, so a row that grows (a rename's error) grows only downwards. */
+export const rowCellClass = 'flex h-row flex-none items-center';
+
+/**
+ * Archived values go after the live ones. `positionOf` is a row's place in the full order, archived
+ * included, which is what a move sends.
+ */
+export function archivedLast<T extends { position: number; is_archived?: boolean }>(rows: readonly T[]) {
+  const ordered = rows.toSorted((a, b) => a.position - b.position);
+  const live = ordered.filter(r => !r.is_archived);
+  return {
+    shown: [...live, ...ordered.filter(r => r.is_archived)],
+    live,
+    positionOf: (row: T) => ordered.indexOf(row),
+  };
+}
+
 /** A value's name, renamed in place. A refused rename keeps the editor open with the reason under it. */
 export function InlineRename({
   name,
@@ -78,17 +102,21 @@ export function InlineRename({
   const [pending, setPending] = useState(false);
 
   if (draft === null) {
-    return canEdit ? (
-      <button
-        type="button"
-        title="Click to rename"
-        onClick={() => setDraft(name)}
-        className="min-w-0 truncate rounded-sm px-1 text-left text-sm hover:bg-hover"
-      >
-        {name}
-      </button>
-    ) : (
-      <span className="min-w-0 truncate px-1 text-sm">{name}</span>
+    return (
+      <span className="flex min-h-row min-w-0 items-center">
+        {canEdit ? (
+          <button
+            type="button"
+            title="Click to rename"
+            onClick={() => setDraft(name)}
+            className="min-w-0 truncate rounded-sm px-1 text-left text-sm hover:bg-hover"
+          >
+            {name}
+          </button>
+        ) : (
+          <span className="min-w-0 truncate px-1 text-sm">{name}</span>
+        )}
+      </span>
     );
   }
 
@@ -110,8 +138,9 @@ export function InlineRename({
   };
 
   return (
-    <span className="flex min-w-0 flex-1 flex-col gap-1 py-1">
+    <span className="flex min-w-0 flex-1 flex-col gap-1 pt-[calc((var(--row)-var(--control-sm))/2)] pb-1.5">
       <input
+        data-slot="input"
         autoFocus
         aria-label={`Rename ${name}`}
         aria-invalid={error ? true : undefined}

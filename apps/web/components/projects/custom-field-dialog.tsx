@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { ChevronsUpDown, X } from 'lucide-react';
+import { ChevronsUpDown, MoreHorizontal, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { customFieldSlug, isCustomFieldSlug } from '@nothingleft/format';
 import {
@@ -25,6 +25,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Switch } from '@components/ui/switch';
 import { FormAlert } from '@components/auth/form-alert';
@@ -33,7 +43,16 @@ import { DialogBody } from '@components/dialog-body';
 import { LabelColorPicker } from '@components/label-color-picker';
 import { TypeBadge } from '@components/issues/value-marks';
 import { DeleteValueDialog } from '@components/projects/schema-values';
-import { InlineRename, MarkFrame, ReorderGrip, RowChip, markButtonClass } from '@components/projects/value-row';
+import {
+  InlineRename,
+  MarkFrame,
+  ReorderGrip,
+  RowChip,
+  archivedLast,
+  markButtonClass,
+  nameColumnClass,
+  rowCellClass,
+} from '@components/projects/value-row';
 import { FieldValue } from '@components/custom-fields/field-value';
 import { FieldEditor } from '@components/custom-fields/field-editors';
 import {
@@ -300,7 +319,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
       <DialogBody className="m-0 flex flex-col gap-5 p-5">
         {error.summary ? <FormAlert title={error.summary} /> : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={cn('grid gap-4', !editing && 'sm:grid-cols-2')}>
           <Row label="Name" htmlFor={ids.name} error={error.fields['name']}>
             <input
               id={ids.name}
@@ -312,8 +331,16 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
               className={inputClass}
             />
           </Row>
-          <Row label="Type" hint={editing ? 'Fixed once the field exists.' : undefined}>
-            {editing ? (
+          {editing ? null : (
+            <Row label="Type">
+              <TypePicker value={type} onChange={setType} />
+            </Row>
+          )}
+        </div>
+
+        {editing ? (
+          <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+            <Row label="Type">
               <Fixed>
                 {(() => {
                   const meta = FIELD_TYPE_META[field.type];
@@ -325,22 +352,20 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                   );
                 })()}
               </Fixed>
-            ) : (
-              <TypePicker value={type} onChange={setType} />
-            )}
-          </Row>
-        </div>
-
-        {editing ? (
-          <Row label="Slug" hint="The name search uses. Fixed once the field exists.">
-            <Fixed className="font-mono text-xs">{field.slug}</Fixed>
-          </Row>
+            </Row>
+            <Row label="Slug">
+              <Fixed className="font-mono text-xs">{field.slug}</Fixed>
+            </Row>
+            <p className="text-xs text-text-secondary sm:col-span-2">
+              Both are fixed once the field exists. Search queries name the field by its slug.
+            </p>
+          </div>
         ) : (
           <Row
             label="Slug"
             htmlFor={ids.slug}
             error={(slugLeft ? slugProblem : null) ?? error.fields['slug']}
-            hint="The name search uses: lower-case letters, digits and hyphens. Made from the name unless you choose one, and fixed once created."
+            hint="How search queries name the field: lower-case letters, digits and hyphens. Made from the name unless you choose one, and fixed once created."
           >
             <input
               id={ids.slug}
@@ -635,7 +660,7 @@ function TypePicker({ value, onChange }: { value: CustomFieldType | null; onChan
           <ChevronsUpDown className="ml-auto text-text-secondary" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-(--radix-popover-trigger-width) min-w-64 p-0">
+      <PopoverContent align="end" className="w-(--radix-popover-trigger-width) min-w-[24rem] p-0">
         <PickerCommand>
           <CommandInput placeholder="Find a type" />
           <CommandList className="max-h-[360px]">
@@ -855,7 +880,8 @@ function DefaultPicker({
             aria-label="Default"
             className={cn(triggerClass, 'min-w-0 flex-1 overflow-hidden')}
           >
-            {preview}
+            <span className="flex min-w-0 flex-1 items-center overflow-hidden">{preview}</span>
+            <ChevronsUpDown className="text-text-secondary" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className={cn('p-0', field.type === 'markdown' ? 'w-[520px]' : 'w-[284px]')}>
@@ -901,13 +927,18 @@ interface OptionsListProps {
   error?: string | null;
 }
 
-/** The option rows: grip, colour, name, archive and delete — one line each, like the project's value lists. */
+/** The option rows: grip, colour, name and a menu — one line each, like the project's value lists. */
 function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: OptionsListProps) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
-  const rows = options.toSorted((a, b) => a.position - b.position);
+  const order = archivedLast(options);
+  const rows = order.shown;
   const nextColor = OPTION_COLORS[rows.length % OPTION_COLORS.length]!;
+  const moveTo = (name: string, to: number) => {
+    const target = order.live[to];
+    if (target && target.name !== name) onMove(name, order.positionOf(target));
+  };
 
   const add = () => {
     const n = draft.trim();
@@ -920,74 +951,106 @@ function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: Opti
     <div className="flex flex-col gap-2">
       {rows.length > 0 ? (
         <ol className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Options">
-          {rows.map((option, index) => (
-            <li
-              key={option.name}
-              onKeyDown={e => {
-                if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-                e.preventDefault();
-                const to = index + (e.key === 'ArrowUp' ? -1 : 1);
-                if (to >= 0 && to < rows.length) onMove(option.name, to);
-              }}
-              onDragOver={
-                dragging
-                  ? e => {
-                      e.preventDefault();
-                      setOver(index);
-                    }
-                  : undefined
-              }
-              onDrop={
-                dragging
-                  ? e => {
-                      e.preventDefault();
-                      if (dragging !== option.name) onMove(dragging, index);
+          {rows.map((option, index) => {
+            const live = !option.is_archived;
+            return (
+              <li
+                key={option.name}
+                onKeyDown={e => {
+                  if (!live || !e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+                  e.preventDefault();
+                  moveTo(option.name, index + (e.key === 'ArrowUp' ? -1 : 1));
+                }}
+                onDragOver={
+                  dragging && live
+                    ? e => {
+                        e.preventDefault();
+                        setOver(index);
+                      }
+                    : undefined
+                }
+                onDrop={
+                  dragging && live
+                    ? e => {
+                        e.preventDefault();
+                        moveTo(dragging, index);
+                        setDragging(null);
+                        setOver(null);
+                      }
+                    : undefined
+                }
+                className={cn(
+                  'flex min-h-row items-start gap-2 px-2',
+                  dragging === option.name && 'bg-inset',
+                  over === index && dragging !== option.name && 'bg-selected',
+                  !live && 'text-text-secondary',
+                )}
+              >
+                <span className={rowCellClass}>
+                  <ReorderGrip
+                    name={live ? option.name : null}
+                    onDragStart={() => setDragging(option.name)}
+                    onDragEnd={() => {
                       setDragging(null);
                       setOver(null);
-                    }
-                  : undefined
-              }
-              className={cn(
-                'flex min-h-row items-center gap-2 px-2',
-                dragging === option.name && 'bg-inset',
-                over === index && dragging !== option.name && 'bg-selected',
-                option.is_archived && 'text-text-secondary',
-              )}
-            >
-              <ReorderGrip
-                name={option.name}
-                onDragStart={() => setDragging(option.name)}
-                onDragEnd={() => {
-                  setDragging(null);
-                  setOver(null);
-                }}
-              />
-              <OptionColor option={option} onChange={color => onChange(option.name, { color })} />
-              <InlineRename name={option.name} canEdit onRename={n => onChange(option.name, { name: n })} />
-              <span className="ml-auto flex flex-none items-center gap-1">
-                {option.is_archived ? <RowChip className="mr-1">Archived</RowChip> : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="font-normal text-text-secondary"
-                  onClick={() => onChange(option.name, { is_archived: !option.is_archived })}
-                >
-                  {option.is_archived ? 'Unarchive' : 'Archive'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Delete ${option.name}`}
-                  className="text-text-secondary hover:text-danger-fg"
-                  onClick={() => onDelete(option.name)}
-                >
-                  <X />
-                </Button>
-              </span>
-            </li>
-          ))}
+                    }}
+                  />
+                </span>
+                <span className={cn(rowCellClass, 'w-10')}>
+                  <OptionColor option={option} onChange={color => onChange(option.name, { color })} />
+                </span>
+                <span className={nameColumnClass}>
+                  <InlineRename name={option.name} canEdit onRename={n => onChange(option.name, { name: n })} />
+                </span>
+                <span className={cn(rowCellClass, 'w-18 max-sm:w-auto')}>
+                  {live ? null : <RowChip>Archived</RowChip>}
+                </span>
+                <span className={cn(rowCellClass, 'ml-auto')}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Actions for ${option.name}`}
+                        className="text-text-secondary"
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onSelect={() => onChange(option.name, { is_archived: live })}>
+                        {live ? 'Archive' : 'Unarchive'}
+                      </DropdownMenuItem>
+                      {live ? (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem disabled={index === 0} onSelect={() => moveTo(option.name, index - 1)}>
+                              Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={index === order.live.length - 1}
+                              onSelect={() => moveTo(option.name, index + 1)}
+                            >
+                              Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      ) : null}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={() => window.setTimeout(() => onDelete(option.name), 0)}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </span>
+              </li>
+            );
+          })}
         </ol>
       ) : null}
       <div className="flex items-center gap-2">
@@ -1013,6 +1076,21 @@ function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: Opti
   );
 }
 
+/** An option's colour, carrying its first letter in the colour's own text ink, as the option reads on an issue. */
+function OptionSwatch({ option }: { option: Pick<CustomFieldOption, 'name' | 'color'> }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        `l-${option.color}`,
+        'grid size-badge-letter flex-none place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg',
+      )}
+    >
+      {option.name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange: (color: LabelColor) => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -1025,15 +1103,7 @@ function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange
           className={markButtonClass}
         >
           <MarkFrame>
-            <span
-              aria-hidden
-              className={cn(
-                `l-${option.color}`,
-                'grid size-badge-letter place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg',
-              )}
-            >
-              a
-            </span>
+            <OptionSwatch option={option} />
           </MarkFrame>
         </button>
       </PopoverTrigger>
@@ -1101,19 +1171,10 @@ function SavedOptions({ projectKey, field }: { projectKey: string; field: Custom
           name={deleting.name}
           message={deleting.message}
           targets={deleting.targets}
+          valueNoun="option"
           markOf={name => {
             const option = field.options.find(o => o.name === name);
-            return option ? (
-              <span
-                aria-hidden
-                className={cn(
-                  `l-${option.color}`,
-                  'grid size-badge-letter flex-none place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg',
-                )}
-              >
-                a
-              </span>
-            ) : null;
+            return option ? <OptionSwatch option={option} /> : null;
           }}
           onArchive={() => {
             updateOption.mutate(

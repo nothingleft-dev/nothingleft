@@ -299,7 +299,9 @@ Opened with `c` or *Create issue* in the top bar (decided 24 Sep 2026):
 
 ## Project value lists
 
-Statuses, priorities, types and work types share one list: drag the grip or press
+Statuses, priorities, types and work types share one list. Archived values go last, without a drag
+handle, dimmed, with the Archived chip in the chip column; every value row's actions are in its ⋯ menu;
+lists with more than one column carry a header row. Drag the grip or press
 `Alt + ↑/↓` to reorder, click the name to rename, click the badge for colour and
 letter, and the row menu for *Make default*, *Archive* and *Delete*. Deleting a value
 issues still use asks where to move them, offering only the values that can receive
