@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { PageHeader } from '@components/page-header';
+import { EmptyState } from '@components/empty-state';
 import { ArticleResults } from '@components/articles/article-results';
 import { DeletedArticles } from '@components/articles/deleted-articles';
 import { useKnowledgeBase } from '@components/articles/knowledge-base';
@@ -48,6 +49,7 @@ export function KnowledgeBaseHome() {
         q={q}
         onCommit={commit}
         autoFocus={params.get('focus') === '1'}
+        searchable={!empty || q !== ''}
         whenEmpty={
           empty ? (
             <Starters canCreate={canCreate} onPick={s => openNewArticle({ parent: null, starter: s })} />
@@ -61,12 +63,10 @@ export function KnowledgeBaseHome() {
 function Starters({ canCreate, onPick }: { canCreate: boolean; onPick: (starter: StarterId) => void }) {
   if (!canCreate) {
     return (
-      <div className="rounded-md border border-dashed px-4 py-6">
-        <p className="font-medium">No articles yet.</p>
-        <p className="mt-1 text-xs text-text-secondary">
-          Runbooks, decisions and onboarding notes appear here once a Contributor writes one.
-        </p>
-      </div>
+      <EmptyState
+        title="No articles yet."
+        description="Runbooks, decisions and onboarding notes appear here once a Contributor writes one."
+      />
     );
   }
   return (

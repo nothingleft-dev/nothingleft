@@ -28,9 +28,19 @@ interface ArticleResultsProps {
   autoFocus?: boolean;
   /** Shown instead of the empty list when nothing is searched for and nothing exists. */
   whenEmpty?: React.ReactNode;
+  /** False while there is nothing to search: the query bar is left out. */
+  searchable?: boolean;
 }
 
-export function ArticleResults({ project, q, onCommit, grouped = false, autoFocus, whenEmpty }: ArticleResultsProps) {
+export function ArticleResults({
+  project,
+  q,
+  onCommit,
+  grouped = false,
+  autoFocus,
+  whenEmpty,
+  searchable = true,
+}: ArticleResultsProps) {
   const session = useSession();
   const timeZone = session.status === 'signed-in' ? session.user.timezone : undefined;
   const search = useArticleSearch({ q, project, sort: q ? undefined : RECENT_SORT });
@@ -60,15 +70,17 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
 
   return (
     <div className="flex flex-col gap-4">
-      <QueryBar
-        value={q}
-        onCommit={onCommit}
-        problem={problem}
-        kind="articles"
-        label="Search articles"
-        placeholder={ARTICLE_QUERY_PLACEHOLDER}
-        autoFocus={autoFocus}
-      />
+      {searchable ? (
+        <QueryBar
+          value={q}
+          onCommit={onCommit}
+          problem={problem}
+          kind="articles"
+          label="Search articles"
+          placeholder={ARTICLE_QUERY_PLACEHOLDER}
+          autoFocus={autoFocus}
+        />
+      ) : null}
 
       {search.isPending && !search.data ? (
         <div className="flex flex-col gap-2" role="status" aria-label="Loading">
@@ -101,16 +113,14 @@ export function ArticleResults({ project, q, onCommit, grouped = false, autoFocu
           whenEmpty
         ) : (
           <EmptyState
-            title={q ? 'No article matches this search.' : 'No articles yet.'}
+            title={q ? 'No articles match this search.' : 'No articles yet.'}
             description={
-              q
-                ? `Nothing matches ${q}. Widen the search or clear it.`
-                : 'Articles appear here once someone in the project writes one.'
+              q ? 'Try fewer words or a different tag.' : 'Articles appear here once someone in the project writes one.'
             }
             action={
               q ? (
                 <Button variant="outline" size="sm" onClick={() => onCommit('')}>
-                  Clear the search
+                  Clear search
                 </Button>
               ) : undefined
             }

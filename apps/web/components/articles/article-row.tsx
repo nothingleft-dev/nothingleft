@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { Route } from 'next';
-import { FileText, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import type { ArticleSummary } from '@nothingleft/types';
 import { Skeleton } from '@components/ui/skeleton';
 import { DraftMark } from '@components/articles/draft-mark';
@@ -22,8 +22,7 @@ interface ArticleRowProps {
 
 export function ArticleRow({ article, showProject = false, showExcerpt = true, timeZone }: ArticleRowProps) {
   return (
-    <li className="group/article relative flex gap-3 px-3 py-2.5 hover:bg-hover">
-      <FileText className="mt-0.5 size-icon-sm flex-none text-text-muted" />
+    <li className="group/article relative flex px-3 py-2.5 hover:bg-hover">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-2">
           <Link
@@ -40,12 +39,14 @@ export function ArticleRow({ article, showProject = false, showExcerpt = true, t
             <span className="flex-none font-mono text-2xs text-text-muted">{article.project.key}</span>
           ) : null}
           {article.parent ? (
-            <span className="min-w-[8ch] shrink-[4] truncate text-xs text-text-muted">in {article.parent.title}</span>
+            <span className="min-w-[8ch] shrink-[4] truncate text-xs text-text-muted max-sm:hidden">
+              in {article.parent.title}
+            </span>
           ) : null}
           <Updated article={article} timeZone={timeZone} className="ml-auto pl-2 max-sm:hidden" />
         </div>
         {showExcerpt && article.excerpt ? (
-          <p className="line-clamp-2 max-w-[90ch] text-xs leading-5 text-text-secondary">{article.excerpt}</p>
+          <p className="line-clamp-1 max-w-[90ch] text-xs leading-5 text-text-secondary">{article.excerpt}</p>
         ) : null}
         <Updated article={article} timeZone={timeZone} className="sm:hidden" />
         {article.tags.length > 0 ? (
@@ -75,8 +76,11 @@ function Updated({
   className: string;
 }) {
   return (
-    <span className={cn('flex flex-none items-center gap-1 text-xs text-text-secondary', className)}>
+    <span className={cn('flex flex-none items-center gap-1.5 text-xs text-text-secondary', className)}>
       <PersonName person={article.updated_by} />
+      <span aria-hidden className="text-text-muted">
+        ·
+      </span>
       <RelativeTime value={article.updated_at} timeZone={timeZone} className="relative" />
     </span>
   );
@@ -87,7 +91,6 @@ export function ArticleRowsSkeleton({ rows = 5 }: { rows?: number }) {
     <ul className="divide-y divide-border-subtle rounded-md border" aria-hidden>
       {Array.from({ length: rows }, (_, i) => (
         <li key={i} className="flex gap-3 px-3 py-3">
-          <Skeleton className="size-4 rounded-xs" />
           <div className="flex flex-1 flex-col gap-2">
             <Skeleton className="h-3.5" style={{ width: `${30 + ((i * 13) % 30)}%` }} />
             <Skeleton className="h-3 w-4/5" />

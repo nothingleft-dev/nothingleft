@@ -6,7 +6,7 @@ import { cn } from '@lib/utils';
 
 const MIN_HEADINGS = 2;
 
-/** Pinned beside the article on wide screens; the heading last scrolled past is marked. */
+/** Pinned beside the article on wide screens; the heading last past the top quarter of the view is marked. */
 export function ArticleToc({ headings }: { headings: readonly MarkdownHeading[] }) {
   const [active, setActive] = useState<string | null>(null);
 
@@ -15,7 +15,8 @@ export function ArticleToc({ headings }: { headings: readonly MarkdownHeading[] 
     const scroller = document.querySelector<HTMLElement>('[data-scroll-root]');
     if (!scroller) return;
     const onScroll = () => {
-      const top = scroller.getBoundingClientRect().top + 24;
+      const box = scroller.getBoundingClientRect();
+      const top = box.top + box.height / 4;
       let current: string | null = headings[0]?.id ?? null;
       for (const h of headings) {
         const el = document.getElementById(h.id);
@@ -47,7 +48,7 @@ export function ArticleToc({ headings }: { headings: readonly MarkdownHeading[] 
               }}
               aria-current={active === h.id ? 'location' : undefined}
               className={cn(
-                '-ml-px block border-l border-transparent py-1 pr-2 text-xs leading-4 text-text-secondary hover:text-text',
+                '-ml-px block rounded-r-sm border-l border-transparent py-1 pr-2 text-xs leading-4 text-text-secondary hover:bg-hover hover:text-text',
                 active === h.id && 'border-text font-medium text-text',
               )}
               style={{ paddingLeft: 12 + (h.level - top) * 12 }}

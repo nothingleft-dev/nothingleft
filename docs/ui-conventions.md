@@ -506,23 +506,25 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 Built in 3.5 (27 Sep 2026); these are the decisions taken building it:
 
 - **Layout.** A 272 px rail beside every knowledge base page, on the surface with a hairline, sticky and
-  scrolling on its own: _Knowledge base_ (home) with `+` for a new article, _Starred_ (the reader's starred
-  articles in this project), _Articles_ (the tree), _Tags_ (the tag cloud) and, at the bottom, _Deleted
-  articles N_ — shown only when there is something the reader may restore, and opening the list in the main
-  column (`?view=deleted`). Below `lg` the rail opens as a sheet.
+  scrolling on its own: _Starred_ (the reader's starred articles in this project), _Articles_ (the tree,
+  with `+` for a new article except on the home page, whose header has _New article_), _Deleted articles N_
+  under the tree — shown only when there is something the reader may restore, and opening the list in the
+  main column (`?view=deleted`) — and _Tags_ (the twelve most-used, then _Show all N_). Below `lg` the rail
+  opens as a sheet.
 - **The tree.** 28 px rows indented 14 px per level, a chevron on rows with children, the open article in
-  `--bg-active` with the 2px accent bar like the navigation. Drafts read in secondary ink with a dashed
-  _Draft_ mark, never a colour. On hover, for someone who may: `+` (a new article under this one, above
+  `--bg-active` with the 2px accent bar like the navigation. Drafts read in secondary ink with a _Draft_
+  mark, never a colour. On hover, for someone who may: `+` (a new article under this one, above
   level 3) and a grip. A drag shows the row beside the pointer; the landing line is the accent, a nest is
   the soft accent with an accent ring, and a place that would pass three levels draws in the danger colour
   and is refused under the row. `Alt` + arrows on a focused title move it without a mouse.
-- **The article page.** _Last updated by X, 3 days ago_ (and _Written by Y_ when that is someone else) with
-  star and the `⋯` menu on the right; the title (click to rename, the address stays), then edit, tag and
-  _Publish_ for a draft; tags as chips in their colour under the title; the body at 15 px in the 72ch column;
-  comments under a hairline. A draft carries a one-line inset notice naming who can see it. The menu holds
+- **The article page.** The title (click to rename, the address stays) with _Publish_ for a draft, then
+  edit, star and the `⋯` menu on the right of the same row; tags as chips in their colour under it; then one
+  line _Written by Y · updated by X 3 days ago_ (_Written by X · updated 3 days ago_ when it is the same
+  person); the body at 15 px in the 72ch column; comments under a hairline. Editing keeps the same column
+  and the contents rail. A draft carries a one-line inset notice naming who can see it. The menu holds
   _New article under this_, _Return to draft_, _Change address_, _Copy link_, _Watch_ and _Delete article_.
 - **Table of contents.** From the body's headings, pinned beside the article from 1280 px wide and only with
-  two or more headings; the heading last scrolled past is marked with an ink rule.
+  two or more headings; the heading last past the top quarter of the view is marked with an ink rule.
 - **Breadcrumb.** The top bar's crumbs continue into the tree; past four crumbs the middle ones fold into one
   `…` menu: `Projects / Partner Portal / … / Restoring a failed sync`.
 - **New article** asks for the title first, because the address is made from it and a rename never moves
@@ -530,11 +532,12 @@ Built in 3.5 (27 Sep 2026); these are the decisions taken building it:
   and opens in the editor. The empty knowledge base offers the same four starters; an Observer reads that
   there are no articles yet.
 - **Deleting** is a dialog that asks up front, when the article has articles under it, whether to _move them
-  up_ (named: under which article, or the top level) or _delete them too_ (_Delete branch_). A refusal shows
+  up_ (named: under which article, or the top level) or _delete them too_ (the button names how many: _Delete 3 articles_). A refusal shows
   in the dialog in the API's words; the deletion toasts _Undo_.
 - **Search** is the issue query bar with the article vocabulary: mono, autocomplete on pause, values
   underlined when wrong with the valid ones one click away. Results are rows with the title, _Draft_, star,
-  parent, who and when last updated, a two-line excerpt and neutral tag chips. `/articles` is the same list
+  parent, who · when last updated, a one-line excerpt and neutral tag chips. An empty knowledge base shows
+  the starters without a search field. `/articles` is the same list
   in one section per project. An excerpt is the body's prose: headings, tables and code are left out.
 - **The global search box** in the top bar searches issues and articles at once and shows them in two groups
   with their totals and _See all N_. A filter only the other group takes is a quiet note in its place
@@ -606,20 +609,23 @@ As built in 6a (web half, 27 Sep 2026; the owner's choices marked):
   collapsed or on a phone — and the sidebar's Inbox item. Both read
   `GET /v1/notifications/unread-count`, polled at 30 s like every list, and drop at once when
   something is marked read.
-- **One row per entry**, flat and hairline-separated: the unread dot (accent), the key (or an
-  article or sprint icon), the title (medium while anything is unread, secondary once read), a count chip, which also expands the entry, when it holds more than one notification, then the newest summary on a
-  second line. Right: the project — prefixed with the organisation only for someone in more
+- **One row per entry**, flat and hairline-separated: dot · key (or article / sprint icon) ·
+  title (medium while anything is unread, secondary once read), with the actor's avatar or a
+  system mark under the key and the newest summary on the second line · a count-chip column ·
+  place · time · tick. On a phone the key column goes and the key starts the second line. Right: the project — prefixed with the organisation only for someone in more
   than one — and the relative time with its absolute tooltip. The chip expands the entry in place to its lines (avatar, or a calendar mark for *Due tomorrow* / *Overdue*, which have no
-  actor; the overdue mark is `--danger-fg`); *Show all N* pages the rest through the subject's
-  own list. A former member keeps the *Former member* chip after the sentence.
+  actor; the overdue mark is `--danger-fg`); an open entry's second line reads *N notifications,
+  M unread* and its own dot clears. *Show N more* (the count not yet shown) pages the rest through
+  the subject's own list; Load more adds three skeleton entries while it loads. A former member keeps the *Former member* chip after the sentence.
 - **Opening marks read** (owner): clicking a line marks that notification read; clicking the
   entry's title marks the whole entry. A tick at the row's end (muted until hovered) does the same without leaving. An entry from another organisation switches the session there first.
 - **Filters** are the report pickers: *Kind* (several; the kinds as people say them, grouped
   by area, with sprints and articles one choice each and reactions left out until something
   produces them), *Project* (grouped by organisation), *Organisation* (only for someone in more
   than one) and *Show* all or unread only. The URL holds them (`?kind=mentioned,sprint&org=
-  &project=&unread=1`). With a kind, project or organisation chosen the button reads *Mark all
-  matching read* and marks only that.
+  &project=&unread=1`). With a kind, project or organisation chosen the button reads *Mark
+  matching read*, at the same width, and marks only that. An empty inbox shows no filters and no
+  *Mark all read*; the header reads *N unread across M organisations* when the inbox spans several.
 - **States**: skeleton rows; an empty inbox that says what arrives here and links to Settings →
   Notifications; a filter with no result naming it (*No notifications for mentions in Partner
   Portal.*) with a button per filter to drop it; *Nothing unread* under the unread filter; the

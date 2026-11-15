@@ -5,7 +5,7 @@ export function DraftMark({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex h-4 flex-none items-center rounded-xs border border-dashed border-border-strong px-1 text-[11px] leading-none font-medium text-text-secondary',
+        'inline-flex h-4 flex-none items-center rounded-xs border border-border-strong px-1 text-[11px] leading-none font-medium text-text-secondary',
         className,
       )}
     >

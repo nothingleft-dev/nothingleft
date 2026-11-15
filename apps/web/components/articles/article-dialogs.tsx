@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import { toast } from 'sonner';
-import type { Article, ArticleChildrenOnDelete } from '@nothingleft/types';
+import type { Article, ArticleChildrenOnDelete, ArticleNode } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { articlePath } from '@components/articles/article-row';
+import { useKnowledgeBase } from '@components/articles/knowledge-base';
 import { useDeleteArticle, useRestoreArticle, useUpdateArticle } from '@hooks/use-articles';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
@@ -35,12 +36,14 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
   const router = useRouter();
   const project = article.project.key;
   const remove = useDeleteArticle(project);
+  const { nodes } = useKnowledgeBase();
   const restore = useRestoreArticle(project);
   const [children, setChildren] = useState<ArticleChildrenOnDelete>('move_up');
   // Children can appear after the page loaded; the API's refusal then asks the same question.
   const [askChildren, setAskChildren] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const withChildren = article.child_count > 0 || askChildren;
+  const branchSize = 1 + descendantsOf(nodes, article.slug);
   const movedUp = article.parent
     ? `They move up one level, under ${article.parent.title}, in the same order.`
     : 'They move up to the top level, in the same order.';
@@ -140,12 +143,21 @@ export function DeleteArticleDialog({ article, open, onOpenChange }: DeleteArtic
             Cancel
           </Button>
           <PendingButton variant="destructive" onClick={confirm} pending={remove.isPending} pendingLabel="Deleting…">
-            {withChildren && children === 'delete' ? 'Delete branch' : 'Delete article'}
+            {withChildren && children === 'delete'
+              ? branchSize > 1
+                ? `Delete ${branchSize} articles`
+                : 'Delete them all'
+              : 'Delete article'}
           </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function descendantsOf(nodes: readonly ArticleNode[], slug: string): number {
+  const under = nodes.filter(n => n.parent === slug);
+  return under.reduce((sum, n) => sum + 1 + descendantsOf(nodes, n.slug), 0);
 }
 
 function Choice({
@@ -169,11 +181,11 @@ function Choice({
         on && 'border-border-strong bg-active',
       )}
     >
-      <RadioGroupItem id={id} value={value} className="mt-0.5" />
-      <span className="flex flex-col gap-0.5">
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="font-medium">{title}</span>
         <span className="text-xs text-text-secondary">{detail}</span>
       </span>
+      <RadioGroupItem id={id} value={value} className="mt-0.5" />
     </label>
   );
 }

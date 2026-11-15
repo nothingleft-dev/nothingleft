@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
-import { BookOpen, PanelLeft, Plus, Star, Trash2 } from 'lucide-react';
+import { CircleAlert, PanelLeft, Plus, Star, Trash2 } from 'lucide-react';
 import type { ArticleNode } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@components/ui/sheet';
@@ -100,9 +100,9 @@ export function KnowledgeBase({ project, children }: { project: string; children
   );
 }
 
-function RailHead({ children, action }: { children: string; action?: ReactNode }) {
+function RailHead({ children, action, first }: { children: string; action?: ReactNode; first?: boolean }) {
   return (
-    <div className="mt-4 mb-1 flex h-6 items-center px-2 text-xs font-medium text-text-muted">
+    <div className={cn('mb-1 flex h-6 items-center px-2 text-xs font-medium text-text-muted', first ? 'mt-1' : 'mt-4')}>
       <span className="flex-1">{children}</span>
       {action}
     </div>
@@ -120,42 +120,13 @@ function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean;
   const starred = nodes.filter(n => n.starred);
   const home = `/projects/${project}/articles`;
   const onHome = pathname === home && search.get('view') !== 'deleted';
+  const onDeleted = search.get('view') === 'deleted' && pathname === home;
 
   return (
     <nav className="flex flex-col text-sm">
-      <div className="flex items-center gap-1">
-        <Link
-          href={home as Route}
-          aria-current={onHome ? 'page' : undefined}
-          className={cn(
-            'flex h-control min-w-0 flex-1 items-center gap-2 rounded-sm px-2 font-medium text-text-secondary hover:bg-hover hover:text-text',
-            onHome && 'text-text',
-          )}
-        >
-          <BookOpen className="size-icon-sm flex-none" />
-          <span className="truncate">Knowledge base</span>
-        </Link>
-        {canCreate ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label="New article"
-                className="text-text-secondary"
-                onClick={() => openNewArticle({ parent: null, starter: 'blank' })}
-              >
-                <Plus />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>New article</TooltipContent>
-          </Tooltip>
-        ) : null}
-      </div>
-
       {starred.length > 0 ? (
         <>
-          <RailHead>Starred</RailHead>
+          <RailHead first>Starred</RailHead>
           <ul className="flex flex-col">
             {starred.map(n => (
               <li key={n.slug}>
@@ -177,7 +148,30 @@ function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean;
         </>
       ) : null}
 
-      <RailHead>Articles</RailHead>
+      <RailHead
+        first={starred.length === 0}
+        action={
+          // On the home page the header's New article is the one way in.
+          canCreate && !onHome ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  aria-label="New article"
+                  className="text-text-secondary"
+                  onClick={() => openNewArticle({ parent: null, starter: 'blank' })}
+                >
+                  <Plus />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>New article</TooltipContent>
+            </Tooltip>
+          ) : null
+        }
+      >
+        Articles
+      </RailHead>
       {loading ? (
         <div className="flex flex-col gap-2 px-2 py-1" aria-hidden>
           {[70, 55, 62, 40, 58].map((w, i) => (
@@ -185,8 +179,11 @@ function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean;
           ))}
         </div>
       ) : failed ? (
-        <div className="flex items-center gap-2 px-2 py-1">
-          <p className="min-w-0 flex-1 text-xs text-danger-fg">The articles could not be loaded.</p>
+        <div className="flex items-center gap-2 px-2">
+          <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-text-secondary">
+            <CircleAlert className="size-3.5 flex-none text-danger-fg" aria-hidden />
+            <span className="truncate">Could not load.</span>
+          </p>
           <RetryButton onRetry={onRetry} size="xs" />
         </div>
       ) : nodes.length === 0 ? (
@@ -202,30 +199,28 @@ function Rail({ loading, failed, onRetry }: { loading: boolean; failed: boolean;
         />
       )}
 
-      <RailHead>Tags</RailHead>
-      <TagCloud project={project} tags={tags.data} loading={tags.isPending} activeQuery={search.get('q') ?? ''} />
-
       {(deleted.data?.length ?? 0) > 0 ? (
         <Link
           href={`${home}?view=deleted` as Route}
-          aria-current={search.get('view') === 'deleted' ? 'page' : undefined}
+          aria-current={onDeleted ? 'page' : undefined}
           className={cn(
-            'mt-5 flex h-7 items-center gap-2 rounded-sm px-2 text-text-secondary hover:bg-hover hover:text-text',
-            search.get('view') === 'deleted' && pathname === home && 'bg-active text-text',
+            'relative mt-2 flex h-7 items-center gap-2 rounded-sm px-2 text-text-secondary hover:bg-hover hover:text-text',
+            onDeleted && 'bg-active text-text',
           )}
         >
+          {onDeleted ? (
+            <span aria-hidden className="absolute top-1 bottom-1 left-0 w-0.5 rounded-full bg-brand" />
+          ) : null}
           <Trash2 className="size-3.5 flex-none" />
           <span className="flex-1">Deleted articles</span>
-          <span
-            className={cn(
-              'tabular text-xs',
-              search.get('view') === 'deleted' && pathname === home ? 'text-text-secondary' : 'text-text-muted',
-            )}
-          >
+          <span className={cn('tabular text-xs', onDeleted ? 'text-text-secondary' : 'text-text-muted')}>
             {deleted.data!.length}
           </span>
         </Link>
       ) : null}
+
+      <RailHead>Tags</RailHead>
+      <TagCloud project={project} tags={tags.data} loading={tags.isPending} activeQuery={search.get('q') ?? ''} />
     </nav>
   );
 }

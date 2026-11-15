@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadError } from '@components/query-state';
 import { PendingButton } from '@components/pending-button';
@@ -55,7 +55,6 @@ export function DeletedArticles({ project }: { project: string }) {
           {deleted.data.map(node => (
             <li key={`${node.slug}-${node.deleted_at}`} className="flex flex-col gap-1 px-3 py-2.5">
               <div className="flex items-center gap-3">
-                <FileText className="size-icon-sm flex-none text-text-muted" />
                 <span className="min-w-0 flex-1 truncate font-medium">{node.title}</span>
                 <span className="flex flex-none items-center gap-1 text-xs text-text-secondary">
                   {node.deleted_at ? (
@@ -88,7 +87,7 @@ export function DeletedArticles({ project }: { project: string }) {
                 </PendingButton>
               </div>
               {refusals[node.slug] ? (
-                <p role="alert" className="pl-7 text-xs text-danger-fg">
+                <p role="alert" className="text-xs text-danger-fg">
                   {refusals[node.slug]}
                 </p>
               ) : null}
