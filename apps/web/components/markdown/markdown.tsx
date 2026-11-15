@@ -52,7 +52,9 @@ export function Markdown({ source, variant = 'description', className, onToggleT
   );
   const isResolvedIssue = useCallback((key: string) => resolved.split(' ').includes(key), [resolved]);
   const files = useMarkdownAttachments();
-  const byo = useStorage().storage?.bring_your_own;
+  const storage = useStorage();
+  const byo = storage.storage?.bring_your_own;
+  const canFix = storage.canManage;
   const imageSize = useCallback(
     (src: string) => {
       const file = files.get(src);
@@ -96,7 +98,9 @@ export function Markdown({ source, variant = 'description', className, onToggleT
     for (const image of el.querySelectorAll<HTMLImageElement>('img')) {
       const file = files.get(image.getAttribute('src') ?? '');
       if (file && !file.available) {
-        image.replaceWith(unavailablePlaceholder(file.filename, unavailableLabel(byo), unavailableReason(byo)));
+        image.replaceWith(
+          unavailablePlaceholder(file.filename, unavailableLabel(byo, canFix), unavailableReason(byo, canFix)),
+        );
       }
     }
     const onError = (event: Event) => {
@@ -106,7 +110,7 @@ export function Markdown({ source, variant = 'description', className, onToggleT
     };
     el.addEventListener('error', onError, true);
     return () => el.removeEventListener('error', onError, true);
-  }, [html, files, byo]);
+  }, [html, files, byo, canFix]);
 
   useLayoutEffect(() => {
     const el = root.current;

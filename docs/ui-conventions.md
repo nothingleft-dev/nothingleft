@@ -166,6 +166,8 @@ them. `Attach files` action. As built in 1f (owner decisions, 25 Sep 2026):
   listed, M the ones hidden because the description or a live comment already shows
   them (the API's `inline`); *Show* / *Hide* toggles them into the list. There is
   no overflow menu — nothing needs it yet.
+- At 100 % of the storage quota *Attach files* and the editor's attach tool are disabled, with the
+  reason in their tooltip.
 - **No files, no section**, for everyone. *Attach files* is then the paperclip among the
   title-row actions (edit, tag, link), which is always there for someone who may upload.
   The section appears as soon as an upload starts, so its progress has somewhere to show.

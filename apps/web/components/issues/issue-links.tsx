@@ -139,7 +139,7 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
             <Star className={cn('size-3.5', issue.starred && 'fill-current')} />
           </button>
         </TooltipTrigger>
-        <TooltipContent>{issue.starred ? 'Starred' : 'Star'}</TooltipContent>
+        <TooltipContent>{issue.starred ? 'Unstar' : 'Star'}</TooltipContent>
       </Tooltip>
       <TypeBadge type={issue.type} className={cn(issue.resolved && 'opacity-55')} />
       <Link

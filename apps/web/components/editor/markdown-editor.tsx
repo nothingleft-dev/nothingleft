@@ -104,6 +104,9 @@ export function MarkdownEditor({
   const uploadRef = useRef<((files: File[], at?: number) => void) | null>(null);
 
   const [reference, setReference] = useState<ReferenceQuery | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const picker = useRef<ReferencePickerHandle>(null);
   const submitRef = useRef(onSubmit);
   useEffect(() => {
@@ -204,9 +207,8 @@ export function MarkdownEditor({
       event.preventDefault();
       onCancel();
     } else if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
-      // The toolbar's link popover owns links; ⌘K only opens it.
       event.preventDefault();
-      (event.currentTarget.querySelector('[aria-label="Link"]') as HTMLButtonElement | null)?.click();
+      setLinkOpen(true);
     }
   };
 
@@ -330,15 +332,21 @@ export function MarkdownEditor({
     : undefined;
 
   const minHeight = minHeightOverride ?? (variant === 'description' ? 'min-h-80' : 'min-h-24');
+  // Set here rather than by `:focus-within`: a toolbar menu is portalled out of the frame but is still editing.
+  const ring = focused || menuOpen;
 
   return (
     <div
       className={cn(
         'editor-frame flex flex-col rounded-md border border-border-strong bg-surface',
-        invalid && 'border-danger-fg',
+        invalid && 'border-danger',
+        ring &&
+          (invalid ? 'shadow-[0_0_0_2px_color-mix(in_srgb,var(--danger)_55%,transparent)]' : 'shadow-(--focus-ring)'),
         dragging && 'border-text-secondary bg-hover',
         className,
       )}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       onKeyDown={onKeyDown}
       onDragOver={event => {
         if (!canUpload || !event.dataTransfer.types.includes('Files')) return;
@@ -361,6 +369,9 @@ export function MarkdownEditor({
         mode={mode}
         onModeChange={switchMode}
         attach={attach}
+        linkOpen={linkOpen}
+        onLinkOpenChange={setLinkOpen}
+        onMenuOpenChange={setMenuOpen}
       />
       <div className={cn(mode === 'visual' ? 'block' : 'hidden')}>
         <EditorContent editor={editor} className={cn('px-3 py-2.5', minHeight)} />
@@ -424,7 +435,7 @@ export function MarkdownEditor({
         </>
       ) : null}
       {footer ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle px-2 py-2">{footer}</div>
+        <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle px-3 py-2">{footer}</div>
       ) : null}
       <ReferencePicker ref={picker} state={reference} projectKey={projectKey} onClose={() => setReference(null)} />
     </div>
@@ -562,8 +573,10 @@ function useVisualCommands(editor: Editor | null): EditorCommands {
     table: action => {
       if (!editor) return;
       const c = chain();
-      if (action === 'addRow') c.addRowAfter().run();
-      else if (action === 'addColumn') c.addColumnAfter().run();
+      if (action === 'addRowBefore') c.addRowBefore().run();
+      else if (action === 'addRowAfter') c.addRowAfter().run();
+      else if (action === 'addColumnBefore') c.addColumnBefore().run();
+      else if (action === 'addColumnAfter') c.addColumnAfter().run();
       else if (action === 'deleteRow') c.deleteRow().run();
       else if (action === 'deleteColumn') c.deleteColumn().run();
       else c.deleteTable().run();

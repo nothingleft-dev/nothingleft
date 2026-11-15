@@ -222,6 +222,7 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
         onChange={setText}
         projectKey={projectKey}
         label="Edit comment"
+        className="sm:-mx-[13px]"
         placeholder="A comment cannot be empty. To remove it, delete it instead."
         autoFocus
         invalid={size.level === 'too_large'}

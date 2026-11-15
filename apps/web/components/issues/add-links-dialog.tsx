@@ -94,8 +94,6 @@ function AddLinksForm({
         </DialogDescription>
       </DialogHeader>
 
-      {error ? <FormAlert title={error} /> : null}
-
       <ChoiceSelect
         label="Link"
         value={link}
@@ -112,7 +110,7 @@ function AddLinksForm({
         {chosen.length > 0 ? (
           <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
             {chosen.map(issue => (
-              <li key={issue.key} className="flex h-row items-center gap-2 pr-1 pl-2.5 text-sm">
+              <li key={issue.key} className="flex h-row items-center gap-2 pr-1 pl-2 text-sm">
                 <TypeBadge type={issue.type} />
                 <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
                 <span className="min-w-0 flex-1 truncate">{issue.title}</span>
@@ -142,12 +140,14 @@ function AddLinksForm({
         />
       </div>
 
+      {error ? <FormAlert title={error} /> : null}
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
         <PendingButton type="submit" disabled={chosen.length === 0} pending={add.isPending} pendingLabel="Adding…">
-          {chosen.length > 1 ? `Add ${chosen.length} links` : 'Add link'}
+          {chosen.length === 1 ? 'Add link' : chosen.length > 1 ? `Add ${chosen.length} links` : 'Add links'}
         </PendingButton>
       </DialogFooter>
     </form>

@@ -34,7 +34,7 @@ export function UploadTray({ uploads, onCancel, onRetry, className }: UploadTray
           upload.status === 'uploading' ? upload.loaded / upload.file.size : upload.status === 'completing' ? 1 : 0;
         return (
           <li key={upload.id} className="flex min-w-0 items-center gap-2 rounded-sm px-1 py-1 text-xs">
-            <FileBadge filename={upload.file.name} mime={upload.mime} className="h-6 flex-none" />
+            <FileBadge filename={upload.file.name} mime={upload.mime} className="h-6 w-9 flex-none" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex min-w-0 items-baseline gap-2">
                 <span className="truncate text-text">{upload.file.name}</span>
@@ -46,13 +46,17 @@ export function UploadTray({ uploads, onCancel, onRetry, className }: UploadTray
                   aria-label={`Uploading ${upload.file.name}`}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-valuenow={Math.round(ratio * 100)}
+                  aria-valuenow={upload.status === 'preparing' ? undefined : Math.round(ratio * 100)}
                   className="h-1 w-full overflow-hidden rounded-full bg-inset"
                 >
-                  <i
-                    className="block h-full rounded-full bg-text-secondary transition-[width] duration-200"
-                    style={{ width: `${ratio * 100}%` }}
-                  />
+                  {upload.status === 'preparing' ? (
+                    <i className="block h-full w-1/4 animate-pulse rounded-full bg-text-muted" />
+                  ) : (
+                    <i
+                      className="block h-full rounded-full bg-text-secondary transition-[width] duration-200"
+                      style={{ width: `${ratio * 100}%` }}
+                    />
+                  )}
                 </div>
               ) : (
                 <p role="alert" className="text-danger-fg [overflow-wrap:anywhere]">

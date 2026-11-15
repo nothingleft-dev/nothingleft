@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { parseIssueKey } from '@nothingleft/format';
 import { FileText } from 'lucide-react';
 import { DraftMark } from '@components/articles/draft-mark';
 import { articlePath } from '@components/articles/article-row';
@@ -13,6 +14,7 @@ import { useReferencingArticles } from '@hooks/use-articles';
  */
 export function IssueReferencedBy({ issueKey, timeZone }: { issueKey: string; timeZone?: string | undefined }) {
   const articles = useReferencingArticles(issueKey);
+  const projectKey = parseIssueKey(issueKey)?.projectKey;
   if (!articles.isSuccess || articles.data.length === 0) return null;
 
   return (
@@ -37,11 +39,12 @@ export function IssueReferencedBy({ issueKey, timeZone }: { issueKey: string; ti
               {a.title}
             </Link>
             {a.status === 'draft' ? <DraftMark /> : null}
-            {a.parent ? (
-              <span className="truncate text-xs text-text-muted max-sm:hidden">in {a.parent.title}</span>
+            {a.parent || a.project.key !== projectKey ? (
+              <span className="max-w-[45%] flex-none truncate text-xs text-text-muted max-sm:hidden">
+                in {a.parent ? a.parent.title : a.project.name}
+              </span>
             ) : null}
-            <span className="ml-auto flex flex-none items-center gap-2 text-xs text-text-muted">
-              <span className="font-mono text-2xs">{a.project.key}</span>
+            <span className="ml-auto flex flex-none items-center gap-2 pl-2 text-xs text-text-muted">
               <RelativeTime value={a.updated_at} timeZone={timeZone} className="relative" />
             </span>
           </li>

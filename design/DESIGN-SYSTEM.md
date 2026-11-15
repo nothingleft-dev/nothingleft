@@ -672,7 +672,8 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
 5. Links: tabs per link type with counts (`Parent for 3`), `Add links`. Rows: P, T,
    key (struck when resolved), title, status pill.
 6. Attachments: count, `Hidden files N · show`, `Attach files`; no overflow menu until
-   something needs one. Image thumbnails; file tiles with a neutral type square and size.
+   something needs one. Image thumbnails; file tiles with a neutral type square and size. Image
+   tiles sit on 12 rem columns and file rows span two of them, so both lists share one rhythm.
    Hidden entirely while the issue has no files (`docs/ui-conventions.md` § Issue page).
 7. Activity: tabs All / Comments / Spent time (total) / History. Entries grouped by
    save (`change_group_id`): one header, several `Field: old → new` lines. A comment
@@ -681,7 +682,10 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
    accent-outlined. A hairline joins consecutive entries. MCP actors get the `⌘` mark.
 8. Comment editor: block type, B I S A, quote, code, link, lists, task list, code
    block, table, image; `Visual | Markdown` toggle; `Add comment ⌘↵`, `Cancel`,
-   `Add spent time` right-aligned. No visibility dropdown, no AI button.
+   `Add spent time` right-aligned. No visibility dropdown, no AI button. The toolbar is one 36 px
+   row; tools that do not fit go, from the end, under ⋯ More formatting. It stays at the top of the
+   page while a long text is edited. In edit mode the text keeps the x it has when read (the frame
+   bleeds by its padding).
 
 The issue, article and create-dialog titles edit in place in a field that wraps like the title
 it replaces, so the start of a long title never scrolls out of view. Enter saves (or submits

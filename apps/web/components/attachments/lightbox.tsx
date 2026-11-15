@@ -67,7 +67,7 @@ export function Lightbox({ gallery, start, onClose }: LightboxProps) {
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-panel/95 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed inset-0 z-50 flex flex-col text-panel-ink outline-none"
+          className="fixed inset-0 z-50 flex flex-col bg-panel text-panel-ink outline-none"
           // Focus the viewer, not the first button: a focused button shows its tooltip, and Esc closes that first.
           onOpenAutoFocus={event => {
             event.preventDefault();
@@ -158,7 +158,13 @@ function Viewer({ ref, image, images, position, onPick, onStep, onClose }: Viewe
   };
 
   return (
-    <div ref={ref} tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none" onKeyDown={onKeyDown}>
+    <div
+      ref={ref}
+      tabIndex={-1}
+      // Under the delete confirmation its own chrome steps back, so the dialog's close is the only one in view.
+      className={cn('flex min-h-0 flex-1 flex-col outline-none', deleting && '[&>header,&>footer]:opacity-25')}
+      onKeyDown={onKeyDown}
+    >
       <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 px-4 py-3">
         <div className="flex min-w-0 items-baseline gap-2">
           <DialogPrimitive.Title className="truncate text-sm font-medium">
@@ -370,7 +376,7 @@ function StepButton({
           aria-label={label}
           onClick={onClick}
           className={cn(
-            'absolute top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-panel-card text-panel-ink hover:bg-panel-line [&_svg]:size-5',
+            'absolute top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-panel-line bg-panel-card text-panel-ink hover:bg-panel-line [&_svg]:size-5',
             side === 'left' ? 'left-4' : 'right-4',
           )}
         >

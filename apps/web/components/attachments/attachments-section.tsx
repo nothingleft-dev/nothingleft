@@ -33,6 +33,10 @@ interface AttachmentsSectionProps {
   timeZone?: string | undefined;
 }
 
+// One rhythm for both lists: a file row spans two image columns and the gap between them.
+const IMAGE_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(0,12rem))] gap-3';
+const FILE_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(0,24.75rem))] gap-3';
+
 const hasModifier = (event: MouseEvent) => event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0;
 
 /**
@@ -47,7 +51,7 @@ export function AttachmentsSection({
   onAttach,
   timeZone,
 }: AttachmentsSectionProps) {
-  const { storage, available, slug, canManage } = useStorage();
+  const { storage, available, blocked, slug, canManage } = useStorage();
   const failing = storage?.bring_your_own === 'failed';
   // Only an admin may read the bucket's name; members get the same sentence without it.
   const overview = useStorageOverview(slug ?? '', slug !== null && canManage && failing);
@@ -67,6 +71,7 @@ export function AttachmentsSection({
   const images = shown.filter(f => isInlineImage(f.mime_type));
   const others = shown.filter(f => !isInlineImage(f.mime_type));
   const canUpload = uploader !== null && available;
+  const byo = storage?.bring_your_own;
 
   return (
     <section
@@ -92,7 +97,8 @@ export function AttachmentsSection({
     >
       <div className="flex min-h-control flex-wrap items-center gap-x-3 gap-y-1 border-b">
         <h2 className="text-sm font-semibold">
-          Attachments <span className="ml-1 font-normal tabular text-text-muted">{listed.length}</span>
+          Attachments
+          {loading ? null : <span className="ml-1 font-normal tabular text-text-muted">{listed.length}</span>}
         </h2>
         {hidden.length > 0 ? (
           <span className="flex items-center gap-1.5 text-xs text-text-secondary">
@@ -116,6 +122,18 @@ export function AttachmentsSection({
           <Button variant="ghost" size="xs" onClick={onAttach} className="ml-auto text-text-secondary">
             <Paperclip /> Attach files
           </Button>
+        ) : uploader && blocked ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* A disabled button fires no pointer events, so the wrapper carries the tooltip. */}
+              <span tabIndex={0} className="ml-auto inline-flex rounded-sm">
+                <Button variant="ghost" size="xs" disabled className="text-text-muted">
+                  <Paperclip /> Attach files
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64">{blocked}</TooltipContent>
+          </Tooltip>
         ) : null}
       </div>
 
@@ -132,9 +150,15 @@ export function AttachmentsSection({
       ) : null}
 
       {loading ? (
-        <div className="flex gap-2 py-3" role="status" aria-label="Loading attachments">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-40" />
+        <div className="flex flex-col gap-3 py-3" role="status" aria-label="Loading attachments">
+          <div className={IMAGE_GRID}>
+            {[0, 1, 2].map(i => (
+              <Skeleton key={i} className="h-[142px] w-full" />
+            ))}
+          </div>
+          <div className={FILE_GRID}>
+            <Skeleton className="h-10 w-full" />
+          </div>
         </div>
       ) : shown.length === 0 && hidden.length > 0 ? (
         <p className="py-3 text-xs text-text-secondary">
@@ -143,10 +167,10 @@ export function AttachmentsSection({
       ) : (
         <div className="flex flex-col gap-3 py-3">
           {images.length > 0 ? (
-            <ul className="flex flex-wrap gap-3" aria-label="Images">
+            <ul className={IMAGE_GRID} aria-label="Images">
               {images.map(file => (
                 <li key={file.id}>
-                  <FileTile file={file} timeZone={timeZone} onDelete={setDeleting} byo={storage?.bring_your_own}>
+                  <FileTile file={file} timeZone={timeZone} onDelete={setDeleting} byo={byo} canFix={canManage}>
                     {file.available ? (
                       <a
                         href={file.url}
@@ -157,7 +181,7 @@ export function AttachmentsSection({
                           event.preventDefault();
                           setZoomed({ src: file.url, alt: file.filename, attachment: file });
                         }}
-                        className="group/tile flex w-48 cursor-zoom-in flex-col overflow-hidden rounded-md border hover:border-border-strong"
+                        className="group/tile flex w-full cursor-zoom-in flex-col overflow-hidden rounded-md border hover:border-border-strong"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- a private file behind a redirect; next/image cannot fetch it */}
                         <img
@@ -171,8 +195,11 @@ export function AttachmentsSection({
                         <TileCaption file={file} />
                       </a>
                     ) : (
-                      <span tabIndex={0} className="flex w-48 flex-col overflow-hidden rounded-md border border-dashed">
-                        <UnavailableImage byo={storage?.bring_your_own} className="h-28 w-full" />
+                      <span
+                        tabIndex={0}
+                        className="flex w-full flex-col overflow-hidden rounded-md border border-dashed"
+                      >
+                        <UnavailableImage byo={byo} canFix={canManage} className="h-28 w-full" />
                         <TileCaption file={file} />
                       </span>
                     )}
@@ -182,10 +209,10 @@ export function AttachmentsSection({
             </ul>
           ) : null}
           {others.length > 0 ? (
-            <ul className="flex flex-wrap gap-2" aria-label="Files">
+            <ul className={FILE_GRID} aria-label="Files">
               {others.map(file => (
                 <li key={file.id}>
-                  <FileTile file={file} timeZone={timeZone} onDelete={setDeleting} byo={storage?.bring_your_own}>
+                  <FileTile file={file} timeZone={timeZone} onDelete={setDeleting} byo={byo} canFix={canManage}>
                     {file.available ? (
                       <a
                         href={file.url}
@@ -193,20 +220,26 @@ export function AttachmentsSection({
                         {...(file.mime_type === 'application/pdf'
                           ? { target: '_blank', rel: 'noopener noreferrer' }
                           : { download: file.filename })}
-                        className="flex h-10 max-w-96 items-center gap-2 rounded-md border pr-3 pl-2 text-xs hover:border-border-strong hover:bg-hover"
+                        className="flex h-10 w-full items-center gap-2 rounded-md border pr-3 pl-2 text-xs hover:border-border-strong hover:bg-hover"
                       >
-                        <FileBadge filename={file.filename} mime={file.mime_type} className="h-6 flex-none" />
+                        <FileBadge filename={file.filename} mime={file.mime_type} className="h-6 w-9 flex-none" />
                         <FileName name={file.filename} className="text-text" />
-                        <span className="flex-none tabular text-text-muted">{formatBytes(file.size_bytes)}</span>
+                        <span className="ml-auto flex-none tabular text-text-muted">
+                          {formatBytes(file.size_bytes)}
+                        </span>
                       </a>
                     ) : (
                       <span
                         tabIndex={0}
-                        className="flex h-10 max-w-96 items-center gap-2 rounded-md border border-dashed pr-3 pl-2 text-xs"
+                        className="flex h-10 w-full items-center gap-2 rounded-md border border-dashed pr-3 pl-2 text-xs"
                       >
-                        <CloudOff className="size-icon-sm flex-none text-text-muted" aria-hidden />
+                        <span className="grid w-9 flex-none place-items-center">
+                          <CloudOff className="size-icon-sm text-text-muted" aria-hidden />
+                        </span>
                         <FileName name={file.filename} className="text-text-secondary" />
-                        <span className="flex-none tabular text-text-muted">{formatBytes(file.size_bytes)}</span>
+                        <span className="ml-auto flex-none tabular text-text-muted">
+                          {formatBytes(file.size_bytes)}
+                        </span>
                       </span>
                     )}
                   </FileTile>
@@ -272,19 +305,20 @@ function TileCaption({ file }: { file: Attachment }) {
 interface FileTileProps {
   file: Attachment;
   byo: ByoStatus | null | undefined;
+  canFix: boolean;
   timeZone?: string | undefined;
   onDelete: (file: Attachment) => void;
   children: React.ReactNode;
 }
 
-function FileTile({ file, byo, timeZone, onDelete, children }: FileTileProps) {
+function FileTile({ file, byo, canFix, timeZone, onDelete, children }: FileTileProps) {
   const where = file.comment_id !== null ? ' on a comment' : file.work_item_id !== null ? ' on spent time' : '';
   return (
     <div className="group/file relative">
-      <Tooltip>
+      <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side="bottom">
-          {file.available ? null : <span className="block max-w-64 pb-1">{unavailableReason(byo)}</span>}
+        <TooltipContent side="top">
+          {file.available ? null : <span className="block max-w-64 pb-1">{unavailableReason(byo, canFix)}</span>}
           <PersonName person={file.created_by} /> attached this{where} · {formatDateTime(file.created_at, timeZone)}
         </TooltipContent>
       </Tooltip>
@@ -295,7 +329,7 @@ function FileTile({ file, byo, timeZone, onDelete, children }: FileTileProps) {
           size="icon-xs"
           aria-label={`Delete ${file.filename}`}
           onClick={() => onDelete(file)}
-          className="absolute -top-2 -right-2 rounded-full bg-raised text-text-secondary reveal shadow-sm group-hover/file:opacity-100 hover:text-danger-fg"
+          className="absolute top-1.5 right-1.5 rounded-full bg-raised text-text-secondary reveal shadow-sm group-hover/file:opacity-100 hover:text-danger-fg"
         >
           <X />
         </Button>
