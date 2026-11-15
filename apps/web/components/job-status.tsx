@@ -8,7 +8,7 @@ const DOT: Record<Tone, string> = {
   moving: 'c-amber bg-c-solid',
   done: 'c-green bg-c-solid',
   failed: 'c-red bg-c-solid',
-  gone: 'c-gray bg-[repeating-linear-gradient(135deg,var(--c-solid)_0_1.5px,transparent_1.5px_3.5px)]',
+  gone: 'c-gray bg-[repeating-linear-gradient(135deg,var(--c-solid)_0_1.5px,transparent_1.5px_3.5px)] shadow-[inset_0_0_0_1px_var(--c-solid)]',
   // A healthy standing state (a connection that works) is the default, so it is neutral: colour is for deviation.
   ok: 'bg-text-secondary',
 };

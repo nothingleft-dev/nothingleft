@@ -17,7 +17,7 @@ export function StatusDot({ category, color, className }: StatusDotProps) {
         `l-${color} inline-block size-2 flex-none rounded-full`,
         category === 'backlog' && 'shadow-[inset_0_0_0_1.5px_var(--c-solid)]',
         category === 'cancelled' &&
-          'bg-[repeating-linear-gradient(135deg,var(--c-solid)_0_1.5px,transparent_1.5px_3.5px)]',
+          'bg-[repeating-linear-gradient(135deg,var(--c-solid)_0_1.5px,transparent_1.5px_3.5px)] shadow-[inset_0_0_0_1px_var(--c-solid)]',
         category !== 'backlog' && category !== 'cancelled' && 'bg-c-solid',
         className,
       )}
