@@ -305,7 +305,10 @@ const SHEET_ROWS = [
 
 function SheetSkeleton() {
   const day = (filled: boolean, weekend: boolean, key: number, height = 'h-row') => (
-    <div key={key} className={cn('flex flex-1 items-center justify-end px-2.5', height, weekend && 'bg-app')}>
+    <div
+      key={key}
+      className={cn('flex flex-1 items-center justify-end px-2.5 max-sm:hidden', height, weekend && 'bg-app')}
+    >
       {filled ? <Skeleton className="h-3 w-12" /> : null}
     </div>
   );
@@ -313,32 +316,32 @@ function SheetSkeleton() {
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="flex border-b">
-        <div className="flex h-11 w-64 flex-none items-center border-r px-3 max-sm:w-32">
+        <div className="flex h-11 w-64 flex-none items-center border-r px-3 max-sm:h-9 max-sm:flex-1 max-sm:border-r-0">
           <Skeleton className="h-3 w-12" />
         </div>
         {Array.from({ length: SHEET_DAYS }, (_, i) => day(true, weekend(i), i, 'h-11'))}
-        <div className="flex h-11 w-32 flex-none items-center justify-end border-l px-2.5">
+        <div className="flex h-11 w-32 flex-none items-center justify-end border-l px-2.5 max-sm:h-9 max-sm:border-l-0">
           <Skeleton className="h-3 w-10" />
         </div>
       </div>
       {SHEET_ROWS.map((row, r) => (
         <div key={r} className="flex border-b border-border-subtle">
-          <div className="flex h-row w-64 flex-none items-center gap-2 border-r px-3 max-sm:w-32">
-            <Skeleton className="size-5 flex-none rounded-full max-sm:hidden" />
+          <div className="flex h-row w-64 flex-none items-center gap-2 border-r px-3 max-sm:h-11 max-sm:flex-1 max-sm:border-r-0">
+            <Skeleton className="size-5 flex-none rounded-full" />
             <Skeleton className="h-3 w-28" />
           </div>
           {row.map((filled, i) => day(Boolean(filled), weekend(i), i))}
-          <div className="flex h-row w-32 flex-none items-center justify-end border-l px-2.5">
+          <div className="flex h-row w-32 flex-none items-center justify-end border-l px-2.5 max-sm:h-11 max-sm:border-l-0">
             <Skeleton className="h-3 w-16" />
           </div>
         </div>
       ))}
       <div className="flex">
-        <div className="flex h-row w-64 flex-none items-center border-r px-3 max-sm:w-32">
+        <div className="flex h-row w-64 flex-none items-center border-r px-3 max-sm:flex-1 max-sm:border-r-0">
           <Skeleton className="h-3 w-10" />
         </div>
         {Array.from({ length: SHEET_DAYS }, (_, i) => day(i < 5, weekend(i), i))}
-        <div className="flex h-row w-32 flex-none items-center justify-end border-l px-2.5">
+        <div className="flex h-row w-32 flex-none items-center justify-end border-l px-2.5 max-sm:border-l-0">
           <Skeleton className="h-3 w-16" />
         </div>
       </div>

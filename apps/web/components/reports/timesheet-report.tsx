@@ -1,11 +1,13 @@
 'use client';
 
-import { useLayoutEffect, useState } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDuration, type WorkCalendar } from '@nothingleft/format';
 import type { MemberRef, ReportScope, TimesheetReport as Timesheet } from '@nothingleft/types';
 import { RetryButton } from '@components/query-state';
+import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Duration } from '@components/duration';
@@ -22,7 +24,7 @@ import { EDGE_END, EDGE_START, useScrollEdges } from '@components/reports/scroll
 import { useMembers } from '@hooks/use-members';
 import { useReport, useTimesheetWorkItems } from '@hooks/use-reports';
 import { useSession } from '@hooks/use-session';
-import type { ReportQuery } from '@lib/api/reports';
+import { TIMESHEET_PAGE, type ReportQuery } from '@lib/api/reports';
 import {
   formatCalendarDate,
   formatCalendarDateShort,
@@ -94,6 +96,49 @@ function scopeNames(scope: ReportScope) {
   return [where, scope.view ? `saved view ${scope.view}` : null].filter(Boolean).join(' · ');
 }
 
+// `8-hour days, 5-day weeks`: what the `1d` and `1w` in the figures stand for.
+function calendarNote(calendar: WorkCalendar, total: number) {
+  const hours = `${Number((calendar.workdayMinutes / 60).toFixed(2))}-hour days`;
+  return total >= calendar.workdayMinutes * calendar.workweekDays
+    ? `${hours}, ${calendar.workweekDays}-day weeks`
+    : hours;
+}
+
+function TimesheetSummary({ data, stale }: { data: Timesheet; stale: boolean }) {
+  const calendar = calendarOf(data);
+  const where = scopeNames(data.scope);
+  const parts = [
+    plural(data.rows.length, 'person', 'people'),
+    data.scope.period ? (
+      stale ? (
+        <Skeleton className="inline-block h-3 w-24 align-middle" />
+      ) : (
+        formatCalendarRange(data.scope.period.from, data.scope.period.to)
+      )
+    ) : null,
+    where || null,
+    data.total >= calendar.workdayMinutes ? calendarNote(calendar, data.total) : null,
+  ].filter(Boolean);
+  return (
+    <span
+      className={cn(
+        'flex max-w-[90ch] flex-wrap items-baseline gap-x-1.5 transition-opacity duration-(--dur-fast)',
+        stale && 'opacity-50',
+      )}
+      inert={stale}
+      aria-busy={stale}
+    >
+      <Duration minutes={data.total} calendar={calendar} className="text-sm font-semibold text-text" />
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          <span aria-hidden>·</span>
+          <span>{part}</span>
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
 export function TimesheetReport() {
   const state = useReportState('timesheet');
   const result = useReport('timesheet', state.query);
@@ -117,27 +162,14 @@ export function TimesheetReport() {
         </>
       }
       skeleton="sheet"
-      summary={d => (
-        <span className="flex max-w-[90ch] flex-wrap gap-x-1.5">
-          <Duration minutes={d.total} calendar={calendarOf(d)} className="font-medium text-text" />
-          <span aria-hidden>·</span>
-          <span>{plural(d.rows.length, 'person', 'people')}</span>
-          {d.scope.period ? (
-            <>
-              <span aria-hidden>·</span>
-              <span>{formatCalendarRange(d.scope.period.from, d.scope.period.to)}</span>
-            </>
-          ) : null}
-          {scopeNames(d.scope) ? (
-            <>
-              <span aria-hidden>·</span>
-              <span>{scopeNames(d.scope)}</span>
-            </>
-          ) : null}
-        </span>
-      )}
+      summary={d => <TimesheetSummary data={d} stale={result.isPlaceholderData} />}
     >
-      {d => <TimesheetGrid data={d} scope={state.query} />}
+      {d => (
+        <>
+          <TimesheetGrid data={d} scope={state.query} stale={result.isPlaceholderData} />
+          <PeopleTotals data={d} scope={state.query} stale={result.isPlaceholderData} />
+        </>
+      )}
     </ReportFrame>
   );
 }
@@ -153,48 +185,99 @@ interface Drill {
 const MONO_CHAR_PX = 8.4;
 const CELL_INSET_PX = 28;
 const PERSON_PX = 256;
+const NARROW_PERSON_PX = 176;
+const NARROW_GRID_PX = 800;
 const MIN_DAY_PX = 72;
+const LONG_DAY_PX = 112;
 const MIN_TOTAL_PX = 128;
+const WEEK = 7;
 
 const widthFor = (minutesList: readonly number[], calendar: WorkCalendar, floor: number) => {
   const chars = Math.max(0, ...minutesList.map(m => (m > 0 ? formatDuration(m, calendar).length : 2)));
   return Math.max(floor, Math.ceil(chars * MONO_CHAR_PX) + CELL_INSET_PX);
 };
 
-const CORNER = 'z-30 bg-surface';
-
-function scrollToToday(el: HTMLElement, today: string) {
-  const days = [...el.querySelectorAll<HTMLElement>('thead [data-day]')];
-  const column = days.find(th => th.dataset.day === today);
-  if (!column) return;
-  const origin = el.getBoundingClientRect().left - el.scrollLeft;
-  const startOf = (th: HTMLElement) => th.getBoundingClientRect().left - origin;
-  const person = el.querySelector<HTMLElement>('thead th')?.offsetWidth ?? 0;
-  const total = el.querySelector<HTMLElement>('thead th:last-child')?.offsetWidth ?? 0;
-  const want = startOf(column) + column.offsetWidth * 2 - (el.clientWidth - total);
-  const starts = days.map(th => startOf(th) - person);
-  const todayAtStart = startOf(column) - person;
-  el.scrollLeft = want <= 0 ? 0 : Math.min(starts.find(s => s >= want) ?? want, todayAtStart);
+interface DayFit {
+  dayPx: number;
+  totalPx: number;
+  visible: number;
 }
 
-function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery }) {
+/**
+ * When the days overflow, a whole number of them fills the room between Person and Total, so a snapped scroll
+ * never shows part of a day. Total takes the pixels left over.
+ */
+const personWidth = (width: number) => (width > 0 && width < NARROW_GRID_PX ? NARROW_PERSON_PX : PERSON_PX);
+
+function fitDays(width: number, days: number, dayFloor: number, totalFloor: number): DayFit | null {
+  const person = personWidth(width);
+  const room = width - person - totalFloor;
+  if (width === 0 || days * dayFloor <= room) return null;
+  const visible = Math.max(1, Math.floor(room / dayFloor));
+  const dayPx = Math.max(dayFloor, Math.floor(room / visible));
+  return { dayPx, visible, totalPx: Math.max(totalFloor, width - person - visible * dayPx) };
+}
+
+/** The first column a long period opens on: all the logged days if they fit, nearest to today and the day after. */
+function openingColumn(dayTotals: readonly number[], todayIndex: number, visible: number) {
+  const lastStart = dayTotals.length - visible;
+  const clamp = (n: number, lo = 0, hi = lastStart) => Math.min(Math.max(n, lo, 0), hi, lastStart);
+  const nearToday = todayIndex >= 0 ? todayIndex + 2 - visible : null;
+  const logged = dayTotals.flatMap((m, i) => (m > 0 ? [i] : []));
+  const first = logged[0];
+  const last = logged.at(-1);
+  if (first === undefined || last === undefined) return clamp(nearToday ?? 0);
+  if (last - first < visible) return clamp(nearToday ?? 0, last + 1 - visible, first);
+  return clamp(nearToday !== null && dayTotals[todayIndex]! > 0 ? nearToday : first);
+}
+
+const CORNER = 'z-30 bg-surface';
+
+function TimesheetGrid({ data, scope, stale }: { data: Timesheet; scope: ReportQuery; stale: boolean }) {
   const calendar = calendarOf(data);
   const today = todayCalendarDate();
   const period = data.scope.period;
   const { ref: scroller, edges, measure } = useScrollEdges();
+  const [width, setWidth] = useState(0);
 
-  const dayPx = widthFor([...data.day_totals, ...data.rows.flatMap(r => r.minutes)], calendar, MIN_DAY_PX);
-  const totalPx = widthFor([data.total, ...data.rows.map(r => r.total)], calendar, MIN_TOTAL_PX);
-  const minWidth = PERSON_PX + data.days.length * dayPx + totalPx;
-
-  // A long period opens on today and the day after, with whole columns showing beside the sticky Person column.
-  // Keyed on the dates, not the response, so a refetch never moves a grid the reader has scrolled.
-  const span = `${data.days[0]?.date}..${data.days.at(-1)?.date}`;
   useLayoutEffect(() => {
     const el = scroller.current;
-    if (el && span) scrollToToday(el, today);
+    if (!el) return;
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    setWidth(el.clientWidth);
+    return () => observer.disconnect();
+  }, [scroller]);
+
+  const dayFloor = widthFor(
+    [...data.day_totals, ...data.rows.flatMap(r => r.minutes)],
+    calendar,
+    data.days.length > WEEK ? LONG_DAY_PX : MIN_DAY_PX,
+  );
+  const totalFloor = widthFor([data.total, ...data.rows.map(r => r.total)], calendar, MIN_TOTAL_PX);
+  const fit = fitDays(width, data.days.length, dayFloor, totalFloor);
+  const totalPx = fit?.totalPx ?? totalFloor;
+  const personPx = personWidth(width);
+  const minWidth = personPx + data.days.length * (fit?.dayPx ?? dayFloor) + totalPx;
+
+  // Keyed on the dates, not the response, so a refetch never moves a grid the reader has scrolled.
+  const span = `${data.days[0]?.date}..${data.days.at(-1)?.date}`;
+  const todayIndex = data.days.findIndex(day => day.date === today);
+  const opening = fit ? openingColumn(data.day_totals, todayIndex, fit.visible) * fit.dayPx : 0;
+  const opened = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el || width === 0) return;
+    if (opened.current !== span) {
+      opened.current = span;
+      el.scrollTo({ left: opening, behavior: 'instant' });
+    }
     measure();
-  }, [today, span, scroller, measure]);
+  }, [span, width, opening, scroller, measure]);
+
+  const page = (direction: 1 | -1) => {
+    if (fit) scroller.current?.scrollBy({ left: direction * Math.min(WEEK, fit.visible) * fit.dayPx });
+  };
 
   const startEdge = cn('sticky left-0 border-r', edges.start && EDGE_START);
   const endEdge = cn('sticky right-0 border-l', edges.end && EDGE_END);
@@ -203,17 +286,22 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
     <div
       ref={scroller}
       onScroll={measure}
-      className="max-h-[max(22rem,calc(100dvh-17rem))] scroll-pt-11 scroll-pb-9 scroll-pl-64 overflow-auto overscroll-x-contain rounded-md border max-sm:scroll-pl-32"
-      style={{ scrollPaddingRight: totalPx }}
+      className={cn(
+        'max-h-[max(22rem,calc(100dvh-17rem))] snap-x snap-mandatory scroll-pt-11 scroll-pb-9 overflow-auto overscroll-x-contain rounded-md border transition-opacity duration-(--dur-fast) motion-safe:scroll-smooth max-sm:hidden',
+        stale && 'opacity-50',
+      )}
+      style={{ scrollPaddingLeft: personPx, scrollPaddingRight: totalPx }}
+      inert={stale}
+      aria-busy={stale}
     >
       <table
         className="w-full table-fixed border-separate border-spacing-0 text-sm whitespace-nowrap"
         style={{ minWidth }}
       >
         <colgroup>
-          <col className="w-64 max-sm:w-32" />
+          <col style={{ width: personPx }} />
           {data.days.map(day => (
-            <col key={day.date} />
+            <col key={day.date} style={fit ? { width: fit.dayPx } : undefined} />
           ))}
           <col style={{ width: totalPx }} />
         </colgroup>
@@ -223,17 +311,43 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
               className={cn(
                 startEdge,
                 CORNER,
-                'top-0 h-11 border-b px-3 text-left text-xs font-normal text-text-secondary',
+                'top-0 h-11 border-b pr-2 pl-3 text-left text-xs font-normal text-text-secondary',
               )}
             >
-              Person
+              <span className="flex items-center justify-between gap-2">
+                Person
+                {fit ? (
+                  <span className="flex gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Earlier days"
+                      title="Earlier days"
+                      disabled={!edges.start}
+                      onClick={() => page(-1)}
+                    >
+                      <ChevronLeft className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label="Later days"
+                      title="Later days"
+                      disabled={!edges.end}
+                      onClick={() => page(1)}
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </Button>
+                  </span>
+                ) : null}
+              </span>
             </th>
             {data.days.map(day => (
               <th
                 key={day.date}
                 data-day={day.date}
                 className={cn(
-                  'sticky top-0 z-20 h-11 border-b px-2.5 text-right text-2xs font-normal text-text-secondary tabular',
+                  'sticky top-0 z-20 h-11 snap-start border-b px-2.5 text-right text-2xs font-normal text-text-secondary tabular',
                   day.working_day ? 'bg-surface' : 'bg-app',
                   day.date === today && 'text-text',
                 )}
@@ -259,10 +373,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                   'z-10 h-row border-b border-b-border-subtle bg-surface px-3 text-left font-normal',
                 )}
               >
-                <span className="flex min-w-0 items-center gap-2">
-                  <MemberAvatar member={row.member} className="size-avatar-sm flex-none max-sm:hidden" />
-                  <PersonName person={row.member} className="min-w-0" />
-                </span>
+                <PersonLabel member={row.member} />
               </th>
               {row.minutes.map((minutes, i) => {
                 const day = data.days[i]!;
@@ -279,6 +390,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                         drill={{ member: row.member, from: day.date, to: day.date, minutes }}
                         scope={scope}
                         calendar={calendar}
+                        disabled={stale}
                         align="start"
                       />
                     ) : null}
@@ -296,6 +408,7 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
                     drill={{ member: row.member, from: period.from, to: period.to, minutes: row.total }}
                     scope={scope}
                     calendar={calendar}
+                    disabled={stale}
                     align="end"
                   />
                 ) : (
@@ -329,16 +442,76 @@ function TimesheetGrid({ data, scope }: { data: Timesheet; scope: ReportQuery })
   );
 }
 
+const PersonLabel = ({ member }: { member: MemberRef }) => (
+  <span className="flex min-w-0 items-center gap-2">
+    <MemberAvatar member={member} className="size-avatar-sm flex-none" />
+    <PersonName person={member} className="min-w-0" />
+  </span>
+);
+
+/** On a phone a day column does not fit beside the names, so each person's total opens their entries instead. */
+function PeopleTotals({ data, scope, stale }: { data: Timesheet; scope: ReportQuery; stale: boolean }) {
+  const calendar = calendarOf(data);
+  const period = data.scope.period;
+  return (
+    <div
+      className={cn(
+        'rounded-md border text-sm transition-opacity duration-(--dur-fast) sm:hidden',
+        stale && 'opacity-50',
+      )}
+      inert={stale}
+      aria-busy={stale}
+    >
+      <div className="flex h-9 items-center justify-between border-b px-3 text-xs text-text-secondary">
+        <span>Person</span>
+        <span className="font-semibold text-text">Total</span>
+      </div>
+      <ul aria-label="Time by person" className="divide-y divide-border-subtle">
+        {data.rows.map(row => (
+          <li key={row.member.username} className="p-0.5">
+            {row.total > 0 && period ? (
+              <DrillCell
+                drill={{ member: row.member, from: period.from, to: period.to, minutes: row.total }}
+                scope={scope}
+                calendar={calendar}
+                disabled={stale}
+                align="end"
+                label={<PersonLabel member={row.member} />}
+                className="h-10 justify-between gap-3 px-2.5 font-medium"
+              />
+            ) : (
+              <span className="flex h-10 items-center justify-between gap-3 px-2.5">
+                <PersonLabel member={row.member} />
+                <span className="font-mono text-text-muted tabular">0m</span>
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="flex h-row items-center justify-between border-t px-3 font-semibold">
+        <span>Total</span>
+        <Duration minutes={data.total} calendar={calendar} />
+      </div>
+    </div>
+  );
+}
+
 function DrillCell({
   drill,
   scope,
   calendar,
   align,
+  label,
+  className,
+  disabled,
 }: {
   drill: Drill;
   scope: ReportQuery;
   calendar: WorkCalendar;
   align: 'start' | 'end';
+  label?: ReactNode;
+  className?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -346,10 +519,16 @@ function DrillCell({
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           aria-label={`${drill.member.name}, ${formatCalendarRange(drill.from, drill.to)}: the time entries`}
-          className={cn('flex h-8 w-full items-center justify-end rounded-xs px-2 hover:bg-hover', open && 'bg-active')}
+          className={cn(
+            'flex h-8 w-full items-center justify-end rounded-xs px-2 hover:bg-hover',
+            open && 'bg-active',
+            className,
+          )}
         >
-          <Duration minutes={drill.minutes} calendar={calendar} />
+          {label}
+          <Duration minutes={drill.minutes} calendar={calendar} className="flex-none whitespace-nowrap" />
         </button>
       </PopoverTrigger>
       <PopoverContent align={align} collisionPadding={16} className="w-[440px] max-w-[calc(100vw-32px)] p-0">
@@ -362,32 +541,36 @@ function DrillCell({
 // A cell names its own person and days; the report's period and people give way to them.
 const PERIOD_AND_PEOPLE = new Set(['period', 'from', 'to', 'users']);
 
-// Key, title, badges, duration: one row per entry, the columns shared across rows.
-const ENTRY_GRID = 'grid grid-cols-[max-content_minmax(0,1fr)_auto_auto] gap-x-2';
+// Key, title with its badges, duration: one row per entry, the columns shared across rows.
+const ENTRY_GRID = 'grid grid-cols-[max-content_minmax(0,1fr)_auto] gap-x-2';
 const ENTRY_ROW = 'col-span-full grid grid-cols-subgrid items-center gap-y-0.5 px-3 py-2';
 
 function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuery; calendar: WorkCalendar }) {
   const rest = Object.fromEntries(Object.entries(scope).filter(([key]) => !PERIOD_AND_PEOPLE.has(key)));
   const items = useTimesheetWorkItems({ ...rest, user: drill.member.username, from: drill.from, to: drill.to });
   const rows = items.data?.pages.flatMap(p => p.data) ?? [];
+  const total = items.data?.pages.at(-1)?.meta.pagination?.total ?? rows.length;
   const single = drill.from === drill.to;
+  const when = single ? formatCalendarDate(drill.from) : formatCalendarRange(drill.from, drill.to);
 
   return (
     <div className="flex max-h-[min(60vh,440px)] flex-col">
       <div className="flex items-baseline gap-2 border-b px-3 py-2.5">
         <span className="min-w-0 flex-1 truncate font-medium">
-          {drill.member.name} · {single ? formatCalendarDate(drill.from) : formatCalendarRange(drill.from, drill.to)}
+          {drill.member.name} · {when}
         </span>
         <Duration minutes={drill.minutes} calendar={calendar} className="font-semibold" />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="scroll-fade min-h-0 flex-1 overflow-y-auto">
         {items.isPending ? (
           <div className={ENTRY_GRID} aria-hidden>
             {[60, 80, 48].map((w, i) => (
               <div key={i} className={cn(ENTRY_ROW, single ? 'min-h-9' : 'min-h-[3.625rem]')}>
                 <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-3" style={{ width: `${w}%` }} />
-                <Skeleton className="size-4" />
+                <span className="flex items-center gap-2">
+                  <Skeleton className="h-3" style={{ width: `${w}%` }} />
+                  <Skeleton className="size-4 flex-none" />
+                </span>
                 <Skeleton className="h-3 w-10" />
                 {single ? null : <Skeleton className="col-start-2 h-3 w-16" />}
               </div>
@@ -395,7 +578,9 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
           </div>
         ) : items.isError && !items.data ? (
           <div className="flex items-center gap-3 px-3 py-3">
-            <p className="min-w-0 flex-1 text-xs text-danger-fg">{items.error.message}</p>
+            <p className="min-w-0 flex-1 text-xs text-danger-fg">
+              Could not load {drill.member.name}’s entries for {when}.
+            </p>
             <RetryButton onRetry={() => void items.refetch()} size="xs" />
           </div>
         ) : (
@@ -406,27 +591,35 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
                 <li key={item.id} className={ENTRY_ROW}>
                   <Link
                     href={`/issue/${item.issue}` as Route}
-                    className="col-span-2 grid grid-cols-subgrid items-center hover:underline"
+                    className="group col-span-2 grid grid-cols-subgrid items-center"
                   >
                     <IssueKey issueKey={item.issue} />
-                    <span className="truncate">{item.issue_title}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate group-hover:underline">{item.issue_title}</span>
+                      {item.work_type || item.attributes.length > 0 ? (
+                        <span className="flex flex-none items-center gap-1">
+                          {item.work_type ? (
+                            <LetterBadge
+                              letter={item.work_type.short_label}
+                              label={item.work_type.name}
+                              variant="outlined"
+                            />
+                          ) : null}
+                          {item.attributes.map(a => (
+                            <LetterBadge
+                              key={a.attribute}
+                              letter={a.value.short_label}
+                              label={`${a.attribute}: ${a.value.name}`}
+                              variant="outlined"
+                            />
+                          ))}
+                        </span>
+                      ) : null}
+                    </span>
                   </Link>
-                  <span className="flex items-center gap-1">
-                    {item.work_type ? (
-                      <LetterBadge letter={item.work_type.short_label} label={item.work_type.name} variant="outlined" />
-                    ) : null}
-                    {item.attributes.map(a => (
-                      <LetterBadge
-                        key={a.attribute}
-                        letter={a.value.short_label}
-                        label={`${a.attribute}: ${a.value.name}`}
-                        variant="outlined"
-                      />
-                    ))}
-                  </span>
                   <Duration minutes={item.duration_minutes} calendar={calendar} className="text-right" />
                   {!single || note ? (
-                    <span className="col-span-3 col-start-2 flex min-w-0 gap-1.5 text-xs text-text-secondary">
+                    <span className="col-span-2 col-start-2 flex min-w-0 gap-1.5 text-xs text-text-secondary">
                       {!single ? (
                         <span className="flex-none tabular">{formatCalendarDateShort(item.work_date)}</span>
                       ) : null}
@@ -442,7 +635,9 @@ function WorkItems({ drill, scope, calendar }: { drill: Drill; scope: ReportQuer
       </div>
       {items.hasNextPage ? (
         <div className="border-t p-2">
-          <LoadMore size="xs" pending={items.isFetchingNextPage} onClick={() => void items.fetchNextPage()} />
+          <LoadMore size="xs" pending={items.isFetchingNextPage} onClick={() => void items.fetchNextPage()}>
+            Load {Math.min(TIMESHEET_PAGE, total - rows.length)} more
+          </LoadMore>
         </div>
       ) : null}
     </div>

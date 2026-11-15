@@ -155,7 +155,10 @@ People as rows, days as columns, totals both ways - this week for you unless you
 people or dates, up to 62 days, so the period picker offers this and last week, this and last
 month, or a range you choose. Non-working days are marked. Open a cell to see the time entries
 behind it - or a person's total, for the whole period. **People** adds colleagues or shows
-*Everyone*. You see time logged on any issue you can open, whoever logged it.
+*Everyone*. You see time logged on any issue you can open, whoever logged it. The line under the
+controls says how long a day and a week are (for example *8-hour days, 5-day weeks*), so 1d and 1w
+read correctly. On a phone the timesheet lists each person's total for the period; tap a person to
+see their entries and the day each was logged.
 
 ## Colours
 

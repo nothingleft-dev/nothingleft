@@ -550,7 +550,11 @@ every chart:
   The chosen option is filled (`--bg-active`, ink text); keyboard focus is the ring, so the two
   never look alike.
 - On phones reports are read-only views: the picker row wraps, charts take the full width, and
-  the matrix, Gantt and timesheet scroll sideways.
+  the matrix and Gantt scroll sideways; the timesheet lists each person's total, and tapping one
+  opens their entries.
+- When a period's days do not fit, the timesheet shows a whole number of day columns and scrolls a
+  column at a time, with Earlier/Later day buttons in the Person header. It opens on the logged
+  days, or on today when today has time.
 - Wide grids scroll inside their frame: the header and total row stay, the name and total columns
   stay, with a hairline and a soft fade on the inner edge while content is under them.
 - A refused period offers _Use this week_ and _Use this month_ as small outline buttons; a
