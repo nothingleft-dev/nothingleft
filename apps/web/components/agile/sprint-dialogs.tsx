@@ -29,10 +29,34 @@ import { listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { PendingButton } from '@components/pending-button';
-import { plural } from '@lib/numbers';
+import { formatCount, plural } from '@lib/numbers';
 
 const unresolvedOf = (s: Sprint) => s.progress.issues - s.progress.resolved_issues;
 const sprintQuery = (s: Sprint) => `sprint: {${s.name}} #Unresolved`;
+
+const NUMBERED = /^(.*?)(\d+)\s*$/;
+
+/** The next name in the project's numbered series ("Sprint 09" → "Sprint 10"), or null when there is none. */
+export function nextSprintName(sprints: readonly Pick<Sprint, 'name'>[]): string | null {
+  let best: { prefix: string; n: number; width: number } | null = null;
+  for (const { name } of sprints) {
+    const match = NUMBERED.exec(name);
+    if (!match) continue;
+    const n = Number(match[2]);
+    if (!best || n > best.n) best = { prefix: match[1]!, n, width: match[2]!.length };
+  }
+  if (!best) return null;
+  const taken = new Set(sprints.map(s => s.name.toLowerCase()));
+  let n = best.n + 1;
+  const name = (k: number) => `${best.prefix}${String(k).padStart(best.width, '0')}`;
+  while (taken.has(name(n).toLowerCase())) n += 1;
+  return name(n);
+}
+
+const scrollToSprint = (name: string) =>
+  document
+    .querySelector(`section[aria-label="${CSS.escape(name)}"]`)
+    ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 
 interface Range {
   from: string | null;
@@ -118,43 +142,52 @@ function GoalField({ value, onChange, error }: { value: string; onChange: (v: st
 
 interface SprintFormDialogProps {
   projectKey: string;
+  projectName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Editing this sprint; absent creates one. */
   sprint?: Sprint | null;
   /** Where "Add N unresolved issues from…" takes its issues from. */
   carryFrom?: Sprint | null;
+  /** Prefilled on a new sprint: the next name in the series. */
+  suggestedName?: string | null;
 }
 
 export function SprintFormDialog({ open, onOpenChange, ...rest }: SprintFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        {open ? <SprintForm {...rest} onClose={() => onOpenChange(false)} /> : null}
-      </DialogContent>
+      <DialogContent>{open ? <SprintForm {...rest} onClose={() => onOpenChange(false)} /> : null}</DialogContent>
     </Dialog>
   );
 }
 
 function SprintForm({
   projectKey,
+  projectName,
   sprint,
   carryFrom,
+  suggestedName,
   onClose,
 }: Omit<SprintFormDialogProps, 'open' | 'onOpenChange'> & { onClose: () => void }) {
   const create = useCreateSprint(projectKey);
   const update = useUpdateSprint(projectKey);
   const pending = create.isPending || update.isPending;
   const error = useApiError(create.error ?? update.error, ['name', 'goal_md', 'start_date', 'end_date']);
-  const [name, setName] = useState(sprint?.name ?? '');
+  const [name, setName] = useState(sprint?.name ?? suggestedName ?? '');
   const [goal, setGoal] = useState(sprint?.goal_md ?? '');
   const [range, setRange] = useState<Range>({ from: sprint?.start_date ?? null, to: sprint?.end_date ?? null });
   const [carry, setCarry] = useState(false);
+  const [submittedName, setSubmittedName] = useState<string | null>(null);
   const carryCount = carryFrom ? unresolvedOf(carryFrom) : 0;
+  const nameError =
+    error.code === 'sprint.name_taken' && error.fields['name']
+      ? `${projectName} already has a sprint called “${submittedName ?? name.trim()}”.`
+      : error.fields['name'];
 
   const submit = () => {
     const trimmed = name.trim();
     if (trimmed === '') return;
+    setSubmittedName(trimmed);
     const goal_md = goal.trim() === '' ? null : goal;
     if (sprint) {
       const dates = sprint.state === 'planned' ? { start_date: range.from, end_date: range.to } : {};
@@ -173,7 +206,10 @@ function SprintForm({
     if (carry && carryFrom) body.add_unresolved_from = carryFrom.slug;
     create.mutate(body, {
       onSuccess: s => {
-        toast.success(carry && carryCount > 0 ? `Planned ${s.name} with ${carryCount} issues.` : `Planned ${s.name}.`);
+        toast.success(
+          carry && carryCount > 0 ? `Planned ${s.name} with ${plural(carryCount, 'issue')}.` : `Planned ${s.name}.`,
+          { action: { label: 'Show', onClick: () => scrollToSprint(s.name) } },
+        );
         onClose();
       },
     });
@@ -206,8 +242,16 @@ function SprintForm({
           autoFocus
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="October 2026"
-          error={error.fields['name']}
+          onFocus={e => e.currentTarget.select()}
+          placeholder="Sprint 1"
+          error={nameError}
+          errorAction={
+            error.code === 'sprint.name_taken' && suggestedName && suggestedName !== name.trim() ? (
+              <Button type="button" size="xs" variant="outline" onClick={() => setName(suggestedName)}>
+                Use “{suggestedName}”
+              </Button>
+            ) : undefined
+          }
         />
         <GoalField value={goal} onChange={setGoal} error={error.fields['goal_md']} />
         <ScheduleField value={range} onChange={setRange} locked={sprint ? sprint.state !== 'planned' : false} />
@@ -215,20 +259,21 @@ function SprintForm({
           <p className="-mt-2 text-xs text-danger-fg">{error.fields['start_date'] ?? error.fields['end_date']}</p>
         ) : null}
         {!sprint && carryFrom && carryCount > 0 ? (
-          <label className="flex items-start gap-2 text-sm">
-            <Checkbox checked={carry} onCheckedChange={v => setCarry(v === true)} className="mt-0.5" />
-            <span>
-              Add{' '}
-              <Link
-                href={listHref(sprintQuery(carryFrom), { project: projectKey })}
-                target="_blank"
-                className="text-brand-text hover:underline"
-              >
-                {carryCount} unresolved {carryCount === 1 ? 'issue' : 'issues'}
-              </Link>{' '}
-              from “{carryFrom.name}”
-            </span>
-          </label>
+          <div className="flex flex-wrap items-start gap-x-3 gap-y-1 text-sm">
+            <label className="flex items-start gap-2">
+              <Checkbox checked={carry} onCheckedChange={v => setCarry(v === true)} className="mt-0.5" />
+              <span>
+                Add {plural(carryCount, 'unresolved issue')} from “{carryFrom.name}”
+              </span>
+            </label>
+            <Link
+              href={listHref(sprintQuery(carryFrom), { project: projectKey })}
+              target="_blank"
+              className="text-brand-text hover:underline"
+            >
+              View them
+            </Link>
+          </div>
         ) : null}
       </form>
 
@@ -264,7 +309,7 @@ export function StartSprintDialog({
 }: SprintActionProps & { timeZone?: string }) {
   return (
     <Dialog open={sprint !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         {sprint ? (
           <StartForm projectKey={projectKey} sprint={sprint} timeZone={timeZone} onClose={() => onOpenChange(false)} />
         ) : null}
@@ -343,7 +388,7 @@ export function FinishSprintDialog({
 }: SprintActionProps & { planned: readonly Sprint[] }) {
   return (
     <Dialog open={sprint !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         {sprint ? (
           <FinishForm projectKey={projectKey} sprint={sprint} planned={planned} onClose={() => onOpenChange(false)} />
         ) : null}
@@ -365,12 +410,14 @@ function FinishForm({
 }) {
   const finish = useFinishSprint(projectKey);
   const error = useApiError(finish.error, []);
-  const [target, setTarget] = useState<string | null>(null);
+  const [target, setTarget] = useState<string>(planned[0]?.slug ?? BACKLOG_TARGET);
   const unfinished = unresolvedOf(sprint);
-  const { resolved_issues, points, resolved_points } = sprint.progress;
+  const { issues, resolved_issues, points, resolved_points } = sprint.progress;
+  const pointsNote = points > 0 ? ` (${formatCount(resolved_points)} of ${formatCount(points)} points)` : '';
+  // Someone else finished it first; the header behind the dialog has already caught up.
+  const gone = error.code === 'sprint.not_active';
 
   const submit = () => {
-    if (!target) return;
     finish.mutate(
       { sprint: sprint.slug, body: { move_unfinished_to: target } },
       {
@@ -392,37 +439,48 @@ function FinishForm({
       <DialogHeader>
         <DialogTitle>Finish {sprint.name}</DialogTitle>
         <DialogDescription>
-          {resolved_issues} resolved{points > 0 ? ` (${resolved_points} of ${points} points)` : ''} stay with it as its
-          record. Choose where the {unfinished} unfinished {unfinished === 1 ? 'issue goes' : 'issues go'}.
+          {issues === 0
+            ? 'It has no issues. Finishing it closes it with an empty record.'
+            : unfinished === 0
+              ? `${issues === 1 ? 'Its issue is' : `All ${formatCount(issues)} issues are`} resolved${pointsNote}. They stay with the sprint as its record.`
+              : `${formatCount(resolved_issues)} resolved${pointsNote} stay with it as its record. Choose where the ${plural(unfinished, 'unfinished issue goes', 'unfinished issues go')}.`}
         </DialogDescription>
       </DialogHeader>
-      {error.summary ? <FormAlert title={error.summary} /> : null}
-      <RadioGroup
-        value={target ?? ''}
-        onValueChange={setTarget}
-        aria-label="Move unfinished issues to"
-        className="flex flex-col gap-0 rounded-md border"
-      >
-        {[{ value: BACKLOG_TARGET, label: 'The backlog', hint: 'Unplanned, at the bottom in their current order.' }]
-          .concat(planned.map(s => ({ value: s.slug, label: s.name, hint: `Planned · ${sprintDatesLabel(s)}` })))
-          .map(option => (
-            <label
-              key={option.value}
-              className="flex cursor-pointer items-start gap-3 border-b px-3 py-2.5 last:border-b-0 hover:bg-hover"
-            >
-              <RadioGroupItem value={option.value} className="mt-0.5" />
-              <span className="flex flex-col">
-                <span className="text-sm">{option.label}</span>
-                <span className="text-xs text-text-secondary">{option.hint}</span>
-              </span>
-            </label>
-          ))}
-      </RadioGroup>
+      {gone ? (
+        <FormAlert title={`${sprint.name} is no longer running.`}>
+          Someone finished it a moment ago. The backlog behind this dialog shows the latest state.
+        </FormAlert>
+      ) : error.summary ? (
+        <FormAlert title={error.summary} />
+      ) : null}
+      {unfinished > 0 ? (
+        <RadioGroup
+          value={target}
+          onValueChange={setTarget}
+          aria-label="Move unfinished issues to"
+          className="flex flex-col gap-0 rounded-md border"
+        >
+          {[{ value: BACKLOG_TARGET, label: 'The backlog', hint: 'Unplanned, at the bottom in their current order.' }]
+            .concat(planned.map(s => ({ value: s.slug, label: s.name, hint: `Planned · ${sprintDatesLabel(s)}` })))
+            .map(option => (
+              <label
+                key={option.value}
+                className="flex cursor-pointer items-start gap-3 border-b px-3 py-2.5 last:border-b-0 hover:bg-hover"
+              >
+                <RadioGroupItem value={option.value} className="mt-0.5" />
+                <span className="flex flex-col">
+                  <span className="text-sm">{option.label}</span>
+                  <span className="text-xs text-text-secondary">{option.hint}</span>
+                </span>
+              </label>
+            ))}
+        </RadioGroup>
+      ) : null}
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={finish.isPending}>
-          Cancel
+          {gone ? 'Close' : 'Cancel'}
         </Button>
-        <PendingButton onClick={submit} disabled={target === null} pending={finish.isPending} pendingLabel="Finishing…">
+        <PendingButton onClick={submit} disabled={gone} pending={finish.isPending} pendingLabel="Finishing…">
           Finish sprint
         </PendingButton>
       </DialogFooter>
@@ -437,7 +495,7 @@ export function DeleteSprintDialog({ projectKey, sprint, onOpenChange }: SprintA
     <ConfirmDialog
       open={sprint !== null}
       onOpenChange={onOpenChange}
-      title={`Delete ${sprint?.name ?? 'sprint'}?`}
+      title={sprint ? `Delete sprint ${sprint.name}?` : 'Delete sprint?'}
       confirmLabel="Delete sprint"
       pendingLabel="Deleting…"
       pending={remove.isPending}

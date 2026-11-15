@@ -1,25 +1,35 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { cn } from '@lib/utils';
 
-/** A neutral mono chip; nothing when unpointed, since `--` in every card would be noise. */
-export function StoryPoints({ points, className }: { points: number | null; className?: string }) {
-  if (points === null) return null;
+const CHIP =
+  'inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-xs border px-1 font-mono text-[11px] font-medium tabular';
+
+/**
+ * A neutral mono chip. Unpointed is nothing on a card, where `?` on every card would be noise, and
+ * `unestimated="mark"` in a column of rows, where a hole reads as a missing value.
+ */
+export function StoryPoints({
+  points,
+  unestimated = 'none',
+  className,
+}: {
+  points: number | null;
+  unestimated?: 'none' | 'mark';
+  className?: string;
+}) {
+  if (points === null && unestimated === 'none') return null;
+  const label = points === null ? 'Not estimated' : `${points} story ${points === 1 ? 'point' : 'points'}`;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          aria-label={`${points} story ${points === 1 ? 'point' : 'points'}`}
-          className={cn(
-            'inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-xs border px-1 font-mono text-[11px] font-medium tabular text-text-secondary',
-            className,
-          )}
+          aria-label={label}
+          className={cn(CHIP, 'text-text-secondary', points === null && 'border-dashed', className)}
         >
-          {points}
+          {points ?? '?'}
         </span>
       </TooltipTrigger>
-      <TooltipContent>
-        {points} story {points === 1 ? 'point' : 'points'}
-      </TooltipContent>
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 }

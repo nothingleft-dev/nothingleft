@@ -471,7 +471,15 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 - **Backlog**: the filter bar narrows the backlog container only (default `#Unresolved`);
   sprint sections always list every issue. Rows are dragged by a grip, so the title stays
   a link. _New sprint_ leaves _Add N unresolved issues_ unticked: carrying issues out of
-  a running sprint is a choice, not a default.
+  a running sprint is a choice, not a default. Sprint headers keep fixed slots, right-aligned:
+  the stats (`4 of 15 resolved · 8 of 37 points`, or _No issues_), a progress bar that is always
+  drawn, and, for Project Admins, one primary action (_Finish sprint_ / _Start sprint_) with the
+  ⋯ menu (_Edit sprint_, _Open its board_, _Delete sprint_). A planned sprint that cannot start
+  yet says _Finish Sprint 08 first_ in that slot. The board link lives in the page header only.
+  An unestimated row shows `?` in the points chip. A filtered backlog counts `N of M`, and a
+  filter that matches nothing offers _Clear filter_. _New sprint_ suggests the next name in the
+  series. _Finish sprint_ preselects the next planned sprint (else the backlog) and asks nothing
+  when every issue is resolved.
 
 ## Knowledge base
 
