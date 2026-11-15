@@ -27,11 +27,11 @@ import { plural } from '@lib/numbers';
 
 const BY_DUE_DATE = 'sort by: {due date} asc';
 const ASSIGNED_QUERY = `${MY_OPEN} ${BY_DUE_DATE}`;
-const STARRED_QUERY = '#Star sort by: updated desc';
+const STARRED_QUERY = `#Star ${BY_DUE_DATE}`;
 // DESIGN-SYSTEM § 8: ten rows across the groups, every non-empty group showing a few.
 const ROWS_SHOWN = 10;
 const ROWS_PER_GROUP_MIN = 3;
-const STARRED_SHOWN = 12;
+const STARRED_SHOWN = 5;
 
 interface Read {
   data: unknown;
@@ -88,11 +88,12 @@ export function MyWork() {
       href: '/timesheets' as Route,
       delta:
         weekMinutes > 0 && loggedMinutes > weekMinutes
-          ? { text: `${formatDuration(loggedMinutes - weekMinutes, hours)} over`, good: null }
+          ? { text: `${formatDuration(loggedMinutes - weekMinutes, hours)} over`, good: null, warn: true }
           : null,
       below: (
         <Meter
           ratio={weekMinutes ? loggedMinutes / weekMinutes : 0}
+          overflow
           label="Logged this week"
           className="mt-2 bg-border"
         />
@@ -122,7 +123,6 @@ export function MyWork() {
         <LoadError onRetry={() => reads.forEach(q => void q.refetch())} detail={errorDetail(figures.error)}>
           My work could not be loaded.
         </LoadError>
-        <StatRow stats={stats} state="failed" />
       </div>
     );
   }
@@ -136,7 +136,6 @@ export function MyWork() {
         </StaleNotice>
       ) : null}
       <div className="flex flex-col gap-3">
-        <StatRow stats={stats} state={rowState} />
         {rowState === 'failed' ? (
           <LoadError
             onRetry={() => {
@@ -148,6 +147,7 @@ export function MyWork() {
             These figures could not be loaded.
           </LoadError>
         ) : null}
+        <StatRow stats={stats} state={rowState} />
       </div>
 
       <div className="grid items-start gap-8 min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]">
@@ -155,7 +155,6 @@ export function MyWork() {
           <Section
             title="Assigned to me"
             count={assignedTotal > 0 ? assignedTotal : undefined}
-            stale={staleRead(assigned)}
             action={
               assignedTotal > 0
                 ? { label: 'View all assigned issues', href: listHref(ASSIGNED_QUERY, { group: 'due' }) }
@@ -169,7 +168,7 @@ export function MyWork() {
                 Your assignments could not be loaded.
               </LoadError>
             ) : assignedTotal === 0 ? (
-              <SectionEmpty>
+              <SectionEmpty className="px-3">
                 Nothing is assigned to you. <Link href={'/issues' as Route}>Browse the issue list</Link>
                 {canCreate ? (
                   <>
@@ -188,8 +187,13 @@ export function MyWork() {
           <Section
             title="Starred"
             count={starredTotal > 0 ? starredTotal : undefined}
-            stale={staleRead(starred)}
-            action={starredTotal > 0 ? { label: 'View all starred', href: '/starred' as Route } : undefined}
+            action={
+              starredTotal > STARRED_SHOWN
+                ? { label: `View all ${starredTotal} starred`, href: '/starred' as Route }
+                : starredTotal > 0
+                  ? { label: 'View all starred', href: '/starred' as Route }
+                  : undefined
+            }
           >
             {starred.isPending ? (
               <CompactRowsSkeleton rows={3} />
@@ -198,7 +202,7 @@ export function MyWork() {
                 Your starred issues could not be loaded.
               </LoadError>
             ) : (starred.data?.data.length ?? 0) === 0 ? (
-              <SectionEmpty>Star an issue from its page and it stays within reach here.</SectionEmpty>
+              <SectionEmpty className="px-3">Star an issue from its page and it stays within reach here.</SectionEmpty>
             ) : (
               <div className="flex flex-col">
                 {starred.data!.data.map(issue => (
@@ -211,11 +215,7 @@ export function MyWork() {
 
         <aside className="flex min-w-0 flex-col gap-8 max-[1199px]:grid max-[1199px]:grid-cols-2 max-[1199px]:gap-6 max-md:grid-cols-1">
           <InboxPreview />
-          <Section
-            title="Active sprints"
-            count={mySprints.length > 0 ? mySprints.length : undefined}
-            stale={staleRead(sprints)}
-          >
+          <Section title="Active sprints" count={mySprints.length > 0 ? mySprints.length : undefined}>
             {sprints.isPending ? (
               <ActiveSprintRowsSkeleton />
             ) : sprints.isError && !sprints.data ? (
@@ -223,13 +223,14 @@ export function MyWork() {
                 Sprints could not be loaded.
               </LoadError>
             ) : mySprints.length === 0 ? (
-              <SectionEmpty>
+              <SectionEmpty className="px-3">
                 None of your issues is in an active sprint.{' '}
                 {backlogProject ? (
                   <Link href={backlogHref(backlogProject.key)}>Open the {backlogProject.name} backlog</Link>
                 ) : (
                   <Link href={'/projects' as Route}>Browse projects</Link>
                 )}
+                .
               </SectionEmpty>
             ) : (
               <ul className="flex flex-col">
@@ -245,14 +246,16 @@ export function MyWork() {
             action={recent.items.length > 0 ? { label: 'Clear', onClick: recent.clear } : undefined}
           >
             {recent.items.length === 0 ? (
-              <SectionEmpty>Issues you open in this organisation appear here, on this device only.</SectionEmpty>
+              <SectionEmpty className="px-3">
+                Issues you open in this organisation appear here, on this device only.
+              </SectionEmpty>
             ) : (
               <ul className="flex flex-col">
                 {recent.items.map(item => (
                   <li key={item.key}>
                     <Link
                       href={`/issue/${item.key}` as Route}
-                      className="grid h-row-dense grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-sm border-b border-border-subtle px-2 hover:bg-hover"
+                      className="grid h-row grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-sm border-b border-border-subtle px-3 hover:bg-hover"
                     >
                       <IssueKey issueKey={item.key} column />
                       <span className="truncate text-xs">{item.title}</span>
@@ -320,7 +323,7 @@ function AssignedGroups({
           <div key={bucket} className="flex flex-col">
             <div
               className={cn(
-                'mt-2 flex h-7 items-center gap-2 rounded-sm bg-app px-2 text-xs font-medium text-text-secondary',
+                'mt-2 flex h-7 items-center gap-2 rounded-sm bg-app px-3 text-xs font-medium text-text-secondary',
                 bucket === 'overdue' && 'text-danger-fg',
               )}
             >
@@ -339,7 +342,7 @@ function AssignedGroups({
             {hidden > 0 ? (
               <Link
                 href={listHref(`${MY_OPEN} ${DUE_GROUP_QUERY[bucket]} ${BY_DUE_DATE}`)}
-                className="flex h-row-dense items-center self-start rounded-xs px-2 text-xs text-text-secondary hover:text-text hover:underline"
+                className="flex h-row-dense items-center self-start rounded-xs px-3 text-xs text-text-secondary hover:text-text hover:underline"
               >
                 View all {group.count} {GROUP_LINK_NOUN[bucket]}
               </Link>

@@ -491,7 +491,8 @@ The same component lives on the board header, project cards, and sprint lines.
 
 ### Meter
 4px track (`--bg-inset`), fill `--c-solid`. Blue for neutral progress, amber ≥ 80%,
-red ≥ 95% for quota meters.
+red ≥ 95% for quota meters. Progress past its target (logged time past the work week) keeps the
+target's share neutral and ends in an amber cap.
 
 ### Stat row
 One `border-top`/`border-bottom` band; figures 20px/600 tabular; label 12px secondary
@@ -592,7 +593,7 @@ and land on Projects.
    with more says _View all 13 overdue_ and opens that group's own query; the header link
    _View all assigned issues_ goes to the issue list with
    `assignee: me #Unresolved sort by: due date asc` grouped by due date.
-3. **Starred**.
+3. **Starred**, five by due date, *View all N starred*.
 4. Rail: **Inbox** (grouped by issue, unread dot, "Mark all read"), **Active sprints**
    the user has issues in (days left, red under 3 days, personal strip), **Recently
    viewed** (this device, one list per account and organisation; an issue that no longer
@@ -611,8 +612,10 @@ and land on Projects.
    overdue, then unassigned, then open, so an empty project sinks to the end.
 3. Stat row: Open · Overdue · Unassigned · Resolved 7d (with delta; no change is neutral
    `±0`) · Created 7d.
-4. **Project cards**, 2-up: avatar, name, key, lead → active sprint line with dates,
-   days left, strip + legend (or the no-sprint empty state) → five figures → team load
+4. **Project cards**, at least 600 px wide (one column at 1440, two on wide screens, the same for every
+   role): avatar, name, key, lead → active sprint line with dates, days left, strip + legend (or
+   *No active sprint · All issues by category* over the category strip, with *Plan one from the
+   backlog*) → five figures on one line, in the stat row's order and words → team load
    (avatar + first name + open count; more than 15 open is danger ink with a tooltip that
    says only that) → footer links and "Updated N ago" with the absolute tooltip. The card
    is not a link, so it has no hover state; its links do.
@@ -624,8 +627,9 @@ and land on Projects.
    an Org Admin's.
 
 A section whose data failed to load says so with _Retry_ in its place — never a zero or an
-empty list. A refresh that fails keeps what loaded before under a one-line notice; a failed
-stat row shows `–`, not `0`. Each figure's link wraps the number and its label, so its
+empty list. When every read fails, the page shows one alert with Try again and nothing else. A
+refresh that fails keeps what loaded before under one notice under the header (sections carry
+no mark of their own); a failed stat row shows `–`, not `0`. Each figure's link wraps the number and its label, so its
 name reads _100 Overdue_.
 
 Every number is a link to the filtered list that produced it.

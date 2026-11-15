@@ -4,14 +4,17 @@ interface MeterProps {
   ratio: number;
   /** A quota meter turns amber at 80% and red at 95%; plain progress stays neutral. */
   quota?: boolean;
+  /** Progress past its target keeps the target's share neutral and caps the rest in amber. */
+  overflow?: boolean;
   className?: string;
   label: string;
 }
 
 /** DESIGN-SYSTEM § 7: 4px track on `--bg-inset`, fill in `--c-solid`. */
-export function Meter({ ratio, quota = false, className, label }: MeterProps) {
+export function Meter({ ratio, quota = false, overflow = false, className, label }: MeterProps) {
   const clamped = Math.max(0, Math.min(1, ratio));
   const tone = quota && clamped >= 0.95 ? 'c-red' : quota && clamped >= 0.8 ? 'c-amber' : quota ? 'c-blue' : null;
+  const target = overflow && !quota && ratio > 1 ? 1 / ratio : null;
   return (
     <div
       role="meter"
@@ -19,12 +22,19 @@ export function Meter({ ratio, quota = false, className, label }: MeterProps) {
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(clamped * 100)}
-      className={cn('h-1 w-full overflow-hidden rounded-full bg-inset', tone, className)}
+      className={cn('flex h-1 w-full gap-0.5 overflow-hidden rounded-full bg-inset', tone, className)}
     >
-      <i
-        className={cn('block h-full rounded-full', tone ? 'bg-c-solid' : 'bg-text-secondary')}
-        style={{ width: `${clamped * 100}%` }}
-      />
+      {target === null ? (
+        <i
+          className={cn('block h-full rounded-full', tone ? 'bg-c-solid' : 'bg-text-secondary')}
+          style={{ width: `${clamped * 100}%` }}
+        />
+      ) : (
+        <>
+          <i className="block h-full rounded-l-full bg-text-secondary" style={{ width: `${target * 100}%` }} />
+          <i className="c-amber block h-full flex-1 rounded-r-full bg-c-solid" />
+        </>
+      )}
     </div>
   );
 }

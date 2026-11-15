@@ -16,8 +16,8 @@ export interface Stat {
   unitHint?: string;
   /** Overdue and the like: the figure in danger ink when non-zero. */
   alert?: boolean;
-  /** `good: null` is no change, in neutral ink. */
-  delta?: { text: string; good: boolean | null } | null;
+  /** `good: null` is no change, in neutral ink; `warn` is a deviation that is neither good nor bad, in amber. */
+  delta?: { text: string; good: boolean | null; warn?: boolean } | null;
   /** Every number is a link to the list that produced it — DESIGN-SYSTEM § 8. */
   href?: Route;
   /** Inside the link when `href` is set, so never interactive there. */
@@ -78,11 +78,13 @@ export function StatRow({
                 <span
                   className={cn(
                     'text-xs font-medium tracking-normal whitespace-nowrap',
-                    stat.delta.good === null
-                      ? 'text-text-muted'
-                      : stat.delta.good
-                        ? 'text-success-fg'
-                        : 'text-danger-fg',
+                    stat.delta.warn
+                      ? 'text-warning-fg'
+                      : stat.delta.good === null
+                        ? 'text-text-muted'
+                        : stat.delta.good
+                          ? 'text-success-fg'
+                          : 'text-danger-fg',
                   )}
                 >
                   {stat.delta.text}
@@ -93,7 +95,8 @@ export function StatRow({
           const label = (
             <span className="flex items-center gap-1 text-xs text-text-secondary transition-colors group-hover/stat:text-text group-focus-visible/stat:text-text">
               {stat.label}
-              {stat.href && known ? (
+              {/* Present before the cell links too, so the label wraps the same once it does. */}
+              {stat.href ? (
                 <ArrowRight
                   aria-hidden
                   className="size-3 opacity-0 transition-opacity group-hover/stat:opacity-100 group-focus-visible/stat:opacity-100"

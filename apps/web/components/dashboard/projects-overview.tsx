@@ -160,12 +160,12 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
     { label: 'Overdue', value: sum(f => f.overdue), alert: true, href: scoped(OVERDUE) },
     { label: 'Unassigned', value: sum(f => f.unassigned), href: scoped(UNASSIGNED) },
     {
-      label: 'Resolved in the last 7 days',
+      label: 'Resolved 7d',
       value: sum(f => f.resolved_7d),
       delta: weekDelta(sum(f => f.resolved_7d) - sum(f => f.resolved_prev_7d)),
       href: scoped(RESOLVED_7D),
     },
-    { label: 'Created in the last 7 days', value: sum(f => f.created_7d), href: scoped(CREATED_7D) },
+    { label: 'Created 7d', value: sum(f => f.created_7d), href: scoped(CREATED_7D) },
   ];
   const statState = worst([statRowState(figures), statRowState(active), statRowState(archived)]);
   const reads: Read[] = [figures, active, archived, sprints, ...(orgAdmin ? [activity] : [])];
@@ -174,6 +174,8 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
   const projectsFailed = active.isError && !active.data;
   const sprintsFailed = sprints.isError && !sprints.data;
   const noProjects = active.data?.length === 0 && archived.data?.length === 0;
+  // Cards wait for the figures that order them, so none jumps when they arrive.
+  const awaitingOrder = sort === 'attention' && figures.isPending && ordered.length > 0;
   const sprintState = sprints.isPending ? 'loading' : sprintsFailed ? 'failed' : 'ready';
 
   if (nothingLoaded) {
@@ -182,7 +184,6 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
         <LoadError onRetry={() => reads.forEach(q => void q.refetch())} detail={errorDetail(active.error)}>
           Your projects could not be loaded.
         </LoadError>
-        <StatRow stats={stats} state="failed" />
       </div>
     );
   }
@@ -194,6 +195,17 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
           These projects could not be refreshed. Showing what loaded at{' '}
           {formatTime(Math.min(...stale.map(q => q.dataUpdatedAt)), timeZone)}.
         </StaleNotice>
+      ) : null}
+      {statState === 'failed' && !projectsFailed && !noProjects ? (
+        <LoadError
+          onRetry={() => {
+            void figures.refetch();
+            void archived.refetch();
+          }}
+          detail={errorDetail(figures.error ?? archived.error)}
+        >
+          These figures could not be loaded.
+        </LoadError>
       ) : null}
       {orgAdmin && org.seats.over > 0 ? <SeatBanner seats={org.seats} /> : null}
       {orgAdmin ? <StorageBanner storage={org.storage} /> : null}
@@ -225,63 +237,38 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <StatRow stats={stats} state={projectsFailed ? 'failed' : statState} />
-            {statState === 'failed' && !projectsFailed ? (
-              <LoadError
-                onRetry={() => {
-                  void figures.refetch();
-                  void archived.refetch();
-                }}
-                detail={errorDetail(figures.error ?? archived.error)}
-              >
-                These figures could not be loaded.
-              </LoadError>
-            ) : null}
-          </div>
+          <StatRow stats={stats} state={projectsFailed ? 'failed' : statState} />
         </>
       )}
 
       <div
         className={cn('mt-2 grid items-start gap-8', orgAdmin && 'min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]')}
       >
-        <div
-          className={cn(
-            'grid min-w-0 gap-3 min-[900px]:grid-cols-2',
-            orgAdmin && 'min-[1200px]:grid-cols-1 min-[1500px]:grid-cols-2',
-          )}
-        >
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,600px),1fr))] gap-3">
           {sprintsFailed && !projectsFailed && ordered.length > 0 ? (
-            <div className="min-[900px]:col-span-full">
+            <div className="col-span-full">
               <LoadError onRetry={() => void sprints.refetch()} detail={errorDetail(sprints.error)}>
                 Sprints could not be loaded.
               </LoadError>
             </div>
           ) : null}
-          {active.isPending ? (
-            <>
-              <ProjectCardSkeleton />
-              <ProjectCardSkeleton />
-            </>
+          {active.isPending || awaitingOrder ? (
+            Array.from({ length: Math.min(ordered.length || 2, 4) }, (_, i) => <ProjectCardSkeleton key={i} />)
           ) : projectsFailed ? (
-            <div className="min-[900px]:col-span-full">
+            <div className="col-span-full">
               <LoadError onRetry={() => void active.refetch()} detail={errorDetail(active.error)}>
                 Your projects could not be loaded.
               </LoadError>
             </div>
           ) : noProjects ? (
-            <div className="min-[900px]:col-span-full">
+            <div className="col-span-full">
               <FirstProject orgAdmin={orgAdmin} />
             </div>
           ) : ordered.length === 0 ? (
-            <div className="min-[900px]:col-span-full">
-              <SectionEmpty>
+            <div className="col-span-full">
+              <SectionEmpty className="px-3">
                 Every project is archived.{' '}
-                <button
-                  type="button"
-                  onClick={() => setScope('all')}
-                  className="text-text-secondary underline hover:text-text"
-                >
+                <button type="button" onClick={() => setScope('all')} className="action-link text-text-secondary">
                   Show all projects
                 </button>
               </SectionEmpty>
@@ -306,7 +293,6 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
             <MembersAndLimits org={org} />
             <Section
               title="Organisation activity"
-              stale={staleRead(activity)}
               action={{ label: 'Audit log', href: '/organization?tab=audit' as Route }}
             >
               {activity.isPending ? (
@@ -314,7 +300,7 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
                   {Array.from({ length: 5 }, (_, i) => (
                     <div
                       key={i}
-                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 border-b border-border-subtle px-2 py-2"
+                      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 border-b border-border-subtle px-3 py-2"
                     >
                       <Skeleton className="size-5 rounded-full" />
                       <div className="flex flex-col gap-1.5 pt-1">
@@ -330,7 +316,7 @@ export function ProjectsOverview({ org, orgAdmin }: { org: Organization; orgAdmi
                   Activity could not be loaded.
                 </LoadError>
               ) : (activity.data?.rows.length ?? 0) === 0 ? (
-                <SectionEmpty>Nothing has happened in the organisation yet.</SectionEmpty>
+                <SectionEmpty className="px-3">Nothing has happened in the organisation yet.</SectionEmpty>
               ) : (
                 <ul className="flex flex-col">
                   {bursts(activity.data!.rows)
@@ -386,12 +372,12 @@ function ProjectCardSkeleton() {
         <Skeleton className="mt-2 h-1.5 w-full" />
         <Skeleton className="mt-2 h-2.5 w-56" />
       </div>
-      <div className="grid grid-cols-3 gap-x-3 gap-y-2 border-t border-border-subtle pt-3 sm:grid-cols-5">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border-subtle pt-3">
         {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-1.5">
-            <Skeleton className="h-5 w-8" />
-            <Skeleton className="h-2.5 w-14" />
-          </div>
+          <span key={i} className="flex h-5 items-center gap-1.5">
+            <Skeleton className="h-3.5 w-5" />
+            <Skeleton className="h-3 w-14" />
+          </span>
         ))}
       </div>
       <div className="flex items-center gap-3 border-t border-border-subtle pt-3">
@@ -414,7 +400,7 @@ function MembersAndLimits({ org }: { org: Organization }) {
   const storageRatio = ownBucket ? 0 : org.storage.used_bytes / org.storage.limit_bytes;
   return (
     <Section title="Members and limits" action={{ label: 'Organisation settings', href: '/organization' as Route }}>
-      <div className="flex flex-col gap-3 px-2 py-1 text-xs">
+      <div className="flex flex-col gap-3 px-3 py-1 text-xs">
         <div className="flex flex-col gap-1">
           <div className="flex justify-between gap-3 text-text-secondary">
             <span>Members</span>
@@ -422,8 +408,8 @@ function MembersAndLimits({ org }: { org: Organization }) {
               {free === null
                 ? plural(used, 'member')
                 : over > 0
-                  ? `${used} · ${over} over the ${free} free seats`
-                  : `${used} of ${free} free seats`}
+                  ? `${used} used · ${over} over ${free} free`
+                  : `${used} used · ${free} free`}
             </b>
           </div>
           {/* Seats past the free allowance block nothing, so their meter never turns amber or red. */}
@@ -445,7 +431,10 @@ function MembersAndLimits({ org }: { org: Organization }) {
           </div>
           {ownBucket ? null : <Meter ratio={storageRatio} quota label="File storage used" className="bg-border" />}
           {storageRatio >= NEAR_LIMIT ? (
-            <Link href={'/organization?tab=storage' as Route} className="action-link self-start text-2xs">
+            <Link
+              href={'/organization?tab=storage' as Route}
+              className="self-start text-2xs text-text-secondary hover:text-text hover:underline"
+            >
               Review stored files
             </Link>
           ) : null}
@@ -517,9 +506,9 @@ function ActivityRow({
     detail = activityDetail(row);
   }
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 border-b border-border-subtle px-2 py-2 text-xs text-text-secondary last:border-b-0">
+    <li className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 border-b border-border-subtle px-3 py-2 text-xs text-text-secondary last:border-b-0">
       <ActivityAvatar row={row} className="size-5" />
-      <span className="min-w-0 leading-5">
+      <span className="min-w-0 leading-5 text-pretty">
         {isSystemActivity(row) ? (
           <span className="text-text">{systemSentence(row)}</span>
         ) : (
@@ -563,10 +552,10 @@ function ProjectFiguresCard({
   const base = `/projects/${project.key}`;
   const nums: { label: string; value: number; alert?: boolean; q: string }[] = [
     { label: 'Open', value: figures?.open ?? 0, q: '#Unresolved' },
-    { label: 'Unassigned', value: figures?.unassigned ?? 0, q: UNASSIGNED },
     { label: 'Overdue', value: figures?.overdue ?? 0, alert: true, q: OVERDUE },
-    { label: 'Created 7d', value: figures?.created_7d ?? 0, q: CREATED_7D },
+    { label: 'Unassigned', value: figures?.unassigned ?? 0, q: UNASSIGNED },
     { label: 'Resolved 7d', value: figures?.resolved_7d ?? 0, q: RESOLVED_7D },
+    { label: 'Created 7d', value: figures?.created_7d ?? 0, q: CREATED_7D },
   ];
   const team = figures?.by_assignee ?? [];
 
@@ -585,7 +574,7 @@ function ProjectFiguresCard({
         {project.lead ? (
           <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
             <span className="text-text-muted">Lead</span>
-            <MemberAvatar member={project.lead} className="size-4" />
+            <MemberAvatar member={project.lead} className="size-5" />
             <PersonName person={project.lead} />
           </span>
         ) : null}
@@ -602,12 +591,13 @@ function ProjectFiguresCard({
       ) : (
         <div>
           <div className="flex items-baseline gap-2">
-            <span className="font-medium">All issues</span>
-            <span className="text-xs text-text-muted">
-              {sprintState === 'failed' ? 'Sprint not loaded' : 'No active sprint'}
-            </span>
+            <span className="font-medium">{sprintState === 'failed' ? 'Sprint not loaded' : 'No active sprint'}</span>
+            <span className="text-xs text-text-muted">All issues by category</span>
             {sprintState === 'ready' && !project.is_archived ? (
-              <Link href={backlogHref(project.key)} className="action-link ml-auto text-xs text-text-secondary">
+              <Link
+                href={backlogHref(project.key)}
+                className="ml-auto text-xs whitespace-nowrap text-text-secondary hover:text-text hover:underline"
+              >
                 Plan one from the backlog
               </Link>
             ) : null}
@@ -617,45 +607,43 @@ function ProjectFiguresCard({
           ) : figuresFailed ? (
             <div className="mt-2 h-1.5 rounded-full bg-inset" />
           ) : (
-            <StatusStrip counts={figures?.by_category ?? {}} tooltipSide="bottom" className="mt-2" />
+            <StatusStrip counts={figures?.by_category ?? {}} className="mt-2" />
           )}
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-x-3 gap-y-2 border-t border-border-subtle pt-3 sm:grid-cols-5">
-        {loading
-          ? nums.map(n => (
-              <div key={n.label} aria-hidden className="flex flex-col gap-1.5">
-                <Skeleton className="h-5 w-8" />
-                <Skeleton className="h-2.5 w-14" />
-              </div>
-            ))
-          : figuresFailed
-            ? nums.map(n => (
-                <span key={n.label} className="flex flex-col">
-                  <span className="text-md font-semibold text-text-muted" aria-label="Not available">
-                    –
-                  </span>
-                  <span className="text-2xs whitespace-nowrap text-text-muted">{n.label}</span>
-                </span>
-              ))
-            : nums.map(n => (
-                <Link
-                  key={n.label}
-                  href={listHref(n.q, { project: project.key })}
-                  className="group/num -mx-1 flex flex-col justify-self-start rounded-xs px-1"
-                >
-                  <span
-                    className={cn(
-                      'text-md font-semibold tracking-tight tabular group-hover/num:underline',
-                      n.alert && n.value > 0 && 'text-danger-fg',
-                    )}
-                  >
-                    {n.value}
-                  </span>
-                  <span className="text-2xs whitespace-nowrap text-text-muted">{n.label}</span>
-                </Link>
-              ))}
+      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t border-border-subtle pt-3">
+        {nums.map(n =>
+          loading ? (
+            <span key={n.label} aria-hidden className="flex h-5 items-center gap-1.5">
+              <Skeleton className="h-3.5 w-5" />
+              <Skeleton className="h-3 w-14" />
+            </span>
+          ) : figuresFailed ? (
+            <span key={n.label} className="flex items-baseline gap-1.5 whitespace-nowrap">
+              <span className="font-semibold text-text-muted" aria-label="Not available">
+                –
+              </span>
+              <span className="text-xs text-text-muted">{n.label}</span>
+            </span>
+          ) : (
+            <Link
+              key={n.label}
+              href={listHref(n.q, { project: project.key })}
+              className="group/num -mx-1 flex items-baseline gap-1.5 rounded-xs px-1 whitespace-nowrap"
+            >
+              <span
+                className={cn(
+                  'font-semibold tabular group-hover/num:underline',
+                  n.alert && n.value > 0 && 'text-danger-fg',
+                )}
+              >
+                {n.value}
+              </span>
+              <span className="text-xs text-text-secondary group-hover/num:text-text">{n.label}</span>
+            </Link>
+          ),
+        )}
       </div>
 
       <div className="flex min-h-5 flex-wrap items-center gap-x-3 gap-y-2 border-t border-border-subtle pt-3">
@@ -679,7 +667,7 @@ function ProjectFiguresCard({
           return open > MANY_OPEN ? (
             <Tooltip key={member.username}>
               <TooltipTrigger asChild>{link}</TooltipTrigger>
-              <TooltipContent>More than {MANY_OPEN} open issues in this project</TooltipContent>
+              <TooltipContent align="start">More than {MANY_OPEN} open issues in this project</TooltipContent>
             </Tooltip>
           ) : (
             <Fragment key={member.username}>{link}</Fragment>

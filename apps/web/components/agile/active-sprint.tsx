@@ -16,7 +16,7 @@ export const backlogHref = (projectKey: string) => `/projects/${projectKey}/back
 export function ActiveSprintRow({ sprint }: { sprint: Sprint }) {
   const mine = sprint.progress.mine;
   return (
-    <li className="flex flex-col gap-2 border-b border-border-subtle px-2 py-3 last:border-b-0">
+    <li className="flex flex-col gap-2 border-b border-border-subtle px-3 py-3 last:border-b-0">
       <div className="flex items-baseline gap-2">
         <span className="font-mono text-2xs text-text-muted">{sprint.project.key}</span>
         <Link href={boardHref(sprint.project.key)} className="min-w-0 truncate text-sm font-medium hover:underline">
@@ -24,7 +24,7 @@ export function ActiveSprintRow({ sprint }: { sprint: Sprint }) {
         </Link>
         <DaysLeft days={sprint.days_left} className="ml-auto" />
       </div>
-      <StatusDistribution statuses={sprint.progress.by_status} tooltipSide="bottom" />
+      <StatusDistribution statuses={sprint.progress.by_status} />
       <p className="text-2xs text-text-secondary">
         You: <b className="font-medium tabular text-text">{mine.resolved_issues}</b> of{' '}
         <b className="font-medium tabular text-text">{mine.issues}</b> resolved
@@ -37,7 +37,7 @@ export function ActiveSprintRowsSkeleton({ rows = 2 }: { rows?: number }) {
   return (
     <div aria-hidden className="flex flex-col">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex flex-col gap-2 border-b border-border-subtle px-2 py-3">
+        <div key={i} className="flex flex-col gap-2 border-b border-border-subtle px-3 py-3">
           <div className="flex gap-2">
             <Skeleton className="h-3 w-8" />
             <Skeleton className="h-3 w-28" />
@@ -69,7 +69,7 @@ export function ActiveSprintLine({ sprint }: { sprint: Sprint }) {
         </span>
         <DaysLeft days={sprint.days_left} className="ml-auto shrink-0" />
       </div>
-      <StatusDistribution statuses={sprint.progress.by_status} tooltipSide="bottom" className="mt-2" />
+      <StatusDistribution statuses={sprint.progress.by_status} className="mt-2" />
     </div>
   );
 }
