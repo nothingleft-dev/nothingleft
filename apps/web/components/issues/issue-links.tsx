@@ -14,6 +14,7 @@ import { linkLabel } from '@components/issues/add-links-dialog';
 import { StatusPill } from '@components/issues/status-pill';
 import { TypeBadge } from '@components/issues/value-marks';
 import { useIssueLinks, useRemoveIssueLink, useStarLinkedIssue } from '@hooks/use-issue-links';
+import { useIssue } from '@hooks/use-issues';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
 import { TextButton } from '@components/text-button';
@@ -28,6 +29,9 @@ interface IssueLinksProps {
 
 export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: IssueLinksProps) {
   const links = useIssueLinks(issueKey);
+  const issue = useIssue(issueKey).data;
+  // The first tab is the hierarchy's, which the issue already counts; anything else is unknown until it loads.
+  const expected = issue ? (issue.subtasks.total > 0 ? issue.subtasks.total : issue.parent ? 1 : 0) : 0;
   const groups = links.data ?? [];
   const [chosen, setChosen] = useState<string | null>(null);
   const active = groups.find(g => g.link === chosen) ?? groups[0];
@@ -38,7 +42,12 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
     <section className="mt-8" aria-label="Links">
       <div className="flex h-control items-center gap-3 border-b">
         <h2 className="flex-none text-sm font-semibold">Links</h2>
-        {groups.length > 0 && active ? (
+        {links.isPending && expected > 0 ? (
+          <span aria-hidden className="flex h-full items-center gap-5 px-2.5">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-16" />
+          </span>
+        ) : groups.length > 0 && active ? (
           <Tabs
             size="section"
             ariaLabel="Link types"
@@ -60,7 +69,7 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
       </div>
 
       {links.isPending ? (
-        <LinksSkeleton />
+        <LinksSkeleton rows={Math.min(expected, 8)} />
       ) : links.isError ? (
         <div className="mt-3">
           <LoadError onRetry={() => void links.refetch()} detail={errorDetail(links.error)}>
@@ -170,13 +179,30 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
   );
 }
 
-// One line, the height of the empty state most issues end on, so Activity below does not move when it settles.
-function LinksSkeleton() {
+// With no rows to expect, one line the height of the empty state most issues end on.
+function LinksSkeleton({ rows }: { rows: number }) {
+  if (rows === 0) {
+    return (
+      <div className="flex h-[30px] items-end" aria-hidden>
+        <span className="flex h-[18px] items-center">
+          <Skeleton className="h-3 w-80 max-w-full" />
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className="flex h-[30px] items-end" aria-hidden>
-      <span className="flex h-[18px] items-center">
-        <Skeleton className="h-3 w-80 max-w-full" />
-      </span>
-    </div>
+    <ul aria-hidden className="flex flex-col">
+      {Array.from({ length: rows }, (_, i) => (
+        <li key={i} className="flex h-row items-center gap-2 border-b border-border-subtle pr-1 pl-1">
+          <span className="grid size-6 flex-none place-items-center">
+            <Skeleton className="size-3 rounded-full" />
+          </span>
+          <Skeleton className="size-badge-letter flex-none rounded-xs" />
+          <Skeleton className="h-3 w-12 flex-none" />
+          <Skeleton className={cn('h-3', ['w-1/2', 'w-2/5', 'w-1/3'][i % 3])} />
+          <Skeleton className="ml-auto h-3 w-20 flex-none max-sm:hidden" />
+        </li>
+      ))}
+    </ul>
   );
 }

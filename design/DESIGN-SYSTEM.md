@@ -686,8 +686,7 @@ button; right: `‹ 12 of 96 ›` pager (j / k), Create issue, theme.
 5. Links: tabs per link type with counts (`Parent for 3`), `Add links`. Rows: P, T,
    key (struck when resolved), title, status pill.
 6. Attachments: count, `Hidden files N · show`, `Attach files`; no overflow menu until
-   something needs one. Image thumbnails; file tiles with a neutral type square and size. Image
-   tiles sit on 12 rem columns and file rows span two of them, so both lists share one rhythm.
+   something needs one. Image thumbnails; file tiles with a neutral type square and size. Image tiles sit on a grid of 2, 4 or 6 columns by the column's width and file rows on 1, 2 or 3, so a file row is two image columns and both lists end on the column's edge. Long names are cut in the middle so the extension stays.
    Hidden entirely while the issue has no files (`docs/ui-conventions.md` § Issue page).
 7. Activity: tabs All / Comments / Spent time (total) / History. Entries grouped by
    save (`change_group_id`): one header, several `Field: old → new` lines. A comment

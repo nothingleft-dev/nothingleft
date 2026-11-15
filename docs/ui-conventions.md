@@ -154,7 +154,7 @@ render struck through**, so a list of subtasks communicates progress at a
 glance. Beside `Add links` sits `Create subtask`. The star toggles in place; a
 row's `×` (hover, editors only) removes that link without asking, since it is
 one click to add back. `Add links` is a dialog: the link name as a choice with a
-one-line meaning under it, then any number of issues found by key or title; a
+one-line meaning under it, then any number of issues found by key or title; each result has a tick box, a picked issue stays ticked in the list, and picking it again unpicks it; a
 refusal (a `depends on` cycle, a second parent) is shown inside the dialog and
 nothing is linked. With no links, the section says so and offers `Add links`; a
 reader who cannot edit sees no section at all.
@@ -172,7 +172,7 @@ them. `Attach files` action. As built in 1f (owner decisions, 25 Sep 2026):
 - **No files, no section**, for everyone. *Attach files* is then the paperclip among the
   title-row actions (edit, tag, link), which is always there for someone who may upload.
   The section appears as soon as an upload starts, so its progress has somewhere to show.
-- **Tiles.** Images (PNG, JPEG, GIF, WebP, AVIF) as 192 px thumbnails with name and size
+- **Tiles.** Images (PNG, JPEG, GIF, WebP, AVIF) as thumbnails on a grid that fills the column (about 170–220 px wide) with name and size
   under them; every other file, SVG included, as a download tile — a neutral type square
   (`PDF`, `CSV`), the name and the size. A PDF opens in a new tab; the rest download. The
   tooltip says who attached it, where (*on a comment*, *on spent time*) and when.

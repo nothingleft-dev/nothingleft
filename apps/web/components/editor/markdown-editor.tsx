@@ -449,10 +449,17 @@ function pastedFiles(event: ClipboardEvent): File[] {
   return [...data.files];
 }
 
+// Not a link yet: muted, with no underline or new-tab mark, until the file it names exists.
+const UPLOADING_LINK = { target: null, class: 'pointer-events-none text-text-muted no-underline' };
+
 function fileNodes(name: string, href: string, image: boolean, uploading: boolean): JSONContent[] {
   if (image) return [{ type: 'image', attrs: { src: href, alt: name } }];
   return [
-    { type: 'text', text: uploading ? `Uploading ${name}…` : name, marks: [{ type: 'link', attrs: { href } }] },
+    {
+      type: 'text',
+      text: uploading ? `Uploading ${name}…` : name,
+      marks: [{ type: 'link', attrs: uploading ? { href, ...UPLOADING_LINK } : { href } }],
+    },
     { type: 'text', text: ' ' },
   ];
 }

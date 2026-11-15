@@ -12,7 +12,8 @@ import { useUploader } from '@hooks/use-attachments';
 import { useToggleIssueTask, useUpdateIssue } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
 import { toastError } from '@components/toast-error';
-import { PendingButton } from '@components/pending-button';
+import { PendingButton, PendingLabel } from '@components/pending-button';
+import { cn } from '@lib/utils';
 import { FormAlert } from '@components/auth/form-alert';
 
 interface IssueDescriptionProps {
@@ -102,11 +103,23 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
               size="sm"
               onClick={submit}
               disabled={blocked}
-              pending={update.isPending || uploader.busy}
-              pendingLabel={uploader.busy ? 'Uploading…' : 'Saving…'}
-              after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+              pending={update.isPending}
+              pendingLabel="Saving…"
+              after={
+                <Kbd
+                  className={cn(
+                    'h-4 border-transparent bg-ink-fg/15 text-ink-fg/80',
+                    (uploader.busy || update.isPending) && 'invisible',
+                  )}
+                >
+                  ⌘↵
+                </Kbd>
+              }
             >
-              Save
+              {/* Waiting for files is not saving: the button is unavailable until they land. */}
+              <PendingLabel pending={uploader.busy} pendingLabel="Uploading…">
+                Save
+              </PendingLabel>
             </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel

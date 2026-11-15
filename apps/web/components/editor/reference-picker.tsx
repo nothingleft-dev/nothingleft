@@ -125,7 +125,7 @@ export const ReferencePicker = forwardRef<ReferencePickerHandle, ReferencePicker
               {loading ? (
                 <PickerSkeleton rows={3} />
               ) : (
-                <CommandEmpty>
+                <CommandEmpty className="px-3 py-3 text-sm text-text-secondary">
                   {trigger === '@' ? 'Nobody in this project matches.' : 'No issue matches that key or title.'}
                 </CommandEmpty>
               )}
@@ -147,11 +147,13 @@ export const ReferencePicker = forwardRef<ReferencePickerHandle, ReferencePicker
               ) : null}
             </CommandList>
           </Command>
-          <div className="flex items-center gap-3 border-t px-3 py-1.5 text-2xs text-text-muted">
-            <span>↑↓ to move</span>
-            <span>↵ or ⇥ to insert</span>
-            <span>esc to close</span>
-          </div>
+          {loading || options.length > 0 ? (
+            <div className="flex items-center gap-3 border-t px-3 py-1.5 text-2xs text-text-muted">
+              <span>↑↓ to move</span>
+              <span>↵ or ⇥ to insert</span>
+              <span>esc to close</span>
+            </div>
+          ) : null}
         </PopoverContent>
       ) : null}
     </Popover>

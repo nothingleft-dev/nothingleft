@@ -32,11 +32,19 @@ export const escapeMarkdownLabel = (text: string) => text.replace(/[[\]\\]/g, '\
 export const attachmentMarkdown = (file: { filename: string; url: string; mime_type: string }) =>
   `${isInlineImage(file.mime_type) ? '!' : ''}[${escapeMarkdownLabel(file.filename)}](${file.url})`;
 
-/** File extension for a type square: `PDF`, `CSV`; the mime subtype when the name has none. */
+const SUBTYPE_BADGE: Record<string, string> = { plain: 'txt', jpeg: 'jpg', markdown: 'md', 'octet-stream': 'file' };
+
+/** File extension for a type square: `PDF`, `CSV`; read from the mime type when the name has none. */
 export function fileBadge(filename: string, mime: string): string {
   const dot = filename.lastIndexOf('.');
-  const ext = dot > 0 && dot < filename.length - 1 ? filename.slice(dot + 1) : (mime.split('/')[1] ?? 'file');
-  return ext.slice(0, 4).toUpperCase();
+  if (dot > 0 && dot < filename.length - 1)
+    return filename
+      .slice(dot + 1)
+      .slice(0, 4)
+      .toUpperCase();
+  const subtype = mime.split('/')[1] ?? '';
+  const badge = SUBTYPE_BADGE[subtype] ?? (/^[a-z0-9]{1,4}$/.test(subtype) ? subtype : 'file');
+  return badge.toUpperCase();
 }
 
 // The anchor is the only way to hand a blob to the browser's downloader.

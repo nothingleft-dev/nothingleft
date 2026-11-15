@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type MouseEvent } from 'react';
-import { CloudOff, Paperclip, X } from 'lucide-react';
+import { CloudOff, ImageOff, Paperclip, X } from 'lucide-react';
 import { formatBytes } from '@nothingleft/format';
 import type { Attachment, ByoStatus } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { PersonName } from '@components/former-member-chip';
 import { FileBadge } from '@components/attachments/file-badge';
+import { FileName } from '@components/attachments/file-name';
 import { Lightbox, imageGallery, type LightboxImage } from '@components/attachments/lightbox';
 import { StorageBanner } from '@components/attachments/storage-banner';
 import { ByoFailingBanner } from '@components/attachments/byo-failing-banner';
@@ -33,9 +34,9 @@ interface AttachmentsSectionProps {
   timeZone?: string | undefined;
 }
 
-// One rhythm for both lists: a file row spans two image columns and the gap between them.
-const IMAGE_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(0,12rem))] gap-3';
-const FILE_GRID = 'grid grid-cols-[repeat(auto-fill,minmax(0,24.75rem))] gap-3';
+// Both lists fill the column; a file row is exactly two image columns and the gap between them.
+const IMAGE_GRID = 'grid grid-cols-2 gap-3 @lg:grid-cols-4 @6xl:grid-cols-6';
+const FILE_GRID = 'grid grid-cols-1 gap-3 @lg:grid-cols-2 @6xl:grid-cols-3';
 
 const hasModifier = (event: MouseEvent) => event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0;
 
@@ -76,7 +77,7 @@ export function AttachmentsSection({
   return (
     <section
       className={cn(
-        'mt-8 rounded-md',
+        'mt-8 rounded-md @container',
         dragging && 'bg-hover outline-2 outline-offset-4 outline-dashed outline-border-strong',
       )}
       aria-label="Attachments"
@@ -98,7 +99,11 @@ export function AttachmentsSection({
       <div className="flex min-h-control flex-wrap items-center gap-x-3 gap-y-1 border-b">
         <h2 className="text-sm font-semibold">
           Attachments
-          {loading ? null : <span className="ml-1 font-normal tabular text-text-muted">{listed.length}</span>}
+          {loading ? (
+            <Skeleton aria-hidden className="ml-1.5 inline-block h-3 w-3 align-[-1px]" />
+          ) : (
+            <span className="ml-1 font-normal tabular text-text-muted">{listed.length}</span>
+          )}
         </h2>
         {hidden.length > 0 ? (
           <span className="flex items-center gap-1.5 text-xs text-text-secondary">
@@ -127,7 +132,7 @@ export function AttachmentsSection({
             <TooltipTrigger asChild>
               {/* A disabled button fires no pointer events, so the wrapper carries the tooltip. */}
               <span tabIndex={0} className="ml-auto inline-flex rounded-sm">
-                <Button variant="ghost" size="xs" disabled className="text-text-muted">
+                <Button variant="ghost" size="xs" disabled className="text-text-muted!">
                   <Paperclip /> Attach files
                 </Button>
               </span>
@@ -152,12 +157,14 @@ export function AttachmentsSection({
       {loading ? (
         <div className="flex flex-col gap-3 pt-3" role="status" aria-label="Loading attachments">
           <div className={IMAGE_GRID}>
-            {[0, 1, 2].map(i => (
-              <Skeleton key={i} className="h-[142px] w-full" />
+            {[0, 1, 2, 3].map(i => (
+              <Skeleton key={i} className={cn('h-[142px] w-full', i > 1 && '@max-lg:hidden')} />
             ))}
           </div>
           <div className={FILE_GRID}>
-            <Skeleton className="h-10 w-full" />
+            {[0, 1].map(i => (
+              <Skeleton key={i} className={cn('h-10 w-full', i > 0 && '@max-lg:hidden')} />
+            ))}
           </div>
         </div>
       ) : shown.length === 0 && hidden.length > 0 ? (
@@ -183,15 +190,7 @@ export function AttachmentsSection({
                         }}
                         className="group/tile flex w-full cursor-zoom-in flex-col overflow-hidden rounded-md border hover:border-border-strong"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element -- a private file behind a redirect; next/image cannot fetch it */}
-                        <img
-                          src={file.url}
-                          alt=""
-                          loading="lazy"
-                          width={file.width ?? undefined}
-                          height={file.height ?? undefined}
-                          className="h-28 w-full bg-inset object-cover"
-                        />
+                        <TileImage file={file} />
                         <TileCaption file={file} />
                       </a>
                     ) : (
@@ -281,15 +280,29 @@ export function AttachmentsSection({
   );
 }
 
-/** Truncates the name before its extension, so `.csv` stays readable. */
-function FileName({ name, className }: { name: string; className?: string }) {
-  const dot = name.lastIndexOf('.');
-  const extension = dot > 0 && name.length - dot <= 8 ? name.slice(dot) : '';
+function TileImage({ file }: { file: Attachment }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <span className="grid h-28 w-full place-items-center bg-inset text-2xs text-text-secondary">
+        <span className="flex flex-col items-center gap-1.5">
+          <ImageOff className="size-icon text-text-muted" aria-hidden />
+          No preview
+        </span>
+      </span>
+    );
+  }
   return (
-    <span className={cn('flex min-w-0', className)}>
-      <span className="truncate">{extension ? name.slice(0, dot) : name}</span>
-      {extension ? <span className="flex-none">{extension}</span> : null}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element -- a private file behind a redirect; next/image cannot fetch it
+    <img
+      src={file.url}
+      alt=""
+      loading="lazy"
+      width={file.width ?? undefined}
+      height={file.height ?? undefined}
+      onError={() => setFailed(true)}
+      className="h-28 w-full bg-inset object-cover"
+    />
   );
 }
 
@@ -317,9 +330,10 @@ function FileTile({ file, byo, canFix, timeZone, onDelete, children }: FileTileP
     <div className="group/file relative">
       <Tooltip delayDuration={500}>
         <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side="top">
+        <TooltipContent side="top" align="start" className="max-w-sm!">
           {file.available ? null : <span className="block max-w-64 pb-1">{unavailableReason(byo, canFix)}</span>}
-          <PersonName person={file.created_by} /> attached this{where} · {formatDateTime(file.created_at, timeZone)}
+          <PersonName person={file.created_by} /> attached this{where} ·{' '}
+          <span className="whitespace-nowrap">{formatDateTime(file.created_at, timeZone)}</span>
         </TooltipContent>
       </Tooltip>
       {file.me.can_delete ? (
