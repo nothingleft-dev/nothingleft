@@ -77,7 +77,7 @@ to be a Contributor or above. The project already has everything an issue needs:
 Defaults are in bold. A Project Admin can change every list and the board; see
 [Issues](./issues.md#project-settings-statuses-priorities-types-work-types).
 
-**Connect an LLM.** Choose **Connect an agent** to let an AI agent file, triage and comment on
+**Connect an agent.** Choose **Connect an agent** to let an AI agent file, triage and comment on
 issues as you. The dialog creates an access token named _Claude Code_ with the `issues:read`,
 `issues:write`, `comments:write` and `time:write` scopes, then shows the config for the agent
 you pick, token filled in, with one **Copy** button. When the agent makes its first call, the

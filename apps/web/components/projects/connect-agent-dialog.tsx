@@ -55,7 +55,7 @@ const CLIENTS: readonly AgentClient[] = [
     value: 'claude-code',
     label: 'Claude Code',
     hint: 'Terminal, over HTTP. Nothing to install.',
-    where: 'Run this in a terminal.',
+    where: 'Run this in a terminal. It connects over HTTP, so there is nothing to install.',
     check: <>Run {cmd('claude mcp list')} — nothingleft should say ✓ Connected.</>,
     config: t => `claude mcp add --transport http nothingleft ${mcpUrl()} --header "Authorization: Bearer ${t}"`,
   },
@@ -63,7 +63,7 @@ const CLIENTS: readonly AgentClient[] = [
     value: 'claude-code-stdio',
     label: 'Claude Code (stdio)',
     hint: 'Terminal, through the local shim. Needs Node.js 20.',
-    where: 'Run this in a terminal.',
+    where: 'Run this in a terminal. It starts the local shim, which needs Node.js 20.',
     check: <>Run {cmd('claude mcp list')} — nothingleft should say ✓ Connected.</>,
     config: t =>
       `claude mcp add nothingleft -e NOTHINGLEFT_TOKEN=${t} -e NOTHINGLEFT_MCP_URL=${mcpUrl()} -- npx -y @nothingleft/mcp`,
@@ -72,7 +72,8 @@ const CLIENTS: readonly AgentClient[] = [
     value: 'claude-desktop',
     label: 'Claude Desktop',
     hint: 'The desktop app, through the local shim. Needs Node.js 20.',
-    where: 'In Claude Desktop, open Settings → Developer → Edit Config, add this, and restart it.',
+    where:
+      'In Claude Desktop, open Settings → Developer → Edit Config, add this, and restart it. The shim needs Node.js 20.',
     check: <>Nothing Left appears in the tools menu after the restart.</>,
     config: t =>
       json({
@@ -236,10 +237,10 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
       </DialogHeader>
 
       <div className="flex min-w-0 flex-col gap-3">
-        <ChoiceSelect label="Your agent" value={clientId} options={CLIENTS} onChange={setClientId} showHint />
+        <ChoiceSelect label="Your agent" value={clientId} options={CLIENTS} onChange={setClientId} />
         <p className="text-xs text-text-secondary">{client.where}</p>
         <div className="relative min-w-0">
-          <pre className="min-w-0 rounded-md border bg-inset py-3 pr-24 pl-3 font-mono text-2xs leading-5 whitespace-pre-wrap text-text [overflow-wrap:anywhere]">
+          <pre className="min-w-0 rounded-md border border-border-strong bg-inset py-3 pr-24 pl-3 font-mono text-2xs leading-5 whitespace-pre-wrap text-text [overflow-wrap:anywhere]">
             {config}
           </pre>
           <div className="absolute top-2 right-2">
@@ -273,7 +274,9 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
       </section>
 
       <DialogFooter>
-        <Button onClick={onDone}>Done</Button>
+        <Button variant={usedAt ? 'default' : 'outline'} onClick={onDone}>
+          Done
+        </Button>
       </DialogFooter>
     </>
   );

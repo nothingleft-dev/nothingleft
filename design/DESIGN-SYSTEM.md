@@ -487,7 +487,8 @@ active filter. Overdue groups colour the label `--danger-fg`.
 6px tall, 2px gaps between segments, radius 3 on the ends only. Segments are
 `--c-solid`; cancelled segment hatched. Always followed by a legend (dot + name + bold
 count) so identity is never colour-alone. Hover on a segment: "58 cards in status Open".
-The same component lives on the board header, project cards, and sprint lines.
+The same component lives on the board header, project cards, and sprint lines. A strip by category
+reads Backlog · Not started · In progress · Done · Cancelled; legend counts are grouped (`30,544`).
 
 ### Meter
 4px track (`--bg-inset`), fill `--c-solid`. Blue for neutral progress, amber ≥ 80%,
@@ -636,6 +637,11 @@ no mark of their own); a failed stat row shows `–`, not `0`. Each figure's lin
 name reads _100 Overdue_.
 
 Every number is a link to the filtered list that produced it.
+
+**Project home**: the same stat row words as the organisation dashboard (Open issues · Overdue ·
+Unassigned · Resolved 7d · Created 7d). The rail (People, Active sprint) keeps its column in every state;
+an empty project shows the ways to start in the main column, as one bordered list. Section bodies are
+hairline boxes with a 12 px inset.
 
 ## 8a. Issue list
 

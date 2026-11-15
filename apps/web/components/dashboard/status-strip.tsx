@@ -6,7 +6,7 @@ import { plural } from '@lib/numbers';
 
 const CATEGORY_LABEL: Record<StatusCategory, string> = {
   backlog: 'Backlog',
-  unstarted: 'Open',
+  unstarted: 'Not started',
   started: 'In progress',
   done: 'Done',
   cancelled: 'Cancelled',
@@ -57,7 +57,7 @@ export function StatusStrip({ counts, legend = true, tooltipSide = 'top', classN
           {entries.map(([category, n]) => (
             <li key={category} className="inline-flex items-center gap-1.5">
               <i className={cn('inline-block size-1.5 rounded-full bg-c-solid', CATEGORY_CLASS[category])} />
-              {CATEGORY_LABEL[category]} <b className="font-medium tabular text-text">{n}</b>
+              {CATEGORY_LABEL[category]} <b className="font-medium tabular text-text">{formatCount(n)}</b>
             </li>
           ))}
         </ul>

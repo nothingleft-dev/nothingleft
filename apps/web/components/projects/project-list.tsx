@@ -29,6 +29,8 @@ import { useSession } from '@hooks/use-session';
 import { toastError } from '@components/toast-error';
 import { isRateLimited } from '@lib/api/errors';
 
+const GRID = 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-3';
+
 const FILTERS = [
   { value: 'active', label: 'Active' },
   { value: 'archived', label: 'Archived' },
@@ -71,7 +73,7 @@ export function ProjectList() {
         title="Projects"
         actions={
           // On phones the actions always take their own row, so New project arriving with the roles moves nothing.
-          <div className="flex items-center justify-end gap-1 max-sm:w-[calc(100vw-2rem)]">
+          <div className="flex items-center justify-end gap-1 max-sm:w-[calc(100vw-2rem)] max-sm:justify-between">
             <Segmented ariaLabel="Project filter" value={filter} options={FILTERS} onChange={setFilter} />
             {orgAdmin && !emptyActive ? (
               <Button variant="outline" size="sm" onClick={() => setCreating(true)}>
@@ -97,8 +99,8 @@ export function ProjectList() {
           Your projects could not be loaded.
         </LoadError>
       ) : projects.isPending ? (
-        <div className="grid gap-3 lg:grid-cols-2" role="status" aria-label="Loading">
-          {Array.from({ length: 4 }, (_, i) => (
+        <div className={GRID} role="status" aria-label="Loading">
+          {Array.from({ length: 6 }, (_, i) => (
             <ProjectCardSkeleton key={i} />
           ))}
         </div>
@@ -113,13 +115,11 @@ export function ProjectList() {
                 : 'A project holds issues, boards and documents. An Org Admin creates projects and adds you to them.'
           }
           action={
-            filter === 'active' && orgAdmin ? (
-              <Button onClick={() => setCreating(true)}>Create a project</Button>
-            ) : undefined
+            filter === 'active' && orgAdmin ? <Button onClick={() => setCreating(true)}>New project</Button> : undefined
           }
         />
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className={GRID}>
           {rows.map(project => (
             <ProjectCard
               key={project.key}
@@ -135,7 +135,7 @@ export function ProjectList() {
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem asChild>
                         <Link href={`/projects/${project.key}/settings` as Route}>
-                          <Settings className="size-icon-sm" /> Project settings
+                          <Settings className="size-icon-sm" /> Settings
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />

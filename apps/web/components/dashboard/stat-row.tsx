@@ -74,10 +74,12 @@ export function StatRow({
                   <span className="text-xs font-normal tracking-normal text-text-muted">{stat.unit}</span>
                 )
               ) : null}
-              {stat.delta && known ? (
+              {stat.delta && state !== 'failed' ? (
                 <span
+                  aria-hidden={known ? undefined : true}
                   className={cn(
                     'text-xs font-medium tracking-normal whitespace-nowrap',
+                    !known && 'invisible',
                     stat.delta.warn
                       ? 'text-warning-fg'
                       : stat.delta.good === null

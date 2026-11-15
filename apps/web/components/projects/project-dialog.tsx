@@ -5,14 +5,7 @@ import { toast } from 'sonner';
 import { CreateProjectSchema, type PaletteHue } from '@nothingleft/types';
 import { generateProjectKey, parseProjectKey } from '@nothingleft/format';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@components/ui/dialog';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PaletteSwatches } from '@components/palette-swatches';
@@ -50,18 +43,15 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
 
   return (
     <Dialog open={open} onOpenChange={next => (next ? onOpenChange(true) : close())}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>New project</DialogTitle>
-          <DialogDescription>
-            The key becomes the prefix on every issue in it, so short reads better: PP-14 rather than PARTNER-14.
-          </DialogDescription>
         </DialogHeader>
 
         <form
           id="create-project"
           noValidate
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 pb-2"
           onSubmit={event => {
             event.preventDefault();
             setKeyChecked(true);
@@ -96,6 +86,7 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
             label="Key"
             className="font-mono tabular uppercase placeholder:font-sans placeholder:normal-case"
             placeholder="e.g. PP"
+            hint="The prefix on every issue, as in PP-14. Short reads best."
             value={derived}
             error={keyProblem ?? error.fields['key']}
             errorAction={
@@ -127,13 +118,7 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
           <Button variant="outline" onClick={close} disabled={create.isPending}>
             Cancel
           </Button>
-          <PendingButton
-            type="submit"
-            form="create-project"
-            disabled={name.trim() === ''}
-            pending={create.isPending}
-            pendingLabel="Creating…"
-          >
+          <PendingButton type="submit" form="create-project" pending={create.isPending} pendingLabel="Creating…">
             Create project
           </PendingButton>
         </DialogFooter>

@@ -97,7 +97,7 @@ This screen is the one every user sees and the one that decides whether they
 come back. It offers three things, in this order:
 
 1. **Create your first issue** — primary action, opens the composer.
-2. **Connect an LLM** — the MCP setup: generate a token, copy the config
+2. **Connect an agent** — the MCP setup: generate a token, copy the config
    block for Claude Desktop or Claude Code, one command to verify.
 3. **Import from CSV** — for people arriving with existing work.
 

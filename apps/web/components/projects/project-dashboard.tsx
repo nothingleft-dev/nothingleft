@@ -10,7 +10,7 @@ import { Skeleton } from '@components/ui/skeleton';
 import { PageTitle } from '@components/page-title';
 import { RowsSkeleton } from '@components/skeletons';
 import { RelativeTime } from '@components/relative-time';
-import { LoadError, notFoundOn404 } from '@components/query-state';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import { Section, SectionEmpty } from '@components/dashboard/section';
 import { StatRow, statRowState, weekDelta, type Stat } from '@components/dashboard/stat-row';
 import { StatusStrip } from '@components/dashboard/status-strip';
@@ -25,6 +25,7 @@ import { ActiveSprintPanel, backlogHref } from '@components/agile/active-sprint'
 import { useRecordProjectVisit } from '@hooks/use-project-visit';
 import { CREATED_7D, OVERDUE, RESOLVED_7D, UNASSIGNED, listHref } from '@lib/issue-list/links';
 import { formatCount } from '@lib/numbers';
+import { cn } from '@lib/utils';
 import { PROJECT_ROLE_LABELS } from '@lib/roles';
 import { useProjectRoles } from '@hooks/use-project-roles';
 
@@ -32,6 +33,7 @@ const PEOPLE_SHOWN = 8;
 const ROW_SKELETON = 5;
 
 const HEADER = 'flex min-h-10 flex-wrap items-center gap-x-4 gap-y-2';
+const PANEL = 'rounded-md border px-3 py-3';
 const MAIN_GRID = 'grid items-start gap-8 min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]';
 
 export function ProjectDashboard({ projectKey }: { projectKey: string }) {
@@ -83,7 +85,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
       ) : !members.data ? (
         <LoadError onRetry={() => void members.refetch()}>People could not be loaded.</LoadError>
       ) : members.data.length === 0 ? (
-        <SectionEmpty>Nobody has been added yet.</SectionEmpty>
+        <SectionEmpty className={PANEL}>Nobody has been added yet.</SectionEmpty>
       ) : (
         <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
           {members.data.slice(0, PEOPLE_SHOWN).map(member => (
@@ -109,7 +111,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
           <ActiveSprintPanel sprint={active} />
         </div>
       ) : (
-        <SectionEmpty>
+        <SectionEmpty className={PANEL}>
           No active sprint.
           {canEdit ? (
             <>
@@ -148,8 +150,8 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
         {data.description_md ? (
           <Markdown source={data.description_md} variant="comment" className="max-w-prose text-text-secondary" />
         ) : canEdit ? (
-          <p className="text-text-muted">
-            No description. <ActionLink href={settingsHref('general')}>Add a description</ActionLink>
+          <p>
+            <ActionLink href={settingsHref('general')}>Add a description</ActionLink>
           </p>
         ) : (
           <p className="text-text-muted">No description</p>
@@ -167,31 +169,38 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
         </p>
       </div>
 
-      {isEmpty ? (
-        <FirstProjectEmptyState
-          projectKey={data.key}
-          projectName={data.name}
-          canCreate
-          canImport={canEdit}
-          readOnly={
-            data.is_archived
-              ? 'It is archived, so nothing new can be filed in it.'
-              : data.my_role === 'observer'
-                ? 'Contributors and Project Admins add issues here.'
-                : null
-          }
-        />
-      ) : (
-        <StatRow stats={stats} state={statRowState(figures)} onRetry={() => void figures.refetch()} />
+      {isEmpty ? null : (
+        <div className="flex flex-col gap-3">
+          {figuresFailed ? (
+            <LoadError onRetry={() => void figures.refetch()} detail={errorDetail(figures.error)}>
+              These figures could not be loaded.
+            </LoadError>
+          ) : null}
+          <StatRow
+            stats={stats}
+            state={statRowState(figures)}
+            onRetry={figuresFailed ? undefined : () => void figures.refetch()}
+          />
+        </div>
       )}
 
-      {isEmpty ? (
-        <div className="grid items-start gap-8 lg:grid-cols-2">
-          {people}
-          {sprint}
-        </div>
-      ) : (
-        <div className={MAIN_GRID}>
+      <div className={MAIN_GRID}>
+        {isEmpty ? (
+          <FirstProjectEmptyState
+            layout="rows"
+            projectKey={data.key}
+            projectName={data.name}
+            canCreate
+            canImport={canEdit}
+            readOnly={
+              data.is_archived
+                ? 'It is archived, so nothing new can be filed in it.'
+                : data.my_role === 'observer'
+                  ? 'Contributors and Project Admins add issues here.'
+                  : null
+            }
+          />
+        ) : (
           <div className="flex min-w-0 flex-col gap-8">
             <Section title="By status" count={total === null ? undefined : formatCount(total)}>
               {figures.isPending ? (
@@ -199,7 +208,7 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
               ) : figuresFailed ? (
                 <FiguresUnavailable />
               ) : (
-                <StatusStrip counts={fig?.by_category ?? {}} className="px-2 py-1" />
+                <StatusStrip counts={fig?.by_category ?? {}} className={PANEL} />
               )}
             </Section>
 
@@ -212,11 +221,15 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
               ) : figuresFailed ? (
                 <FiguresUnavailable />
               ) : (fig?.by_assignee.length ?? 0) === 0 ? (
-                <SectionEmpty>
-                  Nobody has open issues.{' '}
+                <SectionEmpty className={PANEL}>
                   {fig && fig.unassigned > 0 ? (
-                    <Link href={href(UNASSIGNED)}>{formatCount(fig.unassigned)} unassigned</Link>
-                  ) : null}
+                    <>
+                      No open issue has an assignee.{' '}
+                      <Link href={href(UNASSIGNED)}>{formatCount(fig.unassigned)} unassigned</Link>
+                    </>
+                  ) : (
+                    'No open issues.'
+                  )}
                 </SectionEmpty>
               ) : (
                 <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
@@ -248,13 +261,13 @@ export function ProjectDashboard({ projectKey }: { projectKey: string }) {
               )}
             </Section>
           </div>
+        )}
 
-          <aside className="flex min-w-0 flex-col gap-8">
-            {people}
-            {sprint}
-          </aside>
-        </div>
-      )}
+        <aside className="flex min-w-0 flex-col gap-8">
+          {people}
+          {sprint}
+        </aside>
+      </div>
     </div>
   );
 }
@@ -273,16 +286,11 @@ function projectStats(key: string, f: Figures | null): Stat[] {
   const href = (q: string) => listHref(q, { project: key });
   const value = (n: number | undefined) => (n === undefined ? 0 : formatCount(n));
   return [
-    { label: 'Open', value: value(f?.open), href: href('#Unresolved') },
+    { label: 'Open issues', value: value(f?.open), href: href('#Unresolved') },
     { label: 'Overdue', value: value(f?.overdue), alert: true, href: href(OVERDUE) },
     { label: 'Unassigned', value: value(f?.unassigned), href: href(UNASSIGNED) },
-    {
-      label: 'Resolved in the last 7 days',
-      value: value(f?.resolved),
-      delta: f?.delta ?? null,
-      href: href(RESOLVED_7D),
-    },
-    { label: 'Created in the last 7 days', value: value(f?.created), href: href(CREATED_7D) },
+    { label: 'Resolved 7d', value: value(f?.resolved), delta: f?.delta ?? weekDelta(0), href: href(RESOLVED_7D) },
+    { label: 'Created 7d', value: value(f?.created), href: href(CREATED_7D) },
   ];
 }
 
@@ -308,8 +316,8 @@ function LoadRow({
       <span aria-hidden className="h-1 min-w-6 flex-1 overflow-hidden rounded-full bg-inset">
         <span className="block h-full rounded-full bg-text-muted" style={{ width: `${(open / max) * 100}%` }} />
       </span>
-      <span className="w-24 flex-none text-right text-xs whitespace-nowrap tabular text-text-secondary">
-        {formatCount(open)} open
+      <span className="w-16 flex-none text-right text-xs whitespace-nowrap tabular text-text-secondary">
+        {formatCount(open)}
       </span>
     </Link>
   );
@@ -324,12 +332,12 @@ function ActionLink({ href, children }: { href: Route; children: ReactNode }) {
 }
 
 function FiguresUnavailable() {
-  return <p className="px-2 py-1 text-xs text-text-secondary">Not available until the figures load.</p>;
+  return <p className={cn(PANEL, 'text-xs text-text-secondary')}>Not available until the figures load.</p>;
 }
 
 function StripSkeleton() {
   return (
-    <div className="flex flex-col gap-2 px-2 py-1" aria-hidden>
+    <div className={cn(PANEL, 'flex flex-col gap-2')} aria-hidden>
       <Skeleton className="h-1.5" />
       <div className="flex h-4 items-center gap-4">
         {[16, 14, 20, 14, 18].map((w, i) => (
@@ -363,6 +371,7 @@ function ProjectHomeSkeleton() {
             <Skeleton className="size-avatar-lg flex-none rounded-md" />
             <Skeleton className="h-6 w-48" />
           </div>
+          <Skeleton className="ml-auto h-control w-16 rounded-md" />
         </div>
         <div className="flex max-w-prose flex-col">
           {['95%', '80%'].map(w => (
