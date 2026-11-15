@@ -228,7 +228,7 @@
     --bg-hover: oklch(1 0 0 / 0.05);
     --bg-active: oklch(1 0 0 / 0.09);
     --bg-selected: var(--accent-soft);
-    --bg-overlay: oklch(0 0 0 / 0.6);
+    --bg-overlay: oklch(0 0 0 / 0.7);
   
     --border: oklch(0.31 0.007 260);
     --border-strong: oklch(0.53 0.008 260);
@@ -275,7 +275,7 @@
   --bg-hover: oklch(1 0 0 / 0.05);
   --bg-active: oklch(1 0 0 / 0.09);
   --bg-selected: var(--accent-soft);
-  --bg-overlay: oklch(0 0 0 / 0.6);
+  --bg-overlay: oklch(0 0 0 / 0.7);
 
   --border: oklch(0.31 0.007 260);
   --border-strong: oklch(0.53 0.008 260);
