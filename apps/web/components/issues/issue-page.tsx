@@ -1,5 +1,6 @@
 'use client';
 
+import { FullPageState, SECONDARY_LINK } from '@components/full-page-state';
 import { ArchivedNotice } from '@components/projects/archived-notice';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -587,36 +588,38 @@ function IssueNotFound({ issueKey }: { issueKey: string }) {
   const found = project.data;
 
   return (
-    <div className="flex max-w-lg flex-col items-start gap-3 pt-12">
-      <p className="font-mono text-2xs text-text-muted">404</p>
-      <h1 className="text-xl font-semibold tracking-tight">
-        <span className="font-mono">{issueKey}</span> does not exist
-      </h1>
-      <p className="text-pretty text-text-secondary">
-        {found
-          ? `There is no issue ${issueKey} in ${found.name} that you can open. A deleted issue can be restored by a Project Admin for 14 days.`
-          : 'The key may be wrong, or the issue is in a project you cannot open. Your data is unaffected.'}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {found ? (
+    <FullPageState
+      className="pt-12"
+      eyebrow="404"
+      title={
+        <>
+          <span className="font-mono">{issueKey}</span> does not exist
+        </>
+      }
+      actions={
+        found ? (
           <>
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link href={`/projects/${found.key}/issues` as Route}>Back to {found.name} issues</Link>
             </Button>
             {found.my_role === 'project_admin' ? (
-              <Button asChild variant="ghost">
-                <Link href={`/projects/${found.key}/settings?tab=deleted` as Route}>Deleted issues</Link>
-              </Button>
+              <Link href={`/projects/${found.key}/settings?tab=deleted` as Route} className={SECONDARY_LINK}>
+                Deleted issues
+              </Link>
             ) : null}
           </>
         ) : project.isPending && projectKey ? (
           <Skeleton className="h-control w-48" />
         ) : (
-          <Button asChild variant="outline">
+          <Button asChild>
             <Link href="/">Go home</Link>
           </Button>
-        )}
-      </div>
-    </div>
+        )
+      }
+    >
+      {found
+        ? `There is no issue ${issueKey} in ${found.name} that you can open. A deleted issue can be restored by a Project Admin for 14 days.`
+        : 'The key may be wrong, or the issue is in a project you cannot open. Your data is unaffected.'}
+    </FullPageState>
   );
 }

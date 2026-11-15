@@ -1,5 +1,6 @@
 'use client';
 
+import { FullPageState } from '@components/full-page-state';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -540,18 +541,20 @@ function IconAction({ label, shortcut, pressed, onClick, children }: IconActionP
 function ArticleNotFound({ project, slug }: { project: string; slug: string }) {
   const { projectName } = useKnowledgeBase();
   return (
-    <div className="flex max-w-lg flex-col items-start gap-3 pt-12">
-      <p className="font-mono text-2xs text-text-muted">404</p>
-      <h1 className="text-xl font-semibold tracking-tight">No article at this address</h1>
-      <p className="text-pretty text-text-secondary">
-        There is no article <span className="font-mono text-sm text-text">{slug}</span>
-        {projectName ? ` in ${projectName}` : ''} that you can open. The address may have changed, or the article was
-        deleted or is a draft.
-      </p>
-      <Button asChild variant="outline">
-        <Link href={`/projects/${project}/articles` as Route}>Back to the knowledge base</Link>
-      </Button>
-    </div>
+    <FullPageState
+      className="pt-12"
+      eyebrow="404"
+      title="No article at this address"
+      actions={
+        <Button asChild>
+          <Link href={`/projects/${project}/articles` as Route}>Back to the knowledge base</Link>
+        </Button>
+      }
+    >
+      There is no article <span className="font-mono text-sm text-text">{slug}</span>
+      {projectName ? ` in ${projectName}` : ''} that you can open. The address may have changed, or the article was
+      deleted or is a draft.
+    </FullPageState>
   );
 }
 

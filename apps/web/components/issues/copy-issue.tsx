@@ -8,7 +8,7 @@ import { cn } from '@lib/utils';
 export function copyIssueText(issueKey: string, title?: string | null) {
   const text = title ? `${issueKey} ${title}` : issueKey;
   void navigator.clipboard.writeText(text);
-  toast.success(`Copied ${text.length > 60 ? `${text.slice(0, 59)}…` : text}`);
+  toast.success(`Copied ${issueKey}`, title ? { description: title } : undefined);
 }
 
 export function CopyIssueButton({
