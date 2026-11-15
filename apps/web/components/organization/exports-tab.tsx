@@ -26,7 +26,7 @@ const STATUS: Record<ExportStatus, [JobTone, string]> = {
   running: ['moving', 'Building'],
   completed: ['done', 'Ready'],
   failed: ['failed', 'Failed'],
-  expired: ['idle', 'Expired'],
+  expired: ['gone', 'Expired'],
 };
 
 const files = (n: number) => `${formatCount(n)} ${n === 1 ? 'file' : 'files'}`;

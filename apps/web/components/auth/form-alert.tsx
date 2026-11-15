@@ -45,7 +45,7 @@ export function FormAlert({
         <div className="flex min-w-0 flex-col gap-1">
           <p className="font-medium">{title}</p>
           {children ? (
-            <div className="text-xs opacity-90 [&_:is(a,button):not([data-slot])]:font-medium [&_:is(a,button):not([data-slot])]:underline [&_:is(a,button):not([data-slot])]:underline-offset-2 [&_:is(a,button):not([data-slot]):hover]:no-underline">
+            <div className="max-w-[72ch] text-xs text-text [&_:is(a,button):not([data-slot])]:font-medium [&_:is(a,button):not([data-slot])]:underline [&_:is(a,button):not([data-slot])]:underline-offset-2 [&_:is(a,button):not([data-slot]):hover]:no-underline">
               {children}
             </div>
           ) : null}

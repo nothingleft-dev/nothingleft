@@ -9,12 +9,13 @@ interface OrganizationMarkProps {
   className?: string;
 }
 
-/** The organisation's DiceBear blobs mark; its initials on ink stand in until it loads. */
+/** The organisation's DiceBear blobs mark; its initials on ink stand in when it is slow to load. */
 export function OrganizationMark({ organization, className }: OrganizationMarkProps) {
   return (
-    <Avatar className={cn('size-avatar flex-none rounded-sm', className)}>
+    <Avatar className={cn('size-avatar flex-none rounded-sm bg-inset', className)}>
       {organization ? <AvatarImage src={organization.avatar_url} alt="" /> : null}
       <AvatarFallback
+        delayMs={organization ? 400 : undefined}
         className={cn(
           'rounded-[inherit] text-[11px] font-semibold',
           organization ? 'bg-ink text-ink-fg' : 'bg-inset text-text-secondary',

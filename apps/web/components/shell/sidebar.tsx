@@ -98,12 +98,14 @@ function Hint({ children, danger }: { children: ReactNode; danger?: boolean }) {
   return <p className={cn('px-2 py-1 text-xs', danger ? 'text-danger-fg' : 'text-text-secondary')}>{children}</p>;
 }
 
-function NavSkeleton({ rows, collapsed }: { rows: number; collapsed: boolean }) {
+/** `project` rows keep the chevron's gutter and the mark's size, so loaded rows land where the skeleton was. */
+function NavSkeleton({ rows, collapsed, project }: { rows: number; collapsed: boolean; project?: boolean }) {
   return (
     <div className="flex flex-col gap-px" aria-hidden>
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex h-control items-center gap-2 px-2">
-          <Skeleton className="size-icon flex-none rounded-xs" />
+          {project && !collapsed ? <span className="size-3 flex-none" /> : null}
+          <Skeleton className={cn('flex-none', project ? 'size-avatar-sm rounded-sm' : 'size-icon rounded-xs')} />
           {collapsed ? null : <Skeleton className="h-3" style={{ width: `${50 + ((i * 19) % 30)}%` }} />}
         </div>
       ))}
@@ -240,7 +242,7 @@ export function Sidebar({ collapsed, onToggle, user, data, mobile, onNavigate }:
               ))}
             </nav>
             {data.projectsState === 'loading' ? (
-              <NavSkeleton rows={projectRows} collapsed={collapsed} />
+              <NavSkeleton rows={projectRows} collapsed={collapsed} project />
             ) : collapsed ? null : data.projectsState === 'failed' ? (
               <div className="flex items-center gap-2 px-2 py-1">
                 <p className="min-w-0 flex-1 text-xs text-danger-fg">Projects did not load.</p>

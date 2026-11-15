@@ -25,9 +25,14 @@ function useFocusSearch(global: React.RefObject<GlobalSearchHandle | null>) {
 
 function CreateIssueButton({ onClick, slot }: { onClick?: () => void; slot?: 'loading' | 'empty' }) {
   const button = (
-    <Button onClick={onClick} tabIndex={slot ? -1 : undefined} className={slot ? 'invisible gap-2' : 'gap-2'}>
+    <Button
+      variant="outline"
+      onClick={onClick}
+      tabIndex={slot ? -1 : undefined}
+      className={slot ? 'invisible gap-2' : 'gap-2'}
+    >
       Create issue
-      <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80 max-lg:hidden">c</Kbd>
+      <Kbd className="max-lg:hidden">c</Kbd>
     </Button>
   );
   // The button's own width is held while roles load and for someone who may not create, so the search box never moves.

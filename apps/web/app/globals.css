@@ -1362,8 +1362,10 @@
   box-shadow: var(--focus-ring);
 }
 
+/* The ring alone marks focus: the primitives would also turn the border accent, which read as a 3px ring. */
 [data-slot='input']:focus-visible,
-[data-slot='textarea']:focus-visible {
+[data-slot='textarea']:focus-visible,
+[data-variant='outline']:focus-visible {
   border-color: var(--border-strong);
 }
 
@@ -2800,4 +2802,9 @@
     border-width: 0 1.5px 1.5px 0;
     transform: rotate(45deg);
   }
+}
+
+/* A toast rises above the list's bulk bar instead of covering its actions. */
+html:has([role='toolbar'][aria-label='Bulk actions']) [data-sonner-toaster][data-y-position='bottom'] {
+  bottom: calc(var(--offset-bottom) + 56px);
 }

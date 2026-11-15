@@ -85,7 +85,8 @@ export function Tabs<T extends string>({
     <TabStrip
       selected={value}
       count={options.length}
-      className={cn('-mb-px self-stretch', size === 'section' && className)}
+      // Pulled out by the label's padding, so the first label sits on the page's left edge like the title above.
+      className={cn('-mb-px self-stretch', size === 'page' ? '-ml-2.5' : '-ml-2', size === 'section' && className)}
     >
       <div role="tablist" aria-label={ariaLabel} onKeyDown={onKeyDown} className="flex items-stretch gap-1">
         {options.map(o => {
@@ -100,8 +101,8 @@ export function Tabs<T extends string>({
               onClick={() => onChange(o.value)}
               className={cn(
                 'group/tab relative flex shrink-0 items-center whitespace-nowrap text-text-secondary',
-                selected &&
-                  'text-text after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:rounded-full after:bg-text',
+                selected && 'text-text after:absolute after:bottom-0 after:h-0.5 after:rounded-full after:bg-text',
+                selected && (size === 'page' ? 'after:inset-x-2.5' : 'after:inset-x-2'),
                 size === 'page' ? 'text-sm' : 'text-xs',
               )}
             >

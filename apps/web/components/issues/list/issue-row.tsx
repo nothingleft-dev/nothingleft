@@ -103,7 +103,7 @@ export function IssueRow({
               issue.estimate_minutes === null ? 'text-text-muted' : 'text-text-secondary',
             )}
           >
-            {issue.estimate_minutes === null ? '--' : formatDuration(issue.estimate_minutes, calendar)}
+            {issue.estimate_minutes === null ? '?' : formatDuration(issue.estimate_minutes, calendar)}
           </span>
         );
       case 'sprint':
@@ -120,7 +120,7 @@ export function IssueRow({
               issue.story_points === null ? 'text-text-muted' : 'text-text-secondary',
             )}
           >
-            {issue.story_points ?? '--'}
+            {issue.story_points ?? '?'}
           </span>
         );
       case 'development':

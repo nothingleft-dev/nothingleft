@@ -18,6 +18,7 @@ import { formatDate } from '@lib/datetime';
 import { env } from '@lib/env';
 import { regionName } from '@lib/storage/aws-regions';
 import { connectBody, draftFrom, type ConnectionDraft } from '@lib/storage/connection';
+import { JobStatus } from '@components/job-status';
 import { cn } from '@lib/utils';
 import { plural } from '@lib/numbers';
 
@@ -76,16 +77,7 @@ export function ConnectionPanel({
     >
       <dl className="grid gap-x-10 text-sm lg:grid-cols-2">
         <Row term="Status">
-          <span className={cn('inline-flex items-center gap-2', failing ? 'text-danger-fg' : 'text-text')}>
-            <span
-              aria-hidden
-              className={cn(
-                'size-2 flex-none rounded-full',
-                failing ? 'bg-danger-fg' : 'shadow-[inset_0_0_0_1.5px_var(--text-secondary)]',
-              )}
-            />
-            {failing ? 'Refusing its key' : 'Connected'}
-          </span>
+          <JobStatus tone={failing ? 'failed' : 'ok'} label={failing ? 'Refusing its key' : 'Connected'} />
         </Row>
         <Row term="Provider">{PROVIDER_NAMES[connection.provider]}</Row>
         <Row term="Bucket">

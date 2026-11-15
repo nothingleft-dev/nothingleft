@@ -40,6 +40,8 @@ function styleFor(
           textColor: hex([AVATAR_INITIALS_TEXT]),
           initialsVariant: ['alt'],
           fontWeight: 600,
+          // Letters at 40% of the circle: full size, initials outshouted the name beside them.
+          scale: 0.8,
         },
       };
     case 'project': {

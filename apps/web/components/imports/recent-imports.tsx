@@ -17,7 +17,7 @@ import { cn } from '@lib/utils';
 import { formatCount } from '@lib/numbers';
 
 const STATUS: Record<ImportStatus, [JobTone, string]> = {
-  awaiting_upload: ['gone', 'Incomplete'],
+  awaiting_upload: ['idle', 'Incomplete'],
   ready: ['idle', 'Not started'],
   queued: ['waiting', 'Queued'],
   running: ['moving', 'Importing'],

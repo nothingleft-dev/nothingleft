@@ -1,6 +1,6 @@
 import { cn } from '@lib/utils';
 
-type Tone = 'idle' | 'waiting' | 'moving' | 'done' | 'failed' | 'gone';
+type Tone = 'idle' | 'waiting' | 'moving' | 'done' | 'failed' | 'gone' | 'ok';
 
 const DOT: Record<Tone, string> = {
   idle: 'c-gray shadow-[inset_0_0_0_1.5px_var(--c-solid)]',
@@ -9,6 +9,8 @@ const DOT: Record<Tone, string> = {
   done: 'c-green bg-c-solid',
   failed: 'c-red bg-c-solid',
   gone: 'c-gray bg-[repeating-linear-gradient(135deg,var(--c-solid)_0_1.5px,transparent_1.5px_3.5px)]',
+  // A healthy standing state (a connection that works) is the default, so it is neutral: colour is for deviation.
+  ok: 'bg-text-secondary',
 };
 
 /** A background job's state as a dot and a word, the status pill's texture rules applied to imports and exports. */
