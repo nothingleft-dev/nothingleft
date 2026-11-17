@@ -9,9 +9,10 @@ if (!S3_ENDPOINT || !S3_ACCESS_KEY_ID || !S3_SECRET_ACCESS_KEY) {
   throw new Error('Set S3_ENDPOINT, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY first.');
 }
 
+// A local store has no region; with `auto` the SDK would send it as the bucket's location, which RustFS refuses.
 const client = new S3Client({
   endpoint: S3_ENDPOINT,
-  region: env.S3_REGION,
+  region: env.S3_REGION === 'auto' ? 'us-east-1' : env.S3_REGION,
   credentials: { accessKeyId: S3_ACCESS_KEY_ID, secretAccessKey: S3_SECRET_ACCESS_KEY },
   forcePathStyle: true,
 });
