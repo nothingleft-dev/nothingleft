@@ -5,14 +5,7 @@ import { toast } from 'sonner';
 import { formatDuration } from '@nothingleft/format';
 import type { Member, Organization } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';

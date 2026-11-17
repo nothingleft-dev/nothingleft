@@ -7,14 +7,7 @@ import { CalendarRange, X } from 'lucide-react';
 import { BACKLOG_TARGET, type CreateSprint, type Sprint } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { ConfirmDialog } from '@components/confirm-dialog';

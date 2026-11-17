@@ -17,14 +17,7 @@ import {
 import { Button } from '@components/ui/button';
 import { CommandEmpty, CommandGroup, CommandInput, CommandList } from '@components/ui/command';
 import { PickerCommand, PickerItem } from '@components/picker';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,

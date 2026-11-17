@@ -5,14 +5,7 @@ import { MoreHorizontal, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { WORK_ITEM_ATTRIBUTES_MAX, type WorkItemAttribute, type WorkItemAttributeValue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,

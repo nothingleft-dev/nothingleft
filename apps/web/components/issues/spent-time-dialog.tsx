@@ -25,14 +25,7 @@ import { Button } from '@components/ui/button';
 import { Duration } from '@components/duration';
 import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
 import { PickerCommand, PickerItem } from '@components/picker';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { DialogBody } from '@components/dialog-body';
 import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';

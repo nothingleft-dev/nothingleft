@@ -6,14 +6,7 @@ import type { Route } from 'next';
 import { Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/dialog';
 import { DialogBody } from '@components/dialog-body';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Kbd } from '@components/kbd';

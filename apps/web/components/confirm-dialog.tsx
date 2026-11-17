@@ -3,14 +3,7 @@
 import type { ReactNode } from 'react';
 import { Button } from '@components/ui/button';
 import { PendingButton } from '@components/pending-button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 
 interface ConfirmDialogProps {
   open: boolean;

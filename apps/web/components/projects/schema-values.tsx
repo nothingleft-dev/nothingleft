@@ -5,14 +5,7 @@ import { ChevronDown, ChevronsUpDown, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { STATUS_CATEGORIES, type LabelColor, type StatusCategory } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,

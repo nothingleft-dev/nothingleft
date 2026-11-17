@@ -5,14 +5,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import type { Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { PendingButton } from '@components/pending-button';
 import { EmailUs } from '@components/email-us';
 import { StepUpDialog } from '@components/step-up-dialog';

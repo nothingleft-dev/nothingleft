@@ -3,14 +3,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import type { Me, OAuthProvider, StepUp } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { ReauthButtons } from '@components/auth/provider-buttons';

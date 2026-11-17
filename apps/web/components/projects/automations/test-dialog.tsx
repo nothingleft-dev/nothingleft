@@ -6,14 +6,7 @@ import type { Automation, AutomationTestResult } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { FormAlert } from '@components/auth/form-alert';
 import { useTestAutomation } from '@hooks/use-automations';
 import { SKIP_REASON } from '@lib/git/words';

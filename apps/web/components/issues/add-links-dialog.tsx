@@ -5,14 +5,7 @@ import { Check, CircleAlert, X } from 'lucide-react';
 import { ISSUE_LINK_NAME_VALUES, type IssueLinkName, type IssueRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { FormAlert } from '@components/auth/form-alert';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { IssueKey } from '@components/issue-key';

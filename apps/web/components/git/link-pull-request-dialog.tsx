@@ -6,14 +6,7 @@ import { LinkPullRequestSchema } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { useLinkPullRequest } from '@hooks/use-git';
 import { PendingButton } from '@components/pending-button';
 

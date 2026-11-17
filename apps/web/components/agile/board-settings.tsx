@@ -8,14 +8,7 @@ import { ArrowRight, MoreHorizontal, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Board } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';

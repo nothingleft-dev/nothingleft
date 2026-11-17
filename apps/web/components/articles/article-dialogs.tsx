@@ -6,14 +6,7 @@ import type { Route } from 'next';
 import { toast } from 'sonner';
 import type { Article, ArticleChildrenOnDelete, ArticleNode } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
