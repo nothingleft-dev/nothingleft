@@ -9,15 +9,8 @@ import {
   type IssueListItem,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Kbd } from '@components/kbd';
 import { IssueKey } from '@components/issue-key';
 import { Segmented } from '@components/segmented';
@@ -29,6 +22,7 @@ import { useSchemaValuesMany } from '@hooks/use-project-schema';
 import { useShortcut } from '@hooks/use-shortcut';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
 
 interface BulkBarProps {
   selected: readonly IssueListItem[];
@@ -38,12 +32,34 @@ interface BulkBarProps {
 }
 
 type Picker = 'status' | 'priority' | 'type' | 'assign' | 'due' | null;
+type Failures = { results: BulkUpdateResult[]; summary: string; updated: number; picker: Exclude<Picker, null> };
+const PICK_AGAIN: Record<Exclude<Picker, null>, string> = {
+  status: 'Choose another status',
+  priority: 'Choose another priority',
+  type: 'Choose another type',
+  assign: 'Choose other people',
+  due: 'Choose another date',
+};
 type AssignMode = 'add' | 'remove' | 'replace';
 const ASSIGN_MODES = [
   { value: 'add', label: 'Add' },
   { value: 'remove', label: 'Remove' },
   { value: 'replace', label: 'Replace' },
 ] as const;
+
+/** One line per reason: the same refusal on five issues is said once, with their keys. */
+const failureGroups = (results: readonly BulkUpdateResult[]) => {
+  const groups = new Map<string, { reason: string; message: string; valid: string[]; keys: string[] }>();
+  for (const r of results) {
+    const message = r.error?.message ?? 'Refused.';
+    const valid = r.error?.valid_values ?? [];
+    const reason = `${message}\u0000${valid.join('\u0001')}`;
+    const group = groups.get(reason) ?? { reason, message, valid: [...valid], keys: [] };
+    group.keys.push(r.key);
+    groups.set(reason, group);
+  }
+  return [...groups.values()];
+};
 
 const dedupeByName = <T extends { name: string }>(values: readonly T[]) => {
   const seen = new Set<string>();
@@ -55,7 +71,7 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
   const [picker, setPicker] = useState<Picker>(null);
   const [assignMode, setAssignMode] = useState<AssignMode>('add');
   const [assignDraft, setAssignDraft] = useState<string[]>([]);
-  const [failures, setFailures] = useState<BulkUpdateResult[] | null>(null);
+  const [failures, setFailures] = useState<Failures | null>(null);
   const bulk = useBulkUpdateIssues();
   useShortcut('Escape', onClear, selected.length > 0 && picker === null);
 
@@ -64,6 +80,7 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
   const busy = bulk.isPending || overCap;
 
   const run = (changes: BulkUpdateIssues['changes'], summary: string) => {
+    const from = picker ?? 'status';
     setPicker(null);
     bulk.mutate(
       { issues: selected.map(i => i.key), changes },
@@ -72,15 +89,15 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
           const failed = results.filter(r => r.result === 'failed');
           const updated = results.filter(r => r.result === 'updated').length;
           if (failed.length === 0) {
-            toast.success(`${summary} on ${updated} ${updated === 1 ? 'issue' : 'issues'}.`);
+            toast.success(`${summary} on ${plural(updated, 'issue')}.`);
             onClear();
             return;
           }
-          toast.error(`${summary} on ${updated}; ${failed.length} ${failed.length === 1 ? 'was' : 'were'} refused.`);
-          setFailures(failed);
+          setFailures({ results: failed, summary, updated, picker: from });
           onKeepFailed(failed.map(f => f.key));
         },
-        onError: error => toastError(error),
+        onError: error =>
+          toastError('Could not change the selected issues', error, { retry: () => run(changes, summary) }),
       },
     );
   };
@@ -94,7 +111,7 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
           {label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="start" className={cn('p-0', width)}>
+      <PopoverContent side="top" align="start" sideOffset={8} className={cn('p-0', width)}>
         {picker === key ? body : null}
       </PopoverContent>
     </Popover>
@@ -176,29 +193,48 @@ export function BulkBar({ selected, onClear, onKeepFailed }: BulkBarProps) {
       </div>
 
       <Dialog open={failures !== null} onOpenChange={open => (open ? null : setFailures(null))}>
-        <DialogContent>
+        <DialogContent onCloseAutoFocus={event => event.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>
-              {failures?.length} {failures?.length === 1 ? 'issue was' : 'issues were'} not changed
-            </DialogTitle>
+            <DialogTitle>{plural(failures?.results.length ?? 0, 'issue was', 'issues were')} not changed</DialogTitle>
             <DialogDescription>
-              The others were updated. Each refusal is the same answer a single edit would have given; the refused
-              issues stay selected.
+              {failures && failures.updated > 0 ? `${failures.summary} on ${plural(failures.updated, 'issue')}. ` : ''}
+              {failures?.results.length === 1
+                ? 'This one keeps its value and stays'
+                : 'These keep their values and stay'}{' '}
+              selected, so you can choose again.
             </DialogDescription>
           </DialogHeader>
           <ul className="flex max-h-[50vh] flex-col divide-y divide-border-subtle overflow-y-auto rounded-md border">
-            {(failures ?? []).map(f => (
-              <li key={f.key} className="flex flex-col gap-0.5 px-3 py-2">
-                <IssueKey issueKey={f.key} />
-                <span className="text-xs text-danger-fg">{f.error?.message ?? 'Refused.'}</span>
-                {f.error?.valid_values && f.error.valid_values.length > 0 ? (
-                  <span className="text-2xs text-text-muted">Valid: {f.error.valid_values.join(', ')}</span>
+            {failureGroups(failures?.results ?? []).map(group => (
+              <li key={group.reason} className="flex flex-col gap-1 px-3 py-2">
+                <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  {group.keys.map((key, i) => (
+                    <span key={key} className="inline-flex items-center">
+                      <IssueKey issueKey={key} />
+                      {i < group.keys.length - 1 ? <span className="text-text-muted">,</span> : null}
+                    </span>
+                  ))}
+                </span>
+                <span className="text-xs text-text">{group.message}</span>
+                {group.valid.length > 0 ? (
+                  <span className="text-2xs text-text-secondary">Valid: {group.valid.join(', ')}</span>
                 ) : null}
               </li>
             ))}
           </ul>
           <DialogFooter>
-            <Button onClick={() => setFailures(null)}>Close</Button>
+            <Button variant="outline" onClick={() => setFailures(null)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                const again = failures?.picker ?? null;
+                setFailures(null);
+                setPicker(again);
+              }}
+            >
+              {failures ? PICK_AGAIN[failures.picker] : ''}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -282,9 +318,15 @@ function AssignPicker({
       />
       <div className="flex items-center justify-between border-t px-3 py-2 text-2xs text-text-muted">
         <span>
-          {mode === 'replace' && draft.length === 0
-            ? 'Everyone will be unassigned'
-            : `${draft.length} ${draft.length === 1 ? 'person' : 'people'}`}
+          {draft.length === 0
+            ? mode === 'replace'
+              ? 'Everyone will be unassigned'
+              : mode === 'add'
+                ? 'Pick people to add'
+                : 'Pick people to remove'
+            : mode === 'replace'
+              ? `Only ${plural(draft.length, 'person', 'people')} will be assigned`
+              : `${plural(draft.length, 'person', 'people')} to ${mode}`}
         </span>
         <Button size="xs" onClick={onApply} disabled={mode !== 'replace' && draft.length === 0}>
           Apply

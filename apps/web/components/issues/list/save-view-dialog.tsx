@@ -4,14 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import type { SavedView, SavedViewVisibility } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -20,6 +13,8 @@ import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useCreateSavedView, useUpdateSavedView } from '@hooks/use-saved-views';
 import type { ColumnId } from '@lib/issue-list/columns';
+import { PendingButton } from '@components/pending-button';
+import { viewReference } from '@lib/issue-list/saved-views';
 
 interface SaveViewDialogProps {
   open: boolean;
@@ -40,7 +35,7 @@ const VISIBILITY: ChoiceOption<SavedViewVisibility>[] = [
   {
     value: 'project',
     label: 'Everyone in a project',
-    hint: 'Every member of that project can use it and reference it as #{Name}.',
+    hint: 'Every member of that project sees it as a tab and can use it in a query.',
   },
   { value: 'org', label: 'Everyone in the organisation', hint: 'Every member of every project can use it.' },
 ];
@@ -69,7 +64,7 @@ function SaveViewForm({
   const create = useCreateSavedView();
   const update = useUpdateSavedView();
   const pending = create.isPending || update.isPending;
-  const error = useApiError(create.error ?? update.error);
+  const error = useApiError(create.error ?? update.error, ['name', 'query', 'project']);
 
   const [name, setName] = useState(existing?.name ?? '');
   const [visibility, setVisibility] = useState<SavedViewVisibility>(existing?.visibility ?? 'private');
@@ -86,6 +81,7 @@ function SaveViewForm({
   const visibilityOptions = VISIBILITY.map(o =>
     o.value === 'private' || canShare ? o : { ...o, hint: `${o.hint} Needs Contributor in a project.` },
   );
+  const braces = /[{}]/.test(name);
   const chosenProject = projectKey ?? projectOptions[0]?.value ?? null;
 
   const submit = () => {
@@ -112,9 +108,17 @@ function SaveViewForm({
       <DialogHeader>
         <DialogTitle>{existing ? `Edit view ${existing.name}` : 'Save this search as a view'}</DialogTitle>
         <DialogDescription>
-          {existing
-            ? 'The query stays as it is; use the tab menu to save a new query into it.'
-            : 'A view is a named search. Pin it as a tab, or reference it in any query as #{Name}.'}
+          {existing ? (
+            'The query stays as it is; use the tab menu to save a new query into it.'
+          ) : (
+            <>
+              A view is a named search. It shows as a tab, and any query can use it as{' '}
+              <code className="font-mono text-xs [font-variant-ligatures:none]">
+                {viewReference(name.trim() || 'Blocking bugs')}
+              </code>
+              .
+            </>
+          )}
         </DialogDescription>
       </DialogHeader>
 
@@ -135,15 +139,15 @@ function SaveViewForm({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Blocking bugs"
-          error={error.fields['name']}
-          hint="No braces. Names are not case-sensitive."
+          error={braces ? 'A name cannot contain curly braces.' : error.fields['name']}
+          hint="Upper and lower case are the same name: Bugs and bugs are one view."
         />
         {existing ? null : (
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text-secondary">Query</span>
-            <code className="block rounded-md border bg-inset px-3 py-2 font-mono text-xs text-text-secondary [overflow-wrap:anywhere]">
+            <code className="block rounded-md border bg-inset px-3 py-2 font-mono text-xs text-text-secondary [font-variant-ligatures:none] [overflow-wrap:anywhere]">
               {query || '(everything)'}
-              {sort ? <span className="text-text-muted"> · sort {sort}</span> : null}
+              {sort ? ` sort by: ${sort}` : null}
             </code>
             {error.fields['query'] ? <p className="text-xs text-danger-fg">{error.fields['query']}</p> : null}
           </div>
@@ -172,13 +176,15 @@ function SaveViewForm({
         <Button variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button
+        <PendingButton
           type="submit"
           form="save-view"
-          disabled={pending || name.trim() === '' || (visibility === 'project' && !chosenProject)}
+          disabled={name.trim() === '' || braces || (visibility === 'project' && !chosenProject)}
+          pending={pending}
+          pendingLabel="Saving…"
         >
-          {pending ? 'Saving…' : existing ? 'Save changes' : 'Save view'}
-        </Button>
+          {existing ? 'Save changes' : 'Save view'}
+        </PendingButton>
       </DialogFooter>
     </>
   );

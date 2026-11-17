@@ -1,18 +1,19 @@
 'use client';
 
 import { Fragment, useState, type ReactNode } from 'react';
-import { Link2, Tag, X } from 'lucide-react';
-import { formatDuration, parseDuration, type WorkCalendar } from '@nothingleft/format';
+import { AlertCircle, Link2, Lock, Plus, Tag, X } from 'lucide-react';
+import { parseDuration, type WorkCalendar } from '@nothingleft/format';
 import type { CustomField, CustomFieldValueInput, IssueLinkName, MemberRef, Project, TagRef } from '@nothingleft/types';
+import { TitleInput } from '@components/title-input';
+import { Duration } from '@components/duration';
 import { Switch } from '@components/ui/switch';
 import { FieldEditor, editorWidth } from '@components/custom-fields/field-editors';
 import { OptionChip, markdownPreview } from '@components/custom-fields/field-value';
 import { emptyLabelOf } from '@components/custom-fields/field-types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
-import { FormAlert } from '@components/auth/form-alert';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ChoiceSelect } from '@components/choice-select';
 import { IssueKey } from '@components/issue-key';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
@@ -21,8 +22,8 @@ import { TagChip, TagPicker } from '@components/issues/issue-tags';
 import { MarkdownSizeNote } from '@components/issues/markdown-size-note';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
-import { SidebarField } from '@components/issues/sidebar-field';
-import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
+import { FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
+import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { draftSprint, draftValueOf, type DraftFields, type IssueDraft } from '@components/issues/use-issue-draft';
 import { ProjectMark } from '@components/projects/project-mark';
@@ -38,12 +39,17 @@ interface FieldSpec {
   label: string;
   /** Null renders the empty label. */
   value: ReactNode | null;
-  empty: string;
+  /** The chip's muted text while unset; defaults to the label. */
+  empty?: string;
   /** The issue page's wording, where a label already sits above the value: `?` for an unset estimate. */
   panelEmpty?: string;
+  /** Names a set chip whose value alone does not say which field it is. */
+  prefix?: string;
   loading?: boolean;
   /** Mark shown at the right of a panel row, as on the issue page. */
   aside?: ReactNode;
+  /** Skeleton width for the chip's value while the project's values load. */
+  loadingWidth?: string;
   editor: (close: () => void) => ReactNode;
   required?: boolean;
   /** Required, and still empty after a create was tried. */
@@ -78,8 +84,8 @@ function useFieldSpecs(
       id: 'type',
       label: 'Type',
       value: type ? type.name : null,
-      empty: 'Type',
       loading: types.isPending,
+      loadingWidth: 'w-7',
       aside: type ? <TypeBadge type={type} /> : undefined,
       editor: close => (
         <ValueCommand
@@ -96,8 +102,8 @@ function useFieldSpecs(
       id: 'priority',
       label: 'Priority',
       value: priority ? priority.name : null,
-      empty: 'Priority',
       loading: priorities.isPending,
+      loadingWidth: 'w-12',
       aside: priority ? <PriorityBadge priority={priority} /> : undefined,
       editor: close => (
         <ValueCommand
@@ -119,8 +125,8 @@ function useFieldSpecs(
           {status.name}
         </>
       ) : null,
-      empty: 'Status',
       loading: statuses.isPending,
+      loadingWidth: 'w-10',
       editor: close => (
         <ValueCommand
           placeholder="Status"
@@ -140,13 +146,20 @@ function useFieldSpecs(
       value:
         assigned.length === 0 ? null : (
           <>
-            {assigned.slice(0, 3).map(a => (
-              <MemberAvatar key={a.username} member={a} className="size-4" />
-            ))}
+            <span className="flex flex-none items-center">
+              {assigned.slice(0, 2).map((a, i) => (
+                <MemberAvatar
+                  key={a.username}
+                  member={a}
+                  initialsClassName="text-[10px]"
+                  className={cn('size-5 ring-[1.5px] ring-surface', i > 0 && '-ml-[2.5px]')}
+                />
+              ))}
+            </span>
             {assigned.length === 1 ? assigned[0]!.name : `${assigned.length} people`}
           </>
         ),
-      empty: 'Unassigned',
+      panelEmpty: 'Unassigned',
       editor: () => (
         <AssigneeCommand
           people={people.data ?? []}
@@ -167,8 +180,8 @@ function useFieldSpecs(
     {
       id: 'estimate',
       label: 'Estimation',
-      value: fields.estimate ? <span className="font-mono text-xs tabular">{fields.estimate}</span> : null,
-      empty: 'Estimation',
+      value: fields.estimate ? <DraftDuration typed={fields.estimate} calendar={calendar} /> : null,
+      prefix: 'Estimation',
       panelEmpty: '?',
       editor: close => (
         <EstimateEditor
@@ -182,25 +195,34 @@ function useFieldSpecs(
       id: 'start',
       label: 'Start date',
       value: fields.start_date ? formatCalendarDate(fields.start_date) : null,
-      empty: 'No start date',
+      prefix: 'Start',
+      panelEmpty: 'No start date',
       editor: close => (
-        <DateEditor value={fields.start_date ?? null} onChange={v => (set({ start_date: v ?? undefined }), close())} />
+        <DateField label="Start date">
+          <DateEditor
+            value={fields.start_date ?? null}
+            onChange={v => (set({ start_date: v ?? undefined }), close())}
+          />
+        </DateField>
       ),
     },
     {
       id: 'due',
       label: 'Due date',
       value: fields.due_date ? formatCalendarDate(fields.due_date) : null,
-      empty: 'No due date',
+      prefix: 'Due',
+      panelEmpty: 'No due date',
       editor: close => (
-        <DateEditor value={fields.due_date ?? null} onChange={v => (set({ due_date: v ?? undefined }), close())} />
+        <DateField label="Due date">
+          <DateEditor value={fields.due_date ?? null} onChange={v => (set({ due_date: v ?? undefined }), close())} />
+        </DateField>
       ),
     },
     {
       id: 'sprint',
       label: 'Sprint',
       value: sprint ? sprint.name : null,
-      empty: 'Sprint',
+      empty: fields.sprint === null ? UNSCHEDULED : undefined,
       panelEmpty: UNSCHEDULED,
       editor: close => (
         <SprintCommand
@@ -216,10 +238,10 @@ function useFieldSpecs(
       label: 'Story points',
       value:
         fields.story_points !== undefined ? (
-          <span className="font-mono text-xs tabular">{fields.story_points}</span>
+          <span className={cn('font-mono text-xs tabular', FIELD_TEXT)}>{fields.story_points}</span>
         ) : null,
-      empty: 'Story points',
-      panelEmpty: NOT_ESTIMATED,
+      prefix: 'Story points',
+      panelEmpty: '?',
       editor: close => (
         <StoryPointsEditor
           value={fields.story_points ?? null}
@@ -236,7 +258,7 @@ function useFieldSpecs(
       id: `custom:${field.slug}`,
       label: field.name,
       value: draftDisplay(field, value, people.data ?? [], calendar),
-      empty: field.name,
+      prefix: field.name,
       panelEmpty: emptyLabelOf(field),
       required: field.is_required,
       invalid: missing.some(m => m.slug === field.slug),
@@ -295,14 +317,10 @@ function draftDisplay(
     case 'datetime':
       return formatDateTime(String(value));
     case 'duration':
-      return (
-        <span className="font-mono text-xs tabular">
-          {typeof value === 'number' ? formatDuration(value, calendar) : String(value)}
-        </span>
-      );
+      return <DraftDuration typed={value as number | string} calendar={calendar} />;
     case 'number':
     case 'integer':
-      return <span className="font-mono text-xs tabular">{String(value)}</span>;
+      return <span className={cn('font-mono text-xs tabular', FIELD_TEXT)}>{String(value)}</span>;
     case 'markdown':
       return <span className="max-w-48 truncate">{markdownPreview(String(value))}</span>;
     default:
@@ -310,84 +328,187 @@ function draftDisplay(
   }
 }
 
+function DraftDuration({ typed, calendar }: { typed: number | string; calendar: WorkCalendar }) {
+  const minutes = typeof typed === 'number' ? typed : parseDuration(typed, calendar);
+  return minutes === null ? (
+    <span className={cn('font-mono text-xs tabular', FIELD_TEXT)}>{String(typed)}</span>
+  ) : (
+    <Duration minutes={minutes} calendar={calendar} className={cn('text-xs [word-spacing:-0.25em]', FIELD_TEXT)} />
+  );
+}
+
 interface DraftFieldsProps {
   draft: IssueDraft;
   project: Project;
 }
 
-/** The dialog's compact row: each chip names its field on hover and shows the value, or the empty label. */
+const isCustom = (spec: FieldSpec | undefined) => spec?.id.startsWith('custom:') ?? false;
+
+// Fixed rows, so a value that widens one chip never moves another onto the next line.
+const CHIP_ROW: Record<string, number> = { type: 0, priority: 0, status: 0, assignees: 0 };
+const chipRowOf = (spec: FieldSpec) => (isCustom(spec) ? 2 : (CHIP_ROW[spec.id] ?? 1));
+
+/** The dialog's compact rows: each chip names its field until it holds a value, then the value with its field. */
 export function DraftChips({ draft, project }: DraftFieldsProps) {
   const specs = useFieldSpecs(project, draft.fields, draft.setFields, draft.applicableFields, draft.requiredMissing);
   const [open, setOpen] = useState<string | null>(null);
+  const rows = [0, 1, 2].map(row => specs.filter(spec => chipRowOf(spec) === row));
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {specs.map((spec, index) => (
-        <Fragment key={spec.id}>
-          {spec.id.startsWith('custom:') && !specs[index - 1]?.id.startsWith('custom:') ? (
-            <span aria-hidden className="basis-full" />
-          ) : null}
-          <Popover open={open === spec.id} onOpenChange={o => setOpen(o ? spec.id : null)}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="xs"
-                aria-label={spec.required ? `${spec.label}, required` : spec.label}
-                aria-invalid={spec.invalid || undefined}
-                title={spec.label}
-                className={cn('gap-1.5 font-normal', spec.invalid && 'border-danger-fg')}
-              >
-                {spec.loading ? (
-                  <Skeleton className="h-3 w-12" />
-                ) : (
-                  <>
-                    {spec.aside}
-                    {spec.value !== null && spec.id.startsWith('custom:') ? (
-                      <span className="text-text-muted">{spec.label}</span>
-                    ) : null}
-                    {spec.value ?? <span className="text-text-muted">{spec.empty}</span>}
-                    {spec.required ? (
-                      <span aria-hidden className="-ml-1 text-danger-fg">
-                        *
-                      </span>
-                    ) : null}
-                  </>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className={cn('w-[284px] p-0', spec.contentClassName)}>
-              {spec.editor(() => setOpen(null))}
-            </PopoverContent>
-          </Popover>
-        </Fragment>
-      ))}
+    <div className="flex flex-col gap-1.5">
+      {rows.map((row, index) =>
+        row.length === 0 ? null : (
+          <Fragment key={index}>
+            {index === 2 ? <p className="pt-1.5 text-xs text-text-secondary">Custom fields</p> : null}
+            <div className="flex flex-wrap gap-1.5">
+              {row.map(spec => (
+                <DraftChip
+                  key={spec.id}
+                  spec={spec}
+                  open={open === spec.id}
+                  onOpenChange={o => setOpen(o ? spec.id : null)}
+                />
+              ))}
+            </div>
+          </Fragment>
+        ),
+      )}
+      <RequiredMissing draft={draft} />
     </div>
   );
 }
 
-/** The full page's field column, the same rows as the issue page sidebar. */
+interface DraftChipProps {
+  spec: FieldSpec;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function DraftChip({ spec, open, onOpenChange }: DraftChipProps) {
+  // Dashed like the tag `+`: nothing is set yet, so the chip is an offer rather than a value.
+  const unset = !spec.loading && spec.value === null && spec.empty === undefined;
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="xs"
+          aria-label={spec.required ? `${spec.label}, required` : spec.label}
+          aria-invalid={spec.invalid || undefined}
+          title={spec.label}
+          className={cn(
+            'gap-1.5 font-normal',
+            unset && 'border-dashed',
+            spec.invalid && 'border-danger-fg text-danger-fg',
+          )}
+        >
+          {spec.loading ? (
+            <>
+              <Skeleton className={spec.id === 'status' ? 'size-2 rounded-full' : 'size-4 rounded-xs'} />
+              <Skeleton className={cn('h-3', spec.loadingWidth)} />
+            </>
+          ) : (
+            <>
+              {unset ? <Plus aria-hidden className="-ml-0.5 size-3 text-text-secondary" /> : null}
+              {spec.aside}
+              {spec.value !== null && spec.prefix ? <span className="text-text-secondary">{spec.prefix}</span> : null}
+              {spec.value ?? (
+                <span className={spec.invalid ? undefined : 'text-text-secondary'}>{spec.empty ?? spec.label}</span>
+              )}
+              {spec.required ? (
+                <span aria-hidden className={cn('-ml-1', spec.invalid ? 'text-danger-fg' : 'text-text-secondary')}>
+                  *
+                </span>
+              ) : null}
+            </>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        side="top"
+        collisionPadding={16}
+        className={cn('w-[284px] p-0', spec.contentClassName)}
+      >
+        {spec.editor(() => onOpenChange(false))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+const PANEL_GROUP: Record<string, number> = {
+  type: 0,
+  priority: 0,
+  status: 0,
+  assignees: 1,
+  estimate: 2,
+  start: 2,
+  due: 2,
+  sprint: 3,
+  points: 3,
+};
+const panelGroupOf = (spec: FieldSpec) => (isCustom(spec) ? 4 : (PANEL_GROUP[spec.id] ?? 2));
+
+/** The full page's field column, the same rows as the issue page sidebar, grouped. */
 export function DraftPanel({ draft, project }: DraftFieldsProps) {
   const specs = useFieldSpecs(project, draft.fields, draft.setFields, draft.applicableFields, draft.requiredMissing);
   const [open, setOpen] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-0.5">
-      {specs.map(spec => (
-        <SidebarField
-          key={spec.id}
-          label={spec.label}
-          required={spec.required}
-          empty={spec.value === null}
-          mono={spec.id === 'estimate' || spec.id === 'points'}
-          aside={spec.aside}
-          open={open === spec.id}
-          onOpenChange={o => setOpen(o ? spec.id : null)}
-          contentClassName={cn('w-[284px]', spec.contentClassName)}
-          editor={spec.editor(() => setOpen(null))}
-        >
-          {spec.loading ? <Skeleton className="h-3.5 w-24" /> : (spec.value ?? spec.panelEmpty ?? spec.empty)}
-        </SidebarField>
+      {specs.map((spec, index) => (
+        <Fragment key={spec.id}>
+          {index > 0 && panelGroupOf(spec) !== panelGroupOf(specs[index - 1]!) ? (
+            <div aria-hidden className="mx-2 my-1.5 h-px bg-border-subtle" />
+          ) : null}
+          <SidebarField
+            label={spec.label}
+            required={spec.required}
+            invalid={spec.invalid}
+            empty={spec.value === null}
+            mono={spec.id === 'estimate' || spec.id === 'points'}
+            open={open === spec.id}
+            onOpenChange={o => setOpen(o ? spec.id : null)}
+            contentClassName={cn('w-[284px]', spec.contentClassName)}
+            editor={spec.editor(() => setOpen(null))}
+          >
+            {spec.loading ? (
+              <Skeleton className="h-3.5 w-24" />
+            ) : (
+              <>
+                {spec.aside}
+                {spec.value ?? spec.panelEmpty ?? spec.label}
+              </>
+            )}
+          </SidebarField>
+        </Fragment>
       ))}
+      <div className="px-2 pt-1 empty:hidden">
+        <RequiredMissing draft={draft} />
+      </div>
+    </div>
+  );
+}
+
+const listOf = (names: readonly string[]) =>
+  names.length === 1 ? names[0]! : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+
+function RequiredMissing({ draft }: { draft: IssueDraft }) {
+  const missing = draft.requiredMissing;
+  if (missing.length === 0) return null;
+  const forType = draft.typeName ? `${draft.typeName} issues` : 'this type';
+  return (
+    <p role="alert" className="text-xs text-danger-fg">
+      {listOf(missing.map(f => f.name))} {missing.length === 1 ? 'is' : 'are'} required for {forType}.
+    </p>
+  );
+}
+
+function DateField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col">
+      <p className="-mb-1 px-3 pt-3 text-2xs font-medium text-text-secondary">{label}</p>
+      {children}
     </div>
   );
 }
@@ -406,8 +527,11 @@ export function DraftProjectPicker({ draft, className }: ProjectPickerProps) {
       <PopoverTrigger asChild>
         <Button variant="outline" size="xs" className={cn('gap-1.5', className)} aria-label="Project">
           {project ? <ProjectMark project={project} size="xs" /> : null}
-          <span className="max-w-48 truncate">{project?.name ?? 'Choose a project'}</span>
-          {project ? <span className="font-mono text-2xs text-text-muted">{project.key}</span> : null}
+          {draft.projectsPending ? (
+            <Skeleton className="h-3 w-24" />
+          ) : (
+            <span className="max-w-48 truncate">{project?.name ?? 'Choose a project'}</span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[280px] p-0">
@@ -439,7 +563,6 @@ interface DraftTextProps {
 
 /** Title with its quick actions, the tags it will carry, then the description on the same width. */
 export function DraftText({ draft, large, withLinks = false }: DraftTextProps) {
-  const fieldErrors = Object.entries(draft.error.fields);
   const [tagging, setTagging] = useState(false);
   const [linking, setLinking] = useState(draft.links.length > 0);
 
@@ -451,20 +574,19 @@ export function DraftText({ draft, large, withLinks = false }: DraftTextProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      {draft.error.summary ? <FormAlert title={draft.error.summary} /> : null}
       <div className="flex items-center gap-0.5 border-b border-border-strong focus-within:border-(--focus-soft) focus-within:shadow-[0_1px_0_0_var(--focus-soft)]">
         <label htmlFor="create-issue-title" className="sr-only">
           Title
         </label>
-        <input
+        <TitleInput
           id="create-issue-title"
           autoFocus
           value={draft.title}
-          onChange={e => draft.setTitle(e.target.value)}
+          onValueChange={draft.setTitle}
           placeholder="Issue title"
           aria-invalid={Boolean(draft.error.fields['title'])}
           className={cn(
-            'min-w-0 flex-1 bg-transparent py-1.5 font-semibold text-text placeholder:text-text-muted focus-visible:shadow-none',
+            'min-w-0 flex-1 bg-transparent py-1.5 font-semibold text-text [overflow-wrap:anywhere] placeholder:text-text-muted focus-visible:shadow-none',
             large ? 'text-2xl tracking-tight' : 'text-lg',
           )}
         />
@@ -498,27 +620,13 @@ export function DraftText({ draft, large, withLinks = false }: DraftTextProps) {
         label="Description"
         placeholder="Add a description. Type @ to mention someone, # to link an issue."
         variant={large ? 'description' : 'comment'}
-        // Room to write in the dialog, capped so the dialog still fits a short window.
-        minHeight={large ? undefined : 'min-h-[min(25rem,40dvh)]'}
+        // The chips stay near the title; a long description scrolls inside the editor, never the title away.
+        minHeight={large ? 'min-h-40 md:min-h-80' : 'min-h-36 max-h-[40dvh] overflow-y-auto'}
         invalid={draft.size.level === 'too_large'}
         uploader={draft.uploader}
       />
       {withLinks && linking ? <DraftLinks draft={draft} onClose={() => setLinking(false)} /> : null}
-      <div>
-        <MarkdownSizeNote size={draft.size} />
-        {draft.requiredMissing.length > 0 ? (
-          <p role="alert" className="text-xs text-danger-fg">
-            {draft.requiredMissing.length === 1
-              ? `${draft.requiredMissing[0]!.name} is required for this type.`
-              : `${draft.requiredMissing.map(f => f.name).join(', ')} are required for this type.`}
-          </p>
-        ) : null}
-        {fieldErrors.map(([field, message]) => (
-          <p key={field} className="text-xs text-danger-fg">
-            {message}
-          </p>
-        ))}
-      </div>
+      <MarkdownSizeNote size={draft.size} />
     </div>
   );
 }
@@ -582,7 +690,7 @@ function DraftLinks({ draft, onClose }: { draft: IssueDraft; onClose: () => void
             <li key={`${name} ${issue.key}`} className="flex h-row items-center gap-2 pr-1 pl-2.5 text-sm">
               <span className="w-28 flex-none text-xs text-text-secondary">{linkLabel(name)}</span>
               <TypeBadge type={issue.type} />
-              <IssueKey issueKey={issue.key} resolved={issue.resolved} />
+              <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
               <span className="min-w-0 flex-1 truncate">{issue.title}</span>
               <Button
                 type="button"
@@ -619,8 +727,26 @@ export function DraftParentChip({ draft }: { draft: IssueDraft }) {
   );
 }
 
+/** Why the create failed, above or beside the button that retries it. */
+export function DraftError({ draft, className }: { draft: IssueDraft; className?: string }) {
+  const message = draft.failure;
+  if (!message) return null;
+  return (
+    <p role="alert" className={cn('flex min-w-0 flex-1 items-start gap-1.5 text-xs text-danger-fg', className)}>
+      <AlertCircle aria-hidden className="mt-px size-3.5 flex-none" />
+      <span className="min-w-0">{message}</span>
+    </p>
+  );
+}
+
 export function NoWritableProject() {
   return (
-    <FormAlert title="There is no project you can file issues in. Ask a Project Admin to make you a Contributor." />
+    <div role="status" className="flex items-start gap-3">
+      <Lock aria-hidden className="mt-0.5 size-icon-sm flex-none text-text-secondary" />
+      <div className="flex flex-col gap-1">
+        <p className="font-medium text-text">You cannot create issues in any project yet</p>
+        <p className="text-text-secondary">Ask a Project Admin to make you a Contributor.</p>
+      </div>
+    </div>
   );
 }

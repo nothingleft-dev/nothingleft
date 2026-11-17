@@ -2,12 +2,12 @@ import { Check, Circle, LoaderCircle, Minus, X } from 'lucide-react';
 import { cn } from '@lib/utils';
 
 export const CHECK_STEPS = [
-  { id: 'put', side: 'server', label: 'Writing a test file' },
-  { id: 'get', side: 'server', label: 'Reading it back' },
-  { id: 'delete', side: 'server', label: 'Deleting it' },
-  { id: 'upload', side: 'browser', label: 'Uploading 8 KB from this browser' },
-  { id: 'download', side: 'browser', label: 'Opening it again' },
-  { id: 'verify', side: 'browser', label: 'Confirming it arrived intact' },
+  { id: 'put', side: 'server', label: 'Write a test file' },
+  { id: 'get', side: 'server', label: 'Read it back' },
+  { id: 'delete', side: 'server', label: 'Delete it' },
+  { id: 'upload', side: 'browser', label: 'Upload 8 KB from this browser' },
+  { id: 'download', side: 'browser', label: 'Open it again' },
+  { id: 'verify', side: 'browser', label: 'Confirm it arrived intact' },
 ] as const;
 
 export type CheckId = (typeof CHECK_STEPS)[number]['id'];
@@ -93,7 +93,7 @@ export function CheckProgress({ states, failure }: CheckProgressProps) {
                     <span className="sr-only">— {STATE_LABELS[state]}</span>
                   </span>
                   {state === 'failed' && failure ? (
-                    <p className="ml-7.5 text-xs leading-5 text-danger-fg">{failure}</p>
+                    <p className="ml-7.5 text-xs leading-5 text-pretty text-text">{failure}</p>
                   ) : null}
                 </li>
               );

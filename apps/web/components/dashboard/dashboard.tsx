@@ -8,8 +8,11 @@ import { ProjectsOverview } from '@components/dashboard/projects-overview';
 import { EmptyState } from '@components/empty-state';
 import { PageHeader } from '@components/page-header';
 import { Segmented } from '@components/segmented';
-import { PageSkeleton } from '@components/skeletons';
+import { CompactRowsSkeleton } from '@components/dashboard/compact-issue-row';
+import { PageTitleSkeleton } from '@components/skeletons';
+import { LoadError } from '@components/query-state';
 import { Button } from '@components/ui/button';
+import { Skeleton } from '@components/ui/skeleton';
 import { useProjectRoles } from '@hooks/use-project-roles';
 import { useSession } from '@hooks/use-session';
 import { formatLongDate } from '@lib/datetime';
@@ -33,18 +36,13 @@ export function Dashboard() {
 
   if (roles.failed) {
     return (
-      <EmptyState
-        title="Your dashboard could not be loaded."
-        description="Your organisation and projects did not load. Nothing is shown rather than figures that may be wrong."
-        action={
-          <Button size="sm" onClick={roles.retry}>
-            Retry
-          </Button>
-        }
-      />
+      <div className="flex flex-col gap-5">
+        <PageHeader title="Home" />
+        <LoadError onRetry={roles.retry}>Your dashboard could not be loaded.</LoadError>
+      </div>
     );
   }
-  if (roles.isPending) return <PageSkeleton rows={6} />;
+  if (roles.isPending) return <HomeSkeleton />;
   if (!roles.org) {
     return (
       <EmptyState
@@ -79,6 +77,59 @@ export function Dashboard() {
         }
       />
       {tab === 'work' ? <MyWork /> : <ProjectsOverview org={roles.org} orgAdmin={roles.orgAdmin} />}
+    </div>
+  );
+}
+
+const zeroWidth = '\u200b';
+
+/** The loaded page's geometry: a linked stat row with its inset first cell, section headings, rows, rail. */
+function HomeSkeleton() {
+  return (
+    <div className="flex flex-col gap-5" role="status" aria-label="Loading">
+      <PageTitleSkeleton />
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-4 border-y max-sm:grid-cols-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-0.5 border-r py-3 pr-4 pl-4 first:pl-3 last:border-r-0 max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(2n+1)]:pl-3 max-sm:[&:nth-child(n+3)]:border-t"
+            >
+              <span className="flex items-center text-xl font-semibold">
+                <Skeleton className="h-5 w-12" />
+                {zeroWidth}
+              </span>
+              <span className="flex items-center text-xs">
+                <Skeleton className="h-3 w-24" />
+                {zeroWidth}
+              </span>
+              {i === 3 ? <Skeleton className="mt-2 h-1 w-full" /> : null}
+            </div>
+          ))}
+        </div>
+        <div className="grid items-start gap-8 min-[1200px]:grid-cols-[minmax(0,1fr)_var(--rail)]">
+          <div className="flex flex-col gap-1">
+            <div className="flex h-control items-center">
+              <Skeleton className="h-3.5 w-28" />
+            </div>
+            <div className="mt-2 h-7 rounded-sm bg-app" />
+            <CompactRowsSkeleton rows={6} />
+          </div>
+          <div className="flex flex-col gap-1 max-[1199px]:hidden">
+            <div className="flex h-control items-center">
+              <Skeleton className="h-3.5 w-16" />
+            </div>
+            <div className="flex flex-col gap-3 px-2 py-2">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="flex flex-col gap-1.5">
+                  <Skeleton className="h-3" style={{ width: `${55 + ((i * 13) % 30)}%` }} />
+                  <Skeleton className="h-2.5 w-2/3" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

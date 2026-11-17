@@ -3,30 +3,34 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { BrandMark, Wordmark } from '@components/shell/brand';
+import { Skeleton } from '@components/ui/skeleton';
 import { StepRail, type FlowStep } from '@components/onboarding/step-rail';
 import { useSignOut } from '@hooks/use-sign-out';
 
-interface FlowShellProps {
-  steps: readonly FlowStep[];
-  current: number;
-  /** Shown top-right once there is an account; omitted while the flow is still anonymous. */
-  email?: string | null;
-  intro: string;
+interface FlowFrameProps {
+  /** `undefined` while the session is still loading, `null` once it is known to be signed out. */
+  email?: string | null | undefined;
   children: ReactNode;
 }
 
-export function FlowShell({ steps, current, email, intro, children }: FlowShellProps) {
+export function FlowFrame({ email, children }: FlowFrameProps) {
   const signOut = useSignOut();
-  const step = steps[current];
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
-      <header className="flex h-16 flex-none items-center justify-between border-b px-8 max-lg:h-topbar max-lg:px-page-x-mobile">
-        <Link href="/" className="flex items-center gap-2" title="Nothing Left" aria-label="Nothing Left">
+      <header className="flex h-16 flex-none items-center justify-between border-b px-6 max-lg:h-topbar max-lg:px-page-x-mobile">
+        <Link
+          href="/"
+          className="-mx-1.5 flex items-center gap-2 rounded-sm px-1.5 py-1 transition-colors duration-(--dur-fast) hover:bg-hover"
+          title="Nothing Left"
+          aria-label="Nothing Left"
+        >
           <BrandMark size={22} />
           <Wordmark />
         </Link>
-        {email ? (
+        {email === undefined ? (
+          <Skeleton className="h-4 w-64 max-sm:w-16" />
+        ) : email ? (
           <div className="flex items-center gap-5 text-sm text-text-secondary">
             <span className="max-sm:hidden">
               Signed in as <span className="font-medium text-text">{email}</span>
@@ -42,12 +46,28 @@ export function FlowShell({ steps, current, email, intro, children }: FlowShellP
           </div>
         ) : null}
       </header>
+      {children}
+    </div>
+  );
+}
 
-      <div className="mx-auto flex w-full max-w-[1120px] flex-1 items-start gap-12 px-6 py-10 max-lg:flex-col max-lg:gap-0 max-lg:p-0">
+interface FlowShellProps extends Omit<FlowFrameProps, 'children'> {
+  steps: readonly FlowStep[];
+  current: number;
+  intro: string;
+  children: ReactNode;
+}
+
+export function FlowShell({ steps, current, email, intro, children }: FlowShellProps) {
+  const step = steps[current];
+
+  return (
+    <FlowFrame email={email}>
+      <div className="mx-auto flex w-full max-w-[968px] flex-1 items-start gap-12 px-6 py-10 max-lg:flex-col max-lg:gap-0 max-lg:p-0">
         {/* An inset block on the page itself, not a floating card inside another card:
             one edge, not three. */}
-        <aside className="w-[300px] flex-none rounded-lg bg-app p-8 max-lg:hidden" aria-label="Setup steps">
-          <p className="mb-9 text-sm leading-[22px] text-text-secondary">{intro}</p>
+        <aside className="w-[312px] flex-none rounded-lg bg-app p-7 max-lg:hidden" aria-label="Setup steps">
+          <p className="mb-8 text-sm leading-[22px] text-pretty text-text-secondary">{intro}</p>
           <StepRail steps={steps} current={current} />
         </aside>
 
@@ -57,14 +77,14 @@ export function FlowShell({ steps, current, email, intro, children }: FlowShellP
           <span className="text-sm font-medium text-text">{step?.title}</span>
           <span className="text-sm text-text-muted">·</span>
           <span className="text-sm text-text-secondary">
-            step {current + 1} of {steps.length}
+            Step {current + 1} of {steps.length}
           </span>
         </div>
 
-        <main className="comfortable-form w-full min-w-0 flex-1 py-4 max-lg:px-page-x-mobile max-lg:py-6">
-          <div className="max-w-[560px]">{children}</div>
+        <main className="comfortable-form w-full min-w-0 flex-1 pt-7 pb-4 max-lg:px-page-x-mobile max-lg:py-6">
+          <div className="max-w-[560px] max-lg:max-w-none">{children}</div>
         </main>
       </div>
-    </div>
+    </FlowFrame>
   );
 }

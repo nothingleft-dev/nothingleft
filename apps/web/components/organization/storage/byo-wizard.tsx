@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { ByoCheckError, Me, StorageConnection, StorageOverview } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { FormAlert } from '@components/auth/form-alert';
@@ -23,6 +23,7 @@ import { StorageCheckBlockedError, StorageCheckRefusedError } from '@lib/api/sto
 import { env } from '@lib/env';
 import { connectBody, describeCheckError, draftFrom, emptyDraft, type ConnectionDraft } from '@lib/storage/connection';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 export const WIZARD_STEPS = [
   { id: 'provider', label: 'Provider' },
@@ -184,27 +185,24 @@ export function ByoWizard({ slug, overview, user, step, onStep, onClose, onMoveF
   };
 
   const index = WIZARD_STEPS.findIndex(s => s.id === step);
-  const bucket = draft.bucket.trim() || saved?.bucket || 'the bucket';
+  const bucketName = draft.bucket.trim() || saved?.bucket || null;
+  const bucket = bucketName ? <span className="font-mono">{bucketName}</span> : 'the bucket';
 
   return (
     <section aria-label="Connect your own bucket" className="flex flex-col gap-5 rounded-md border">
-      <header className="flex items-center gap-4 border-b px-5 py-4 max-sm:px-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 className="font-medium">Connect your own bucket</h2>
-          <p className="text-sm text-text-secondary">
-            Store this organisation’s files in a Cloudflare R2 or AWS S3 bucket of yours. The storage limit lifts the
-            moment it is connected.
-          </p>
-        </div>
-        {step === 'connected' ? null : (
-          <Button variant="outline" size="sm" className="ml-auto flex-none" onClick={onClose} disabled={running}>
-            {saved ? 'Finish later' : 'Cancel'}
-          </Button>
-        )}
+      <header className="flex flex-col gap-0.5 border-b px-5 py-4 max-sm:px-4">
+        <h2 className="font-semibold">Connect your own bucket</h2>
+        <p className="text-sm text-pretty text-text-secondary">
+          Store this organisation’s files in a Cloudflare R2 or AWS S3 bucket of yours, on your bill. The storage limit
+          lifts the moment it is connected.
+        </p>
       </header>
 
       <div className="grid gap-6 px-5 pb-5 max-sm:px-4 md:grid-cols-[176px_minmax(0,1fr)]">
-        <StepRail current={index} />
+        <StepRail
+          current={step === 'connected' ? WIZARD_STEPS.length : index}
+          failed={step === 'check' && failure !== null && !running}
+        />
 
         <div className="flex min-w-0 flex-col gap-5">
           {step === 'provider' ? (
@@ -253,11 +251,18 @@ export function ByoWizard({ slug, overview, user, step, onStep, onClose, onMoveF
           {step === 'check' ? (
             <div className="flex flex-col gap-4">
               <p className="text-sm text-text-secondary">
-                {running
-                  ? `Checking ${bucket}. This takes a few seconds; keep this page open.`
-                  : failure
-                    ? `${bucket} is not connected yet. Uploads still go to the built-in storage.`
-                    : `The server reached ${bucket}. One more check, from this browser, proves the bucket lets the app upload and open files.`}
+                {running ? (
+                  <>Checking {bucket}. This takes a few seconds; keep this page open.</>
+                ) : failure ? (
+                  <>
+                    {bucketName ? bucket : 'The bucket'} is not connected yet. Uploads still go to the built-in storage.
+                  </>
+                ) : (
+                  <>
+                    The server reached {bucket}. One more check, from this browser, proves the bucket lets the app
+                    upload and open files.
+                  </>
+                )}
               </p>
               <CheckProgress states={checks} failure={failure?.message} />
               {failure?.cors ? (
@@ -270,7 +275,7 @@ export function ByoWizard({ slug, overview, user, step, onStep, onClose, onMoveF
 
           {step === 'connected' ? (
             <ConnectedStep
-              bucket={saved?.bucket ?? bucket}
+              bucket={saved?.bucket ?? bucketName ?? ''}
               platformFiles={overview.platform.files}
               onMoveFiles={onMoveFiles}
               onClose={onClose}
@@ -293,6 +298,8 @@ export function ByoWizard({ slug, overview, user, step, onStep, onClose, onMoveF
               }}
               onRetry={runBrowserCheck}
               onChangeKey={() => onStep('credentials')}
+              closeLabel={saved ? 'Finish later' : 'Cancel'}
+              onClose={onClose}
             />
           )}
         </div>
@@ -330,7 +337,7 @@ export function ByoWizard({ slug, overview, user, step, onStep, onClose, onMoveF
   );
 }
 
-function StepRail({ current }: { current: number }) {
+function StepRail({ current, failed }: { current: number; failed: boolean }) {
   return (
     <ol
       className="flex flex-col gap-0.5 max-md:flex-row max-md:flex-wrap max-md:gap-x-4 max-md:gap-y-1"
@@ -345,22 +352,33 @@ function StepRail({ current }: { current: number }) {
             aria-current={active ? 'step' : undefined}
             className={cn(
               'flex h-8 items-center gap-2.5 rounded-sm text-sm md:px-2',
-              active ? 'font-medium text-text md:bg-active' : done ? 'text-text' : 'text-text-secondary',
+              active ? 'font-medium md:bg-active' : 'text-text-secondary',
+              active && (failed ? 'text-danger-fg' : 'text-text'),
             )}
           >
             <span
               aria-hidden
               className={cn(
                 'grid size-5 flex-none place-items-center rounded-full text-2xs font-semibold tabular',
-                done && 'bg-ink text-ink-fg',
-                active && 'bg-surface text-text ring-[1.5px] ring-text',
+                done && 'text-text-secondary ring-1 ring-border-strong ring-inset',
+                active && (failed ? 'bg-danger-fg text-surface' : 'bg-ink text-ink-fg'),
                 !done && !active && 'bg-inset text-text-secondary',
               )}
             >
-              {done ? <Check className="size-3" strokeWidth={3} /> : i + 1}
+              {done ? (
+                <Check className="size-3" strokeWidth={2.5} />
+              ) : active && failed ? (
+                <X className="size-3" strokeWidth={3} />
+              ) : (
+                i + 1
+              )}
             </span>
             {s.label}
-            {done ? <span className="sr-only"> — done</span> : null}
+            {done ? (
+              <span className="sr-only"> (done)</span>
+            ) : active && failed ? (
+              <span className="sr-only"> (failed)</span>
+            ) : null}
           </li>
         );
       })}
@@ -377,6 +395,8 @@ interface WizardFooterProps {
   onNext: () => void;
   onRetry: () => void;
   onChangeKey: () => void;
+  closeLabel: string;
+  onClose: () => void;
 }
 
 function WizardFooter({
@@ -388,9 +408,16 @@ function WizardFooter({
   onNext,
   onRetry,
   onChangeKey,
+  closeLabel,
+  onClose,
 }: WizardFooterProps) {
+  if (step === 'check' && running) return null;
+  const close = (
+    <Button variant="outline" onClick={onClose} disabled={running}>
+      {closeLabel}
+    </Button>
+  );
   if (step === 'check') {
-    if (running) return null;
     return (
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">
         <Button onClick={onRetry}>
@@ -399,6 +426,7 @@ function WizardFooter({
         <Button variant="outline" onClick={onChangeKey}>
           Change the key
         </Button>
+        {close}
       </div>
     );
   }
@@ -412,6 +440,7 @@ function WizardFooter({
           Back
         </Button>
       )}
+      {close}
     </div>
   );
 }
@@ -429,15 +458,14 @@ function ConnectedStep({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <FormAlert tone="success" title="The storage limit is lifted">
-        <p>
-          <span className="font-mono">{bucket}</span> passed both checks. Every file uploaded from now on is stored
-          there, and nothing in it counts against a limit. Every admin has been emailed.
-        </p>
-      </FormAlert>
+      <FormAlert tone="success" title="Connected. The storage limit is lifted." />
+      <p className="text-sm text-text">
+        <span className="font-mono">{bucket}</span> passed both checks. Every file uploaded from now on is stored there,
+        and every admin has been emailed.
+      </p>
       <p className="text-sm text-text-secondary">
         {platformFiles > 0
-          ? `The ${platformFiles} ${platformFiles === 1 ? 'file' : 'files'} you already had stay in the built-in storage and keep working. Move them across and each is copied, checked, and only then removed from the built-in storage, so every file keeps opening throughout. You can leave the page while it runs.`
+          ? `The ${plural(platformFiles, 'file')} you already had stay in the built-in storage and keep working. Moving them copies and checks each one before removing it here, so every file keeps opening; you can leave the page while it runs.`
           : 'There were no files in the built-in storage, so there is nothing to move.'}
       </p>
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">

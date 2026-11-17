@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import type { Article } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
+import { LoadError } from '@components/query-state';
 import { Skeleton } from '@components/ui/skeleton';
-import { EmptyState } from '@components/empty-state';
 import { CommentBody, CommentComposer, CommentHeader, CommentMenu } from '@components/issues/issue-comments';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { useComments, type CommentScope, type ThreadComment } from '@hooks/use-comments';
 import { cn } from '@lib/utils';
+import { LoadMore } from '@components/text-button';
 
 export function ArticleComments({ article, timeZone }: { article: Article; timeZone?: string | undefined }) {
   const scope: CommentScope = { project: article.project.key, article: article.slug };
@@ -34,7 +34,11 @@ export function ArticleComments({ article, timeZone }: { article: Article; timeZ
           ))}
         </div>
       ) : comments.isError ? (
-        <EmptyState className="mt-3" title="The comments could not be loaded." description={comments.error.message} />
+        <div className="mt-3">
+          <LoadError onRetry={() => void comments.refetch()} detail={comments.error.message}>
+            The comments could not be loaded.
+          </LoadError>
+        </div>
       ) : rows.length === 0 ? (
         <p className="mt-2 text-xs text-text-secondary">
           {article.me.can_comment ? 'No comments yet. Start the conversation below.' : 'No comments yet.'}
@@ -54,15 +58,14 @@ export function ArticleComments({ article, timeZone }: { article: Article; timeZ
         </ol>
       )}
       {comments.hasNextPage ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2"
-          disabled={comments.isFetchingNextPage}
+        <LoadMore
+          className="mt-2 pl-11"
+          pending={comments.isFetchingNextPage}
+          pendingLabel="Loading more…"
           onClick={() => void comments.fetchNextPage()}
         >
-          {comments.isFetchingNextPage ? 'Loading more…' : 'Show later comments'}
-        </Button>
+          Show later comments
+        </LoadMore>
       ) : null}
 
       {article.me.can_comment ? <CommentComposer scope={scope} projectKey={article.project.key} /> : null}

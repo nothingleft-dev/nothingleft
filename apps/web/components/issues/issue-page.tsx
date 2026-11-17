@@ -1,7 +1,10 @@
 'use client';
 
+import { FullPageState, SECONDARY_LINK } from '@components/full-page-state';
+import { ArchivedNotice } from '@components/projects/archived-notice';
 import { useEffect, useRef, useState } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Route } from 'next';
 import {
   Eye,
@@ -19,9 +22,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Issue, MemberRef } from '@nothingleft/types';
+import { parseIssueKey } from '@nothingleft/format';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { RelativeTime } from '@components/relative-time';
 import { AttachmentsSection } from '@components/attachments/attachments-section';
@@ -54,12 +59,16 @@ import { useDeleteIssue, useIssue, useIssueSignal, useRestoreIssue } from '@hook
 import { useOrganization } from '@hooks/use-organizations';
 import { useProject } from '@hooks/use-projects';
 import { useRecordRecentlyViewed } from '@hooks/use-recently-viewed';
+import { useRateLimit } from '@hooks/use-rate-limit';
 import { useSession } from '@hooks/use-session';
 import { useShortcut } from '@hooks/use-shortcut';
 import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+
+const PAGE_GRID =
+  'grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center';
 
 export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; variant?: 'page' | 'modal' }) {
   const modal = variant === 'modal';
@@ -124,18 +133,20 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
   if (issue.isError && isApiError(issue.error) && issue.error.isNotFound) {
     if (modal) return <FormAlert title={`${issueKey} does not exist, or you cannot open it.`} />;
-    notFound();
+    return <IssueNotFound issueKey={issueKey} />;
   }
   if (issue.isError) {
-    return (
-      <FormAlert title="This issue could not be loaded.">
-        <Button size="sm" variant="outline" className="mt-2" onClick={() => void issue.refetch()}>
-          Retry
-        </Button>
-      </FormAlert>
-    );
+    if (modal) {
+      return (
+        <LoadError onRetry={() => void issue.refetch()} detail={errorDetail(issue.error)}>
+          This issue could not be loaded.
+        </LoadError>
+      );
+    }
+    return <IssueLoadError issueKey={issueKey} error={issue.error} onRetry={() => void issue.refetch()} />;
   }
-  if (issue.isPending) return <IssueSkeleton />;
+  // The role decides the title's action strip and so its wrap: drawn without it, the page jumps when it lands.
+  if (issue.isPending || project.isPending) return <IssueSkeleton />;
 
   const data = issue.data;
   const createSubtask = () => openCreateIssue({ project: data.project.key, parent: data.key });
@@ -150,6 +161,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
           panel: (
             <DevelopmentPanel
               issueKey={data.key}
+              issueTitle={data.title}
               projectKey={data.project.key}
               canLink={canEdit}
               canAdminProject={role === 'project_admin'}
@@ -162,11 +174,13 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
-      <div className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center">
-        <div className="min-w-0">
+      <div className={PAGE_GRID}>
+        <div className="@container min-w-0">
           {archived ? (
-            <div role="status" className="mb-4 rounded-md bg-inset px-3 py-2 text-xs text-text-secondary">
-              {data.project.name} is archived, so this issue is read-only. Starring, voting and watching still work.
+            <div className="mb-4">
+              <ArchivedNotice>
+                {data.project.name} is archived, so this issue is read-only. Starring, voting and watching still work.
+              </ArchivedNotice>
             </div>
           ) : null}
 
@@ -176,7 +190,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
 
           <div className="flex items-start gap-4 max-sm:flex-col max-sm:gap-1">
             <IssueTitle issue={data} canEdit={canEdit} />
-            <div className="mt-0.5 flex flex-none gap-0.5">
+            <div className="mt-0.5 flex flex-none items-center gap-0.5 max-sm:-ml-3.5">
               {canEdit ? (
                 <>
                   <IconAction label="Edit description" shortcut="e" onClick={() => setEditingDescription(true)}>
@@ -266,6 +280,11 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
             onTabChange={setActivityTab}
             timeZone={timeZone}
           />
+          {role && !canEdit && !archived ? (
+            <p className="mt-6 text-xs text-text-secondary">
+              You can read this issue but not change it. A Project Admin can give you edit access.
+            </p>
+          ) : null}
         </div>
 
         {canEdit ? (
@@ -330,7 +349,9 @@ function Provenance({ issue, timeZone, withKey }: { issue: Issue; timeZone?: str
         Created by <PersonName person={issue.created_by} className="font-medium text-text" />{' '}
         <RelativeTime value={issue.created_at} timeZone={timeZone} />
       </span>
-      <span className="text-text-muted">·</span>
+      <span aria-hidden className="text-text-muted max-sm:hidden">
+        ·
+      </span>
       <span>
         Updated by <PersonName person={issue.updated_by} className="font-medium text-text" />{' '}
         <RelativeTime value={issue.updated_at} timeZone={timeZone} />
@@ -424,12 +445,12 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
             onClick: () =>
               restore.mutateAsync(deleted.key).then(
                 back => router.push(issuePath(back)),
-                (error: Error) => toastError(error),
+                (error: Error) => toastError(`Could not restore ${deleted.key}`, error),
               ),
           },
         });
       },
-      onError: error => toastError(error),
+      onError: error => toastError(`Could not delete ${issue.key}`, error),
     });
 
   return (
@@ -437,7 +458,12 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="More actions" className="text-text-secondary">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="More actions"
+              className="text-text-secondary max-md:size-control"
+            >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -497,44 +523,162 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
         onOpenChange={setConfirming}
         title={`Delete ${issue.key}?`}
         confirmLabel="Delete issue"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={onDelete}
       >
         <p>
-          <span className="font-medium text-text">{issue.title}</span> leaves {issue.project.name} for everyone straight
-          away. A Project Admin can restore it from the project&apos;s deleted issues for 14 days; after that it is
-          gone, with its history.
+          <span className="font-medium text-text">{issue.title}</span> is removed from {issue.project.name} for
+          everyone. A Project Admin can restore it from deleted issues for 14 days; after that it is deleted with its
+          history.
         </p>
       </ConfirmDialog>
     </DropdownMenu>
   );
 }
 
+const STRIP_CELLS = ['w-20', 'w-16', 'w-16', 'w-24', 'w-20', 'w-24'];
+
 function IssueSkeleton() {
   return (
-    <div
-      className="grid items-start gap-10 min-[1100px]:grid-cols-[minmax(0,960px)_var(--rail-slim)] min-[1100px]:justify-center"
-      role="status"
-      aria-label="Loading"
-    >
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-3 w-80" />
-        <Skeleton className="h-8 w-2/3" />
-        <Skeleton className="h-[54px] w-full rounded-md" />
-        <div className="mt-2 flex flex-col gap-2">
+    <div className={PAGE_GRID} role="status" aria-label="Loading">
+      <div className="@container min-w-0">
+        <div className="mb-4 flex h-8 items-center justify-between gap-4">
+          <Skeleton className="h-3 w-96 max-w-[70%]" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="flex h-8 items-center">
+          <Skeleton className="h-6 w-2/3" />
+        </div>
+        <div className="mt-2 flex h-5 gap-1.5">
+          <Skeleton className="h-5 w-16 rounded-sm" />
+          <Skeleton className="h-5 w-12 rounded-sm" />
+        </div>
+        <div className="key-strip mt-4 grid-cols-2! @[26rem]:grid-cols-3! @[46rem]:grid-cols-6!">
+          {STRIP_CELLS.map((width, i) => (
+            <div key={i} className="flex flex-col gap-0.5 px-3 py-2">
+              <span className="flex h-4 items-center">
+                <Skeleton className="h-2.5 w-12" />
+              </span>
+              <span className="flex h-5 items-center">
+                <Skeleton className={cn('h-3.5', width)} />
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-col gap-3">
           <Skeleton className="h-4 w-full max-w-[72ch]" />
           <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
           <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
         </div>
+        <div className="mt-8 flex h-control items-center border-b">
+          <Skeleton className="h-3.5 w-12" />
+        </div>
+        <Skeleton className="mt-4 h-3.5 w-full max-w-[56ch]" />
+        <div className="mt-8 flex h-control items-center gap-5 border-b">
+          {['w-14', 'w-8', 'w-20', 'w-20', 'w-14'].map((width, i) => (
+            <Skeleton key={i} className={cn('h-3.5', width)} />
+          ))}
+        </div>
       </div>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-1.5 px-2 py-1">
-            <Skeleton className="h-2.5 w-16" />
-            <Skeleton className="h-3.5 w-32" />
+          <div key={i} className="flex flex-col gap-0.5 px-2 py-[7px]">
+            <span className="flex h-4 items-center">
+              <Skeleton className="h-2.5 w-16" />
+            </span>
+            <span className="flex h-5 items-center">
+              <Skeleton className="h-3.5 w-28" />
+            </span>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+function IssueLoadError({ issueKey, error, onRetry }: { issueKey: string; error: unknown; onRetry: () => void }) {
+  const projectKey = parseIssueKey(issueKey)?.projectKey ?? null;
+  const project = useProject(projectKey);
+  const { secondsLeft } = useRateLimit();
+  const limited = secondsLeft > 0;
+  const back = project.data ? (
+    <Link href={`/projects/${project.data.key}/issues` as Route} className={SECONDARY_LINK}>
+      Back to {project.data.name} issues
+    </Link>
+  ) : null;
+
+  return (
+    <FullPageState
+      className="pt-12"
+      eyebrow={limited ? 'Request limit' : 'Error'}
+      title={
+        <>
+          <span className="font-mono">{issueKey}</span> could not be loaded
+        </>
+      }
+      actions={
+        limited ? (
+          (back ?? <span />)
+        ) : (
+          <>
+            <Button onClick={onRetry}>Try again</Button>
+            {back}
+          </>
+        )
+      }
+    >
+      {limited
+        ? 'The request limit paused it. It loads again by itself when the limit lifts.'
+        : (errorDetail(error) ?? 'Something went wrong on our side.')}
+    </FullPageState>
+  );
+}
+
+/** Missing and denied read the same (docs/permissions.md); a deleted issue is missing until it is restored. */
+function IssueNotFound({ issueKey }: { issueKey: string }) {
+  const projectKey = parseIssueKey(issueKey)?.projectKey ?? null;
+  const project = useProject(projectKey);
+  const found = project.data;
+
+  return (
+    <FullPageState
+      className="pt-12"
+      eyebrow="404"
+      title={
+        <>
+          <span className="font-mono">{issueKey}</span> does not exist
+        </>
+      }
+      actions={
+        found ? (
+          <>
+            <Button asChild>
+              <Link href={`/projects/${found.key}/issues` as Route}>Back to {found.name} issues</Link>
+            </Button>
+            {found.my_role === 'project_admin' ? (
+              <Link href={`/projects/${found.key}/settings?tab=deleted` as Route} className={SECONDARY_LINK}>
+                Deleted issues
+              </Link>
+            ) : null}
+          </>
+        ) : project.isPending && projectKey ? (
+          <Skeleton className="h-control w-48" />
+        ) : (
+          <Button asChild>
+            <Link href="/">Go home</Link>
+          </Button>
+        )
+      }
+    >
+      {found ? (
+        <>
+          There is no issue <span className="font-mono">{issueKey}</span> in {found.name} that you can open. A deleted
+          issue can be restored by a Project Admin for 14 days.
+        </>
+      ) : (
+        'The key may be mistyped, or the issue is in a project you cannot open.'
+      )}
+    </FullPageState>
   );
 }

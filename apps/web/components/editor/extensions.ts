@@ -72,6 +72,9 @@ export function editorExtensions(placeholder: string, bridge: ReferenceBridge): 
       codeBlock: false,
       underline: false,
       heading: { levels: [1, 2, 3] },
+      // It appends an empty paragraph on the first click into text that ends in a list, which grows the frame
+      // under the pointer; a gap cursor already reaches past a closing table or code block.
+      trailingNode: false,
       link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow' } },
     }),
     CodeBlockLowlight.configure({ lowlight, defaultLanguage: null }),

@@ -14,6 +14,7 @@ import { useFinishGitHubConnect } from '@hooks/use-git';
 import { isApiError } from '@lib/api/errors';
 
 const INTEGRATIONS = '/organization?tab=integrations' as Route;
+const PLAN = '/organization?tab=plan' as Route;
 
 const TITLES: Record<string, string> = {
   'git.connect_state_invalid': 'This connection attempt expired.',
@@ -51,26 +52,31 @@ export function GitHubCallback() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installation, state, code]);
 
-  const back = (
-    <Button asChild variant="outline" size="sm">
-      <Link href={INTEGRATIONS}>Back to Integrations</Link>
-    </Button>
-  );
+  const incomplete = !installation || !state || !code;
+  const atLimit = isApiError(finish.error) && finish.error.code === 'git.connection_limit_reached';
+  const title = requested
+    ? 'Waiting for approval'
+    : incomplete || finish.isError
+      ? 'GitHub was not connected'
+      : 'Connecting GitHub';
 
   return (
-    <div className="flex max-w-2xl flex-col gap-5">
-      <PageHeader title="Connecting GitHub" />
+    <div className="flex flex-col gap-5">
+      <PageHeader title={title} />
       {requested ? (
         <FormAlert tone="warning" title="GitHub sent the request to an owner of that organisation.">
           Once they approve the installation, connect again from Integrations and it is picked up.
         </FormAlert>
-      ) : !installation || !state || !code ? (
+      ) : incomplete ? (
         <FormAlert title="GitHub did not send back what this page needs.">
           The address is incomplete. Start again from Integrations with Connect GitHub.
         </FormAlert>
       ) : finish.isError ? (
-        <FormAlert title={(isApiError(finish.error) && TITLES[finish.error.code]) || 'GitHub could not be connected.'}>
-          {finish.error.message}
+        <FormAlert
+          tone={atLimit ? 'warning' : 'danger'}
+          title={(isApiError(finish.error) && TITLES[finish.error.code]) || 'GitHub could not be connected.'}
+        >
+          {atLimit ? 'Disconnect one in Integrations to connect another, or see the plan.' : finish.error.message}
         </FormAlert>
       ) : (
         <div className="flex flex-col gap-3 rounded-md border p-4" role="status" aria-label="Connecting">
@@ -79,7 +85,18 @@ export function GitHubCallback() {
           <Skeleton className="h-4 w-1/2" />
         </div>
       )}
-      {requested || !installation || !state || !code || finish.isError ? <div>{back}</div> : null}
+      {requested || incomplete || finish.isError ? (
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant={atLimit ? 'default' : 'outline'}>
+            <Link href={INTEGRATIONS}>{atLimit ? 'Manage connections' : 'Back to Integrations'}</Link>
+          </Button>
+          {atLimit ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href={PLAN}>See plan</Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

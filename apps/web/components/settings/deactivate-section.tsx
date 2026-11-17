@@ -3,17 +3,17 @@
 import { useState } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Me } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { FormAlert } from '@components/auth/form-alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
+import { PendingButton } from '@components/pending-button';
 import { EmailUs } from '@components/email-us';
 import { StepUpDialog } from '@components/step-up-dialog';
 import { SettingsSection } from '@components/settings/section';
 import { useDeactivateAccount } from '@hooks/use-account-security';
-import { useOrganizations, useSwitchOrganization } from '@hooks/use-organizations';
 import { isApiError } from '@lib/api/errors';
+import { useOrganizations, useSwitchOrganization } from '@hooks/use-organizations';
+import { toastError } from '@components/toast-error';
 
 interface DeactivateSectionProps {
   user: Me;
@@ -25,19 +25,26 @@ export function DeactivateSection({ user, reopen, onReopened }: DeactivateSectio
   const [chosen, setOpen] = useState(false);
   const open = chosen || reopen;
   const deactivate = useDeactivateAccount();
+  const blocked =
+    isApiError(deactivate.error) && deactivate.error.code === 'account.owns_organization'
+      ? (deactivate.error.validValues ?? [])
+      : null;
+
+  const close = () => {
+    setOpen(false);
+    deactivate.reset();
+    onReopened();
+  };
 
   return (
     <SettingsSection
       title="Danger zone"
-      description="Deactivating signs you out everywhere. Your work stays, under your name."
+      description="Deactivating your account keeps everything you wrote, under your name."
     >
-      <div className="flex items-center gap-4 rounded-md border border-danger-fg/25 px-4 py-3 max-sm:flex-col max-sm:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <p className="font-medium">Deactivate account</p>
-          <p className="text-sm text-text-secondary">
-            Reactivation is done by us, on an email from the address on the account.
-          </p>
-        </div>
+      <div className="flex items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-start">
+        <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+          Sign out everywhere and leave assignee lists. To come back, <EmailUs /> from this address.
+        </p>
         <Button
           variant="outline"
           size="sm"
@@ -49,14 +56,8 @@ export function DeactivateSection({ user, reopen, onReopened }: DeactivateSectio
       </div>
 
       <StepUpDialog
-        open={open}
-        onOpenChange={next => {
-          setOpen(next);
-          if (!next) {
-            deactivate.reset();
-            onReopened();
-          }
-        }}
+        open={open && blocked === null}
+        onOpenChange={next => (next ? setOpen(true) : close())}
         user={user}
         title="Deactivate your account?"
         confirmLabel="Deactivate account"
@@ -64,61 +65,74 @@ export function DeactivateSection({ user, reopen, onReopened }: DeactivateSectio
         returnTo="/settings?tab=security&confirm=deactivate"
         pending={deactivate.isPending}
         error={deactivate.error}
-        renderError={error =>
-          error.code === 'account.owns_organization' ? (
-            <OwnedOrganizations slugs={error.validValues ?? []} />
-          ) : undefined
-        }
         onConfirm={body => deactivate.mutate(body)}
       >
-        <ul className="flex list-disc flex-col gap-1.5 pl-5">
+        <ul className="flex list-disc flex-col gap-1 pl-5">
+          <li>Signs you out and revokes every access token.</li>
+          <li>Your work stays under your name; you leave assignee lists and mentions.</li>
           <li>
-            You are signed out everywhere and every access token is revoked, so connected agents and scripts stop
-            working.
-          </li>
-          <li>
-            Your memberships and everything you wrote stay, under your real name. Colleagues see your name greyed out,
-            and you are no longer offered as an assignee or in mentions.
-          </li>
-          <li>
-            We send you a confirmation email. To come back, <EmailUs /> from {user.email}.
+            To come back, <EmailUs /> from <span className="whitespace-nowrap">{user.email}</span>.
           </li>
         </ul>
       </StepUpDialog>
+
+      <OwnedOrganizationsDialog slugs={open ? blocked : null} onClose={close} />
     </SettingsSection>
   );
 }
 
-function OwnedOrganizations({ slugs }: { slugs: readonly string[] }) {
+function OwnedOrganizationsDialog({ slugs, onClose }: { slugs: readonly string[] | null; onClose: () => void }) {
   const router = useRouter();
   const organizations = useOrganizations();
   const switchTo = useSwitchOrganization();
   const name = (slug: string) => organizations.data?.find(o => o.slug === slug)?.name ?? slug;
+  const one = slugs?.length === 1 ? slugs[0] : undefined;
 
   // The danger tab reads the session's organisation, so another one is switched to first.
   const open = (slug: string) =>
     switchTo.mutate(slug, {
       onSuccess: () => router.push('/organization?tab=danger' as Route),
-      onError: error => toast.error(isApiError(error) ? error.message : 'That organisation could not be opened.'),
+      onError: error => toastError('Could not open the organisation', error),
     });
 
   return (
-    <FormAlert title={slugs.length === 1 ? 'You still own an organisation' : 'You still own organisations'}>
-      <p>Someone has to be able to look after it. Transfer ownership, or delete it, first.</p>
-      <ul className="mt-1.5 flex flex-col gap-1">
-        {slugs.map(slug => (
-          <li key={slug}>
-            <button
-              type="button"
-              disabled={switchTo.isPending}
-              onClick={() => open(slug)}
-              className="inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:no-underline"
-            >
-              {name(slug)} - Danger zone <ArrowRight className="size-3" />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </FormAlert>
+    <Dialog open={slugs !== null} onOpenChange={next => (next ? null : onClose())}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{one ? 'You still own an organisation' : 'You still own organisations'}</DialogTitle>
+          <DialogDescription>
+            {one
+              ? `Every organisation needs an Owner. Hand ${name(one)} to someone else or delete it, then deactivate your account.`
+              : 'Every organisation needs an Owner. Hand each of these to someone else or delete it, then deactivate your account.'}
+          </DialogDescription>
+        </DialogHeader>
+        {slugs && !one ? (
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {slugs.map(slug => (
+              <li key={slug}>
+                <button
+                  type="button"
+                  disabled={switchTo.isPending}
+                  onClick={() => open(slug)}
+                  className="action-link font-medium"
+                >
+                  {name(slug)} › Danger zone
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          {one ? (
+            <PendingButton onClick={() => open(one)} pending={switchTo.isPending} pendingLabel="Opening…">
+              Open {name(one)}
+            </PendingButton>
+          ) : null}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import type { AcceptedInvitation, Me } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { AvatarPicker } from '@components/avatar-picker';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -13,15 +12,17 @@ import { StepPanel } from '@components/onboarding/step-panel';
 import { useApiError } from '@hooks/use-api-error';
 import { useUpdateMe } from '@hooks/use-me';
 import { useUpdateMember } from '@hooks/use-members';
+import { PendingButton } from '@components/pending-button';
 
 interface InviteProfileStepProps {
   user: Me;
   accepted: AcceptedInvitation;
+  projectName: string | null;
   stepNumber: number;
   stepCount: number;
 }
 
-export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: InviteProfileStepProps) {
+export function InviteProfileStep({ user, accepted, projectName, stepNumber, stepCount }: InviteProfileStepProps) {
   const router = useRouter();
   const { organization, project_key } = accepted;
   const current = organization.membership.username;
@@ -32,8 +33,8 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
 
   const updateMe = useUpdateMe();
   const updateMember = useUpdateMember(organization.slug);
-  const meError = useApiError(updateMe.error);
-  const memberError = useApiError(updateMember.error);
+  const meError = useApiError(updateMe.error, ['name']);
+  const memberError = useApiError(updateMember.error, ['username']);
   const isPending = updateMe.isPending || updateMember.isPending;
 
   const land = () => router.replace((project_key ? `/projects/${project_key}` : '/projects') as Route);
@@ -52,11 +53,11 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
     <StepPanel
       eyebrow={`Step ${stepNumber} of ${stepCount}`}
       title={`You’re in ${organization.name}`}
-      lede="One last look at how you appear to everyone else here. All of it can be changed later."
+      lede={`${project_key ? `You joined ${organization.name} and its project ${projectName ?? project_key}. ` : ''}Check how you appear to everyone here; all of it can be changed later.`}
       footer={
-        <Button type="submit" form="invite-profile" disabled={isPending}>
-          {isPending ? 'Saving…' : project_key ? `Go to ${project_key}` : 'Go to your projects'}
-        </Button>
+        <PendingButton type="submit" form="invite-profile" pending={isPending} pendingLabel="Saving…">
+          {project_key ? `Save and open ${projectName ?? project_key}` : 'Save and go to your projects'}
+        </PendingButton>
       }
     >
       {meError.summary ? <FormAlert title={meError.summary} /> : null}
@@ -72,7 +73,7 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
         }}
       >
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-text-secondary">Photo</span>
+          <span className="text-sm font-medium text-text-secondary">Photo</span>
           <AvatarPicker user={user} />
         </div>
 
@@ -86,8 +87,7 @@ export function InviteProfileStep({ user, accepted, stepNumber, stepCount }: Inv
 
         <Field
           label={`Your username in ${organization.name}`}
-          className="font-mono"
-          hint="Letters, numbers, dots, hyphens and underscores. Mentions use it — @jordan.rivera — and it is yours in this organisation only."
+          hint={`Mentions use @${username.trim() || current}. Letters, numbers, dots, hyphens and underscores; it is yours in this organisation only.`}
           value={username}
           error={memberError.fields['username']}
           onChange={e => setUsername(e.target.value)}

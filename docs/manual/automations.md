@@ -5,7 +5,7 @@ open subtask of an issue is resolved, or when an issue is marked as a duplicate 
 that fixes ACME-12 and ACME-12 is Fixed, with a line in its history that says why.
 
 Automations belong to a project. Project Admins create and change them; everyone who can read
-the project sees them and what they did. They need a GitHub or GitLab repository linked to the
+the project sees them and what they did, and opens a rule with *View*. They need a GitHub or GitLab repository linked to the
 project for the git triggers; *Resolve parent* and *Close duplicates* work without one.
 
 Every project starts with one rule already on: **Close duplicates**. Mark ACME-14 as
@@ -92,8 +92,8 @@ Review to Fixed*, or why it would leave it alone - and changes nothing.
 ## When things change around a rule
 
 - **You rename a status**: every rule that sets it follows the new name.
-- **You archive or delete the status a rule sets**: the rule is marked *status missing* and skips
-  until you point it at another status.
+- **You archive or delete the status a rule sets**: the rule shows *Status missing* under its
+  trigger and skips every run until you pick another status.
 - **The project is archived**: rules skip, and the run log says so.
 - **A webhook delivery is replayed**: rules run only when the replay asks for them, and only for
   what the replay itself changes - a pull request already recorded as merged does not count as
@@ -102,7 +102,8 @@ Review to Fixed*, or why it would leave it alone - and changes nothing.
 
 ## Limits
 
-The free plan allows 10 automations per project. See [Limits and billing](./limits-and-billing.md).
+The free plan allows 10 automations per project. At the limit, *New automation* is unavailable
+and the editor says how many are in use; delete one to add another. See [Limits and billing](./limits-and-billing.md).
 
 ## Asking an agent
 

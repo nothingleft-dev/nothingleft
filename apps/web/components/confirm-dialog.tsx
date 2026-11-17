@@ -2,20 +2,16 @@
 
 import type { ReactNode } from 'react';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { PendingButton } from '@components/pending-button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 
 interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   confirmLabel: string;
+  /** The confirm verb in progress: "Deleting…", "Removing…". */
+  pendingLabel: string;
   onConfirm: () => void;
   pending?: boolean;
   destructive?: boolean;
@@ -31,14 +27,21 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   confirmLabel,
+  pendingLabel,
   onConfirm,
-  pending,
+  pending = false,
   destructive = true,
   children,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent
+        // The panel takes focus, so Cancel does not open wearing a ring beside the red button.
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription asChild>
@@ -49,9 +52,14 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel
           </Button>
-          <Button variant={destructive ? 'destructive' : 'default'} onClick={onConfirm} disabled={pending}>
-            {pending ? 'Working…' : confirmLabel}
-          </Button>
+          <PendingButton
+            variant={destructive ? 'destructive' : 'default'}
+            onClick={onConfirm}
+            pending={pending}
+            pendingLabel={pendingLabel}
+          >
+            {confirmLabel}
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

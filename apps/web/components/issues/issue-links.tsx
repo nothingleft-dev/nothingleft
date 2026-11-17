@@ -5,16 +5,20 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { ListTree, Plus, Star, X } from 'lucide-react';
 import type { IssueLinkGroup, IssueRef } from '@nothingleft/types';
+import { Tabs } from '@components/tabs';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { IssueKey } from '@components/issue-key';
 import { linkLabel } from '@components/issues/add-links-dialog';
 import { StatusPill } from '@components/issues/status-pill';
 import { TypeBadge } from '@components/issues/value-marks';
 import { useIssueLinks, useRemoveIssueLink, useStarLinkedIssue } from '@hooks/use-issue-links';
+import { useIssue } from '@hooks/use-issues';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { TextButton } from '@components/text-button';
+import { LoadError, errorDetail } from '@components/query-state';
 
 interface IssueLinksProps {
   issueKey: string;
@@ -25,6 +29,9 @@ interface IssueLinksProps {
 
 export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: IssueLinksProps) {
   const links = useIssueLinks(issueKey);
+  const issue = useIssue(issueKey).data;
+  // The first tab is the hierarchy's, which the issue already counts; anything else is unknown until it loads.
+  const expected = issue ? (issue.subtasks.total > 0 ? issue.subtasks.total : issue.parent ? 1 : 0) : 0;
   const groups = links.data ?? [];
   const [chosen, setChosen] = useState<string | null>(null);
   const active = groups.find(g => g.link === chosen) ?? groups[0];
@@ -33,53 +40,48 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
 
   return (
     <section className="mt-8" aria-label="Links">
-      <div className="flex min-h-control flex-wrap items-center gap-x-3 gap-y-1 border-b">
-        <h2 className="text-sm font-semibold">Links</h2>
-        {groups.length > 0 ? (
-          <div role="tablist" aria-label="Link types" className="flex flex-wrap gap-1">
-            {groups.map(g => (
-              <button
-                key={g.link}
-                type="button"
-                role="tab"
-                aria-selected={g.link === active?.link}
-                onClick={() => setChosen(g.link)}
-                className={cn(
-                  'inline-flex h-control-sm items-center gap-1.5 rounded-sm px-2 text-xs text-text-secondary hover:bg-hover hover:text-text',
-                  g.link === active?.link && 'bg-active text-text',
-                )}
-              >
-                {linkLabel(g.link)}
-                <span className="tabular text-text-muted">{g.count}</span>
-              </button>
-            ))}
-          </div>
+      <div className="flex h-control items-center gap-3 border-b">
+        <h2 className="flex-none text-sm font-semibold">Links</h2>
+        {links.isPending && expected > 0 ? (
+          <span aria-hidden className="flex h-full items-center gap-5 px-2.5">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-16" />
+          </span>
+        ) : groups.length > 0 && active ? (
+          <Tabs
+            size="section"
+            ariaLabel="Link types"
+            value={active.link}
+            onChange={setChosen}
+            options={groups.map(g => ({ value: g.link, label: linkLabel(g.link), count: g.count }))}
+          />
         ) : null}
         {canEdit ? (
-          <span className="ml-auto flex gap-1">
+          <span className="ml-auto flex flex-none gap-1">
             <Button variant="ghost" size="xs" onClick={onCreateSubtask} className="text-text-secondary">
-              <ListTree /> Create subtask
+              <ListTree /> <span className="max-sm:sr-only">Create subtask</span>
             </Button>
             <Button variant="ghost" size="xs" onClick={onAddLinks} className="text-text-secondary">
-              <Plus /> Add links
+              <Plus /> <span className="max-sm:sr-only">Add links</span>
             </Button>
           </span>
         ) : null}
       </div>
 
       {links.isPending ? (
-        <LinksSkeleton />
+        <LinksSkeleton rows={Math.min(expected, 8)} />
       ) : links.isError ? (
-        <p className="py-3 text-xs text-danger-fg">The links could not be loaded. {links.error.message}</p>
+        <div className="mt-3">
+          <LoadError onRetry={() => void links.refetch()} detail={errorDetail(links.error)}>
+            The links could not be loaded.
+          </LoadError>
+        </div>
       ) : active ? (
         <LinkRows issueKey={issueKey} group={active} canEdit={canEdit} />
       ) : (
-        <p className="py-3 text-xs text-text-secondary">
-          No linked issues.{' '}
-          <button type="button" onClick={onAddLinks} className="text-text underline underline-offset-2">
-            Add links
-          </button>{' '}
-          to show what this depends on, duplicates or relates to.
+        <p className="pt-3 text-xs text-text-secondary">
+          No linked issues. <TextButton onClick={onAddLinks}>Add links</TextButton> to show what this depends on,
+          duplicates or relates to.
         </p>
       )}
     </section>
@@ -96,10 +98,22 @@ function LinkRows({ issueKey, group, canEdit }: { issueKey: string; group: Issue
         <LinkRow
           key={issue.key}
           issue={issue}
-          onStar={() => star.mutate({ target: issue.key, on: !issue.starred }, { onError: error => toastError(error) })}
+          onStar={() =>
+            star.mutate(
+              { target: issue.key, on: !issue.starred },
+              {
+                onError: error =>
+                  toastError(issue.starred ? `Could not unstar ${issue.key}` : `Could not star ${issue.key}`, error),
+              },
+            )
+          }
           onRemove={
             canEdit
-              ? () => remove.mutate({ link: group.link, target: issue.key }, { onError: error => toastError(error) })
+              ? () =>
+                  remove.mutate(
+                    { link: group.link, target: issue.key },
+                    { onError: error => toastError(`Could not remove the link to ${issue.key}`, error) },
+                  )
               : undefined
           }
           removeLabel={`Remove “${group.link} ${issue.key}”`}
@@ -134,14 +148,14 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
             <Star className={cn('size-3.5', issue.starred && 'fill-current')} />
           </button>
         </TooltipTrigger>
-        <TooltipContent>{issue.starred ? 'Starred' : 'Star'}</TooltipContent>
+        <TooltipContent>{issue.starred ? 'Unstar' : 'Star'}</TooltipContent>
       </Tooltip>
       <TypeBadge type={issue.type} className={cn(issue.resolved && 'opacity-55')} />
       <Link
         href={`/issue/${issue.key}` as Route}
         className="flex min-w-0 flex-1 items-center gap-2 self-stretch hover:underline"
       >
-        <IssueKey issueKey={issue.key} resolved={issue.resolved} className="flex-none" />
+        <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
         <span className={cn('truncate text-sm', issue.resolved && 'text-text-muted')}>{issue.title}</span>
       </Link>
       <StatusPill status={issue.status} className="flex-none max-sm:hidden" />
@@ -153,7 +167,7 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
               size="icon-xs"
               aria-label={removeLabel}
               onClick={onRemove}
-              className="flex-none text-text-muted opacity-0 group-hover/link:opacity-100 focus-visible:opacity-100"
+              className="flex-none text-text-muted reveal group-hover/link:opacity-100"
             >
               <X />
             </Button>
@@ -165,17 +179,30 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
   );
 }
 
-function LinksSkeleton() {
+// With no rows to expect, one line the height of the empty state most issues end on.
+function LinksSkeleton({ rows }: { rows: number }) {
+  if (rows === 0) {
+    return (
+      <div className="flex h-[30px] items-end" aria-hidden>
+        <span className="flex h-[18px] items-center">
+          <Skeleton className="h-3 w-80 max-w-full" />
+        </span>
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col" aria-hidden>
-      {Array.from({ length: 2 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-2 border-b border-border-subtle px-2">
-          <Skeleton className="size-4 rounded-sm" />
-          <Skeleton className="size-4.5 rounded-xs" />
-          <Skeleton className="h-3 w-14" />
-          <Skeleton className="h-3" style={{ width: `${30 + i * 18}%` }} />
-        </div>
+    <ul aria-hidden className="flex flex-col">
+      {Array.from({ length: rows }, (_, i) => (
+        <li key={i} className="flex h-row items-center gap-2 border-b border-border-subtle pr-1 pl-1">
+          <span className="grid size-6 flex-none place-items-center">
+            <Skeleton className="size-3 rounded-full" />
+          </span>
+          <Skeleton className="size-badge-letter flex-none rounded-xs" />
+          <Skeleton className="h-3 w-12 flex-none" />
+          <Skeleton className={cn('h-3', ['w-1/2', 'w-2/5', 'w-1/3'][i % 3])} />
+          <Skeleton className="ml-auto h-3 w-20 flex-none max-sm:hidden" />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

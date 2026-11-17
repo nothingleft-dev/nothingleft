@@ -3,8 +3,8 @@ import { ArrowRight } from 'lucide-react';
 import type { Route } from 'next';
 import type { CSSProperties, ReactNode } from 'react';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
-import { SectionError, StaleNotice } from '@components/dashboard/section';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
+import { LoadError, StaleNotice } from '@components/query-state';
 import { cn } from '@lib/utils';
 
 export interface Stat {
@@ -16,8 +16,8 @@ export interface Stat {
   unitHint?: string;
   /** Overdue and the like: the figure in danger ink when non-zero. */
   alert?: boolean;
-  /** `good: null` is no change, in neutral ink. */
-  delta?: { text: string; good: boolean | null } | null;
+  /** `good: null` is no change, in neutral ink; `warn` is a deviation that is neither good nor bad, in amber. */
+  delta?: { text: string; good: boolean | null; warn?: boolean } | null;
   /** Every number is a link to the list that produced it — DESIGN-SYSTEM § 8. */
   href?: Route;
   /** Inside the link when `href` is set, so never interactive there. */
@@ -74,15 +74,19 @@ export function StatRow({
                   <span className="text-xs font-normal tracking-normal text-text-muted">{stat.unit}</span>
                 )
               ) : null}
-              {stat.delta && known ? (
+              {stat.delta && state !== 'failed' ? (
                 <span
+                  aria-hidden={known ? undefined : true}
                   className={cn(
                     'text-xs font-medium tracking-normal whitespace-nowrap',
-                    stat.delta.good === null
-                      ? 'text-text-muted'
-                      : stat.delta.good
-                        ? 'text-success-fg'
-                        : 'text-danger-fg',
+                    !known && 'invisible',
+                    stat.delta.warn
+                      ? 'text-warning-fg'
+                      : stat.delta.good === null
+                        ? 'text-text-muted'
+                        : stat.delta.good
+                          ? 'text-success-fg'
+                          : 'text-danger-fg',
                   )}
                 >
                   {stat.delta.text}
@@ -93,7 +97,8 @@ export function StatRow({
           const label = (
             <span className="flex items-center gap-1 text-xs text-text-secondary transition-colors group-hover/stat:text-text group-focus-visible/stat:text-text">
               {stat.label}
-              {stat.href && known ? (
+              {/* Present before the cell links too, so the label wraps the same once it does. */}
+              {stat.href ? (
                 <ArrowRight
                   aria-hidden
                   className="size-3 opacity-0 transition-opacity group-hover/stat:opacity-100 group-focus-visible/stat:opacity-100"
@@ -103,7 +108,7 @@ export function StatRow({
           );
           const cell = cn(
             'flex flex-col gap-0.5 border-r py-3 pr-4 pl-4 last:border-r-0',
-            'max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(n+3)]:border-t',
+            'max-sm:[&:nth-child(2n)]:border-r-0 max-sm:[&:nth-child(n+3)]:border-t max-sm:[&:last-child:nth-child(odd)]:col-span-2',
             inset ? 'max-sm:[&:nth-child(2n+1)]:pl-3' : 'max-sm:[&:nth-child(2n+1)]:pl-0',
             i === 0 && (inset ? 'pl-3' : 'pl-0'),
           );
@@ -121,13 +126,13 @@ export function StatRow({
             <div key={stat.label} className={cell}>
               {figure}
               {label}
-              {known ? stat.below : null}
+              {known ? stat.below : stat.below ? <div aria-hidden className="mt-2 h-1 rounded-full bg-inset" /> : null}
             </div>
           );
         })}
       </div>
       {state === 'failed' && onRetry ? (
-        <SectionError onRetry={onRetry}>These figures could not be loaded.</SectionError>
+        <LoadError onRetry={onRetry}>These figures could not be loaded.</LoadError>
       ) : null}
       {state === 'stale' && onRetry ? (
         <StaleNotice onRetry={onRetry}>These figures could not be refreshed and may be out of date.</StaleNotice>
@@ -144,7 +149,7 @@ export function statRowState(query: { isPending: boolean; isError: boolean; data
 
 export function weekDelta(delta: number): NonNullable<Stat['delta']> {
   return {
-    text: `${delta > 0 ? '+' : delta === 0 ? '±' : ''}${delta} vs last week`,
+    text: `${delta > 0 ? '+' : delta === 0 ? '±' : '−'}${Math.abs(delta)} vs last week`,
     good: delta === 0 ? null : delta > 0,
   };
 }

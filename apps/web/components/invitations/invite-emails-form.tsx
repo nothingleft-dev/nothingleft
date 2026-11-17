@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   EMAIL_INVITATION_BATCH_MAX,
@@ -10,7 +10,6 @@ import {
   type ProjectRole,
   type Seats,
 } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { FormAlert } from '@components/auth/form-alert';
 import { EmailChips } from '@components/invitations/email-chips';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
@@ -19,6 +18,8 @@ import { useApiError } from '@hooks/use-api-error';
 import { useInviteByEmail } from '@hooks/use-invitations';
 import type { InviteScope } from '@lib/api/invitations';
 import { ORG_ROLE_HINTS, ORG_ROLE_LABELS, PROJECT_ROLE_HINTS, PROJECT_ROLE_LABELS } from '@lib/roles';
+import { PendingButton } from '@components/pending-button';
+import { cn } from '@lib/utils';
 
 const ORG_OPTIONS: ChoiceOption<OrgRole>[] = ORG_ROLES.map(value => ({
   value,
@@ -39,6 +40,8 @@ interface InviteEmailsFormProps {
   seats?: Seats | undefined;
   onSent?: () => void;
   submitLabel?: string;
+  submitVariant?: 'default' | 'outline';
+  onPendingChange?: (count: number) => void;
 }
 
 export function InviteEmailsForm({
@@ -47,18 +50,22 @@ export function InviteEmailsForm({
   seats,
   onSent,
   submitLabel = 'Send invitations',
+  submitVariant = 'default',
+  onPendingChange,
 }: InviteEmailsFormProps) {
   const [emails, setEmails] = useState<string[]>([]);
   const [orgRole, setOrgRole] = useState<OrgRole>('member');
   const [projectRole, setProjectRole] = useState<ProjectRole>('contributor');
   const invite = useInviteByEmail(scope);
-  const error = useApiError(invite.error);
+  const error = useApiError(invite.error, []);
   const isProject = scope.kind === 'project';
+
+  useEffect(() => onPendingChange?.(emails.length), [emails.length, onPendingChange]);
 
   return (
     <form
       noValidate
-      className="flex flex-col gap-4"
+      className="flex max-w-xl flex-col gap-4"
       onSubmit={event => {
         event.preventDefault();
         if (emails.length === 0) return;
@@ -78,12 +85,11 @@ export function InviteEmailsForm({
         );
       }}
     >
-      {seats ? <SeatNotice seats={seats} /> : null}
-      {error.summary ? <FormAlert title={error.summary} /> : null}
+      {error.summary ? <FormAlert title="The invitations were not sent.">{error.summary}</FormAlert> : null}
 
       <EmailChips value={emails} onChange={setEmails} max={EMAIL_INVITATION_BATCH_MAX} disabled={invite.isPending} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={cn('grid gap-4', isProject && canGrantOrgAdmin && 'sm:grid-cols-2')}>
         {isProject ? (
           <ChoiceSelect
             label="Role in this project"
@@ -106,14 +112,19 @@ export function InviteEmailsForm({
         ) : null}
       </div>
 
-      <div className="flex items-start gap-3 max-sm:flex-col">
-        <Button type="submit" disabled={invite.isPending || emails.length === 0}>
-          {invite.isPending ? 'Sending…' : submitLabel}
-        </Button>
-        <span className="text-xs text-text-muted">
-          Invitations expire in 14 days and can be used once.
-          {isProject ? ' Accepting joins the organisation and this project in one step.' : ''}
-        </span>
+      {seats && emails.length > 0 ? <SeatNotice seats={seats} /> : null}
+
+      <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-start">
+        <PendingButton
+          type="submit"
+          variant={submitVariant}
+          disabled={emails.length === 0}
+          pending={invite.isPending}
+          pendingLabel="Sending…"
+        >
+          {submitLabel}
+        </PendingButton>
+        <span className="text-xs text-text-secondary">Invitations expire in 14 days and work once.</span>
       </div>
     </form>
   );

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import type { WorkCalendar } from '@nothingleft/format';
 import { PALETTE_HUES, type PaletteHue } from '@nothingleft/types';
-import { PersonMark, type DurationUnit, type PersonRef } from '@components/reports/report-bits';
+import { DrillLink, PersonMark, type DurationUnit, type PersonRef } from '@components/reports/report-bits';
 import type { MarkPaint } from '@lib/reports/colors';
 import { cn } from '@lib/utils';
 
@@ -56,11 +56,28 @@ export const cssPaint = (paint: MarkPaint) => ({
 });
 
 /** A swatch beside a label: identity is never colour alone, and text never wears the series colour. */
-export function Swatch({ paint, shape = 'rect' }: { paint: MarkPaint; shape?: 'rect' | 'line' }) {
+export function Swatch({
+  paint,
+  shape = 'rect',
+  outlined = false,
+}: {
+  paint: MarkPaint;
+  /** `band`: a shaded area behind the plot, drawn as a short filled strip with an edge so it reads on its own. */
+  shape?: 'rect' | 'line' | 'band';
+  outlined?: boolean;
+}) {
   return (
     <i
       aria-hidden
-      className={cn('inline-block flex-none', shape === 'rect' ? 'size-2.5 rounded-[3px]' : 'h-0.5 w-3 rounded-full')}
+      className={cn(
+        'inline-block flex-none',
+        shape === 'rect'
+          ? 'size-2.5 rounded-[3px]'
+          : shape === 'band'
+            ? 'h-2 w-3 rounded-[2px]'
+            : 'h-0.5 w-3 rounded-full',
+        (outlined || shape === 'band') && 'border border-border-strong',
+      )}
       style={cssPaint(paint)}
     />
   );
@@ -112,13 +129,20 @@ export function ChartTooltipBody({
 export function ChartLegend({
   items,
 }: {
-  items: readonly { key: string; label: string; paint: MarkPaint; shape?: 'rect' | 'line'; person?: PersonRef }[];
+  items: readonly {
+    key: string;
+    label: string;
+    paint: MarkPaint;
+    shape?: 'rect' | 'line' | 'band';
+    outlined?: boolean;
+    person?: PersonRef;
+  }[];
 }) {
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary">
       {items.map(item => (
         <li key={item.key} className="inline-flex items-center gap-1.5">
-          <Swatch paint={item.paint} shape={item.shape} />
+          <Swatch paint={item.paint} shape={item.shape} outlined={item.outlined} />
           {item.person ? <PersonMark name={item.label} {...item.person} small /> : null}
           {item.label}
         </li>
@@ -131,32 +155,48 @@ const truncate = (text: string, max: number) => (text.length > max ? `${text.sli
 
 /**
  * A category label on one line, shortened; the tooltip and the table carry the whole name. A person
- * wears their picture between the name and the axis.
+ * wears their picture before their name, as in the table; with `links`, the label opens the issues it
+ * counts and carries its colour's swatch, as the table's row heading does.
  */
 export function CategoryTick({
   x = 0,
   y = 0,
   payload,
   people,
+  links,
+  width = 168,
 }: {
   x?: number;
   y?: number;
   payload?: { value: string };
   people?: ReadonlyMap<string, PersonRef>;
+  links?: ReadonlyMap<string, { paint: MarkPaint | null; query: string | null }>;
+  width?: number;
 }) {
   const label = payload?.value ?? '';
   const person = people?.get(label);
-  return (
-    <g>
-      <text x={person ? x - 24 : x} y={y} dy={4} textAnchor="end" fill="var(--text-secondary)" fontSize={12}>
-        {truncate(label, person ? 23 : 26)}
+  const link = links?.get(label);
+  if (!person && !link) {
+    return (
+      <text x={x} y={y} dy={4} textAnchor="end" fill="var(--text-secondary)" fontSize={12}>
+        {truncate(label, 26)}
       </text>
-      {person ? (
-        <foreignObject x={x - 20} y={y - 8} width={16} height={16}>
-          <PersonMark name={label} {...person} small />
-        </foreignObject>
-      ) : null}
-    </g>
+    );
+  }
+  return (
+    <foreignObject x={x - width} y={y - 10} width={width - 4} height={20}>
+      <span className="flex h-5 items-center justify-end gap-1.5 text-xs text-text-secondary" title={label}>
+        {link?.paint ? <Swatch paint={link.paint} /> : null}
+        {person ? <PersonMark name={label} {...person} small /> : null}
+        {link ? (
+          <DrillLink query={link.query} className="truncate">
+            {label}
+          </DrillLink>
+        ) : (
+          <span className="truncate">{label}</span>
+        )}
+      </span>
+    </foreignObject>
   );
 }
 
@@ -173,7 +213,7 @@ export const peopleByLabel = (
 export function durationTicks(max: number, calendar: WorkCalendar): number[] {
   const day = calendar.workdayMinutes;
   const week = day * calendar.workweekDays;
-  if (max > week * 5) return niceTicks(max / week, [1, 2, 5, 10]).map(w => w * week);
+  if (max > week * 5) return niceTicks(max / week, [1, 2, 5, 10], { minStep: 1 }).map(w => w * week);
   const step = [15, 30, 60, 120, 240, day, day * 2, week].find(s => Math.ceil(max / s) <= 5) ?? week;
   return Array.from({ length: Math.ceil(max / step) + 1 }, (_, i) => i * step);
 }
@@ -181,14 +221,27 @@ export function durationTicks(max: number, calendar: WorkCalendar): number[] {
 /** Ticks in the unit the viewer reads: round hours or days, or round durations. */
 export function unitTicks(max: number, unit: DurationUnit, calendar: WorkCalendar): number[] {
   const top = Math.max(max, 1);
-  if (unit === 'hours') return niceTicks(top / 60).map(h => h * 60);
+  if (unit === 'hours') return niceTicks(top / 60, undefined, { minStep: 1 }).map(h => h * 60);
   if (unit === 'days') return niceTicks(top / calendar.workdayMinutes).map(d => d * calendar.workdayMinutes);
   return durationTicks(top, calendar);
 }
 
-/** Round ticks for the axis — 0 / 20 / 40 / 60 rather than stopping at 58.3. */
-export function niceTicks(value: number, multiples: readonly number[] = [1, 2, 2.5, 5, 10]): number[] {
+/**
+ * Round ticks for the axis — 0 / 25 / 50 / 75 / 100 / 125 rather than stopping at 58.3, or leaping to 200 for
+ * a top of 104: the coarsest round step that still gives three to five intervals.
+ */
+export function niceTicks(
+  value: number,
+  multiples: readonly number[] = [1, 2, 2.5, 5, 10],
+  { minStep = 0 }: { minStep?: number } = {},
+): number[] {
   const magnitude = 10 ** Math.floor(Math.log10(value));
-  const step = multiples.map(m => m * magnitude).find(s => Math.ceil(value / s) <= 5) ?? magnitude * 10;
-  return Array.from({ length: Math.ceil(value / step) + 1 }, (_, i) => i * step);
+  const steps = [magnitude / 10, magnitude]
+    .flatMap(m => multiples.map(k => k * m))
+    .filter(s => s >= minStep)
+    .toSorted((a, b) => a - b);
+  const intervals = (s: number) => Math.ceil(value / s);
+  const step =
+    steps.findLast(s => intervals(s) >= 3 && intervals(s) <= 5) ?? steps.find(s => intervals(s) <= 5) ?? magnitude * 10;
+  return Array.from({ length: intervals(step) + 1 }, (_, i) => i * step);
 }

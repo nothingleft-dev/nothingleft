@@ -3,13 +3,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { Me, TwoFactorChallenge, TwoFactorSignIn } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
-import { AuthHeading, TextLink } from '@components/auth/auth-card';
+import { AlertLink, INLINE_LINK, AuthHeading } from '@components/auth/auth-card';
 import { CODE_LENGTH, CodeInput } from '@components/auth/code-input';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { signInWithTwoFactor } from '@lib/api/auth';
-import { isApiError } from '@lib/api/errors';
+import { isApiError, isRateLimited } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
+import { RateLimitWait } from '@components/rate-limit';
+import { useRateLimit } from '@hooks/use-rate-limit';
 
 // The API's own sentence for two_factor.challenge_expired, for when the clock runs out before
 // anything is sent.
@@ -29,6 +31,7 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
 
   const verify = useMutation({
     mutationFn: (body: TwoFactorSignIn) => signInWithTwoFactor(body).then(r => r.data),
+    meta: { rateLimit: 'inline' },
     onSuccess: onSignedIn,
     onError: error => {
       if (isApiError(error) && error.code === 'two_factor.challenge_expired') onExpired(error.message);
@@ -42,11 +45,14 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
     return () => window.clearTimeout(timer);
   }, [challenge.expires_at, onExpired]);
 
+  const { secondsLeft } = useRateLimit();
   const error = verify.error;
   const locked = isApiError(error) && error.code === 'auth.account_locked';
+  const limited = isRateLimited(error);
+  const waiting = limited && secondsLeft > 0;
   const message =
     missing ??
-    (error && !locked
+    (error && !locked && !limited
       ? isApiError(error)
         ? error.message
         : 'The server could not be reached. Try again.'
@@ -88,7 +94,12 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
 
       {locked ? (
         <FormAlert title={error.message}>
-          Wait, then <TextLink href="/sign-in">sign in again</TextLink> with your password.
+          Wait, then <AlertLink href="/sign-in">sign in again</AlertLink> with your password.
+        </FormAlert>
+      ) : null}
+      {limited ? (
+        <FormAlert title="Too many attempts.">
+          <RateLimitWait />
         </FormAlert>
       ) : null}
 
@@ -98,7 +109,7 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
             label="Two-factor code"
             autoFocus
             value={code}
-            disabled={verify.isPending || locked}
+            disabled={verify.isPending || locked || waiting}
             error={message}
             onChange={value => {
               setCode(value);
@@ -117,7 +128,7 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
             className="font-mono"
             hint="Spaces, dashes and capitals do not matter."
             value={recovery}
-            disabled={verify.isPending || locked}
+            disabled={verify.isPending || locked || waiting}
             error={message}
             onChange={event => {
               setRecovery(event.target.value);
@@ -125,18 +136,20 @@ export function TwoFactorStep({ challenge, onSignedIn, onExpired }: TwoFactorSte
             }}
           />
         )}
-        <Button type="submit" disabled={verify.isPending || locked} className="mt-1 w-full">
-          {verify.isPending ? 'Verifying…' : 'Verify'}
-        </Button>
+        <PendingButton
+          type="submit"
+          disabled={locked || waiting}
+          className="mt-1 w-full"
+          pending={verify.isPending}
+          pendingLabel="Verifying…"
+        >
+          Verify
+        </PendingButton>
       </form>
 
       <p className="text-sm text-text-secondary">
         {mode === 'code' ? 'Lost your phone? ' : 'Have your phone? '}
-        <button
-          type="button"
-          onClick={() => switchTo(mode === 'code' ? 'recovery' : 'code')}
-          className="font-medium text-text underline-offset-4 hover:underline"
-        >
+        <button type="button" onClick={() => switchTo(mode === 'code' ? 'recovery' : 'code')} className={INLINE_LINK}>
           {mode === 'code' ? 'Use a recovery code' : 'Use your authenticator app'}
         </button>
       </p>

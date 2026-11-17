@@ -4,17 +4,23 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import {
+  Check,
   ChevronRight,
+  Copy,
   ExternalLink,
   GitBranch,
   GitCommitHorizontal,
   Link2,
   MoreHorizontal,
   Unlink,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { urlSlug } from '@nothingleft/format';
 import type {
   GitBranch as GitBranchDto,
+  GitCheckConclusion,
+  GitCheckStatus,
   GitCommit,
   GitLinkInfo,
   GitProviderKind,
@@ -23,8 +29,8 @@ import type {
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +40,7 @@ import {
 } from '@components/ui/dropdown-menu';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
+import { LoadError } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
 import { GitAuthorAvatar, GitAuthorLine } from '@components/git/git-author';
 import { HueChip, HueDot, PullRequestIcon, PullRequestStateChip } from '@components/git/git-marks';
@@ -45,6 +52,7 @@ import {
   CI_STATE,
   LINK_SOURCE,
   REVIEWER_STATE,
+  branchNameFor,
   capitalize,
   checkTone,
   count,
@@ -59,6 +67,7 @@ const FAILED = ['failure', 'timed_out', 'cancelled', 'action_required'];
 
 interface DevelopmentPanelProps {
   issueKey: string;
+  issueTitle: string;
   projectKey: string;
   canLink: boolean;
   canAdminProject: boolean;
@@ -68,6 +77,7 @@ interface DevelopmentPanelProps {
 
 export function DevelopmentPanel({
   issueKey,
+  issueTitle,
   projectKey,
   canLink,
   canAdminProject,
@@ -79,16 +89,11 @@ export function DevelopmentPanel({
   if (development.isPending) return <DevelopmentSkeleton />;
   if (development.isError && !development.data) {
     return (
-      <EmptyState
-        className="mt-3"
-        title="The development panel could not be loaded."
-        description={development.error.message}
-        action={
-          <Button variant="outline" size="sm" onClick={() => void development.refetch()}>
-            Try again
-          </Button>
-        }
-      />
+      <div className="mt-3">
+        <LoadError onRetry={() => void development.refetch()} detail={development.error.message}>
+          The development panel could not be loaded.
+        </LoadError>
+      </div>
     );
   }
 
@@ -101,7 +106,7 @@ export function DevelopmentPanel({
         description={
           canAdminProject
             ? 'Link a GitHub or GitLab repository in project settings, and branches, commits and pull requests that name an issue will show here.'
-            : 'A Project Admin can link a GitHub or GitLab repository in project settings; ask yours.'
+            : 'Ask a Project Admin to link a GitHub or GitLab repository in project settings. Branches, commits and pull requests that name an issue will then show here.'
         }
         action={
           canAdminProject ? (
@@ -114,7 +119,9 @@ export function DevelopmentPanel({
     );
   }
 
-  if (data.repositories.length === 0) return <NothingYet issueKey={issueKey} canLink={canLink} onLink={onLink} />;
+  if (data.repositories.length === 0) {
+    return <NothingYet issueKey={issueKey} issueTitle={issueTitle} canLink={canLink} onLink={onLink} />;
+  }
 
   return (
     <div className="flex flex-col gap-5 pt-3">
@@ -129,7 +136,7 @@ export function DevelopmentPanel({
       ))}
       {canLink ? (
         <div>
-          <Button variant="ghost" size="sm" className="text-text-secondary" onClick={onLink}>
+          <Button variant="outline" size="sm" onClick={onLink}>
             <Link2 /> Link a pull request
           </Button>
         </div>
@@ -138,27 +145,75 @@ export function DevelopmentPanel({
   );
 }
 
-function NothingYet({ issueKey, canLink, onLink }: { issueKey: string; canLink: boolean; onLink: () => void }) {
-  const lower = issueKey.toLowerCase();
+function NothingYet({
+  issueKey,
+  issueTitle,
+  canLink,
+  onLink,
+}: {
+  issueKey: string;
+  issueTitle: string;
+  canLink: boolean;
+  onLink: () => void;
+}) {
+  const examples = [
+    { label: 'In a branch name', what: 'Branch name', value: `feat/${branchNameFor(issueKey, urlSlug(issueTitle))}` },
+    { label: 'In a commit message', what: 'Commit message', value: `${issueKey}: ${issueTitle}` },
+    { label: 'In a pull request description', what: 'Pull request line', value: `Fixes ${issueKey}` },
+  ];
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-md border border-dashed px-4 py-5">
-      <p className="font-medium">No branches, commits or pull requests reference {issueKey} yet.</p>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
-        <dt className="text-text-secondary">A branch name</dt>
-        <dd className="font-mono text-text">feat/{lower}-login-redirect</dd>
-        <dt className="text-text-secondary">A commit message</dt>
-        <dd className="font-mono text-text">{issueKey}: keep the return path</dd>
-        <dt className="text-text-secondary">A pull request</dt>
-        <dd className="font-mono text-text">Fixes {issueKey}</dd>
-      </dl>
-      {canLink ? (
-        <div>
-          <Button variant="outline" size="sm" onClick={onLink}>
-            <Link2 /> Link a pull request
-          </Button>
+    <EmptyState
+      className="mt-3"
+      title={`No branches, commits or pull requests reference ${issueKey} yet.`}
+      description={`Name ${issueKey} in any of these and it links here by itself.`}
+      action={
+        <div className="flex flex-col gap-3">
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 text-xs">
+            {examples.map(example => (
+              <div key={example.label} className="contents">
+                <dt className="text-text-secondary">{example.label}</dt>
+                <dd className="flex min-w-0 items-center gap-1">
+                  <span className="min-w-0 truncate font-mono text-text" title={example.value}>
+                    {example.value}
+                  </span>
+                  <CopyExample value={example.value} what={example.what} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {canLink ? (
+            <div>
+              <Button variant="outline" size="sm" onClick={onLink}>
+                <Link2 /> Link a pull request
+              </Button>
+            </div>
+          ) : null}
         </div>
-      ) : null}
-    </div>
+      }
+    />
+  );
+}
+
+function CopyExample({ value, what }: { value: string; what: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      className="flex-none text-text-muted"
+      aria-label={copied ? `${what} copied` : `Copy ${what.toLowerCase()}`}
+      onClick={() =>
+        navigator.clipboard.writeText(value).then(
+          () => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          },
+          () => toast.error(`The ${what.toLowerCase()} could not be copied. Your browser blocked the clipboard.`),
+        )
+      }
+    >
+      {copied ? <Check /> : <Copy />}
+    </Button>
   );
 }
 
@@ -255,20 +310,25 @@ function PullRequestCard({
       <div className="flex items-start gap-2.5 px-3 pt-2.5">
         <PullRequestIcon state={pr.state} className="mt-0.5" />
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <ExternalText href={pr.html_url} className="font-mono text-xs text-text-secondary">
-              {pr.ref}
+          <p className="min-w-0 text-sm [overflow-wrap:anywhere]">
+            <ExternalText href={pr.html_url} className="mr-2 font-mono text-xs text-text-secondary">
+              {pr.ref.startsWith(pr.repository.full_name) ? pr.ref.slice(pr.repository.full_name.length) : pr.ref}
             </ExternalText>
-            <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{pr.title}</span>
-          </div>
+            <span className="font-medium">{pr.title}</span>
+          </p>
           <div className="flex flex-wrap items-center gap-1.5">
             <PullRequestStateChip state={pr.state} />
-            {pr.link?.intent === 'closes' ? <HueChip hue="gray">Closes {issueKey}</HueChip> : null}
-            {pr.is_revert ? <HueChip hue="orange">Revert</HueChip> : null}
+            {pr.is_revert ? <HueChip hue="gray">Revert</HueChip> : null}
             {pr.reverted ? <HueChip hue="orange">Reverted</HueChip> : null}
             {open ? <CiChip pr={pr} /> : null}
-            {open && pr.review_state === 'approved' ? <HueChip hue="green">Approved</HueChip> : null}
+            {open && pr.review_state === 'approved' ? <HueChip hue="gray">Approved</HueChip> : null}
             {open && pr.review_state === 'changes_requested' ? <HueChip hue="red">Changes requested</HueChip> : null}
+            {pr.link?.intent === 'closes' ? (
+              <span className="inline-flex items-center gap-1 pl-1 text-2xs text-text-secondary">
+                <Link2 aria-hidden className="size-3 text-text-muted" />
+                Closes {issueKey}
+              </span>
+            ) : null}
           </div>
         </div>
         <CardMenu
@@ -281,26 +341,43 @@ function PullRequestCard({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pt-2 pb-2.5 pl-[38px] text-xs text-text-secondary">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 pt-2 pb-2.5 pl-[38px] text-xs text-text-secondary">
         <span className="inline-flex min-w-0 items-center gap-1 font-mono text-2xs">
           <GitBranch className="size-3 text-text-muted" aria-hidden />
           <span className="truncate">{pr.head_label}</span>
           <span className="text-text-muted">→</span>
           <span>{pr.base_ref}</span>
         </span>
-        <GitAuthorLine author={pr.author} provider={provider} />
-        <ThisIsMe author={pr.author} provider={provider} repositoryUrl={pr.repository.html_url} />
-        {pr.reviewers.length > 0 ? <Reviewers pr={pr} /> : null}
-        {pr.additions !== null && pr.deletions !== null ? (
-          <span className="font-mono text-2xs tabular">
-            <span className="text-success-fg">+{formatCount(pr.additions)}</span>{' '}
-            <span className="text-danger-fg">−{formatCount(pr.deletions)}</span>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 sm:ml-auto sm:gap-x-2">
+          <GitAuthorLine author={pr.author} provider={provider} />
+          {pr.reviewers.length > 0 ? (
+            <>
+              <Separator />
+              <Reviewers pr={pr} />
+            </>
+          ) : null}
+          {pr.additions !== null && pr.deletions !== null ? (
+            <>
+              <Separator />
+              <span className="font-mono text-2xs whitespace-nowrap text-text-secondary tabular">
+                <span className="text-success-fg">+</span>
+                {formatCount(pr.additions)} <span className="text-danger-fg">−</span>
+                {formatCount(pr.deletions)}
+              </span>
+            </>
+          ) : null}
+          <Separator />
+          <span className="whitespace-nowrap">
+            {verb} <RelativeTime value={when} timeZone={timeZone} />
           </span>
-        ) : null}
-        <span>
-          {verb} <RelativeTime value={when} timeZone={timeZone} />
         </span>
       </div>
+      <ThisIsMe
+        author={pr.author}
+        provider={provider}
+        repositoryUrl={pr.repository.html_url}
+        className="px-3 pb-2.5 pl-[38px]"
+      />
 
       {commits.length > 0 ? (
         <div className="border-t">
@@ -311,12 +388,9 @@ function PullRequestCard({
             className="flex h-8 w-full items-center gap-1.5 px-3 text-xs text-text-secondary hover:bg-hover hover:text-text"
           >
             <ChevronRight aria-hidden className={cn('size-3.5 transition-transform', expanded && 'rotate-90')} />
-            {count(commits.length, 'commit')}
-            {pr.commits_total !== null && pr.commits_total > pr.commits_scanned ? (
-              <span className="text-text-muted">
-                · {formatCount(pr.commits_scanned)} of {formatCount(pr.commits_total)} commits scanned
-              </span>
-            ) : null}
+            {pr.commits_total !== null && pr.commits_total > pr.commits_scanned
+              ? `${count(pr.commits_total, 'commit')} · ${formatCount(commits.length)} shown`
+              : count(commits.length, 'commit')}
           </button>
           {expanded ? (
             <ul className="divide-y divide-border-subtle border-t">
@@ -338,19 +412,45 @@ function PullRequestCard({
   );
 }
 
-function Reviewers({ pr }: { pr: GitPullRequest }) {
-  const provider = pr.repository.provider;
+// On phones the group wraps, and a dot would end or start a line; the gap alone separates there.
+function Separator() {
   return (
-    <span className="inline-flex items-center gap-1">
+    <span aria-hidden className="text-text-muted max-sm:hidden">
+      ·
+    </span>
+  );
+}
+
+const REVIEWER_GLYPH = { approved: Check, changes_requested: X } as const;
+
+function ReviewerMark({ state }: { state: GitPullRequest['reviewers'][number]['state'] }) {
+  const Glyph = state === 'approved' || state === 'changes_requested' ? REVIEWER_GLYPH[state] : null;
+  const { hue } = REVIEWER_STATE[state];
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        `c-${hue} absolute -right-1 -bottom-1 grid size-3 place-items-center rounded-full ring-[1.5px] ring-surface`,
+        Glyph ? 'bg-c-solid text-surface' : 'bg-surface shadow-[inset_0_0_0_1.5px_var(--c-solid)]',
+      )}
+    >
+      {Glyph ? <Glyph className="size-2" strokeWidth={4} /> : null}
+    </span>
+  );
+}
+
+function Reviewers({ pr }: { pr: GitPullRequest }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
       {pr.reviewers.map((reviewer, i) => {
-        const { label, hue } = REVIEWER_STATE[reviewer.state];
+        const { label } = REVIEWER_STATE[reviewer.state];
         const name = reviewer.author.member?.name ?? (reviewer.author.login ? `@${reviewer.author.login}` : 'Someone');
         return (
           <Tooltip key={i}>
             <TooltipTrigger asChild>
               <span role="img" className="relative inline-flex cursor-help" aria-label={`${name} ${label}`}>
-                <GitAuthorAvatar author={reviewer.author} provider={provider} className="size-5" />
-                <HueDot hue={hue} className="absolute -right-0.5 -bottom-0.5 size-2 ring-[1.5px] ring-surface" />
+                <GitAuthorAvatar author={reviewer.author} className="size-5" />
+                <ReviewerMark state={reviewer.state} />
               </span>
             </TooltipTrigger>
             <TooltipContent>
@@ -380,7 +480,7 @@ function CiChip({ pr }: { pr: GitPullRequest }) {
           </HueChip>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[360px] max-w-[calc(100vw-32px)] p-0">
+      <PopoverContent align="start" className="w-[420px] max-w-[calc(100vw-32px)] p-0">
         <div className="border-b px-3 py-2 text-xs font-medium">Checks on {pr.ref}</div>
         {detail.isPending ? (
           <div className="flex flex-col gap-2 p-3" aria-label="Loading checks">
@@ -389,35 +489,44 @@ function CiChip({ pr }: { pr: GitPullRequest }) {
             ))}
           </div>
         ) : detail.isError ? (
-          <p className="px-3 py-3 text-xs text-danger-fg">{detail.error.message}</p>
+          <div className="p-2">
+            <LoadError onRetry={() => void detail.refetch()} detail={detail.error.message}>
+              The checks could not be loaded.
+            </LoadError>
+          </div>
         ) : detail.data.checks.length === 0 ? (
           <p className="px-3 py-3 text-xs text-text-secondary">No checks have reported on the latest commit.</p>
         ) : (
           <ul className="max-h-72 divide-y divide-border-subtle overflow-y-auto">
-            {detail.data.checks.map((check, i) => {
+            {sortChecks(detail.data.checks).map((check, i) => {
               const tone = checkTone(check.status, check.conclusion);
               const took = elapsed(check.started_at, check.completed_at);
               return (
-                <li key={`${check.name}-${i}`} className="flex h-8 items-center gap-2 px-3 text-xs">
+                <li
+                  key={`${check.name}-${i}`}
+                  className="grid h-8 grid-cols-[auto_minmax(0,1fr)_6.5rem_3.5rem_1.25rem] items-center gap-2 px-3 text-xs"
+                >
                   <HueDot hue={tone.hue} />
-                  <span className="min-w-0 flex-1 truncate">{check.name}</span>
-                  <span className={cn('text-text-secondary', tone.hue === 'red' && 'text-danger-fg')}>
+                  <span className="truncate" title={check.name}>
+                    {check.name}
+                  </span>
+                  <span className={cn('truncate text-text-secondary', tone.hue === 'red' && 'text-danger-fg')}>
                     {tone.label}
                   </span>
-                  {took ? (
-                    <span className="w-14 text-right font-mono text-2xs text-text-muted tabular">{took}</span>
-                  ) : null}
+                  <span className="text-right font-mono text-2xs text-text-secondary tabular">{took}</span>
                   {check.details_url ? (
                     <a
                       href={check.details_url}
                       target="_blank"
                       rel="noreferrer noopener"
                       aria-label={`Open ${check.name}`}
-                      className="text-text-muted hover:text-text"
+                      className="grid size-5 place-items-center rounded-xs text-text-muted hover:bg-hover hover:text-text"
                     >
                       <ExternalLink className="size-3.5" />
                     </a>
-                  ) : null}
+                  ) : (
+                    <span />
+                  )}
                 </li>
               );
             })}
@@ -425,6 +534,18 @@ function CiChip({ pr }: { pr: GitPullRequest }) {
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+const CHECK_ORDER = { red: 0, amber: 1, gray: 2, green: 3, orange: 0, blue: 2 } as const;
+
+function sortChecks<T extends { name: string; status: GitCheckStatus; conclusion: GitCheckConclusion | null }>(
+  checks: T[],
+): T[] {
+  return [...checks].sort(
+    (a, b) =>
+      CHECK_ORDER[checkTone(a.status, a.conclusion).hue] - CHECK_ORDER[checkTone(b.status, b.conclusion).hue] ||
+      a.name.localeCompare(b.name),
   );
 }
 
@@ -565,6 +686,7 @@ function CardMenu({
           onOpenChange={setConfirming}
           title={`Unlink this ${what} from ${issueKey}?`}
           confirmLabel="Unlink"
+          pendingLabel="Unlinking…"
           destructive={false}
           pending={unlink.isPending}
           onConfirm={() =>
@@ -572,16 +694,16 @@ function CardMenu({
               .mutateAsync(link.link_id)
               .then(
                 () => toast.success(`Unlinked from ${issueKey}.`),
-                (error: Error) => toastError(error),
+                (error: Error) => toastError(`Could not unlink it from ${issueKey}`, error),
               )
               .finally(() => setConfirming(false))
           }
         >
-          <p>It leaves the Development tab and the badge for everyone, and the history records who unlinked it.</p>
           <p>
+            {issueKey} stops showing it for everyone. The history records who unlinked it.{' '}
             {manual
-              ? 'It was linked by hand, so it stays unlinked.'
-              : 'The same reference will not bring it back. A new reference — a later commit naming it — will link it again.'}
+              ? 'Because it was linked by hand, nothing links it again by itself.'
+              : `A later commit or pull request that names ${issueKey} links it again.`}
           </p>
         </ConfirmDialog>
       ) : null}
@@ -594,16 +716,25 @@ function DevelopmentSkeleton() {
     <div className="flex flex-col gap-2 pt-3" role="status" aria-label="Loading development">
       <Skeleton className="h-3 w-40" />
       {Array.from({ length: 2 }, (_, i) => (
-        <div key={i} className="flex flex-col gap-2 rounded-md border px-3 py-3">
-          <div className="flex items-center gap-2">
-            <Skeleton className="size-4 rounded-full" />
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-3 w-64" />
+        <div key={i} className="rounded-md border">
+          <div className="flex flex-col gap-2 px-3 pt-3 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-4 rounded-full" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-64" />
+            </div>
+            <div className="flex gap-2 pl-6">
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+            <div className="flex items-center gap-4 pt-1 pl-6">
+              <Skeleton className="h-3 w-56" />
+              <Skeleton className="ml-auto h-3 w-64" />
+            </div>
           </div>
-          <div className="flex gap-2 pl-6">
-            <Skeleton className="h-5 w-16" />
-            <Skeleton className="h-5 w-20" />
-            <Skeleton className="h-5 w-24" />
+          <div className="flex h-8 items-center border-t px-3">
+            <Skeleton className="h-3 w-24" />
           </div>
         </div>
       ))}

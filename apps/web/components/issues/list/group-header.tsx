@@ -31,28 +31,33 @@ export function GroupHeader({ group, groupBy, category, loaded, collapsed, onTog
         onClick={onToggle}
         aria-expanded={!collapsed}
         className={cn(
-          'flex h-8 w-full items-center gap-2 rounded-sm bg-app px-2 text-left text-xs font-medium text-text-secondary hover:text-text',
+          'flex h-8 w-full items-center gap-2 rounded-sm bg-app px-2 text-left text-xs font-medium text-text-secondary hover:bg-hover hover:text-text',
           overdue && 'text-danger-fg hover:text-danger-fg',
         )}
       >
-        <ChevronDown
-          className={cn(
-            'size-3 flex-none text-text-muted transition-transform duration-(--dur-fast)',
-            collapsed && '-rotate-90',
-          )}
-        />
-        {groupBy === 'status' && group.color ? (
-          <StatusDot category={category ?? 'unstarted'} color={group.color as LabelColor} />
-        ) : groupBy === 'project' && group.value ? (
-          <ProjectMarkByKey projectKey={group.value} />
-        ) : groupBy.startsWith('custom:') && group.color ? (
-          <i aria-hidden className={cn(`l-${group.color}`, 'inline-block size-2 flex-none rounded-full bg-c-solid')} />
-        ) : null}
-        <span className="truncate">{group.label}</span>
-        <span className="font-normal tabular text-text-muted">{group.count}</span>
-        {!collapsed && loaded < group.count ? (
-          <span className="font-normal text-text-muted">· showing {loaded}</span>
-        ) : null}
+        <span className="sticky left-2 flex min-w-0 items-center gap-2">
+          <ChevronDown
+            className={cn(
+              'size-3 flex-none text-text-muted transition-transform duration-(--dur-fast)',
+              collapsed && '-rotate-90',
+            )}
+          />
+          {groupBy === 'status' && group.color ? (
+            <StatusDot category={category ?? 'unstarted'} color={group.color as LabelColor} />
+          ) : groupBy === 'project' && group.value ? (
+            <ProjectMarkByKey projectKey={group.value} />
+          ) : groupBy.startsWith('custom:') && group.color ? (
+            <i
+              aria-hidden
+              className={cn(`l-${group.color}`, 'inline-block size-2 flex-none rounded-full bg-c-solid')}
+            />
+          ) : null}
+          <span className="truncate">{group.label}</span>
+          <span className="font-normal tabular text-text-muted">{group.count}</span>
+          {!collapsed && loaded < group.count ? (
+            <span className="font-normal text-text-muted">· showing {loaded}</span>
+          ) : null}
+        </span>
       </button>
     </div>
   );

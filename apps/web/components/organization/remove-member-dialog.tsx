@@ -5,14 +5,7 @@ import { toast } from 'sonner';
 import { formatDuration } from '@nothingleft/format';
 import type { Member, Organization } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';
@@ -21,6 +14,7 @@ import { useApiError } from '@hooks/use-api-error';
 import { useMembers, useRemovalPreview, useRemoveMember } from '@hooks/use-members';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 type IssueChoice = 'reassign' | 'unassign';
 type ViewChoice = 'delete' | 'transfer';
@@ -35,7 +29,13 @@ interface RemoveMemberDialogProps {
 export function RemoveMemberDialog({ organization, member, onClose }: RemoveMemberDialogProps) {
   return (
     <Dialog open={member !== null} onOpenChange={open => (open ? null : onClose())}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent
+        className="sm:max-w-2xl"
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          (event.currentTarget as HTMLElement).focus();
+        }}
+      >
         {member ? (
           <RemovalForm key={member.username} organization={organization} member={member} onClose={onClose} />
         ) : null}
@@ -56,7 +56,7 @@ function RemovalForm({
   const preview = useRemovalPreview(organization.slug, member.username);
   const everyone = useMembers(organization.slug, { limit: 100 });
   const remove = useRemoveMember(organization.slug);
-  const error = useApiError(remove.error ?? preview.error);
+  const error = useApiError(remove.error ?? preview.error, ['reassign_to', 'transfer_views_to']);
   const calendar = useWorkCalendar();
 
   const [issueChoice, setIssueChoice] = useState<IssueChoice | null>(null);
@@ -94,7 +94,14 @@ function RemovalForm({
     );
   };
 
-  const fieldError = error.fields['reassign_to'] ?? error.fields['transfer_views_to'];
+  // A refusal is about the choice it was sent with; a new choice clears it.
+  const choose =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      if (remove.isError) remove.reset();
+    };
+  const absent = data ? KEPT.filter(row => (data[row.key] ?? 0) === 0).map(row => row.none) : [];
 
   return (
     <>
@@ -108,7 +115,13 @@ function RemovalForm({
         </DialogDescription>
       </DialogHeader>
 
-      {error.summary || fieldError ? <FormAlert title={error.summary ?? fieldError!} /> : null}
+      {error.summary ? (
+        <FormAlert
+          title={remove.error ? `${member.name} was not removed.` : 'What removal changes could not be loaded.'}
+        >
+          {error.summary}
+        </FormAlert>
+      ) : null}
 
       <div className="overflow-x-auto">
         <div role="table" aria-label="What removal changes" className="min-w-[520px] border-y text-sm">
@@ -117,13 +130,25 @@ function RemovalForm({
             count={data?.open_assigned}
             below={
               hasOpen && issues === 'reassign' ? (
-                <MemberPicker
-                  people={candidates}
-                  value={reassignTo}
-                  onChange={setReassignTo}
-                  placeholder="Choose who takes them"
-                  label="Reassign open issues to"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <MemberPicker
+                    people={candidates}
+                    value={reassignTo}
+                    onChange={choose(setReassignTo)}
+                    placeholder="Choose a member"
+                    label="Reassign open issues to"
+                    invalid={error.fields['reassign_to'] !== undefined}
+                  />
+                  {error.fields['reassign_to'] ? (
+                    <FieldProblem>{error.fields['reassign_to']}</FieldProblem>
+                  ) : reassignTo === null ? (
+                    <span className="text-xs text-text-secondary">
+                      Choose who takes{' '}
+                      {data!.open_assigned === 1 ? 'the open issue' : `the ${data!.open_assigned} open issues`}, or
+                      leave {data!.open_assigned === 1 ? 'it' : 'them'} unassigned.
+                    </span>
+                  ) : null}
+                </div>
               ) : hasOpen && candidates.length === 0 ? (
                 <span className="text-xs text-text-secondary">
                   Nobody else can be assigned in every project these issues are in.
@@ -131,59 +156,72 @@ function RemovalForm({
               ) : null
             }
           >
-            {!hasOpen ? (
+            {!data ? (
+              <Skeleton className="h-3 w-40" />
+            ) : !hasOpen ? (
               <Unchanged>Nothing to reassign</Unchanged>
+            ) : candidates.length === 0 ? (
+              <span>Left unassigned</span>
             ) : (
               <Choice
                 value={issues}
-                onChange={v => setIssueChoice(v as IssueChoice)}
+                onChange={choose((v: string) => setIssueChoice(v as IssueChoice))}
                 label="Open issues"
                 options={[
-                  { value: 'reassign', label: 'Reassign', disabled: candidates.length === 0 },
+                  { value: 'reassign', label: 'Reassign' },
                   { value: 'unassign', label: 'Leave unassigned' },
                 ]}
               />
             )}
           </Row>
-          <Row label="Resolved issues assigned" count={data?.resolved_assigned}>
-            <Unchanged />
-          </Row>
-          <Row label="Issues created" count={data?.created}>
-            <Unchanged />
-          </Row>
-          <Row label="Comments" count={data?.comments}>
-            <Unchanged />
-          </Row>
-          <Row
-            label="Time logged"
-            count={data?.time_logged_minutes}
-            format={minutes => (minutes === 0 ? '0m' : formatDuration(minutes, calendar))}
-            mono
-          >
-            <Unchanged />
-          </Row>
+          {KEPT.filter(row => !data || (data[row.key] ?? 0) > 0).map(row => (
+            <Row
+              key={row.key}
+              label={row.label}
+              count={data?.[row.key]}
+              {...(row.key === 'time_logged_minutes'
+                ? { format: (m: number) => formatDuration(m, calendar), mono: true }
+                : {})}
+            >
+              <Unchanged />
+            </Row>
+          ))}
           <Row
             label="Saved views"
             count={data?.saved_views}
             below={
               hasViews && viewChoice === 'transfer' ? (
-                <MemberPicker
-                  people={transferTargets}
-                  value={transferTo}
-                  onChange={setTransferTo}
-                  placeholder="Choose who gets them"
-                  label="Transfer saved views to"
-                  loading={everyone.isPending}
-                />
+                <div className="flex flex-col gap-1.5">
+                  <MemberPicker
+                    people={transferTargets}
+                    value={transferTo}
+                    onChange={choose(setTransferTo)}
+                    placeholder="Choose a member"
+                    label="Transfer saved views to"
+                    loading={everyone.isPending}
+                    invalid={error.fields['transfer_views_to'] !== undefined}
+                  />
+                  {error.fields['transfer_views_to'] ? (
+                    <FieldProblem>{error.fields['transfer_views_to']}</FieldProblem>
+                  ) : transferTo === null ? (
+                    <span className="text-xs text-text-secondary">
+                      {data!.saved_views === 1
+                        ? 'Choose who gets the saved view, or delete it.'
+                        : `Choose who gets the ${data!.saved_views} saved views, or delete them.`}
+                    </span>
+                  ) : null}
+                </div>
               ) : null
             }
           >
-            {!hasViews ? (
+            {!data ? (
+              <Skeleton className="h-3 w-32" />
+            ) : !hasViews ? (
               <Unchanged>Nothing to move</Unchanged>
             ) : (
               <Choice
                 value={viewChoice}
-                onChange={v => setViewChoice(v as ViewChoice)}
+                onChange={choose((v: string) => setViewChoice(v as ViewChoice))}
                 label="Saved views"
                 options={[
                   { value: 'delete', label: 'Delete' },
@@ -193,21 +231,30 @@ function RemovalForm({
             )}
           </Row>
           <Row label="Active sessions" count={data?.sessions}>
-            <span>Access revoked</span>
+            <Revoked count={data?.sessions} outcome="Signed out on removal" />
           </Row>
           <Row label="Access tokens" count={data?.access_tokens} last>
-            <span>Access revoked</span>
+            <Revoked count={data?.access_tokens} outcome="Revoked on removal" />
           </Row>
         </div>
+        {absent.length > 0 ? (
+          <p className="pt-2 text-xs text-text-secondary">They have no {listOf(absent)} here.</p>
+        ) : null}
       </div>
 
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={remove.isPending}>
           Cancel
         </Button>
-        <Button variant="destructive" onClick={submit} disabled={!ready || remove.isPending}>
-          {remove.isPending ? 'Removing…' : 'Remove member'}
-        </Button>
+        <PendingButton
+          variant="destructive"
+          onClick={submit}
+          disabled={!ready}
+          pending={remove.isPending}
+          pendingLabel="Removing…"
+        >
+          Remove member
+        </PendingButton>
       </DialogFooter>
     </>
   );
@@ -247,6 +294,28 @@ function Row({ label, count, format = String, mono, last, below, children }: Row
   );
 }
 
+const KEPT = [
+  { key: 'resolved_assigned', label: 'Resolved issues assigned', none: 'resolved issues' },
+  { key: 'created', label: 'Issues created', none: 'created issues' },
+  { key: 'comments', label: 'Comments', none: 'comments' },
+  { key: 'time_logged_minutes', label: 'Time logged', none: 'logged time' },
+] as const;
+
+const listOf = (items: readonly string[]) =>
+  items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} or ${items[items.length - 1]}`;
+
+function Revoked({ count, outcome }: { count: number | undefined; outcome: string }) {
+  return count === 0 ? <Unchanged>None to revoke</Unchanged> : <span className="text-text-secondary">{outcome}</span>;
+}
+
+function FieldProblem({ children }: { children: ReactNode }) {
+  return (
+    <span role="alert" className="text-xs text-danger-fg">
+      {children}
+    </span>
+  );
+}
+
 function Unchanged({ children = 'Unchanged' }: { children?: ReactNode }) {
   return <span className="text-text-muted">{children}</span>;
 }
@@ -254,7 +323,6 @@ function Unchanged({ children = 'Unchanged' }: { children?: ReactNode }) {
 interface ChoiceOption {
   value: string;
   label: string;
-  disabled?: boolean;
 }
 
 function Choice({
@@ -273,11 +341,8 @@ function Choice({
     <RadioGroup value={value} onValueChange={onChange} aria-label={label} className="flex flex-wrap gap-x-5 gap-y-1.5">
       {options.map(option => (
         <div key={option.value} className="flex items-center gap-2">
-          <RadioGroupItem id={`${id}-${option.value}`} value={option.value} disabled={option.disabled} />
-          <label
-            htmlFor={`${id}-${option.value}`}
-            className={cn('shrink-0 cursor-pointer', option.disabled && 'cursor-not-allowed text-text-disabled')}
-          >
+          <RadioGroupItem id={`${id}-${option.value}`} value={option.value} />
+          <label htmlFor={`${id}-${option.value}`} className="shrink-0 cursor-pointer">
             {option.label}
           </label>
         </div>

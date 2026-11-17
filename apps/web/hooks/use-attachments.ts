@@ -44,7 +44,9 @@ export function useStorage() {
         ? canManage
           ? BYO_UPLOADS_PAUSED_ADMIN
           : BYO_UPLOADS_PAUSED
-        : null;
+        : storage?.level === 'full' && storage.bring_your_own !== 'verified'
+          ? 'Uploads are paused: file storage is full.'
+          : null;
   return { storage, available: blocked === null, blocked, slug, canManage };
 }
 
@@ -130,10 +132,13 @@ const isRetryable = (error: unknown) =>
   error instanceof ApiNetworkError ||
   (isApiError(error) && (RETRYABLE_CODES.has(error.code) || (error.status >= 500 && error.status !== 503)));
 
+// The storage banner explains a full quota; the row only says what happened to this file.
 const messageOf = (error: unknown) =>
-  isApiError(error) || error instanceof ApiNetworkError || error instanceof StorageUploadError
-    ? error.message
-    : 'The file could not be uploaded.';
+  isApiError(error) && error.code === 'storage.quota_exceeded'
+    ? 'Not uploaded: file storage is full.'
+    : isApiError(error) || error instanceof ApiNetworkError || error instanceof StorageUploadError
+      ? error.message
+      : 'The file could not be uploaded.';
 
 const PRELOAD_TIMEOUT_MS = 10_000;
 
@@ -147,11 +152,11 @@ const preload = (url: string) =>
     image.src = url;
   });
 
-/** A problem found before anything is sent: the API would refuse it with the same words. */
+/** A problem found before anything is sent, which the API would refuse too. */
 function refusal(file: File): string | null {
-  if (file.size === 0) return `${file.name} is empty.`;
+  if (file.size === 0) return 'Not uploaded: the file is empty.';
   if (file.size > ATTACHMENT_MAX_BYTES) {
-    return `${file.name} is ${formatBytes(file.size)}. Files can be at most ${formatBytes(ATTACHMENT_MAX_BYTES)}.`;
+    return `Not uploaded: it is ${formatBytes(file.size)}, and files can be at most ${formatBytes(ATTACHMENT_MAX_BYTES)}.`;
   }
   return null;
 }
@@ -220,8 +225,11 @@ export function useUploader(target: UploadTarget | null) {
         if (isApiError(error) && error.code === 'storage.not_configured') {
           client.setQueryData(queryKeys.storageUnavailable(), true);
         }
-        // The bucket started refusing its key since the organisation was read: redraw the banners and controls.
-        if (isApiError(error) && error.code === 'storage.byo_unavailable') {
+        // The bucket or the quota changed since the organisation was read: redraw the banners and controls.
+        if (
+          isApiError(error) &&
+          (error.code === 'storage.byo_unavailable' || error.code === 'storage.quota_exceeded')
+        ) {
           void client.invalidateQueries({ queryKey: queryKeys.organizations() });
         }
         patch(upload.id, { status: 'failed', error: messageOf(error), retryable: isRetryable(error) });

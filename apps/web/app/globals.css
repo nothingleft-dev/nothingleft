@@ -263,16 +263,15 @@
   --chart-grid: var(--border-subtle);
   --chart-axis: var(--text-secondary);
   --chart-ideal: var(--text-muted);
-  /* Burndown backgrounds, kept quieter than the lines: non-working days, and days still to come. */
-  --chart-off-day: color-mix(in oklab, var(--text) 5%, var(--bg-surface));
-  --chart-future: color-mix(in oklab, var(--text) 2.5%, var(--bg-surface));
-  /* Matrix cell shade: five grey steps mixed from the text colour into the surface, capped so
-     ink text clears 4.5:1 on every step in both themes (8.2:1 light, 6.2:1 dark at the deepest). */
-  --heat-1: color-mix(in oklab, var(--text) 5%, var(--bg-surface));
-  --heat-2: color-mix(in oklab, var(--text) 10%, var(--bg-surface));
-  --heat-3: color-mix(in oklab, var(--text) 16%, var(--bg-surface));
-  --heat-4: color-mix(in oklab, var(--text) 23%, var(--bg-surface));
-  --heat-5: color-mix(in oklab, var(--text) 31%, var(--bg-surface));
+  /* Burndown non-working days: about 1.2:1 from the surface in both themes, still quieter than any line. */
+  --chart-off-day: color-mix(in oklab, var(--text) 9%, var(--bg-surface));
+  /* Matrix cell shade: five grey steps mixed from the text colour into the surface, steep enough to part in
+     dark mode and capped so ink text clears 4.5:1 on every step (at 43 % it drops to 4.35:1 in dark). */
+  --heat-1: color-mix(in oklab, var(--text) 8%, var(--bg-surface));
+  --heat-2: color-mix(in oklab, var(--text) 15%, var(--bg-surface));
+  --heat-3: color-mix(in oklab, var(--text) 23%, var(--bg-surface));
+  --heat-4: color-mix(in oklab, var(--text) 31%, var(--bg-surface));
+  --heat-5: color-mix(in oklab, var(--text) 40%, var(--bg-surface));
 }
 
 /* ========================================================================== */
@@ -289,7 +288,7 @@
     --bg-hover: oklch(1 0 0 / 0.05);
     --bg-active: oklch(1 0 0 / 0.09);
     --bg-selected: var(--accent-soft);
-    --bg-overlay: oklch(0 0 0 / 0.6);
+    --bg-overlay: oklch(0 0 0 / 0.7);
 
     --border: oklch(0.31 0.007 260);
     --border-strong: oklch(0.53 0.008 260);
@@ -366,7 +365,7 @@
   --bg-hover: oklch(1 0 0 / 0.05);
   --bg-active: oklch(1 0 0 / 0.09);
   --bg-selected: var(--accent-soft);
-  --bg-overlay: oklch(0 0 0 / 0.6);
+  --bg-overlay: oklch(0 0 0 / 0.7);
 
   --border: oklch(0.31 0.007 260);
   --border-strong: oklch(0.53 0.008 260);
@@ -1203,6 +1202,9 @@
   --spacing-avatar-sm: var(--avatar-sm);
   --spacing-avatar-lg: var(--avatar-lg);
   --spacing-badge-letter: var(--badge-letter);
+
+  /* DESIGN § 6: below 900 px the sidebar becomes a sheet. */
+  --breakpoint-shell: 56.25rem;
 }
 
 @layer base {
@@ -1256,6 +1258,10 @@
   pre {
     font-family: var(--font-mono);
   }
+
+  input:placeholder-shown {
+    text-overflow: ellipsis;
+  }
 }
 
 /* Unlayered on purpose: shadcn's menu and command items carry `cursor-default` as a
@@ -1267,6 +1273,443 @@
 [data-slot='dropdown-menu-sub-trigger'],
 [data-slot='command-item']:not([data-disabled='true']) {
   cursor: pointer;
+}
+
+/* ---- Primitive overrides ----------------------------------------------------
+   components/ui/* is shadcn output and is never hand-edited, so the system's rules for
+   those primitives live here. Unlayered so they outrank the utilities the primitives carry. */
+
+/* sonner and shadcn read these names; the token layer only emits them as Tailwind colours. */
+:root {
+  --popover: var(--bg-raised);
+  --popover-foreground: var(--text);
+  --radius: var(--radius-lg);
+}
+
+/* 320 px keeps a toast in the issue page's rail at 1440 instead of over the main column's composer. */
+[data-sonner-toaster] {
+  --width: 320px !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  align-items: flex-start;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  border: 0;
+  box-shadow: var(--shadow-popover);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true']:focus-visible {
+  box-shadow: var(--shadow-popover), var(--focus-ring);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
+  font-weight: 500;
+  line-height: 20px;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+/* On the title's first line, not the block's middle: a two-line toast otherwise floats its icon. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-icon] {
+  margin-top: 2px;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type='success'] [data-icon] {
+  color: var(--success-fg);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type='warning'] [data-icon] {
+  color: var(--warning-fg);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type='error'] [data-icon] {
+  color: var(--danger-fg);
+}
+
+/* The one action (Undo, Try again) is secondary: an outline, never a second filled button beside Create issue. */
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
+  /* Centred on the title's line, so a one-line toast reads level and a longer one keeps it beside the title. */
+  align-self: flex-start;
+  margin-top: -3px;
+  height: var(--control-sm);
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button]:hover {
+  background: var(--bg-hover);
+}
+
+/* Reads wait out the request limit instead of loading; the banner says so, and a pulse would contradict it. */
+[data-rate-limited] [data-slot='skeleton'] {
+  animation: none;
+}
+
+/* One focus ring (DESIGN § 3.2): the primitives' own ring utilities would otherwise stack on it. */
+[data-slot]:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* The ring alone marks focus: the primitives would also turn the border accent, which read as a 3px ring. */
+[data-slot='input']:focus-visible,
+[data-slot='textarea']:focus-visible,
+[data-variant='outline']:focus-visible {
+  border-color: var(--border-strong);
+}
+
+[data-slot][aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+[data-slot][aria-invalid='true']:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+/* Radix moves focus into menu items under the pointer; the highlighted row is the cue there. */
+[data-slot='command-input']:focus-visible,
+[role^='menuitem']:focus-visible,
+[data-slot='command-item']:focus-visible {
+  box-shadow: none;
+}
+
+/* A ring drawn outside a control is clipped by the scroll container it sits in. */
+[data-slot='scroll-area-viewport'] :focus-visible,
+[data-tab-strip] :focus-visible,
+.key-strip > :focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus-soft);
+}
+
+/* Radix wraps the viewport's children in display:table, which stops anything inside truncating. */
+[data-slot='scroll-area-viewport'] > div {
+  display: block !important;
+}
+
+/* A button that a trigger renders as (tooltip, popover) carries the trigger's slot, so these rules also match its
+   variant and size. */
+:is([data-slot='button'], [data-variant][data-size]):disabled,
+:is([data-slot='button'], [data-variant][data-size])[aria-disabled='true'] {
+  opacity: 1;
+}
+
+/* A disabled outline, ghost or link button keeps its shape with secondary ink. */
+:is([data-slot='button'], [data-variant][data-size]):is(
+    [data-variant='outline'],
+    [data-variant='ghost'],
+    [data-variant='link']
+  ):is(:disabled, [aria-disabled='true']):not([data-pending]) {
+  color: var(--text-secondary);
+}
+
+:is([data-slot='button'], [data-variant][data-size]):disabled {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+/* Pending is not disabled: the action is running, so the button keeps its own fill and ink. */
+:is([data-slot='button'], [data-variant][data-size])[data-pending] {
+  cursor: progress;
+}
+
+/* A disabled filled button keeps its own fill and ink, faded: still the primary, just not yet available. */
+:is([data-slot='button'], [data-variant][data-size]):is(
+    [data-variant='default'],
+    [data-variant='destructive'],
+    [data-variant='secondary']
+  ):is(:disabled, [aria-disabled='true']):not([data-pending]) {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+/* One control height (DESIGN § 5): buttons, pickers and inputs at the primitive's default size share --control
+   with the form inputs beside them; [data-variant] also catches a button a trigger renders as. A size a caller
+   chose (another h-*) is left alone. */
+[data-variant][data-size='default'].h-9,
+[data-slot='input'].h-9 {
+  height: var(--control);
+}
+
+/* A disabled outline button stays an outline: a grey fill would make it heavier than the enabled ones beside it. */
+:is([data-slot='button'], [data-variant][data-size])[data-variant='outline']:is(:disabled, [aria-disabled='true']):not(
+    [data-pending]
+  ) {
+  background: transparent;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+[data-slot='button'][data-variant='ghost']:is(:disabled, [aria-disabled='true']),
+[data-slot='button'][data-variant='link']:is(:disabled, [aria-disabled='true']) {
+  background: transparent;
+  text-decoration: none;
+}
+
+/* The one red fill (DESIGN § 9). The danger solid is a mark colour (3:1 on the surface); a fill
+   that carries white text needs a deeper step of the same hue in both themes. */
+[data-slot='button'][data-variant='destructive']:is(:not(:disabled, [aria-disabled='true']), [data-pending]) {
+  background: oklch(from var(--danger) 0.5 c h);
+  color: oklch(1 0 0);
+}
+
+[data-slot='button'][data-variant='destructive']:not(:disabled, [aria-disabled='true']):hover {
+  background: oklch(from var(--danger) 0.45 c h);
+}
+
+[data-slot='switch']:disabled,
+[data-slot='checkbox']:disabled {
+  opacity: 0.45;
+}
+
+[data-slot='switch'][data-state='unchecked']:not(:disabled):hover {
+  background: var(--text-disabled);
+}
+
+[data-slot='switch'][data-state='checked']:not(:disabled):hover {
+  background: var(--ink-hover);
+}
+
+[data-slot='checkbox']:not(:disabled):hover {
+  border-color: var(--text-muted);
+}
+
+[data-slot='checkbox'][data-state='indeterminate'] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ink-fg);
+}
+
+[data-slot='checkbox-indicator'][data-state='indeterminate'] > svg {
+  display: none;
+}
+
+[data-slot='checkbox-indicator'][data-state='indeterminate']::after {
+  content: '';
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+[data-slot='tooltip-content'] {
+  max-width: 20rem;
+  text-wrap: pretty;
+}
+
+[data-slot='dialog-overlay'],
+/* Menu items: the solid danger red read at 3.8:1 in dark, and half-opacity disabled items fell further; the
+   -fg ink and muted text carry the same meaning at legible contrast. */
+[data-slot='dropdown-menu-item'][data-variant='destructive'],
+[data-slot='dropdown-menu-item'][data-variant='destructive'] svg {
+  color: var(--danger-fg) !important;
+}
+
+[data-slot^='dropdown-menu-'][data-disabled] {
+  opacity: 1;
+  color: var(--text-muted);
+}
+
+/* A sheet opened by mouse takes focus for its keyboard users; that is not a reason to ring the whole panel. */
+[data-slot='sheet-content']:focus-visible {
+  box-shadow: var(--shadow-dialog);
+}
+
+/* A sheet's title outranks the section headings inside it. */
+[data-slot='sheet-title'] {
+  font-size: var(--text-md);
+  line-height: var(--leading-md);
+}
+
+[data-slot='sheet-overlay'] {
+  background: var(--bg-overlay);
+}
+
+/* Anchored near the top, so a dialog whose content grows or shrinks keeps its title where it was. */
+[data-slot='dialog-content'] {
+  top: var(--dialog-top, 12dvh);
+  translate: -50% 0;
+  max-height: calc(100dvh - var(--dialog-top, 12dvh) - max(1rem, 4dvh));
+  border-color: transparent;
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-dialog);
+}
+
+/* A wide dialog keeps a 16px gutter on a tablet instead of running edge to edge. */
+[data-slot='dialog-content'] {
+  width: calc(100% - 2rem);
+}
+
+/* The hover fill measured about 1.1:1 on the page, so loading shapes barely read; one step up does. */
+[data-slot='skeleton'] {
+  background: var(--bg-active);
+}
+
+[data-slot='dialog-content']:focus-visible {
+  box-shadow: var(--shadow-dialog);
+}
+
+/* With a DialogBody, the header and footer stay put and only the body scrolls. */
+[data-slot='dialog-content']:has([data-slot='dialog-body']) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+[data-slot='dialog-content'] > :not([data-slot='dialog-body']):has([data-slot='dialog-body']) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+[data-slot='popover-content'],
+[data-slot='dropdown-menu-content'],
+[data-slot='dropdown-menu-sub-content'] {
+  border-color: transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+}
+
+[data-slot='popover-content']:focus-visible,
+[data-slot='dropdown-menu-content']:focus-visible,
+[data-slot='dropdown-menu-sub-content']:focus-visible {
+  box-shadow: var(--shadow-popover);
+}
+
+/* A picker inside a popover gives up height from its list, never from its search box. */
+[data-slot='popover-content']:has(> [data-slot='command']) {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-slot='popover-content'] > [data-slot='command'] {
+  min-height: 0;
+}
+
+[data-slot='command-list'] {
+  min-height: 0;
+}
+
+/* A list cut off at its edge fades out until its end is reached; a list that fits never fades. */
+@property --scroll-fade {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-fade-end {
+  0%,
+  90% {
+    --scroll-fade: 1.5rem;
+  }
+  100% {
+    --scroll-fade: 0px;
+  }
+}
+
+.scroll-fade,
+[data-slot='command-list'],
+[data-slot='dialog-body'] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--scroll-fade)), transparent);
+  animation: scroll-fade-end linear both;
+  animation-timeline: scroll(self block);
+}
+
+/* Equal columns, so the dividers of a wrapped row line up with the row above; the outer ones are clipped. */
+.key-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.key-strip > * {
+  box-shadow:
+    1px 0 0 var(--border-subtle),
+    0 1px 0 var(--border-subtle);
+}
+
+@property --scroll-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-fade-inline {
+  0% {
+    --scroll-fade-start: 0px;
+    --scroll-fade: 1.5rem;
+  }
+  10%,
+  90% {
+    --scroll-fade-start: 1.5rem;
+    --scroll-fade: 1.5rem;
+  }
+  100% {
+    --scroll-fade-start: 1.5rem;
+    --scroll-fade: 0px;
+  }
+}
+
+.scroll-fade-x {
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--scroll-fade-start),
+    #000 calc(100% - var(--scroll-fade)),
+    transparent
+  );
+  animation: scroll-fade-inline linear both;
+  animation-timeline: scroll(self inline);
+}
+
+/* Row controls that wait for the pointer: the row adds `group-hover/<name>:opacity-100`. Touch has no
+   hover, so there they are always shown. */
+@utility reveal {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+
+  &:focus-visible,
+  &:focus-within,
+  &[data-state='open'] {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    opacity: 1;
+  }
+}
+
+@utility action-link {
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    text-decoration-color var(--dur-fast) var(--ease-out);
+
+  &:hover:not(:disabled, [aria-disabled='true']) {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+  }
+
+  &:is(:disabled, [aria-disabled='true']) {
+    color: var(--text-disabled);
+    text-decoration-color: currentColor;
+  }
 }
 
 @keyframes brand-burn {
@@ -1313,8 +1756,24 @@
     font-size: var(--text-md);
   }
 
-  .comfortable-form [data-slot='button']:not([data-size^='icon']) {
-    min-height: 40px;
+  /* Buttons stand level with the 44px fields beside them; small and icon buttons keep their size. */
+  .comfortable-form
+    :is([data-slot='button'], [data-variant][data-size]):not([data-size^='icon']):not([data-size='sm']):not(
+      [data-size='xs']
+    ) {
+    min-height: 44px;
+  }
+}
+
+/* Content kept on screen while a refetch is in flight. Dims the ink, never the surface: opacity let the
+   page behind show through popovers and pushed headers under AA. */
+@utility is-stale {
+  --text: var(--text-secondary);
+  color: var(--text);
+  transition: color var(--dur-fast);
+
+  & :is(img, svg, [data-slot='avatar']) {
+    opacity: 0.6;
   }
 }
 
@@ -1529,8 +1988,16 @@
     transform: rotate(45deg);
   }
 
+  /* A box the reader cannot tick sits on the inset fill, so it never reads as one they can. */
   .md li.task-list-item > input[type='checkbox']:disabled {
     cursor: default;
+    background: var(--bg-inset);
+    border-color: var(--border);
+  }
+
+  .md li.task-list-item > input[type='checkbox']:disabled:checked {
+    background: var(--text-muted);
+    border-color: var(--text-muted);
   }
 
   .md blockquote {
@@ -1580,6 +2047,9 @@
     padding: 5px var(--space-3);
     text-align: left;
     vertical-align: top;
+    /* The prose's break-anywhere would shrink cells letter by letter instead of letting the table scroll. */
+    overflow-wrap: normal;
+    min-width: 8ch;
   }
 
   .md th {
@@ -1595,8 +2065,12 @@
   .md img {
     display: block;
     max-width: 100%;
-    /* With the stored width and height on the tag, auto height keeps the ratio and reserves the box. */
+    max-height: 32rem;
+    /* With the stored width and height on the tag, auto height keeps the ratio and reserves the box;
+       a tall image is fitted inside the capped box rather than resized, so nothing below it moves. */
     height: auto;
+    object-fit: contain;
+    object-position: left;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     margin: 0 0 var(--space-3);
@@ -1882,12 +2356,13 @@
     --topbar: 56px;
   }
 
-  [data-slot='button'],
+  /* [data-variant][data-size] also catches a button a popover or tooltip trigger renders as. */
+  :is([data-slot='button'], [data-variant][data-size]),
   [role='tab'] {
     min-height: 44px;
   }
 
-  [data-slot='button'][data-size^='icon'] {
+  :is([data-slot='button'], [data-variant][data-size])[data-size^='icon'] {
     min-width: 44px;
   }
 
@@ -2331,4 +2806,19 @@
     border-width: 0 1.5px 1.5px 0;
     transform: rotate(45deg);
   }
+}
+
+/* A toast rises above the list's bulk bar instead of covering its actions. */
+html:has([role='toolbar'][aria-label='Bulk actions']) [data-sonner-toaster][data-y-position='bottom'] {
+  bottom: calc(var(--offset-bottom) + 56px);
+}
+
+/* A dialog's title and description start on the left at every width, like the fields under them. */
+[data-slot='dialog-header'] {
+  text-align: left;
+}
+
+/* The close × centres on the title's first line, not above it. */
+[data-slot='dialog-close'] {
+  top: 1.25rem;
 }

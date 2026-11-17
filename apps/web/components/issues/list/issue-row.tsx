@@ -7,7 +7,7 @@ import { MessageSquare } from 'lucide-react';
 import { formatDuration } from '@nothingleft/format';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type IssueListItem, type UpdateIssue } from '@nothingleft/types';
 import { Checkbox } from '@components/ui/checkbox';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { IssueKey } from '@components/issue-key';
 import { RelativeTime } from '@components/relative-time';
 import { AssigneeStack } from '@components/issues/assignee-stack';
@@ -18,7 +18,7 @@ import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-ma
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
-import type { ColumnDef } from '@lib/issue-list/columns';
+import { FROZEN_TRACKS, type ColumnDef } from '@lib/issue-list/columns';
 import { DevelopmentBadge, summaryCounts } from '@components/git/git-marks';
 import { FieldValue } from '@components/custom-fields/field-value';
 import { formatCalendarDateShort } from '@lib/datetime';
@@ -44,6 +44,10 @@ interface IssueRowProps {
 }
 
 export const ROW_HEIGHT = 36;
+
+/** Checkbox, P, T, key and title stay put while the table scrolls sideways; the row's tint is painted over an opaque surface. */
+export const FROZEN_CELL =
+  'sticky left-0 z-[1] grid items-center gap-2 self-stretch bg-surface bg-[linear-gradient(var(--row-tint,transparent),var(--row-tint,transparent))] pl-2 [[data-scrolled]_&]:shadow-[1px_0_0_var(--border)]';
 
 export function IssueRow({
   issue,
@@ -86,10 +90,10 @@ export function IssueRow({
       case 'due':
         return <DueDate value={issue.due_date} today={today} resolved={resolved} />;
       case 'start':
-        return (
-          <span className="text-xs tabular text-text-muted">
-            {issue.start_date ? formatCalendarDateShort(issue.start_date) : '--'}
-          </span>
+        return issue.start_date ? (
+          <span className="text-xs tabular text-text-muted">{formatCalendarDateShort(issue.start_date)}</span>
+        ) : (
+          <EmptyCell />
         );
       case 'updated':
         return <RelativeTime value={issue.updated_at} timeZone={timeZone} className="text-xs whitespace-nowrap" />;
@@ -103,7 +107,7 @@ export function IssueRow({
               issue.estimate_minutes === null ? 'text-text-muted' : 'text-text-secondary',
             )}
           >
-            {issue.estimate_minutes === null ? '--' : formatDuration(issue.estimate_minutes, calendar)}
+            {issue.estimate_minutes === null ? '?' : formatDuration(issue.estimate_minutes, calendar)}
           </span>
         );
       case 'sprint':
@@ -120,7 +124,7 @@ export function IssueRow({
               issue.story_points === null ? 'text-text-muted' : 'text-text-secondary',
             )}
           >
-            {issue.story_points ?? '--'}
+            {issue.story_points ?? '?'}
           </span>
         );
       case 'development':
@@ -130,13 +134,13 @@ export function IssueRow({
             <span className="truncate text-2xs text-text-muted tabular">{summaryCounts(issue.development, true)}</span>
           </span>
         ) : (
-          <span className="text-xs text-text-muted">--</span>
+          <EmptyCell />
         );
       case 'votes':
-        return (
-          <span className={cn('text-xs tabular', issue.vote_count === 0 ? 'text-text-muted' : 'text-text-secondary')}>
-            {issue.vote_count === 0 ? '--' : issue.vote_count}
-          </span>
+        return issue.vote_count === 0 ? (
+          <EmptyCell />
+        ) : (
+          <span className="text-xs tabular text-text-secondary">{issue.vote_count}</span>
         );
       default: {
         // A field that does not apply to this issue's type is as empty as one never filled in.
@@ -165,7 +169,7 @@ export function IssueRow({
   const meta =
     issue.comment_count > 0 ? (
       <span
-        className="ml-2 inline-flex items-center gap-0.5 align-middle text-2xs tabular text-text-muted"
+        className="ml-2 inline-flex flex-none items-center gap-0.5 text-2xs tabular text-text-muted"
         title={`${issue.comment_count} comments`}
       >
         <MessageSquare className="size-[11px]" />
@@ -181,7 +185,7 @@ export function IssueRow({
         onClick={open}
         style={style}
         className={cn(
-          'group grid h-row cursor-pointer grid-cols-[minmax(64px,auto)_minmax(0,1fr)_auto] items-center gap-2 border-b border-border-subtle px-1 hover:bg-hover',
+          'group grid h-row cursor-pointer grid-cols-[minmax(64px,auto)_minmax(0,1fr)_7rem] items-center gap-2 border-b border-border-subtle px-1 hover:bg-hover',
           selected && 'bg-selected',
         )}
       >
@@ -192,7 +196,7 @@ export function IssueRow({
         >
           {issue.title}
         </Link>
-        <StatusPill status={issue.status} className="min-w-0 px-1" />
+        <StatusPill status={issue.status} className="min-w-0 justify-self-start px-1" />
       </div>
     );
   }
@@ -204,36 +208,44 @@ export function IssueRow({
       onClick={open}
       style={{ ...style, gridTemplateColumns: template }}
       className={cn(
-        'group grid h-row cursor-pointer items-center gap-2 border-b border-border-subtle px-2 hover:bg-hover',
-        selected && 'bg-selected hover:bg-selected',
+        'group grid h-row cursor-pointer items-center gap-2 border-b border-border-subtle pr-2 hover:bg-hover hover:[--row-tint:var(--bg-hover)]',
+        selected &&
+          'bg-selected [--row-tint:var(--bg-selected)] hover:bg-selected hover:[--row-tint:var(--bg-selected)]',
       )}
     >
-      <span className="flex items-center" data-inline>
-        <Checkbox
-          checked={selected}
-          aria-label={`Select ${issue.key}`}
-          onClick={event => onSelect(issue.key, !selected, event.shiftKey)}
-          className={cn(
-            'bg-surface transition-opacity duration-(--dur-fast)',
-            !selected && !selecting && 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100',
-          )}
-        />
-      </span>
-      <PriorityCell issue={issue} canEdit={canEdit} onUpdate={onUpdate} dim={resolved} />
-      <TypeBadge type={issue.type} className={cn(resolved && 'opacity-55')} />
-      <Link href={href} className="min-w-0">
-        <IssueKey issueKey={issue.key} resolved={resolved} />
-      </Link>
-      <span className="min-w-0 truncate">
-        <Link
-          href={href}
-          title={issue.title}
-          className={cn('text-text', resolved && 'text-text-muted line-through decoration-border-strong')}
-        >
-          {issue.title}
+      <div className={FROZEN_CELL} style={{ gridTemplateColumns: FROZEN_TRACKS }}>
+        <span className="flex items-center" data-inline>
+          <Checkbox
+            checked={selected}
+            aria-label={`Select ${issue.key}`}
+            onClick={event => onSelect(issue.key, !selected, event.shiftKey)}
+            className={cn(
+              'bg-surface transition-opacity duration-(--dur-fast)',
+              !selected && !selecting && 'reveal group-hover:opacity-100',
+            )}
+          />
+        </span>
+        <PriorityCell issue={issue} canEdit={canEdit} onUpdate={onUpdate} dim={resolved} />
+        <TypeBadge type={issue.type} className={cn(resolved && 'opacity-55')} />
+        <Link href={href} className="min-w-0 rounded-xs hover:underline hover:decoration-border-strong">
+          <IssueKey issueKey={issue.key} resolved={resolved} />
         </Link>
-        {meta}
-      </span>
+        <span className="flex min-w-0 items-center pr-4">
+          <Link
+            href={href}
+            title={issue.title}
+            className={cn(
+              'truncate text-text',
+              resolved
+                ? 'text-text-muted line-through decoration-border-strong hover:text-text-secondary'
+                : 'underline-offset-2 hover:underline hover:decoration-border-strong',
+            )}
+          >
+            {issue.title}
+          </Link>
+          {meta}
+        </span>
+      </div>
       {columns.map(column => (
         <span
           key={column.id}
@@ -250,6 +262,11 @@ export function IssueRow({
   );
 }
 
+function EmptyCell() {
+  // Not tabular: tabular figures give each hyphen a digit's width, and `--` falls apart.
+  return <span className="text-xs text-text-muted">--</span>;
+}
+
 interface CellProps {
   issue: IssueListItem;
   canEdit: boolean;
@@ -258,7 +275,8 @@ interface CellProps {
 
 function StatusCell({ issue, canEdit, onUpdate }: CellProps) {
   const [open, setOpen] = useState(false);
-  if (!canEdit) return <StatusPill status={issue.status} />;
+  // Same inset as the editable pill's trigger, so the dot sits on one line down the column.
+  if (!canEdit) return <StatusPill status={issue.status} title={issue.status.name} className="-ml-2" />;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -268,7 +286,7 @@ function StatusCell({ issue, canEdit, onUpdate }: CellProps) {
           className="group/pill -ml-2 max-w-full text-left"
           aria-label={`Status: ${issue.status.name}. Change`}
         >
-          <StatusPill status={issue.status} editable />
+          <StatusPill status={issue.status} title={issue.status.name} editable />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[260px] p-0" data-inline>
@@ -299,6 +317,7 @@ function StatusEditor({
       placeholder="Change status"
       loading={statuses.isPending}
       onRetry={retryOf(statuses)}
+      failure="The statuses could not be loaded."
       selected={issue.status.name}
       options={(statuses.data ?? [])
         .filter(s => !s.is_archived || s.name === issue.status.name)
@@ -355,6 +374,7 @@ function PriorityEditor({
       placeholder="Change priority"
       loading={priorities.isPending}
       onRetry={retryOf(priorities)}
+      failure="The priorities could not be loaded."
       selected={issue.priority.name}
       options={(priorities.data ?? []).map(p => ({ name: p.name, mark: <PriorityBadge priority={p} /> }))}
       onSelect={name => {
@@ -370,7 +390,11 @@ function AssigneeCell({ issue, canEdit, onUpdate }: CellProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>([]);
   const people = useProjectAssignees(open ? issue.project.key : null);
-  if (!canEdit) return <AssigneeStack assignees={issue.assignees} className="max-w-full" />;
+  // Two or more people read as faces: a name cut to four letters says less than the avatars do.
+  const stack = (
+    <AssigneeStack assignees={issue.assignees} withName={issue.assignees.length < 2} className="max-w-full" />
+  );
+  if (!canEdit) return stack;
 
   const commit = () => {
     const before = issue.assignees.map(a => a.username).sort();
@@ -397,7 +421,7 @@ function AssigneeCell({ issue, canEdit, onUpdate }: CellProps) {
           aria-label="Change assignees"
           className="-ml-1.5 flex h-[26px] max-w-full items-center rounded-sm border border-transparent px-1.5 text-left hover:border-border-strong"
         >
-          <AssigneeStack assignees={issue.assignees} className="max-w-full" />
+          {stack}
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[280px] p-0" data-inline>
@@ -405,6 +429,7 @@ function AssigneeCell({ issue, canEdit, onUpdate }: CellProps) {
           people={people.data ?? []}
           loading={people.isPending}
           onRetry={retryOf(people)}
+          failure="The people could not be loaded."
           selected={draft}
           onToggle={username =>
             setDraft(d => (d.includes(username) ? d.filter(u => u !== username) : [...d, username]))

@@ -4,15 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { CloudOff, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import type { ByoStatus, StorageFile, StorageTarget } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
@@ -26,6 +25,7 @@ import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { ProjectMark, ProjectMarkByKey } from '@components/projects/project-mark';
 import { isInlineImage } from '@lib/files';
 import { cn } from '@lib/utils';
+import { toastError } from '@components/toast-error';
 
 export interface FilesFilter {
   sort: 'size' | 'created';
@@ -41,8 +41,13 @@ interface StorageFilesProps {
   /** The connection's state, which says why a file in the organisation's bucket cannot open. */
   byo: ByoStatus | null;
   bucket: string | null;
+  /** Whether any file can be in an own bucket: one is connected, or was. */
+  ownBucket: boolean;
   timeZone?: string | undefined;
 }
+
+export const FILES_DESCRIPTION =
+  'Every file on an issue, a comment, spent time or an article. Deleting one frees its space at once; the issue or article loses it too.';
 
 const SORTS = [
   { value: 'size', label: 'Largest first' },
@@ -54,7 +59,7 @@ const TARGETS = [
   { value: 'byo', label: 'Your own bucket' },
 ];
 
-export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZone }: StorageFilesProps) {
+export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, ownBucket, timeZone }: StorageFilesProps) {
   const query: StorageFilesFilter = {
     sort: filter.sort,
     target: filter.target ?? undefined,
@@ -70,6 +75,13 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
   const total = files.data?.meta.pagination?.total ?? 0;
   const narrowed = filter.target !== null || filter.project !== null;
   const set = (patch: Partial<FilesFilter>) => onFilterChange({ ...filter, offset: 0, ...patch });
+  const nothingStored = !files.isPending && !files.isError && rows.length === 0 && !narrowed;
+  const targets = ownBucket || filter.target === 'byo' ? TARGETS : TARGETS.filter(t => t.value !== 'byo');
+
+  const deleteFile = (file: StorageFile): void =>
+    remove.mutate(file, {
+      onError: error => toastError(`Could not delete ${file.filename}`, error, { retry: () => deleteFile(file) }),
+    });
 
   const projectOptions = [
     { value: '', label: 'All projects' },
@@ -84,11 +96,12 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
   }
 
   return (
-    <SettingsSection
-      title="Files"
-      description="Every file on an issue, a comment, spent time or an article. Deleting one frees its space at once; the issue or article loses it too."
-    >
-      <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Filter files">
+    <SettingsSection title="Files" description={FILES_DESCRIPTION}>
+      <div
+        className={cn('flex flex-wrap items-center gap-2', nothingStored && 'hidden')}
+        role="toolbar"
+        aria-label="Filter files"
+      >
         <ReportPicker
           label="Sort"
           value={filter.sort}
@@ -107,7 +120,7 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
         <ReportPicker
           label="Stored in"
           value={filter.target ?? 'all'}
-          options={TARGETS}
+          options={targets}
           onChange={v => set({ target: v === 'all' ? null : (v as StorageTarget) })}
           width="w-52"
         />
@@ -121,11 +134,9 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
       {files.isPending ? (
         <FilesSkeleton />
       ) : files.isError ? (
-        <FormAlert title="The file list could not be loaded.">
-          <button type="button" onClick={() => void files.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void files.refetch()} detail={errorDetail(files.error)}>
+          The file list could not be loaded.
+        </LoadError>
       ) : rows.length === 0 && narrowed ? (
         <EmptyState
           title="No files match these filters."
@@ -142,19 +153,9 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
           description="Files attached to issues, comments, spent time and articles appear here, largest first."
         />
       ) : (
-        <div className={cn('overflow-x-auto rounded-md border', files.isPlaceholderData && 'opacity-60')}>
-          <table className="w-full min-w-[880px] table-fixed text-sm">
-            <thead className="bg-app text-left text-2xs text-text-secondary">
-              <tr>
-                <th className="h-7 px-3 font-medium">File</th>
-                <th className="w-24 px-3 text-right font-medium">Size</th>
-                <th className="w-[22%] px-3 font-medium">On</th>
-                <th className="w-32 px-3 font-medium">Stored in</th>
-                <th className="w-36 px-3 font-medium">Uploaded by</th>
-                <th className="w-28 px-3 font-medium">Uploaded</th>
-                <th className="w-36 px-3" aria-label="Actions" />
-              </tr>
-            </thead>
+        <div className={cn('overflow-x-auto rounded-md border', files.isPlaceholderData && 'is-stale')}>
+          <table className={TABLE}>
+            <FilesHead />
             <tbody className="divide-y divide-border-subtle">
               {rows.map(file => (
                 <FileRow
@@ -201,29 +202,32 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
         onOpenChange={open => (open ? undefined : setDeleting(null))}
         title={`Delete ${deleting?.filename ?? 'this file'}?`}
         confirmLabel="Delete file"
+        pendingLabel="Deleting…"
         onConfirm={() => {
           if (!deleting) return;
           const file = deleting;
           setDeleting(null);
-          remove.mutate(file, {
-            onError: error => toast.error(`${file.filename} was not deleted. ${error.message}`),
-          });
+          deleteFile(file);
         }}
       >
         {deleting ? (
           <>
             <p>
-              It leaves {holderName(deleting)} for everyone and cannot be restored. Any link to it, or image of it in
-              the text, stops working.
+              It is removed from {holderName(deleting)} for everyone and cannot be restored. Links to it, and images of
+              it in the text, stop working.
             </p>
             <p>
-              {deleting.storage_target === 'platform'
-                ? `${formatBytes(deleting.size_bytes)} of the built-in storage is free again at once.`
-                : deleting.available
-                  ? `It is deleted from ${bucket ?? 'your own bucket'} too, which frees ${formatBytes(deleting.size_bytes)} there.`
-                  : byo === 'failed'
-                    ? `It is deleted from ${bucket ?? 'your own bucket'} once the bucket accepts its key again.`
-                    : 'Its copy stays in the earlier bucket, which is no longer connected; delete it there if you want it gone.'}
+              {deleting.storage_target === 'platform' ? (
+                `This frees ${formatBytes(deleting.size_bytes)} of the built-in storage.`
+              ) : deleting.available ? (
+                <>
+                  It is also deleted from {bucketName(bucket)}, which frees {formatBytes(deleting.size_bytes)} there.
+                </>
+              ) : byo === 'failed' ? (
+                <>It is deleted from {bucketName(bucket)} once the bucket accepts its key again.</>
+              ) : (
+                'Its copy stays in the earlier bucket, which is no longer connected. Delete it there if you want it gone.'
+              )}
             </p>
           </>
         ) : null}
@@ -234,8 +238,14 @@ export function StorageFiles({ slug, filter, onFilterChange, byo, bucket, timeZo
 
 function holderName(file: StorageFile) {
   if (file.article) return `the article “${file.article.title}”`;
-  return file.issue ?? file.project;
+  return <span className="font-mono">{file.issue ?? file.project}</span>;
 }
+
+const bucketName = (bucket: string | null) =>
+  bucket ? <span className="font-mono">{bucket}</span> : 'your own bucket';
+
+/** "2.0 MB" under "2.4 MB": sizes in a column line up on the decimal. */
+const columnBytes = (bytes: number) => formatBytes(bytes).replace(/^(\d) (?!B$)/, '$1.0 ');
 
 interface FileRowProps {
   file: StorageFile;
@@ -251,7 +261,7 @@ function FileRow({ file, byo, bucket, timeZone, deleting, onDelete }: FileRowPro
   return (
     <tr className={cn('h-10', deleting && 'opacity-50')}>
       <td className="px-3">
-        <span className="flex min-w-0 items-center gap-2.5">
+        <span className="flex min-w-0 items-center gap-3">
           <Thumbnail file={file} image={image} />
           {file.available ? (
             <a
@@ -267,16 +277,18 @@ function FileRow({ file, byo, bucket, timeZone, deleting, onDelete }: FileRowPro
           )}
         </span>
       </td>
-      <td className="px-3 text-right font-mono text-xs whitespace-nowrap tabular">{formatBytes(file.size_bytes)}</td>
+      <td className="px-3 text-right whitespace-nowrap tabular">{columnBytes(file.size_bytes)}</td>
       <td className="px-3">
         <Holder file={file} />
       </td>
       <td className="px-3 text-xs whitespace-nowrap">
         {file.available ? (
-          <span className="text-text-secondary">
+          <span className="block truncate text-text-secondary">
             {file.storage_target === 'byo' ? (
               bucket ? (
-                <span className="font-mono">{bucket}</span>
+                <span className="font-mono" title={bucket}>
+                  {bucket}
+                </span>
               ) : (
                 'Your own bucket'
               )
@@ -316,16 +328,21 @@ function FileRow({ file, byo, bucket, timeZone, deleting, onDelete }: FileRowPro
             </TooltipContent>
           </Tooltip>
         ) : file.me.can_delete ? (
-          <Button
-            variant="ghost"
-            size="xs"
-            className="text-text-secondary hover:text-danger-fg"
-            disabled={deleting}
-            onClick={onDelete}
-            aria-label={`Delete ${file.filename}`}
-          >
-            <Trash2 /> Delete
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="-my-1 -mr-1.5 size-7 text-text-secondary hover:text-danger-fg"
+                disabled={deleting}
+                onClick={onDelete}
+                aria-label={`Delete ${file.filename}`}
+              >
+                <Trash2 className="size-icon" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete file</TooltipContent>
+          </Tooltip>
         ) : null}
       </td>
     </tr>
@@ -336,7 +353,7 @@ function Thumbnail({ file, image }: { file: StorageFile; image: boolean }) {
   const [broken, setBroken] = useState(false);
   if (!file.available) {
     return (
-      <span className="grid size-7 flex-none place-items-center rounded-sm border border-dashed bg-inset" aria-hidden>
+      <span className={cn(THUMB, 'grid place-items-center border border-dashed bg-inset')} aria-hidden>
         <CloudOff className="size-3.5 text-text-muted" />
       </span>
     );
@@ -349,11 +366,11 @@ function Thumbnail({ file, image }: { file: StorageFile; image: boolean }) {
         alt=""
         loading="lazy"
         onError={() => setBroken(true)}
-        className="size-7 flex-none rounded-sm border bg-inset object-cover"
+        className={cn(THUMB, 'border bg-inset object-cover')}
       />
     );
   }
-  return <FileBadge filename={file.filename} mime={file.mime_type} className="h-7 w-7 flex-none" />;
+  return <FileBadge filename={file.filename} mime={file.mime_type} className={cn(THUMB, 'px-0')} />;
 }
 
 function Holder({ file }: { file: StorageFile }) {
@@ -387,25 +404,61 @@ function Holder({ file }: { file: StorageFile }) {
   );
 }
 
+const TABLE = 'w-full min-w-[1080px] table-fixed text-sm';
+const THUMB = 'h-7 w-10 flex-none rounded-sm';
+
+function FilesHead() {
+  return (
+    <thead className="bg-app text-left text-2xs text-text-secondary">
+      <tr>
+        <th className="h-7 px-3 font-medium">File</th>
+        <th className="w-24 px-3 text-right font-medium">Size</th>
+        <th className="w-36 px-3 font-medium">On</th>
+        <th className="w-32 px-3 font-medium">Stored in</th>
+        <th className="w-40 px-3 font-medium">Uploaded by</th>
+        <th className="w-28 px-3 font-medium">Uploaded</th>
+        <th className="w-36 px-3" aria-label="Actions" />
+      </tr>
+    </thead>
+  );
+}
+
 export function FilesSkeleton() {
   return (
-    <div
-      className="flex flex-col divide-y divide-border-subtle rounded-md border"
-      role="status"
-      aria-label="Loading files"
-    >
-      <div className="h-7 bg-app" />
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="flex h-10 items-center gap-3 px-3">
-          <Skeleton className="size-7 rounded-sm" />
-          <Skeleton className="h-3" style={{ width: `${18 + ((i * 13) % 20)}%` }} />
-          <Skeleton className="ml-auto h-3 w-14" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-16" />
-        </div>
-      ))}
+    <div className="overflow-x-auto rounded-md border" role="status" aria-label="Loading files">
+      <table className={TABLE} aria-hidden>
+        <FilesHead />
+        <tbody className="divide-y divide-border-subtle">
+          {Array.from({ length: 6 }, (_, i) => (
+            <tr key={i} className="h-10">
+              <td className="px-3">
+                <span className="flex items-center gap-3">
+                  <Skeleton className={THUMB} />
+                  <Skeleton className="h-3" style={{ width: `${40 + ((i * 17) % 40)}%` }} />
+                </span>
+              </td>
+              <td className="px-3">
+                <Skeleton className="ml-auto h-3 w-12" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-12" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-14" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-20" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="h-3 w-16" />
+              </td>
+              <td className="px-3">
+                <Skeleton className="ml-auto size-5" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

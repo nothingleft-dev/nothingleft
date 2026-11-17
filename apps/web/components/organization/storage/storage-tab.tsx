@@ -5,19 +5,25 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Route } from 'next';
 import { HardDrive } from 'lucide-react';
-import { toast } from 'sonner';
 import type { Me, Organization, StorageOverview } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError } from '@components/query-state';
 import { SettingsSection } from '@components/settings/section';
-import { ByoFailingBanner } from '@components/attachments/byo-failing-banner';
+import { FormAlert } from '@components/auth/form-alert';
+import { Skeleton } from '@components/ui/skeleton';
 import { ByoWizard, entryStep, isWizardStep, type WizardStep } from '@components/organization/storage/byo-wizard';
 import { ConnectionPanel, DisconnectDialog, EarlierBuckets } from '@components/organization/storage/connection-panel';
 import { MigrationPanel } from '@components/organization/storage/migration-panel';
-import { FilesSkeleton, StorageFiles, type FilesFilter } from '@components/organization/storage/storage-files';
+import {
+  FILES_DESCRIPTION,
+  FilesSkeleton,
+  StorageFiles,
+  type FilesFilter,
+} from '@components/organization/storage/storage-files';
 import { StorageUsage, StorageUsageSkeleton } from '@components/organization/storage/storage-usage';
 import { useStartMigration, useStorageOverview } from '@hooks/use-organization-storage';
 import { queryKeys } from '@lib/query/keys';
+import { toastError } from '@components/toast-error';
 
 /** Org Admins and the Owner only: the tab is not offered to anyone else, and the API refuses them too. */
 export function StorageTab({ organization, user }: { organization: Organization; user: Me }) {
@@ -65,21 +71,48 @@ export function StorageTab({ organization, user }: { organization: Organization;
   if (overview.isPending) {
     return (
       <div className="flex flex-col gap-6">
-        <StorageUsageSkeleton />
-        <FilesSkeleton />
+        <StorageUsageSkeleton ownBucket={organization.storage.bring_your_own !== null} />
+        <div className="flex items-start gap-4 border-b pb-5" aria-hidden>
+          <div className="flex min-w-0 flex-1 flex-col [&>*]:flex [&>*]:h-5 [&>*]:items-center [&>*:first-child]:mb-0.5">
+            <div>
+              <Skeleton className="h-3.5 w-40" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-full max-w-3xl" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-52 flex-none max-sm:hidden" />
+        </div>
+        <SettingsSection title="Files" description={FILES_DESCRIPTION}>
+          <div className="flex flex-wrap gap-2" aria-hidden>
+            <Skeleton className="h-6 w-[137px]" />
+            <Skeleton className="h-6 w-[150px]" />
+            <Skeleton className="h-6 w-[167px]" />
+          </div>
+          <FilesSkeleton />
+        </SettingsSection>
       </div>
     );
   }
   if (overview.isError) {
     return (
-      <FormAlert title="Storage usage could not be loaded.">
-        <p>{overview.error.message}</p>
-        <p>
-          <button type="button" onClick={() => void overview.refetch()}>
-            Try again
-          </button>
-        </p>
-      </FormAlert>
+      <div className="flex flex-col gap-6">
+        <LoadError onRetry={() => void overview.refetch()} detail={overview.error.message}>
+          Storage usage could not be loaded.
+        </LoadError>
+        <StorageFiles
+          slug={slug}
+          filter={filter}
+          onFilterChange={onFilterChange}
+          byo={organization.storage.bring_your_own}
+          bucket={null}
+          ownBucket={organization.storage.bring_your_own !== null}
+          timeZone={user.timezone}
+        />
+      </div>
     );
   }
 
@@ -91,15 +124,25 @@ export function StorageTab({ organization, user }: { organization: Organization;
 
   return (
     <div className="flex flex-col gap-6">
-      {mode.kind === 'connected' ? (
-        <ByoFailingBanner
-          storage={organization.storage}
-          bucket={connection?.bucket}
-          canFix
-          withAction={!mode.updating}
-        />
+      {mode.kind === 'connected' && connection?.status === 'failed' ? (
+        <FormAlert
+          title={
+            <>
+              <span className="font-mono">{connection.bucket}</span> refused its key.
+            </>
+          }
+          action={
+            mode.updating ? undefined : (
+              <Button variant="outline" size="sm" onClick={() => setParams({ setup: 'update' })}>
+                Update key
+              </Button>
+            )
+          }
+        >
+          Files there cannot be opened and uploads are paused until a working key for the same bucket is saved.
+        </FormAlert>
       ) : null}
-      <StorageUsage overview={data} />
+      <StorageUsage overview={data} compact={wizardOpen} />
 
       {mode.kind === 'wizard' ? (
         <ByoWizard
@@ -112,7 +155,7 @@ export function StorageTab({ organization, user }: { organization: Organization;
           onMoveFiles={() => {
             setParams({ setup: null });
             migrate.mutate(undefined, {
-              onError: error => toast.error(`The files did not start moving. ${error.message}`),
+              onError: error => toastError('Could not start moving the files', error),
             });
           }}
         />
@@ -129,7 +172,7 @@ export function StorageTab({ organization, user }: { organization: Organization;
             onReopened={() => setParams({ confirm: null })}
             timeZone={user.timezone}
           />
-          <MigrationPanel slug={slug} overview={data} />
+          <MigrationPanel slug={slug} overview={data} quiet={mode.updating} />
         </>
       ) : mode.kind === 'unfinished' && connection ? (
         <SettingsSection
@@ -165,7 +208,11 @@ export function StorageTab({ organization, user }: { organization: Organization;
           title="Bring your own bucket"
           description="Store this organisation’s files in a Cloudflare R2 or AWS S3 bucket of yours instead: in your account, on your bill, with no storage limit. Setup takes a few minutes."
           actions={
-            <Button size="sm" onClick={() => setParams({ setup: 'provider' })}>
+            <Button
+              size="sm"
+              variant={data.platform.level === 'ok' ? 'outline' : 'default'}
+              onClick={() => setParams({ setup: 'provider' })}
+            >
               <HardDrive /> Connect your own bucket
             </Button>
           }
@@ -183,6 +230,7 @@ export function StorageTab({ organization, user }: { organization: Organization;
           onFilterChange={onFilterChange}
           byo={organization.storage.bring_your_own}
           bucket={connection?.bucket ?? null}
+          ownBucket={connection !== null || data.bring_your_own.files > 0 || data.earlier_buckets.length > 0}
           timeZone={user.timezone}
         />
       )}

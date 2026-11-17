@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -24,9 +24,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronRight, GripVertical, Kanban, MoreHorizontal, Plus } from 'lucide-react';
+import { ChevronRight, GripVertical, MoreHorizontal, Plus, SquareKanban } from 'lucide-react';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type Sprint } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
+import { LoadError, errorDetail, notFoundOn404 } from '@components/query-state';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,11 +36,12 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
 import { IssueKey } from '@components/issue-key';
 import { PageHeader } from '@components/page-header';
+import { ArchivedNotice } from '@components/projects/archived-notice';
+import { ReadOnlyNotice } from '@components/projects/read-only-notice';
 import { Meter } from '@components/dashboard/meter';
 import { AssigneeStack } from '@components/issues/assignee-stack';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
@@ -51,8 +53,9 @@ import {
   FinishSprintDialog,
   SprintFormDialog,
   StartSprintDialog,
+  nextSprintName,
 } from '@components/agile/sprint-dialogs';
-import { useBacklog, useBacklogMove, type BacklogDrop } from '@hooks/use-backlog';
+import { BACKLOG_PAGE_SIZE, useBacklog, useBacklogMove, type BacklogDrop } from '@hooks/use-backlog';
 import { useBoards } from '@hooks/use-boards';
 import { useProject } from '@hooks/use-projects';
 import { useProjectRoles } from '@hooks/use-project-roles';
@@ -63,6 +66,8 @@ import { isApiError } from '@lib/api/errors';
 import { issuePath } from '@lib/issue-path';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { LoadMore } from '@components/text-button';
+import { formatCount } from '@lib/numbers';
 
 export const BACKLOG_DEFAULT_QUERY = '#Unresolved';
 const BACKLOG = 'backlog';
@@ -101,8 +106,11 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
   );
   const active = open.find(s => s.state === 'active') ?? null;
   const planned = open.filter(s => s.state === 'planned');
+  const nextUp = planned[0] ?? null;
   const carryFrom = active ?? [...planned].reverse().find(s => s.progress.issues > s.progress.resolved_issues) ?? null;
   const boardSlug = boards.data?.[0]?.slug;
+  // Fetched while the sprints load, so the backlog does not wait for its section to mount.
+  useBacklog(projectKey, null, q);
 
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Sprint | null>(null);
@@ -112,6 +120,9 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
 
   const [dragging, setDragging] = useState<Issue | null>(null);
   const [hint, setHint] = useState<Hint>(null);
+  // Keys up to KEY-999 fit before anything loads, so the titles rarely shift once rows arrive.
+  const [keyChars, setKeyChars] = useState(projectKey.length + 4);
+  const fitKeys = useCallback((chars: number) => setKeyChars(n => Math.max(n, chars)), []);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -144,45 +155,110 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
     // Within one list the rows move aside themselves; a line is only needed across lists.
     setHint(next && next.container !== (event.active.data.current as DragData).container ? next : null);
   };
+  // A refusal is answered by the refreshed list, so only a fault on our side or the network offers a retry.
+  const send = (body: BacklogDrop) =>
+    move.mutate(body, {
+      onError: error =>
+        toastError(
+          `Could not move ${body.issues[0]}`,
+          error,
+          isApiError(error) && error.status < 500 && !error.isRateLimited ? {} : { retry: () => send(body) },
+        ),
+    });
+  // A pointer drag leaves the grip focused, which would keep it showing beside the hovered row's.
+  const releaseGrip = (event: DragEndEvent) => {
+    if (!(event.activatorEvent instanceof KeyboardEvent) && document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+  };
   const onDragEnd = (event: DragEndEvent) => {
     const drop = dropOf(event);
     setDragging(null);
     setHint(null);
+    releaseGrip(event);
     if (!drop) return;
     const key = String(event.active.id);
     const from = (event.active.data.current as DragData).container;
     if (drop.container === from && drop.key === null) return;
     const body: BacklogDrop = { issues: [key], sprint: drop.container === BACKLOG ? null : drop.container };
     if (drop.key) body[drop.side] = drop.key;
-    move.mutate(body, { onError: error => toastError(error) });
+    send(body);
   };
 
-  if (project.isError) return <FormAlert title="This project could not be loaded." />;
-
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Backlog"
-        meta={project.data?.name}
-        actions={
+  const listedName = roles.projects.find(p => p.key === projectKey)?.name;
+  const projectName = project.data?.name ?? listedName;
+  const header = (
+    <PageHeader
+      title="Backlog"
+      meta={projectName ?? (project.isPending ? <Skeleton className="h-3.5 w-28" /> : projectKey)}
+      actions={
+        project.isError && !project.data ? undefined : (
           <>
-            {boardSlug ? (
-              <Button variant="outline" asChild>
+            {boards.isPending ? (
+              <Skeleton className="h-8 w-[83px] rounded-md max-sm:w-8" />
+            ) : boardSlug ? (
+              <Button variant="outline" size="sm" asChild>
                 <Link href={`/projects/${projectKey}/board/${boardSlug}/current` as Route}>
-                  <Kanban />
-                  Board
+                  <SquareKanban />
+                  <span className="max-sm:sr-only">Board</span>
                 </Link>
               </Button>
             ) : null}
-            {canManage ? (
-              <Button onClick={() => setCreating(true)}>
+            {roles.isPending ? (
+              <Skeleton className="h-8 w-28 rounded-md max-sm:w-8" />
+            ) : canManage ? (
+              <Button size="sm" onClick={() => setCreating(true)}>
                 <Plus />
-                New sprint
+                <span className="max-sm:sr-only">New sprint</span>
               </Button>
             ) : null}
           </>
-        }
-      />
+        )
+      }
+    />
+  );
+
+  if (project.isError && !project.data) {
+    notFoundOn404(project.error);
+    return (
+      <div className="flex flex-col gap-6">
+        {header}
+        <LoadError onRetry={() => void project.refetch()} detail={errorDetail(project.error)}>
+          This project could not be loaded.
+        </LoadError>
+      </div>
+    );
+  }
+
+  const slots: HeaderSlots = { actions: canManage };
+  const archived = project.data?.is_archived ?? false;
+  const unarchivable = archived && (roles.orgAdmin || project.data?.my_role === 'project_admin');
+  // Everything below the header lands at once: sections arriving one after another would push the backlog down.
+  const settling = sprints.isPending || roles.isPending || project.isPending;
+
+  return (
+    <div
+      className="flex flex-col gap-6"
+      style={{ '--key-w': `${Math.ceil(keyChars * KEY_CHAR_PX)}px` } as CSSProperties}
+    >
+      {header}
+
+      {settling ? null : archived ? (
+        <ArchivedNotice>
+          {projectName ?? projectKey} is archived, so its sprints and backlog are read-only.
+          {unarchivable ? (
+            <>
+              {' '}
+              <Link href={`/projects/${projectKey}/settings` as Route} className="action-link hover:text-text">
+                Unarchive it in settings
+              </Link>
+            </>
+          ) : null}
+        </ArchivedNotice>
+      ) : !canPlan ? (
+        <ReadOnlyNotice>
+          You can read this backlog. Ordering issues needs the Contributor role; planning sprints, Project Admin.
+        </ReadOnlyNotice>
+      ) : null}
 
       <DndContext
         sensors={sensors}
@@ -190,52 +266,74 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={() => {
+        onDragCancel={event => {
           setDragging(null);
           setHint(null);
+          releaseGrip(event);
         }}
       >
-        <div className="flex flex-col gap-6">
-          {sprints.isPending ? (
-            <SectionSkeleton />
-          ) : open.length === 0 ? (
-            <EmptyState
-              title={`${project.data?.name ?? projectKey} has no sprint planned.`}
-              description={
-                canManage
-                  ? 'Plan one, then drag issues into it from the backlog below.'
-                  : 'A Project Admin plans sprints; you can still order the backlog.'
-              }
-              action={
-                canManage ? (
-                  <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
-                    <Plus />
-                    New sprint
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : (
-            open.map(sprint => (
-              <SprintSection
-                key={sprint.slug}
-                projectKey={projectKey}
-                sprint={sprint}
-                canPlan={canPlan}
-                canManage={canManage}
-                hint={hint}
-                boardSlug={boardSlug}
-                startBlockedBy={active?.name ?? null}
-                onStart={() => setStarting(sprint)}
-                onFinish={() => setFinishing(sprint)}
-                onEdit={() => setEditing(sprint)}
-                onDelete={() => setDeleting(sprint)}
+        {settling ? (
+          <div className="flex flex-col gap-6" role="status" aria-label="Loading">
+            <SectionSkeleton slots={{ actions: canManage || roles.isPending }} />
+            <BacklogSkeleton />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {!sprints.data ? (
+              <LoadError onRetry={() => void sprints.refetch()} detail={errorDetail(sprints.error)}>
+                The sprints could not be loaded.
+              </LoadError>
+            ) : open.length === 0 ? (
+              <EmptyState
+                title={`${projectName ?? projectKey} has no sprint planned.`}
+                description={
+                  canManage
+                    ? 'Plan one, then drag issues into it from the backlog below.'
+                    : archived
+                      ? 'An archived project plans no sprints.'
+                      : 'A Project Admin plans sprints; you can still order the backlog.'
+                }
+                action={
+                  canManage ? (
+                    <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
+                      <Plus />
+                      New sprint
+                    </Button>
+                  ) : undefined
+                }
               />
-            ))
-          )}
+            ) : (
+              open.map(sprint => (
+                <SprintSection
+                  key={sprint.slug}
+                  projectKey={projectKey}
+                  sprint={sprint}
+                  canPlan={canPlan}
+                  canManage={canManage}
+                  slots={slots}
+                  hint={hint}
+                  boardSlug={boardSlug}
+                  start={sprint.slug === nextUp?.slug ? (active ? 'blocked' : 'button') : active ? 'none' : 'menu'}
+                  activeName={active?.name ?? null}
+                  onKeys={fitKeys}
+                  onStart={() => setStarting(sprint)}
+                  onFinish={() => setFinishing(sprint)}
+                  onEdit={() => setEditing(sprint)}
+                  onDelete={() => setDeleting(sprint)}
+                />
+              ))
+            )}
 
-          <BacklogSection projectKey={projectKey} q={q} onCommit={commit} canPlan={canPlan} hint={hint} />
-        </div>
+            <BacklogSection
+              projectKey={projectKey}
+              q={q}
+              onCommit={commit}
+              canPlan={canPlan}
+              hint={hint}
+              onKeys={fitKeys}
+            />
+          </div>
+        )}
 
         <DragOverlay dropAnimation={null}>
           {dragging ? <IssueLine issue={dragging} draggable overlay /> : null}
@@ -244,6 +342,7 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
 
       <SprintFormDialog
         projectKey={projectKey}
+        projectName={project.data?.name ?? projectKey}
         open={creating || editing !== null}
         onOpenChange={o => {
           if (!o) {
@@ -253,6 +352,7 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
         }}
         sprint={editing}
         carryFrom={carryFrom}
+        suggestedName={nextSprintName(sprints.data ?? [])}
       />
       <StartSprintDialog
         projectKey={projectKey}
@@ -271,15 +371,55 @@ export function BacklogPage({ projectKey }: { projectKey: string }) {
   );
 }
 
+// JetBrains Mono advances 0.6em; issue keys are set at 12px.
+const KEY_CHAR_PX = 7.2;
+
+interface HeaderSlots {
+  /** The admin's primary action and ⋯ menu, kept one width so every header's stats and bar line up. */
+  actions: boolean;
+}
+
+const ACTIONS_SLOT = 'w-44';
+const STATS_SLOT = 'min-w-52';
+const METER_SLOT = 'w-24';
+
+function sprintStats(progress: Sprint['progress']) {
+  if (progress.issues === 0) return { long: 'No issues', short: 'No issues', ratio: 0, label: 'No issues' };
+  const issues = `${formatCount(progress.resolved_issues)} of ${formatCount(progress.issues)} resolved`;
+  const short = `${formatCount(progress.resolved_issues)}/${formatCount(progress.issues)}`;
+  if (progress.points === 0) {
+    const ratio = progress.resolved_issues / progress.issues;
+    return {
+      long: `${issues} · ? points`,
+      short: `${short} · ? pts`,
+      ratio,
+      label: `${Math.round(ratio * 100)}% of the issues resolved`,
+    };
+  }
+  const ratio = progress.resolved_points / progress.points;
+  return {
+    long: `${issues} · ${formatCount(progress.resolved_points)} of ${formatCount(progress.points)} points`,
+    short: `${short} · ${formatCount(progress.resolved_points)}/${formatCount(progress.points)} pts`,
+    ratio,
+    label: `${Math.round(ratio * 100)}% of the points resolved`,
+  };
+}
+
 interface SprintSectionProps {
   projectKey: string;
   sprint: Sprint;
   canPlan: boolean;
   canManage: boolean;
+  slots: HeaderSlots;
   hint: Hint;
   boardSlug: string | undefined;
-  /** The running sprint, which has to finish before another starts. */
-  startBlockedBy: string | null;
+  /**
+   * Only the next planned sprint offers Start in its header, disabled while another runs; the rest
+   * offer it in the ⋯ menu when nothing runs.
+   */
+  start: 'button' | 'blocked' | 'menu' | 'none';
+  activeName: string | null;
+  onKeys: (chars: number) => void;
   onStart: () => void;
   onFinish: () => void;
   onEdit: () => void;
@@ -291,9 +431,12 @@ function SprintSection({
   sprint,
   canPlan,
   canManage,
+  slots,
   hint,
   boardSlug,
-  startBlockedBy,
+  start,
+  activeName,
+  onKeys,
   onStart,
   onFinish,
   onEdit,
@@ -302,102 +445,131 @@ function SprintSection({
   const [expanded, setExpanded] = useState(true);
   const list = useBacklog(projectKey, sprint.slug, '', expanded);
   const issues = useMemo(() => list.data?.pages.flatMap(p => p.data) ?? [], [list.data]);
-  const { progress } = sprint;
-  const ratio = progress.points > 0 ? progress.resolved_points / progress.points : 0;
   const isActive = sprint.state === 'active';
+  const stats = sprintStats(sprint.progress);
+  const total = list.data?.pages[0]?.meta.pagination?.total;
 
   return (
-    <section aria-label={sprint.name} className="flex flex-col">
-      <header className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 border-y bg-app px-2 py-1.5">
-        <button
-          type="button"
-          onClick={() => setExpanded(v => !v)}
-          aria-expanded={expanded}
-          className="flex min-w-0 items-center gap-2 rounded-sm text-left hover:text-text"
-        >
-          <ChevronRight
-            className={cn(
-              'size-3.5 flex-none text-text-muted transition-transform duration-(--dur-fast)',
-              expanded && 'rotate-90',
-            )}
-          />
-          <span className="truncate font-semibold">{sprint.name}</span>
-        </button>
-        {isActive ? (
-          <span className="c-amber rounded-xs bg-c-bg px-1.5 text-2xs leading-[18px] font-medium text-c-fg">
-            Active
-          </span>
-        ) : null}
-        <SprintDates sprint={sprint} className="text-xs" />
-        <DaysLeft days={sprint.days_left} />
-
-        <div className="ml-auto flex items-center gap-3">
-          <span className="text-xs text-text-secondary tabular">
-            {progress.resolved_issues} of {progress.issues} resolved
-            {progress.points > 0 ? ` · ${progress.resolved_points} of ${progress.points} points` : ''}
-          </span>
-          {progress.points > 0 ? (
-            <Meter
-              ratio={ratio}
-              label={`${Math.round(ratio * 100)}% of the points resolved`}
-              className="w-20 max-sm:hidden"
-            />
-          ) : null}
-          {isActive && boardSlug ? (
-            <Button size="sm" variant="outline" asChild>
-              <Link href={`/projects/${projectKey}/board/${boardSlug}/${sprint.slug}` as Route}>
-                <Kanban />
-                Board
-              </Link>
-            </Button>
-          ) : null}
-          {canManage ? (
-            <>
-              {isActive ? (
-                <Button size="sm" variant="outline" onClick={onFinish}>
-                  Finish sprint
-                </Button>
-              ) : (
-                <StartButton blockedBy={startBlockedBy} onClick={onStart} />
+    <section aria-label={sprint.name} className={cn('flex flex-col', !expanded && '-mb-4')}>
+      <header className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-0.5 border-y bg-app px-2 py-0.5">
+        <div className="flex min-w-0 flex-1 items-center gap-x-3">
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            aria-expanded={expanded}
+            className="-ml-1 flex min-w-0 items-center gap-2 rounded-sm px-1 text-left hover:bg-hover"
+          >
+            <ChevronRight
+              className={cn(
+                'size-3.5 flex-none text-text-muted transition-transform duration-(--dur-fast)',
+                expanded && 'rotate-90',
               )}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="icon-sm" variant="ghost" aria-label={`${sprint.name} actions`}>
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={onEdit}>
-                    {isActive ? 'Rename or edit goal' : 'Edit sprint'}
-                  </DropdownMenuItem>
-                  {isActive ? null : (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-                        Delete sprint
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+            />
+            <span className="truncate font-semibold">{sprint.name}</span>
+          </button>
+          {isActive ? (
+            <span className="c-amber flex-none rounded-xs bg-c-bg px-1.5 text-2xs leading-[18px] font-medium text-c-fg">
+              Active
+            </span>
           ) : null}
+          <span className="flex flex-none items-center gap-x-3 max-sm:hidden">
+            <SprintDates sprint={sprint} className="text-xs" />
+            <DaysLeft days={sprint.days_left} />
+          </span>
+        </div>
+
+        <div className="flex flex-none items-center gap-3 max-sm:hidden">
+          <span className={cn('text-right text-xs text-text-secondary tabular', STATS_SLOT)}>{stats.long}</span>
+          <Meter
+            ratio={stats.ratio}
+            label={stats.label}
+            className={cn('bg-border', METER_SLOT, sprint.progress.issues === 0 && 'invisible')}
+          />
+        </div>
+
+        {slots.actions ? (
+          <div
+            className={cn(
+              'flex flex-none items-center justify-end gap-1',
+              ACTIONS_SLOT,
+              'max-sm:w-auto max-sm:max-w-[55%]',
+            )}
+          >
+            {canManage ? (
+              <>
+                {isActive ? (
+                  <Button size="sm" variant="outline" onClick={onFinish}>
+                    Finish sprint
+                  </Button>
+                ) : start === 'button' || start === 'blocked' ? (
+                  <StartButton blockedBy={start === 'blocked' ? activeName : null} onClick={onStart} />
+                ) : null}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon-sm" variant="ghost" aria-label={`${sprint.name} actions`}>
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {start === 'menu' ? <DropdownMenuItem onSelect={onStart}>Start sprint</DropdownMenuItem> : null}
+                    <DropdownMenuItem onSelect={onEdit}>Edit sprint</DropdownMenuItem>
+                    {boardSlug ? (
+                      <DropdownMenuItem asChild>
+                        <Link href={`/projects/${projectKey}/board/${boardSlug}/${sprint.slug}` as Route}>
+                          Open board
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : null}
+                    {isActive ? null : (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                          Delete sprint
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="flex min-w-0 basis-full flex-wrap items-center gap-x-3 gap-y-0.5 pb-1 pl-5.5 text-xs whitespace-nowrap sm:hidden">
+          <SprintDates sprint={sprint} />
+          <DaysLeft days={sprint.days_left} />
+          <span className="ml-auto flex items-center gap-x-3">
+            <span className="text-text-secondary tabular">{stats.short}</span>
+            {sprint.progress.issues > 0 ? (
+              <Meter ratio={stats.ratio} label={stats.label} className="w-10 flex-none bg-border" />
+            ) : null}
+          </span>
         </div>
       </header>
 
       {expanded ? (
         <>
           {sprint.goal_md ? (
-            <p className="border-b border-border-subtle px-8 py-2 text-xs text-text-secondary">
-              {plainGoal(sprint.goal_md)}
-            </p>
+            <div className="border-b border-border-subtle py-2 pr-2 pl-7.5">
+              <p className="max-w-[72ch] text-xs text-pretty text-text-secondary">{plainGoal(sprint.goal_md)}</p>
+            </div>
           ) : null}
           <Container
             id={sprint.slug}
             issues={issues}
+            total={total}
             loading={list.isPending}
+            skeletonRows={Math.max(1, Math.min(sprint.progress.issues, BACKLOG_PAGE_SIZE))}
+            failed={
+              list.isError && !list.data ? (
+                <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+                  {`${sprint.name} could not be loaded.`}
+                </LoadError>
+              ) : null
+            }
             canPlan={canPlan}
             hint={hint}
+            onKeys={onKeys}
             empty={canPlan ? 'Drag issues here from the backlog.' : 'Nothing is planned into this sprint yet.'}
             more={list.hasNextPage ? () => void list.fetchNextPage() : undefined}
             loadingMore={list.isFetchingNextPage}
@@ -445,16 +617,31 @@ function BacklogSection({
   onCommit,
   canPlan,
   hint,
+  onKeys,
 }: {
   projectKey: string;
   q: string;
   onCommit: (q: string) => void;
   canPlan: boolean;
   hint: Hint;
+  onKeys: (chars: number) => void;
 }) {
   const list = useBacklog(projectKey, null, q);
-  const issues = useMemo(() => list.data?.pages.flatMap(p => p.data) ?? [], [list.data]);
-  const total = list.data?.pages[0]?.meta.pagination?.total;
+  const refused = list.isError && isApiError(list.error) && list.error.status === 400;
+  // A refused query keeps the rows that were on screen; opened with one, it shows the unfiltered backlog.
+  const [lastGood, setLastGood] = useState<typeof list.data>(undefined);
+  if (list.data && !list.isPlaceholderData && lastGood !== list.data) setLastGood(list.data);
+  const unfiltered = useBacklog(projectKey, null, '', refused && !lastGood);
+  const shown = list.data ?? (refused ? (lastGood ?? unfiltered.data) : undefined);
+  const issues = useMemo(() => shown?.pages.flatMap(p => p.data) ?? [], [shown]);
+  const total = shown?.pages[0]?.meta.pagination?.total;
+
+  // A narrowing of the default query counts against the unresolved backlog; anything else against all of it.
+  const trimmed = q.trim();
+  const base = UNRESOLVED_TOKEN.test(trimmed) ? BACKLOG_DEFAULT_QUERY : '';
+  const filtered = trimmed !== base;
+  const whole = useBacklog(projectKey, null, base, filtered);
+  const wholeTotal = filtered && !refused ? whole.data?.pages[0]?.meta.pagination?.total : undefined;
 
   const problem = useMemo<QueryProblem | null>(() => {
     const error = list.error;
@@ -468,12 +655,23 @@ function BacklogSection({
 
   return (
     <section aria-label="Backlog" className="flex flex-col">
-      <header className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-2 border-y bg-app px-2 py-1.5">
+      <header className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-0.5 border-y bg-app px-2 py-0.5">
         <span className="pl-5.5 font-semibold">Backlog</span>
-        {total !== undefined ? <span className="tabular text-text-muted">{total}</span> : null}
-        <span className="text-xs text-text-secondary">Issues in no sprint, in the order they will be picked up.</span>
+        {total !== undefined ? (
+          <span className="text-text-muted tabular">
+            {formatCount(total)}
+            {wholeTotal !== undefined && wholeTotal !== total ? ` of ${formatCount(wholeTotal)}` : ''}
+          </span>
+        ) : list.isPending ? (
+          <Skeleton className="h-3 w-6" />
+        ) : null}
+        <span className="text-xs text-text-secondary max-sm:basis-full max-sm:pl-5.5">
+          {refused && shown
+            ? 'These are the last valid filter’s results; fix the filter to update them.'
+            : 'Issues in no sprint, in the order they will be picked up.'}
+        </span>
       </header>
-      <div className="border-b border-border-subtle px-2 py-2">
+      <div className="border-b border-border-subtle py-2">
         <QueryBar
           value={q}
           onCommit={onCommit}
@@ -484,13 +682,29 @@ function BacklogSection({
       <Container
         id={BACKLOG}
         issues={issues}
-        loading={list.isPending}
+        total={total}
+        loading={list.isPending || (refused && !shown)}
+        failed={
+          list.isError && !shown ? (
+            <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+              The backlog could not be loaded.
+            </LoadError>
+          ) : null
+        }
         canPlan={canPlan}
         hint={hint}
+        onKeys={onKeys}
         empty={
-          q.trim() === '' || q.trim() === BACKLOG_DEFAULT_QUERY
-            ? 'The backlog is empty: every unresolved issue is planned into a sprint.'
-            : 'No issue in the backlog matches this query.'
+          trimmed === '' || trimmed === BACKLOG_DEFAULT_QUERY ? (
+            'The backlog is empty: every unresolved issue is planned into a sprint.'
+          ) : (
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              No issue in the backlog matches this filter.
+              <Button size="xs" variant="outline" onClick={() => onCommit(BACKLOG_DEFAULT_QUERY)}>
+                Clear filter
+              </Button>
+            </span>
+          )
         }
         more={list.hasNextPage ? () => void list.fetchNextPage() : undefined}
         loadingMore={list.isFetchingNextPage}
@@ -499,23 +713,52 @@ function BacklogSection({
   );
 }
 
+const UNRESOLVED_TOKEN = /(^|\s)#unresolved(\s|$)/i;
+
+// From 900px the key column holds at least seven mono characters, so titles start at one x across projects.
+const GRID =
+  'grid h-row grid-cols-[20px_18px_18px_var(--key-w,84px)_minmax(0,1fr)_auto] items-center gap-x-2 pr-3 min-[900px]:grid-cols-[20px_18px_18px_max(var(--key-w,84px),51px)_minmax(0,1fr)_140px_120px_28px]';
+
 interface ContainerProps {
   id: string;
   issues: readonly Issue[];
+  /** Everything in the container, loaded or not. */
+  total: number | undefined;
   loading: boolean;
+  /** How many rows are coming, when the container already knows. */
+  skeletonRows?: number;
+  failed?: ReactNode;
   canPlan: boolean;
   hint: Hint;
-  empty: string;
+  onKeys: (chars: number) => void;
+  empty: ReactNode;
   more: (() => void) | undefined;
   loadingMore: boolean;
 }
 
-function Container({ id, issues, loading, canPlan, hint, empty, more, loadingMore }: ContainerProps) {
+function Container({
+  id,
+  issues,
+  total,
+  loading,
+  skeletonRows,
+  failed,
+  canPlan,
+  hint,
+  onKeys,
+  empty,
+  more,
+  loadingMore,
+}: ContainerProps) {
   const { setNodeRef } = useDroppable({ id: `${DROP_PREFIX}${id}`, data: { container: id }, disabled: !canPlan });
   const targeted = hint?.container === id;
+  const longestKey = issues.reduce((n, issue) => Math.max(n, issue.key.length), 0);
+  useEffect(() => onKeys(longestKey), [onKeys, longestKey]);
 
-  if (loading) return <RowsSkeleton />;
+  if (loading) return <RowsSkeleton rows={skeletonRows} />;
+  if (failed) return <div className="py-2">{failed}</div>;
 
+  const left = total !== undefined ? total - issues.length : undefined;
   return (
     <div
       ref={setNodeRef}
@@ -533,19 +776,24 @@ function Container({ id, issues, loading, canPlan, hint, empty, more, loadingMor
         ))}
       </SortableContext>
       {issues.length === 0 ? (
-        <p
+        <div
           className={cn(
-            'm-2 rounded-md border border-dashed px-3 py-4 text-xs text-text-muted',
-            targeted && 'border-brand bg-selected text-text-secondary',
+            'my-2 rounded-md border px-3 py-3 text-xs text-text-secondary',
+            targeted && 'border-brand bg-selected',
           )}
         >
           {empty}
-        </p>
+        </div>
       ) : null}
       {more ? (
-        <Button variant="ghost" size="sm" className="m-1 self-start" onClick={more} disabled={loadingMore}>
-          {loadingMore ? 'Loading…' : 'Load more'}
-        </Button>
+        <LoadMore
+          className="py-2 pl-7"
+          pending={loadingMore}
+          onClick={more}
+          progress={total !== undefined ? `${formatCount(issues.length)} of ${formatCount(total)}` : undefined}
+        >
+          {left !== undefined ? `Load ${formatCount(Math.min(BACKLOG_PAGE_SIZE, left))} more` : 'Load more'}
+        </LoadMore>
       ) : null}
     </div>
   );
@@ -588,7 +836,7 @@ function SortableLine({
             <button
               type="button"
               aria-label={`Move ${issue.key}`}
-              className="grid h-full w-5 cursor-grab place-items-center text-text-muted opacity-0 group-hover/line:opacity-100 focus-visible:opacity-100 active:cursor-grabbing"
+              className="mx-auto grid h-7 w-4 cursor-grab place-items-center rounded-xs text-text-muted reveal group-hover/line:opacity-100 hover:text-text active:cursor-grabbing"
               {...attributes}
               {...listeners}
             >
@@ -616,18 +864,20 @@ function IssueLine({
   return (
     <div
       className={cn(
-        'group/line grid h-row grid-cols-[20px_18px_18px_84px_minmax(0,1fr)_auto] items-center gap-x-2 border-b border-border-subtle bg-surface pr-3 hover:bg-hover min-[900px]:grid-cols-[20px_18px_18px_84px_minmax(0,1fr)_140px_120px_28px]',
-        overlay && 'rounded-md border bg-raised shadow-lg hover:bg-raised',
+        'group/line border-b border-border-subtle bg-surface hover:bg-hover',
+        GRID,
+        // A ring, not a border, so the lifted row's columns stay on the list's x.
+        overlay && 'rounded-md border-b-0 bg-raised shadow-lg ring-1 ring-border-strong hover:bg-raised',
       )}
     >
-      <span className="h-full">{draggable ? handle : null}</span>
-      <PriorityBadge priority={issue.priority} className={cn(resolved && 'opacity-55')} />
-      <TypeBadge type={issue.type} className={cn(resolved && 'opacity-55')} />
+      <span className="flex h-full items-center">{draggable ? handle : null}</span>
+      <PriorityBadge priority={issue.priority} className={cn(resolved && 'grayscale')} />
+      <TypeBadge type={issue.type} className={cn(resolved && 'grayscale')} />
       <IssueKey issueKey={issue.key} resolved={resolved} />
       <Link
         href={issuePath(issue) as Route}
         title={issue.title}
-        className={cn('truncate hover:underline', resolved && 'text-text-muted line-through')}
+        className={cn('truncate', resolved ? 'text-text-muted line-through hover:text-text' : 'hover:underline')}
       >
         {issue.title}
       </Link>
@@ -635,32 +885,83 @@ function IssueLine({
         <StatusDot category={issue.status.category} color={issue.status.color} />
         <span className="truncate">{issue.status.name}</span>
       </span>
-      <AssigneeStack assignees={issue.assignees} className="max-[899px]:hidden" />
+      {issue.assignees.length > 1 ? (
+        <span className="flex min-w-0 items-center gap-1.5 text-xs text-text-secondary max-[899px]:hidden">
+          <AssigneeStack assignees={issue.assignees} withName={false} className="flex-none" />
+          <span className="truncate tabular">{issue.assignees.length} people</span>
+        </span>
+      ) : (
+        <AssigneeStack assignees={issue.assignees} className="max-[899px]:hidden" />
+      )}
       <span className="flex justify-end">
-        <StoryPoints points={issue.story_points} />
+        <StoryPoints points={issue.story_points} unestimated="mark" />
       </span>
     </div>
   );
 }
 
-function RowsSkeleton() {
+function RowsSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="flex flex-col">
-      {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-3 border-b border-border-subtle px-7">
-          <Skeleton className="size-4" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3" style={{ width: `${30 + ((i * 17) % 40)}%` }} />
+    <div className="flex flex-col" aria-hidden>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className={cn('border-b border-border-subtle', GRID)}>
+          <span />
+          <Skeleton className="size-badge-letter rounded-xs" />
+          <Skeleton className="size-badge-letter rounded-xs" />
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3" style={{ maxWidth: `${40 + ((i * 17) % 40)}%` }} />
+          <Skeleton className="h-3 w-20 max-[899px]:hidden" />
+          <Skeleton className="size-avatar-sm rounded-full max-[899px]:hidden" />
+          <Skeleton className="h-[18px] w-[18px] rounded-xs" />
         </div>
       ))}
     </div>
   );
 }
 
-function SectionSkeleton() {
+function BacklogSkeleton() {
   return (
     <div className="flex flex-col">
-      <Skeleton className="h-10 w-full rounded-none" />
+      <div className="flex min-h-10 items-center gap-3 border-y bg-app px-2 py-0.5">
+        <span className="pl-5.5 font-semibold">Backlog</span>
+        <Skeleton className="h-3 w-6" />
+        <Skeleton className="h-3 w-72 max-sm:hidden" />
+      </div>
+      <div className="border-b border-border-subtle py-2">
+        <Skeleton className="h-control-lg w-full rounded-md" />
+      </div>
+      <RowsSkeleton />
+    </div>
+  );
+}
+
+function SectionSkeleton({ slots }: { slots: HeaderSlots }) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex min-h-10 items-center gap-3 border-y bg-app px-2 py-0.5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Skeleton className="ml-5.5 h-3.5 w-24" />
+          <Skeleton className="h-3 w-28 max-sm:hidden" />
+        </div>
+        <div className="flex flex-none items-center justify-end gap-3 max-sm:hidden">
+          <span className={cn('flex justify-end', STATS_SLOT)}>
+            <Skeleton className="h-3 w-40" />
+          </span>
+          <Skeleton className={cn('h-1 rounded-full', METER_SLOT)} />
+        </div>
+        {slots.actions ? (
+          <div
+            className={cn(
+              'flex flex-none items-center justify-end gap-1',
+              ACTIONS_SLOT,
+              'max-sm:w-auto max-sm:max-w-[55%]',
+            )}
+          >
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <span className="size-8" />
+          </div>
+        ) : null}
+      </div>
       <RowsSkeleton />
     </div>
   );

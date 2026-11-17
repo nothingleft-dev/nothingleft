@@ -12,6 +12,9 @@ import { useUploader } from '@hooks/use-attachments';
 import { useToggleIssueTask, useUpdateIssue } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
 import { toastError } from '@components/toast-error';
+import { PendingButton, PendingLabel } from '@components/pending-button';
+import { cn } from '@lib/utils';
+import { FormAlert } from '@components/auth/form-alert';
 
 interface IssueDescriptionProps {
   issue: Issue;
@@ -46,7 +49,8 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
       className="mt-4 max-w-none"
       onToggleTask={
         canEdit
-          ? (index, checked) => toggle.mutate({ index, checked }, { onError: error => toastError(error) })
+          ? (index, checked) =>
+              toggle.mutate({ index, checked }, { onError: error => toastError('Could not update the task', error) })
           : undefined
       }
     />
@@ -72,7 +76,7 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
           uploader.finish(text);
           onDone();
         },
-        onError: e => setError(isApiError(e) ? e.message : 'The description could not be saved.'),
+        onError: e => setError(isApiError(e) ? e.message : ''),
       },
     );
   };
@@ -80,6 +84,8 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
   return (
     <div className="mt-4 flex flex-col gap-2">
       <MarkdownEditor
+        // Bleeds by its padding and border, so the text keeps the x it has when read.
+        className="sm:-mx-[13px]"
         value={text}
         onChange={setText}
         projectKey={issue.project.key}
@@ -87,16 +93,34 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
         placeholder="Describe the issue. Type @ to mention someone, # to link an issue."
         variant="description"
         autoFocus
-        invalid={Boolean(error) || size.level === 'too_large'}
+        invalid={error !== null || size.level === 'too_large'}
         onSubmit={submit}
         onCancel={onDone}
         uploader={uploader}
         footer={
           <>
-            <Button size="sm" onClick={submit} disabled={update.isPending || blocked}>
-              {uploader.busy ? 'Uploading…' : 'Save'}{' '}
-              <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={submit}
+              disabled={blocked}
+              pending={update.isPending}
+              pendingLabel="Saving…"
+              after={
+                <Kbd
+                  className={cn(
+                    'h-4 border-transparent bg-ink-fg/15 text-ink-fg/80',
+                    (uploader.busy || update.isPending) && 'invisible',
+                  )}
+                >
+                  ⌘↵
+                </Kbd>
+              }
+            >
+              {/* Waiting for files is not saving: the button is unavailable until they land. */}
+              <PendingLabel pending={uploader.busy} pendingLabel="Uploading…">
+                Save
+              </PendingLabel>
+            </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel
             </Button>
@@ -104,7 +128,11 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
         }
       />
       <MarkdownSizeNote size={size} />
-      {error ? <p className="text-xs text-danger-fg">{error}</p> : null}
+      {error !== null ? (
+        <FormAlert title="The description was not saved.">
+          {error} Your text is still here, so you can save it again.
+        </FormAlert>
+      ) : null}
     </div>
   );
 }

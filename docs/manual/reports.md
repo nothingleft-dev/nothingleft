@@ -27,7 +27,7 @@ line chart has a table with the same numbers under or beside it. Hover a slice o
 read its figure; click a name, a figure or a slice to open the issues it counts. People appear
 with their pictures, and projects in their own colours.
 
-Durations can be read three ways - **1w 1d** (`1w 2d 3h`), **Days** or **Hours**. Days and
+Durations can be read three ways - **Mixed** (`1w 2d 3h`), **Days** or **Hours**. Days and
 weeks are your organisation's working ones, and the report says how long they are.
 
 ## Choosing what a report covers
@@ -74,13 +74,18 @@ How issues spread over the organisation's projects.
 How issues spread over any field: status, priority, type, assignee, tag, sprint, due date
 (Overdue, Today, This week, Later, No due date), or a custom field - a select, multi-select,
 person, people or checkbox field. Issues without a value are counted under the field's empty
-label (*No Severity*), and a custom field counts only on the issue types it applies to.
+label (*No severity*), and a custom field counts only on the issue types it applies to. For
+status and priority the second sort is **Workflow order**; for people, tags and projects it is
+**A–Z**. Issues with no value (*Unassigned*, *No tags*) are always listed last.
 
 When the projects in a report name their statuses differently, **group by category** adds them
 up by the five status categories - Backlog, Unstarted, Started, Done, Cancelled - so *Fixed* in
 one project and *Closed* in another both count as Done.
 
 ### Matrix
+
+Every column is the same width so shades compare fairly; the row names and the Total column stay
+in place while the rest scrolls sideways.
 
 Two fields at once: status × assignee, priority × type, or any two custom fields. Each cell is
 the number of issues with both values and leads to them. At most 50 values per side; the rest
@@ -101,9 +106,11 @@ the days left underneath.
 
 The figures are recorded every night and when the sprint starts and finishes, so the chart
 shows how the sprint really went even after issues are edited later; today's point is read
-live and labelled with its figure. **Scope added after the start is its own line**, so *we
-finished nothing* and *they added 30 points on Tuesday* look different. Days still to come are
-shaded. A sprint that has not started yet has no figures. Choose the project and the sprint at
+live and labelled with its figure; a day with no recorded figure is bridged by a dashed line. **Scope added after the start is its own line**, so *we
+finished nothing* and *they added 30 points on Tuesday* look different. Non-working days are
+shaded; the dashed Today line marks where the figures stop. When some of the commitment was
+already done on the first day, the line under the figures says so (*Committed at the start: 37,
+with 35 still to do*) and the ideal line starts from what was still to do. A sprint that has not started yet has no figures. Choose the project and the sprint at
 the top; **Daily figures** under the chart lists every day's numbers, with scope change and
 completed work counted from the start of the sprint to that day.
 
@@ -130,9 +137,13 @@ most 366 days. To report on a sprint, add `sprint: {September 2026}` to the quer
 
 ### Gantt chart
 
+The month in view is named above the days and today is marked. A bar that starts before the
+visible window still shows its status at the window's edge, and a row whose bar is out of view
+has an arrow that scrolls to it.
+
 A project's issues on a timeline, from start date to due date, with an arrow for every
-*depends on* link between two of them. Group the bars by epic (the issue's nearest Epic above
-it), by assignee, or not at all.
+*depends on* link between two of them. **Group by** puts the bars under their
+epic (the issue's nearest Epic above it), under their assignee, or in one list.
 
 An issue without both a start date and a due date is **listed underneath, not dropped** - a
 timeline that quietly leaves out half the work is worse than none.
@@ -142,18 +153,24 @@ a red end when it is past its due date and still open. An arrow turns red when a
 before the one it depends on ends. Click a bar to open the issue over the chart; **Days** and
 **Weeks** change the scale.
 
-### Timesheet
+### Timesheets
 
 People as rows, days as columns, totals both ways - this week for you unless you choose other
-people or dates, up to 62 days. Non-working days are marked. Open a cell to see the time entries
+people or dates, up to 62 days, so the period picker offers this and last week, this and last
+month, or a range you choose. Non-working days are marked. Open a cell to see the time entries
 behind it - or a person's total, for the whole period. **People** adds colleagues or shows
-*Everyone*. You see time logged on any issue you can open, whoever logged it.
+*Everyone*. You see time logged on any issue you can open, whoever logged it. The line under the
+controls says how long a day and a week are (for example *8-hour days, 5-day weeks*), so 1d and 1w
+read correctly. On a phone the timesheet lists each person's total for the period; tap a person to
+see their entries and the day each was logged.
 
 ## Colours
 
 Each chart uses up to eight colours, given to the eight largest groups in the field's own order,
 so a person or a priority keeps its colour however the numbers move. Anything smaller is added
-up as *Other*. A chart by status uses the statuses' own colours.
+up as *Other*. A chart by status uses the statuses' own colours. Unassigned, and any other group
+of issues with no value such as *No tag*, is always grey: an absence never takes one of the eight
+colours.
 
 A chart by project uses **each project's own colour**, the one picked in its settings. When two
 projects in the same chart share a colour, the one created later is drawn in a colour no other

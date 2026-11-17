@@ -1,4 +1,4 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { formatCalendarDate, formatCalendarDateShort } from '@lib/datetime';
 import { cn } from '@lib/utils';
 
@@ -13,7 +13,8 @@ interface DueDateProps {
 
 /** Overdue in danger ink, today in primary, everything else muted; an empty cell is `--`. */
 export function DueDate({ value, today, resolved = false, className }: DueDateProps) {
-  if (value === null) return <span className={cn('text-xs tabular text-text-muted', className)}>--</span>;
+  // Not tabular: tabular figures give each hyphen a digit's width, and `--` falls apart.
+  if (value === null) return <span className={cn('text-xs text-text-muted', className)}>--</span>;
 
   const overdue = !resolved && value < today;
   const isToday = value === today;

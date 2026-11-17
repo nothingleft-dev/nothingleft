@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronRight, ExternalLink, RotateCcw } from 'lucide-react';
+import { ChevronRight, ExternalLink, RotateCcw, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import type { GitConnection, GitEventStatus, GitWebhookEvent } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
@@ -10,17 +10,20 @@ import { Label } from '@components/ui/label';
 import { Skeleton } from '@components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@components/ui/sheet';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus, type JobTone } from '@components/job-status';
 import { RelativeTime } from '@components/relative-time';
 import { Segmented } from '@components/segmented';
+import { TextButton } from '@components/text-button';
 import { GIT_PAGE, useGitEvent, useGitEvents, useReplayGitEvent } from '@hooks/use-git';
 import { EVENT_STATUS, eventReason, providerLabel } from '@lib/git/words';
 import { formatCount } from '@lib/numbers';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
-const TONE: Record<GitEventStatus, JobTone> = { pending: 'waiting', done: 'done', ignored: 'idle', failed: 'failed' };
+// Done is the resting state, so it stays neutral; only waiting and failing wear colour.
+const TONE: Record<GitEventStatus, JobTone> = { pending: 'moving', done: 'waiting', ignored: 'idle', failed: 'failed' };
 
 const FILTERS = [
   { value: 'all', label: 'All' },
@@ -60,47 +63,48 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
   });
   const rows = events.data?.data ?? [];
   const total = events.data?.meta.pagination?.total ?? rows.length;
+  const failed = events.isError && !events.data;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <SheetHeader className="border-b px-5 py-4">
         <SheetTitle>Delivery log</SheetTitle>
         <SheetDescription>
-          Every webhook {connection.account.login} on {providerLabel(connection.provider)} delivered
-          {repository ? ` for ${repository}` : ''} in the last 7 days, and what was done with it.
+          Webhooks from {connection.account.login} on {providerLabel(connection.provider)}
+          {repository ? ` for ${repository}` : ''} in the last 7&nbsp;days, and what was done with each.
         </SheetDescription>
       </SheetHeader>
-      <div className="flex flex-wrap items-center gap-3 border-b px-5 py-2.5">
-        <Segmented
-          ariaLabel="Delivery status"
-          value={filter}
-          options={FILTERS}
-          onChange={next => {
-            setFilter(next);
-            setOffset(0);
-          }}
-        />
-        {connection.redelivery_url ? (
-          <a
-            href={connection.redelivery_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="ml-auto inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text hover:underline"
-          >
-            Not here? Redeliver from {providerLabel(connection.provider)} <ExternalLink className="size-3" />
-          </a>
-        ) : null}
-      </div>
+      {failed ? null : (
+        <div className="flex flex-wrap items-center gap-3 border-b px-5 py-2.5">
+          <Segmented
+            ariaLabel="Delivery status"
+            value={filter}
+            options={FILTERS}
+            onChange={next => {
+              setFilter(next);
+              setOffset(0);
+            }}
+          />
+          {connection.redelivery_url ? (
+            <a
+              href={connection.redelivery_url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="ml-auto inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text hover:underline"
+            >
+              Not here? Redeliver from {providerLabel(connection.provider)} <ExternalLink className="size-3" />
+            </a>
+          ) : null}
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {events.isPending ? (
           <LogSkeleton />
-        ) : events.isError && !events.data ? (
+        ) : failed ? (
           <div className="p-5">
-            <FormAlert title="The delivery log could not be loaded.">
-              <button type="button" onClick={() => void events.refetch()}>
-                Try again
-              </button>
-            </FormAlert>
+            <LoadError onRetry={() => void events.refetch()} detail={errorDetail(events.error)}>
+              The delivery log could not be loaded.
+            </LoadError>
           </div>
         ) : rows.length === 0 ? (
           <div className="p-5">
@@ -110,8 +114,22 @@ function Log({ slug, connection, repository }: { slug: string; connection: GitCo
               }
               description={
                 filter === 'all'
-                  ? 'A push, a pull request or a check on a linked repository arrives here within seconds.'
-                  : 'Show all to see every delivery.'
+                  ? connection.redelivery_url
+                    ? 'A push, a pull request or a check on a linked repository arrives here within seconds.'
+                    : `A push, a pull request or a check on a linked repository arrives here within seconds. One ${providerLabel(connection.provider)} never sent can be redelivered from the repository’s webhook settings there.`
+                  : undefined
+              }
+              action={
+                filter === 'all' ? undefined : (
+                  <TextButton
+                    onClick={() => {
+                      setFilter('all');
+                      setOffset(0);
+                    }}
+                  >
+                    Show every delivery
+                  </TextButton>
+                )
               }
             />
           </div>
@@ -158,27 +176,34 @@ function EventRow({ slug, event }: { slug: string; event: GitWebhookEvent }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
-        className="grid w-full grid-cols-[14px_92px_minmax(0,1fr)_auto] items-center gap-x-3 px-5 py-2 text-left hover:bg-hover"
+        className="grid w-full grid-cols-[14px_92px_minmax(0,1fr)_auto] items-start gap-x-3 px-5 py-2 text-left hover:bg-hover"
+        title={!open && reason ? reason : undefined}
       >
-        <ChevronRight
-          aria-hidden
-          className={cn('size-3.5 text-text-muted transition-transform', open && 'rotate-90')}
-        />
-        <JobStatus tone={TONE[event.status]} label={EVENT_STATUS[event.status]} className="text-xs" />
+        <span className="flex h-5 items-center">
+          <ChevronRight
+            aria-hidden
+            className={cn('size-3.5 text-text-muted transition-transform', open && 'rotate-90')}
+          />
+        </span>
+        <JobStatus tone={TONE[event.status]} label={EVENT_STATUS[event.status]} className="text-xs leading-5" />
         <span className="flex min-w-0 flex-col">
-          <span className="flex min-w-0 items-center gap-2 text-sm">
-            <span className="font-mono text-xs">{event.event}</span>
+          <span className="flex min-w-0 items-center gap-3 text-sm leading-5">
+            <span className="w-28 flex-none truncate font-mono text-xs max-sm:w-auto">{event.event}</span>
             {event.repository ? <span className="truncate text-text-secondary">{event.repository}</span> : null}
           </span>
           {reason ? (
             <span
-              className={cn('truncate text-xs', event.status === 'failed' ? 'text-danger-fg' : 'text-text-secondary')}
+              className={cn(
+                'text-xs',
+                open ? 'text-pretty' : 'truncate',
+                event.status === 'failed' ? 'text-danger-fg' : 'text-text-secondary',
+              )}
             >
               {reason}
             </span>
           ) : null}
         </span>
-        <RelativeTime value={event.received_at} className="text-xs whitespace-nowrap" />
+        <RelativeTime value={event.received_at} className="text-xs leading-5 whitespace-nowrap" />
       </button>
       {open ? <EventDetail slug={slug} event={event} /> : null}
     </li>
@@ -231,22 +256,23 @@ function EventDetail({ slug, event }: { slug: string; event: GitWebhookEvent }) 
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button
+        <PendingButton
           variant="outline"
           size="sm"
-          disabled={replay.isPending}
+          pending={replay.isPending}
+          pendingLabel="Redelivering…"
           onClick={() =>
             replay.mutate(
               { id: event.id, runAutomations },
               {
                 onSuccess: () => toast.success('Redelivered. It is processed again in a few seconds.'),
-                onError: error => toastError(error),
+                onError: error => toastError('Could not redeliver the event', error),
               },
             )
           }
         >
-          <RotateCcw /> {replay.isPending ? 'Redelivering…' : 'Redeliver'}
-        </Button>
+          <RotateCcw /> Redeliver
+        </PendingButton>
         <div className="flex items-center gap-2">
           <Checkbox
             id={`replay-automations-${event.id}`}
@@ -258,9 +284,9 @@ function EventDetail({ slug, event }: { slug: string; event: GitWebhookEvent }) 
           </Label>
         </div>
         {runAutomations ? (
-          <p className="w-full text-xs text-warning-fg">
-            Rules may change issue statuses again. Only what this delivery changes counts: a pull request already
-            recorded as merged does not count as merged twice. Needs Project Admin in every project it touches.
+          <p className="flex w-full items-start gap-1.5 text-xs text-text-secondary">
+            <TriangleAlert aria-hidden className="mt-0.5 size-3 flex-none text-warning-fg" />
+            Rules run again for this delivery only. Needs Project Admin in each project it touches.
           </p>
         ) : null}
       </div>

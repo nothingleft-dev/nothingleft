@@ -1,12 +1,16 @@
 'use client';
 
+import { FullPageState } from '@components/full-page-state';
 import { useEffect, useRef, useState } from 'react';
-import { notFound, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
-import { Eye, EyeOff, FilePlus2, Link2, MoreHorizontal, Pencil, Star, Tag, Trash2, Undo2, AtSign } from 'lucide-react';
+import { Eye, EyeOff, FilePlus2, Link2, MoreHorizontal, Pencil, Star, Trash2, Undo2, AtSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { checkMarkdownSize } from '@nothingleft/markdown';
 import { ARTICLE_HIERARCHY_MAX_DEPTH, type Article, type TagRef } from '@nothingleft/types';
+import { TitleInput } from '@components/title-input';
+import { LoadError, errorDetail } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import {
   DropdownMenu,
@@ -16,8 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
-import { FormAlert } from '@components/auth/form-alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { PersonName } from '@components/former-member-chip';
 import { Kbd } from '@components/kbd';
@@ -46,6 +49,7 @@ import { useShortcut } from '@hooks/use-shortcut';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 export function ArticlePage({ project, slug }: { project: string; slug: string }) {
   const article = useArticle(project, slug);
@@ -67,18 +71,30 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
 
   useShortcut('e', () => setEditing(true), canEdit && !editing);
 
-  if (article.isError && isApiError(article.error) && article.error.isNotFound) notFound();
-  if (article.isError) return <FormAlert title="This article could not be loaded." />;
+  if (article.isError && isApiError(article.error) && article.error.isNotFound) {
+    return <ArticleNotFound project={project} slug={slug} />;
+  }
+  if (article.isError && !article.data) {
+    return (
+      <div className={cn('grid items-start gap-10', PAGE_COLUMNS)}>
+        <div className="min-w-0 max-w-[900px]">
+          <LoadError onRetry={() => void article.refetch()} detail={errorDetail(article.error)}>
+            This article could not be loaded.
+          </LoadError>
+        </div>
+      </div>
+    );
+  }
   if (article.isPending) return <ArticleSkeleton />;
 
   const data = article.data;
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
-      <div className="grid items-start gap-10 min-[1280px]:grid-cols-[minmax(0,1fr)_220px]">
+      <div className={cn('grid items-start gap-10', PAGE_COLUMNS)}>
         <article className="min-w-0 max-w-[900px]">
-          <Provenance article={data} timeZone={timeZone} />
           <ArticleHeading article={data} onEdit={() => setEditing(true)} editing={editing} />
+          <Provenance article={data} timeZone={timeZone} />
           {data.status === 'draft' ? (
             <p className="mt-3 rounded-md bg-inset px-3 py-2 text-xs text-text-secondary">
               A draft: only <PersonName person={data.created_by} className="font-medium text-text" /> and the
@@ -93,7 +109,7 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
           <ArticleComments article={data} timeZone={timeZone} />
         </article>
         <aside className="self-stretch max-[1279px]:hidden">
-          {editing ? null : <ArticleToc headings={headings} />}
+          <ArticleToc headings={headings} />
         </aside>
       </div>
     </MarkdownAttachments>
@@ -101,32 +117,21 @@ export function ArticlePage({ project, slug }: { project: string; slug: string }
 }
 
 function Provenance({ article, timeZone }: { article: Article; timeZone?: string | undefined }) {
-  const signal = useArticleSignal(article.project.key, article.slug);
+  const sameAuthor = article.created_by.username === article.updated_by.username;
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
-      <span>
-        Last updated by <PersonName person={article.updated_by} className="font-medium text-text" />{' '}
-        <RelativeTime value={article.updated_at} timeZone={timeZone} />
-      </span>
-      {article.created_by.username !== article.updated_by.username ? (
+    <p className="mt-2 text-xs text-text-secondary">
+      {sameAuthor ? (
         <>
-          <span className="text-text-muted">·</span>
-          <span>
-            Written by <PersonName person={article.created_by} className="font-medium text-text" />
-          </span>
+          Written by <PersonName person={article.created_by} className="font-medium text-text" /> · updated{' '}
         </>
-      ) : null}
-      <span className="ml-auto flex gap-1">
-        <IconAction
-          label={article.me.starred ? 'Starred — you watch this article' : 'Star (also watches)'}
-          pressed={article.me.starred}
-          onClick={() => signal.mutate({ signal: 'star', on: !article.me.starred }, { onError: e => toastError(e) })}
-        >
-          <Star className={cn(article.me.starred && 'fill-current')} />
-        </IconAction>
-        <ArticleMenu article={article} />
-      </span>
-    </div>
+      ) : (
+        <>
+          Written by <PersonName person={article.created_by} className="font-medium text-text" /> · updated by{' '}
+          <PersonName person={article.updated_by} className="font-medium text-text" />{' '}
+        </>
+      )}
+      <RelativeTime value={article.updated_at} timeZone={timeZone} />
+    </p>
   );
 }
 
@@ -134,6 +139,7 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
   const [tagging, setTagging] = useState(false);
   const update = useUpdateArticle(article.project.key, article.slug);
   const tag = useArticleTag(article.project.key, article.slug);
+  const signal = useArticleSignal(article.project.key, article.slug);
   const canTag = article.me.can_edit;
 
   const publish = () =>
@@ -141,38 +147,51 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
       { body: { status: 'published' }, optimistic: a => ({ ...a, status: 'published' }) },
       {
         onSuccess: a => toast.success(`Published ${a.title}.`),
-        onError: e => toastError(e),
+        onError: e => toastError(`Could not publish ${article.title}`, e),
       },
     );
 
   const change = (t: TagRef, on: boolean, isNew = false) =>
-    tag.mutate({ tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined }, { onError: e => toastError(e) });
+    tag.mutate(
+      { tag: on ? t.name : t.slug, on, color: isNew ? t.color : undefined },
+      { onError: e => toastError(on ? `Could not add ${t.name}` : `Could not remove ${t.name}`, e) },
+    );
 
   return (
     <>
       <div className="flex items-start gap-4">
         <ArticleTitle article={article} />
         <div className="mt-0.5 flex flex-none items-center gap-0.5">
-          {article.status === 'draft' ? <DraftMark className="mr-1.5" /> : null}
+          {article.status === 'draft' && article.me.can_publish ? (
+            <Button size="sm" className="mr-1.5" onClick={publish} disabled={update.isPending}>
+              Publish
+            </Button>
+          ) : null}
           {article.me.can_edit && !editing ? (
             <IconAction label="Edit article" shortcut="e" onClick={onEdit}>
               <Pencil />
             </IconAction>
           ) : null}
-          {canTag ? (
-            <IconAction label="Add tag" onClick={() => setTagging(true)}>
-              <Tag />
-            </IconAction>
-          ) : null}
-          {article.status === 'draft' && article.me.can_publish ? (
-            <Button size="sm" className="ml-1.5" onClick={publish} disabled={update.isPending}>
-              Publish
-            </Button>
-          ) : null}
+          <IconAction
+            label={article.me.starred ? 'Starred — you watch this article' : 'Star (also watches)'}
+            pressed={article.me.starred}
+            onClick={() =>
+              signal.mutate(
+                { signal: 'star', on: !article.me.starred },
+                {
+                  onError: e =>
+                    toastError(article.me.starred ? 'Could not unstar the article' : 'Could not star the article', e),
+                },
+              )
+            }
+          >
+            <Star className={cn(article.me.starred && 'fill-current')} />
+          </IconAction>
+          <ArticleMenu article={article} />
         </div>
       </div>
       {article.tags.length > 0 || canTag ? (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Tags">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Tags">
           {article.tags.map(t => (
             <TagChip key={t.slug} tag={t} onRemove={canTag ? () => change(t, false) : undefined} />
           ))}
@@ -194,6 +213,10 @@ function ArticleHeading({ article, onEdit, editing }: { article: Article; onEdit
 
 const titleClass = 'flex-1 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]';
 
+function TitleDraftMark({ article }: { article: Article }) {
+  return article.status === 'draft' ? <DraftMark className="ml-2 align-middle" /> : null;
+}
+
 function ArticleTitle({ article }: { article: Article }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -207,16 +230,20 @@ function ArticleTitle({ article }: { article: Article }) {
             <button
               type="button"
               onClick={() => setDraft(article.title)}
-              className="-mx-1 cursor-text rounded-sm px-1 text-left underline decoration-border-strong decoration-dotted decoration-2 underline-offset-[6px] hover:bg-hover hover:decoration-text-secondary"
+              className="-mx-1 cursor-text rounded-sm px-1 text-left underline decoration-border-strong decoration-dotted decoration-1 underline-offset-[6px] hover:bg-hover hover:decoration-text-secondary"
             >
               {article.title}
             </button>
           </TooltipTrigger>
           <TooltipContent>Click to rename · the address stays the same</TooltipContent>
         </Tooltip>
+        <TitleDraftMark article={article} />
       </h1>
     ) : (
-      <h1 className={titleClass}>{article.title}</h1>
+      <h1 className={titleClass}>
+        {article.title}
+        <TitleDraftMark article={article} />
+      </h1>
     );
   }
 
@@ -244,24 +271,21 @@ function ArticleTitle({ article }: { article: Article }) {
       <label htmlFor="article-title" className="sr-only">
         Title
       </label>
-      <input
+      <TitleInput
         id="article-title"
         autoFocus
         value={draft}
-        onChange={e => setDraft(e.target.value)}
+        onValueChange={setDraft}
         onBlur={commit}
+        onEnter={commit}
         onKeyDown={e => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          }
           if (e.key === 'Escape') {
             setDraft(null);
             setError(null);
           }
         }}
         aria-invalid={Boolean(error)}
-        className="-mx-1 w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text"
+        className="-mx-1 block w-full rounded-sm border border-border-strong bg-surface px-1 text-2xl font-semibold tracking-tight text-text [overflow-wrap:anywhere]"
       />
       {error ? <p className="mt-1 text-xs text-danger-fg">{error}</p> : null}
     </div>
@@ -298,7 +322,8 @@ function ArticleBody({ article, onEdit, onHeadings }: ArticleBodyProps) {
       onHeadings={onHeadings}
       onToggleTask={
         article.me.can_edit
-          ? (index, checked) => toggle.mutate({ index, checked }, { onError: e => toastError(e) })
+          ? (index, checked) =>
+              toggle.mutate({ index, checked }, { onError: e => toastError('Could not update the task', e) })
           : undefined
       }
     />
@@ -345,10 +370,16 @@ function BodyEditor({ article, onDone }: { article: Article; onDone: () => void 
         className="[&_.ProseMirror]:min-h-[420px] [&_textarea]:min-h-[420px]"
         footer={
           <>
-            <Button size="sm" onClick={submit} disabled={update.isPending || blocked}>
-              {uploader.busy ? 'Uploading…' : 'Save'}{' '}
-              <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={submit}
+              disabled={blocked}
+              pending={update.isPending || uploader.busy}
+              pendingLabel={uploader.busy ? 'Uploading…' : 'Saving…'}
+              after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+            >
+              Save
+            </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel
             </Button>
@@ -375,7 +406,7 @@ function ArticleMenu({ article }: { article: Article }) {
       { body: { status: 'draft' }, optimistic: a => ({ ...a, status: 'draft' }) },
       {
         onSuccess: a => toast.success(`${a.title} is a draft again.`),
-        onError: e => toastError(e),
+        onError: e => toastError(`Could not make ${article.title} a draft`, e),
       },
     );
 
@@ -430,7 +461,16 @@ function ArticleMenu({ article }: { article: Article }) {
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() =>
-              signal.mutate({ signal: 'watch', on: !article.me.watching }, { onError: e => toastError(e) })
+              signal.mutate(
+                { signal: 'watch', on: !article.me.watching },
+                {
+                  onError: e =>
+                    toastError(
+                      article.me.watching ? 'Could not stop watching the article' : 'Could not watch the article',
+                      e,
+                    ),
+                },
+              )
             }
           >
             {article.me.watching ? <EyeOff /> : <Eye />}
@@ -483,25 +523,67 @@ function IconAction({ label, shortcut, pressed, onClick, children }: IconActionP
       </TooltipTrigger>
       <TooltipContent>
         {label}
-        {shortcut ? <span className="ml-2 text-text-muted">{shortcut}</span> : null}
+        {shortcut ? <span className="ml-2 opacity-75">{shortcut}</span> : null}
       </TooltipContent>
     </Tooltip>
   );
 }
 
+function ArticleNotFound({ project, slug }: { project: string; slug: string }) {
+  const { projectName } = useKnowledgeBase();
+  return (
+    <FullPageState
+      className="pt-12"
+      eyebrow="404"
+      title="No article at this address"
+      actions={
+        <Button asChild>
+          <Link href={`/projects/${project}/articles` as Route}>Back to the knowledge base</Link>
+        </Button>
+      }
+    >
+      There is no article <span className="font-mono text-sm text-text">{slug}</span>
+      {projectName ? ` in ${projectName}` : ''} that you can open. The address may have changed, or the article was
+      deleted or is a draft.
+    </FullPageState>
+  );
+}
+
+const PAGE_COLUMNS = 'min-[1280px]:grid-cols-[minmax(0,1fr)_220px]';
+
 export function ArticleSkeleton() {
   return (
-    <div className="flex max-w-[900px] flex-col gap-4" role="status" aria-label="Loading">
-      <Skeleton className="h-3 w-72" />
-      <Skeleton className="h-8 w-2/3" />
-      <Skeleton className="h-5 w-40" />
-      <div className="mt-3 flex flex-col gap-2">
-        <Skeleton className="h-4 w-full max-w-[72ch]" />
-        <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
-        <Skeleton className="h-4 w-4/6 max-w-[64ch]" />
-        <Skeleton className="mt-3 h-5 w-48" />
-        <Skeleton className="h-4 w-full max-w-[72ch]" />
-        <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
+    <div className={cn('grid items-start gap-10', PAGE_COLUMNS)} role="status" aria-label="Loading">
+      <div className="flex min-w-0 max-w-[900px] flex-col">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-7 w-2/3" />
+          <span className="ml-auto flex gap-1">
+            <Skeleton className="size-6 rounded-sm" />
+            <Skeleton className="size-6 rounded-sm" />
+            <Skeleton className="size-6 rounded-sm" />
+          </span>
+        </div>
+        <div className="mt-3 flex gap-1.5">
+          <Skeleton className="h-5 w-14 rounded-sm" />
+          <Skeleton className="h-5 w-20 rounded-sm" />
+          <Skeleton className="h-5 w-10 rounded-sm" />
+        </div>
+        <Skeleton className="mt-3 h-3 w-64 max-w-[60%]" />
+        <div className="mt-6 flex flex-col gap-2.5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-full max-w-[72ch]" />
+          <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
+          <Skeleton className="h-4 w-4/6 max-w-[64ch]" />
+          <Skeleton className="mt-4 h-5 w-48" />
+          <Skeleton className="h-4 w-full max-w-[72ch]" />
+          <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 max-[1279px]:hidden" aria-hidden>
+        <Skeleton className="h-3 w-20" />
+        {[70, 55, 62, 48].map(w => (
+          <Skeleton key={w} className="ml-3 h-3" style={{ width: `${w}%` }} />
+        ))}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { IMPORT_FIELDS, type CustomField } from '@nothingleft/types';
 import { ReportPicker, type ReportOption } from '@components/reports/report-picker';
 import { FIELD_LABELS, fieldLabel } from '@components/imports/import-results';
+import { cn } from '@lib/utils';
 
 const SKIP = '';
 const SAMPLES_SHOWN = 3;
@@ -47,12 +48,16 @@ export function ColumnMapping({
     onChange(next);
   };
 
+  const longest = Math.max(18, ...headers.map(h => h.length));
+
   return (
     <div className="overflow-x-auto rounded-md border">
       <table className="w-full min-w-[720px] table-fixed text-sm">
-        <thead className="bg-app text-left text-2xs text-text-secondary">
+        <thead className="bg-app text-left text-xs text-text-secondary">
           <tr>
-            <th className="h-7 w-[28%] px-3 font-medium">Column in the file</th>
+            <th className="h-7 px-3 font-medium" style={{ width: `clamp(160px, calc(${longest}ch + 24px), 280px)` }}>
+              Column in the file
+            </th>
             <th className="px-3 font-medium">First rows</th>
             <th className="w-64 px-3 font-medium">Imports as</th>
           </tr>
@@ -64,9 +69,10 @@ export function ColumnMapping({
               .map(row => row[index]?.trim() ?? '')
               .filter(Boolean)
               .slice(0, SAMPLES_SHOWN);
+            const skipped = field === SKIP;
             return (
               <tr key={`${header}:${index}`} className="h-row">
-                <td className="truncate px-3 font-medium" title={header}>
+                <td className={cn('truncate px-3', skipped ? 'text-text-secondary' : 'font-medium')} title={header}>
                   {header || <span className="text-text-muted">Untitled column {index + 1}</span>}
                 </td>
                 <td className="truncate px-3 text-text-secondary" title={values.join(' · ')}>
@@ -76,7 +82,7 @@ export function ColumnMapping({
                     <span className="text-text-muted">Empty in the first rows</span>
                   )}
                 </td>
-                <td className="px-3">
+                <td className="px-3 [&>button]:w-full [&>button]:justify-between">
                   <ReportPicker
                     label=""
                     value={field}
@@ -85,7 +91,7 @@ export function ColumnMapping({
                     onChange={next => choose(header, next)}
                     loading={fieldsLoading}
                     searchable
-                    width="w-64"
+                    width="w-[var(--radix-popover-trigger-width)]"
                     disabled={disabled}
                   />
                 </td>

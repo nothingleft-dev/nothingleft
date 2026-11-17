@@ -77,7 +77,7 @@ export function Brand({ collapsed }: { collapsed: boolean }) {
   return (
     <Link
       href="/"
-      className="flex h-10 items-center gap-2 rounded-sm px-1.5"
+      className="flex h-10 items-center gap-2 self-start rounded-sm px-1.5 transition-colors duration-(--dur-fast) hover:bg-hover"
       title="Nothing Left"
       aria-label="Nothing Left"
     >

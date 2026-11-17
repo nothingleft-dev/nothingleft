@@ -30,7 +30,12 @@ export function useCreateToken() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: CreatePersonalAccessToken) => createToken(body).then(r => r.data),
-    onSettled: () => void client.invalidateQueries({ queryKey: queryKeys.tokens() }),
+    // The secret stays with the caller; the list only learns the token exists.
+    onSuccess: ({ token: _secret, ...created }) =>
+      client.setQueryData<PersonalAccessToken[]>(queryKeys.tokens(), rows =>
+        rows && !rows.some(t => t.id === created.id) ? [created, ...rows] : rows,
+      ),
+    onError: () => void client.invalidateQueries({ queryKey: queryKeys.tokens() }),
   });
 }
 

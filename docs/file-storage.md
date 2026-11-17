@@ -65,7 +65,7 @@ The chain, in priority order — the first that exists wins:
 3. **Gravatar** — `https://gravatar.com/avatar/<sha256(email)>?d=404`,
    checked once server-side at account creation and on OAuth login; kept only
    if it answers `200`.
-4. **Generated initials** — `<API_BASE_URL>/avatars/person?seed=<name>`, an SVG the API
+4. **Generated initials** — `<API_BASE_URL>/avatars/person?seed=<name>&v=<n>`, an SVG the API
    renders itself with DiceBear's `initials` style (`@dicebear/core`, no hosted service) on the
    pastel set of design/DESIGN-SYSTEM.md § 3.4, from `AVATAR_PASTEL_BACKGROUNDS` in
    `apps/api/src/config/constants.ts`.

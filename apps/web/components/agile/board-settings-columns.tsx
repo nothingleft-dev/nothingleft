@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Check, ChevronDown, GripVertical, Pencil, X } from 'lucide-react';
+import { ChevronDown, GripVertical, Pencil, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   BOARD_COLUMNS_MAX,
@@ -33,9 +33,10 @@ import {
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Checkbox } from '@components/ui/checkbox';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { SettingsSection } from '@components/settings/section';
 import { StatusDot } from '@components/issues/value-marks';
@@ -108,7 +109,7 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
         body: { columns: columnsNext.map(toInput) },
         optimistic: b => ({ ...b, columns: columnsNext, unmapped_values: all.filter(v => !mapped.has(v.name)) }),
       },
-      { onError: error => (onError ? onError(error.message) : toastError(error)) },
+      { onError: error => (onError ? onError(error.message) : toastError('Could not change the columns', error)) },
     );
   };
 
@@ -158,59 +159,59 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
           toast.success(`Columns are now one per ${COLUMN_FIELD_LABELS[next].toLowerCase()}.`);
           setSwitchTo(null);
         },
-        onError: error => toastError(error),
+        onError: error => toastError('Could not switch the columns', error),
       },
     );
 
   return (
     <SettingsSection
-      title="Columns"
+      title={`Columns · ${board.name}`}
       description="Left to right. Moving a card to a column sets that value on the issue; WIP limits warn, they never stop a move."
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-sm">
-          <span>
-            <b className="font-semibold">Columns</b> are identified by
-          </span>
+          <span>Columns are identified by</span>
           <FieldPicker value={field} disabled={!canEdit} onPick={f => f !== field && setSwitchTo(f)} />
         </div>
 
-        <div role="table" aria-label={`Columns of ${board.name}`} className="flex flex-col">
-          <div
-            role="row"
-            className="grid grid-cols-[48px_minmax(0,1fr)_88px_88px_88px_120px_32px] items-end gap-x-3 border-b pb-1.5 text-xs font-medium text-text-secondary"
-          >
-            <span role="columnheader" aria-label="Order" />
-            <span role="columnheader">Column</span>
-            <span role="columnheader">Min WIP</span>
-            <span role="columnheader">Max WIP</span>
-            <span role="columnheader" className="text-center">
-              Collapsed
-            </span>
-            <span role="columnheader" aria-label="Merge" />
-            <span role="columnheader" aria-label="Delete" />
+        <div className="scroll-fade-x -mx-1 overflow-x-auto px-1">
+          <div role="table" aria-label={`Columns of ${board.name}`} className="flex min-w-[40rem] flex-col">
+            <div
+              role="row"
+              className="grid grid-cols-[48px_minmax(0,1fr)_88px_88px_88px_120px_32px] items-end gap-x-3 border-b pb-1.5 text-xs font-medium text-text-secondary"
+            >
+              <span role="columnheader" aria-label="Order" />
+              <span role="columnheader">Column</span>
+              <span role="columnheader">Min WIP</span>
+              <span role="columnheader">Max WIP</span>
+              <span role="columnheader" className="text-center">
+                Collapsed
+              </span>
+              <span role="columnheader" aria-label="Merge" />
+              <span role="columnheader" aria-label="Delete" />
+            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={columns.map(c => c.name)} strategy={verticalListSortingStrategy}>
+                {columns.map((column, index) => (
+                  <ColumnRow
+                    key={column.name}
+                    index={index}
+                    column={column}
+                    columns={columns}
+                    field={field}
+                    canEdit={canEdit}
+                    onRename={(name, onError) => change(index, { name }, onError)}
+                    onWip={(patch, onError) => change(index, patch, onError)}
+                    onCollapsed={collapsed_by_default => change(index, { collapsed_by_default })}
+                    onMerge={other => mergeInto(index, other)}
+                    onSplit={value => split(index, value)}
+                    onDelete={() => save(columns.filter((_, i) => i !== index))}
+                    onMove={to => move(index, to)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={columns.map(c => c.name)} strategy={verticalListSortingStrategy}>
-              {columns.map((column, index) => (
-                <ColumnRow
-                  key={column.name}
-                  index={index}
-                  column={column}
-                  columns={columns}
-                  field={field}
-                  canEdit={canEdit}
-                  onRename={(name, onError) => change(index, { name }, onError)}
-                  onWip={(patch, onError) => change(index, patch, onError)}
-                  onCollapsed={collapsed_by_default => change(index, { collapsed_by_default })}
-                  onMerge={other => mergeInto(index, other)}
-                  onSplit={value => split(index, value)}
-                  onDelete={() => save(columns.filter((_, i) => i !== index))}
-                  onMove={to => move(index, to)}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -234,6 +235,7 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
         onOpenChange={open => !open && setSwitchTo(null)}
         title={`Make columns ${switchTo ? COLUMN_FIELD_LABELS[switchTo].toLowerCase() : ''} values?`}
         confirmLabel="Rebuild columns"
+        pendingLabel="Rebuilding…"
         destructive={false}
         pending={update.isPending}
         onConfirm={() => switchTo && switchField(switchTo)}
@@ -268,10 +270,11 @@ function FieldPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
             {BOARD_COLUMN_FIELDS.map(f => (
-              <CommandItem
+              <PickerItem
+                checked={f === value}
                 key={f}
                 value={f}
                 onSelect={() => {
@@ -280,11 +283,10 @@ function FieldPicker({
                 }}
               >
                 <span className="flex-1">{COLUMN_FIELD_LABELS[f]}</span>
-                <Check className={cn('size-icon-sm', f === value ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -545,7 +547,11 @@ function WipInput({
   const invalid = trimmed !== '' && (parsed === null || parsed < 1 || parsed > BOARD_WIP_MAX);
 
   if (!canEdit) {
-    return <span className="text-sm tabular text-text-secondary">{value ?? 'No'}</span>;
+    return (
+      <span className={cn('text-sm tabular', value === null ? 'text-text-muted' : 'text-text-secondary')}>
+        {value ?? 'None'}
+      </span>
+    );
   }
 
   const commit = () => {
@@ -559,7 +565,7 @@ function WipInput({
       aria-label={label}
       inputMode="numeric"
       value={text}
-      placeholder="No"
+      placeholder="None"
       aria-invalid={invalid}
       title={invalid ? `A whole number from 1 to ${BOARD_WIP_MAX}, or empty for none` : undefined}
       onChange={e => setText(e.target.value)}
@@ -591,7 +597,7 @@ function MergeWith({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-60 p-0">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Filter columns" />
           <CommandList>
             <CommandEmpty>No other column matches.</CommandEmpty>
@@ -611,7 +617,7 @@ function MergeWith({
               ),
             )}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -636,7 +642,7 @@ function AddColumn({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-60 p-0">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Filter values" />
           <CommandList>
             <CommandEmpty>Every value is on a column.</CommandEmpty>
@@ -654,7 +660,7 @@ function AddColumn({
               </CommandItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

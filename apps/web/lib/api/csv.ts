@@ -1,6 +1,6 @@
 import { ErrorEnvelopeSchema } from '@nothingleft/types';
 import { buildUrl, type QueryEntry } from '@lib/api/client';
-import { ApiError, ApiNetworkError } from '@lib/api/errors';
+import { ApiError, ApiNetworkError, UNKNOWN_FAILURE_MESSAGE } from '@lib/api/errors';
 
 export interface CsvDownload {
   blob: Blob;
@@ -31,7 +31,7 @@ export async function downloadCsv(
     const parsed = ErrorEnvelopeSchema.safeParse(await response.json().catch(() => null));
     throw parsed.success
       ? ApiError.fromBody(response.status, parsed.data.error)
-      : new ApiError(response.status, 'unknown', response.statusText, requestId);
+      : new ApiError(response.status, 'unknown', UNKNOWN_FAILURE_MESSAGE, requestId);
   }
 
   const disposition = response.headers.get('content-disposition') ?? '';

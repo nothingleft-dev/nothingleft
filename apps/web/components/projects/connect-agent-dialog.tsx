@@ -2,17 +2,18 @@
 
 import { useState, type ReactNode } from 'react';
 import { CheckCircle2 } from 'lucide-react';
-import type { CreatedPersonalAccessToken, PatScope } from '@nothingleft/types';
+import { CreatePersonalAccessTokenSchema, type CreatedPersonalAccessToken, type PatScope } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@components/ui/dialog';
+} from '@components/dialog';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { CopyButton } from '@components/copy-button';
@@ -22,6 +23,8 @@ import { useApiError } from '@hooks/use-api-error';
 import { useCreateToken, useTokenFirstUse } from '@hooks/use-tokens';
 import { formatTime } from '@lib/datetime';
 import { env } from '@lib/env';
+import { PendingButton } from '@components/pending-button';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 // What an agent triaging issues needs; admin scopes are a deliberate extra tick.
 const AGENT_SCOPES: PatScope[] = ['issues:read', 'issues:write', 'comments:write', 'time:write'];
@@ -41,7 +44,9 @@ interface AgentClient {
   config: (token: string) => string;
 }
 
-const cmd = (text: string) => <code className="rounded-xs bg-inset px-1 font-mono text-2xs text-text">{text}</code>;
+const cmd = (text: string) => <code className="rounded-xs bg-active px-1 font-mono text-2xs text-text">{text}</code>;
+
+const StepLabel = ({ step }: { step: number }) => <p className="text-xs text-text-secondary">Step {step} of 2</p>;
 
 // Every client below speaks Streamable HTTP with a bearer header except Claude Desktop,
 // which only starts local servers and so runs the stdio shim.
@@ -50,7 +55,7 @@ const CLIENTS: readonly AgentClient[] = [
     value: 'claude-code',
     label: 'Claude Code',
     hint: 'Terminal, over HTTP. Nothing to install.',
-    where: 'Run this in a terminal.',
+    where: 'Run this in a terminal. It connects over HTTP, so there is nothing to install.',
     check: <>Run {cmd('claude mcp list')} — nothingleft should say ✓ Connected.</>,
     config: t => `claude mcp add --transport http nothingleft ${mcpUrl()} --header "Authorization: Bearer ${t}"`,
   },
@@ -58,7 +63,7 @@ const CLIENTS: readonly AgentClient[] = [
     value: 'claude-code-stdio',
     label: 'Claude Code (stdio)',
     hint: 'Terminal, through the local shim. Needs Node.js 20.',
-    where: 'Run this in a terminal.',
+    where: 'Run this in a terminal. It starts the local shim, which needs Node.js 20.',
     check: <>Run {cmd('claude mcp list')} — nothingleft should say ✓ Connected.</>,
     config: t =>
       `claude mcp add nothingleft -e NOTHINGLEFT_TOKEN=${t} -e NOTHINGLEFT_MCP_URL=${mcpUrl()} -- npx -y @nothingleft/mcp`,
@@ -67,7 +72,8 @@ const CLIENTS: readonly AgentClient[] = [
     value: 'claude-desktop',
     label: 'Claude Desktop',
     hint: 'The desktop app, through the local shim. Needs Node.js 20.',
-    where: 'In Claude Desktop, open Settings → Developer → Edit Config, add this, and restart it.',
+    where:
+      'In Claude Desktop, open Settings → Developer → Edit Config, add this, and restart it. The shim needs Node.js 20.',
     check: <>Nothing Left appears in the tools menu after the restart.</>,
     config: t =>
       json({
@@ -155,12 +161,14 @@ function TokenStep({ onCreated }: { onCreated: (token: CreatedPersonalAccessToke
   const [name, setName] = useState('Claude Code');
   const [scopes, setScopes] = useState<PatScope[]>(AGENT_SCOPES);
   const create = useCreateToken();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name']);
+  const local = useFieldProblems(CreatePersonalAccessTokenSchema, { name: 'Token name' });
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Connect an LLM</DialogTitle>
+        <StepLabel step={1} />
+        <DialogTitle>Connect an agent</DialogTitle>
         <DialogDescription>
           The agent acts as you through an access token. It can never do more than your role allows, and everything it
           changes is recorded under your name.
@@ -175,23 +183,36 @@ function TokenStep({ onCreated }: { onCreated: (token: CreatedPersonalAccessToke
         className="flex flex-col gap-4"
         onSubmit={event => {
           event.preventDefault();
-          create.mutate({ name, scopes }, { onSuccess: onCreated });
+          if (!local.check({ name, scopes })) return;
+          create.mutate({ name: name.trim(), scopes }, { onSuccess: onCreated });
         }}
       >
         <Field
           label="Token name"
           hint="Where it will live, so you can tell it apart later."
           value={name}
-          error={error.fields['name']}
-          onChange={e => setName(e.target.value)}
+          error={local.problems['name'] ?? error.fields['name']}
+          onChange={e => {
+            setName(e.target.value);
+            local.clear('name');
+          }}
         />
         <ScopeChecklist value={scopes} onChange={setScopes} />
       </form>
 
       <DialogFooter>
-        <Button type="submit" form="connect-agent-token" disabled={scopes.length === 0 || create.isPending}>
-          {create.isPending ? 'Creating…' : 'Create token'}
-        </Button>
+        <DialogClose asChild>
+          <Button variant="outline">Cancel</Button>
+        </DialogClose>
+        <PendingButton
+          type="submit"
+          form="connect-agent-token"
+          disabled={scopes.length === 0}
+          pending={create.isPending}
+          pendingLabel="Creating…"
+        >
+          Create token
+        </PendingButton>
       </DialogFooter>
     </>
   );
@@ -207,6 +228,7 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
   return (
     <>
       <DialogHeader>
+        <StepLabel step={2} />
         <DialogTitle>Add Nothing Left to your agent</DialogTitle>
         <DialogDescription>
           The token is in the config below. This is the only time it is shown; you can revoke it in Settings → Access
@@ -215,14 +237,16 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
       </DialogHeader>
 
       <div className="flex min-w-0 flex-col gap-3">
-        <ChoiceSelect label="Your agent" value={clientId} options={CLIENTS} onChange={setClientId} showHint />
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-text-secondary">{client.where}</p>
-          <CopyButton value={config} what="Config" />
+        <ChoiceSelect label="Your agent" value={clientId} options={CLIENTS} onChange={setClientId} />
+        <p className="text-xs text-text-secondary">{client.where}</p>
+        <div className="relative min-w-0">
+          <pre className="min-w-0 rounded-md border border-border-strong bg-inset py-3 pr-24 pl-3 font-mono text-2xs leading-5 whitespace-pre-wrap text-text [overflow-wrap:anywhere]">
+            {config}
+          </pre>
+          <div className="absolute top-2 right-2">
+            <CopyButton value={config} what="Config" />
+          </div>
         </div>
-        <pre className="min-w-0 rounded-md border bg-inset p-3 font-mono text-2xs leading-5 break-all whitespace-pre-wrap text-text">
-          {config}
-        </pre>
       </div>
 
       <section aria-label="Verify" className="flex flex-col gap-2 border-t pt-4">
@@ -250,7 +274,7 @@ function ConnectStep({ token, onDone }: { token: CreatedPersonalAccessToken; onD
       </section>
 
       <DialogFooter>
-        <Button variant={usedAt ? 'default' : 'ghost'} onClick={onDone}>
+        <Button variant={usedAt ? 'default' : 'outline'} onClick={onDone}>
           Done
         </Button>
       </DialogFooter>

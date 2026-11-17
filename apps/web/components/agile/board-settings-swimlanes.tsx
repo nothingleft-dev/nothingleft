@@ -11,7 +11,7 @@ import {
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { SettingsSection } from '@components/settings/section';
@@ -56,7 +56,7 @@ export function BoardSwimlanes({ projectKey, board, canEdit }: BoardSwimlanesPro
           ...(body.swimlane_types !== undefined ? { swimlane_types: body.swimlane_types } : {}),
         }),
       },
-      { onError: error => toastError(error) },
+      { onError: error => toastError('Could not change the swimlanes', error) },
     );
 
   const choose = (mode: BoardSwimlane) => {
@@ -75,7 +75,7 @@ export function BoardSwimlanes({ projectKey, board, canEdit }: BoardSwimlanesPro
 
   return (
     <SettingsSection
-      title="Swimlanes"
+      title={`Swimlanes · ${board.name}`}
       description="Rows across the board. Cards that fit no row go in Uncategorized, always last."
     >
       <div className="flex flex-col gap-3">

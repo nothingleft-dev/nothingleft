@@ -37,7 +37,7 @@ describe('generated marks', () => {
 
   test('mark URLs point at this API, never a third party', () => {
     const marks = avatarMarks('https://api.example.test/');
-    expect(marks.person('Jordan Rivera')).toBe('https://api.example.test/avatars/person?seed=Jordan%20Rivera');
+    expect(marks.person('Jordan Rivera')).toBe('https://api.example.test/avatars/person?seed=Jordan%20Rivera&v=3');
     expect(marks.project('PP', 'teal')).toBe('https://api.example.test/avatars/project?seed=PP&color=teal');
     expect(marks.organization('A&B')).toBe('https://api.example.test/avatars/organization?seed=A%26B');
   });

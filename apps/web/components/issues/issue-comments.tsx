@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { PersonName } from '@components/former-member-chip';
@@ -33,8 +33,27 @@ import { useSession } from '@hooks/use-session';
 import { isApiError } from '@lib/api/errors';
 import { formatDateTimeWithZone } from '@lib/datetime';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { FormAlert } from '@components/auth/form-alert';
 
 const SUBMIT_KBD = 'h-4 border-transparent bg-ink-fg/15 text-ink-fg/80';
+const EXCERPT_LENGTH = 80;
+
+/** The comment's first line as plain words, so a delete names which comment it removes. */
+function excerptOf(markdown: string): string {
+  const line =
+    markdown
+      .split('\n')
+      .map(l => l.replace(/^\s*(?:[#>*+-]|\d+\.|\[[ xX]\])+\s*/, '').trim())
+      .find(l => l !== '' && !l.startsWith('```')) ?? '';
+  const plain = line
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`~]+/g, '')
+    .trim();
+  if (plain.length <= EXCERPT_LENGTH) return plain;
+  const cut = plain.slice(0, EXCERPT_LENGTH);
+  return `${cut.slice(0, cut.lastIndexOf(' ') > 0 ? cut.lastIndexOf(' ') : EXCERPT_LENGTH).replace(/[\s,.;:]+$/, '')}…`;
+}
 
 interface CommentHeaderProps {
   comment: ThreadComment;
@@ -52,7 +71,7 @@ export function CommentHeader({ comment, verb = 'commented', timeZone }: Comment
         <Tooltip>
           <TooltipTrigger asChild>
             <span tabIndex={0} className="text-text-muted">
-              · edited
+              edited
             </span>
           </TooltipTrigger>
           <TooltipContent>Edited {formatDateTimeWithZone(comment.edited_at, timeZone)}</TooltipContent>
@@ -90,7 +109,10 @@ export function CommentBody({ scope, projectKey, comment, editing, onEditingChan
       onToggleTask={
         comment.me.can_edit
           ? (index, checked) =>
-              toggle.mutate({ id: comment.id, index, checked }, { onError: error => toastError(error) })
+              toggle.mutate(
+                { id: comment.id, index, checked },
+                { onError: error => toastError('Could not update the task', error) },
+              )
           : undefined
       }
     />
@@ -118,7 +140,7 @@ export function CommentMenu({ scope, subject, comment, onEdit }: CommentMenuProp
             variant="ghost"
             size="icon-xs"
             aria-label="Comment actions"
-            className="ml-auto text-text-muted opacity-0 group-hover/comment:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            className="ml-auto text-text-muted reveal group-hover/comment:opacity-100"
           >
             <MoreHorizontal />
           </Button>
@@ -142,17 +164,23 @@ export function CommentMenu({ scope, subject, comment, onEdit }: CommentMenuProp
         onOpenChange={setConfirming}
         title="Delete this comment?"
         confirmLabel="Delete comment"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() =>
           remove.mutate(comment.id, {
             onSuccess: () => setConfirming(false),
             onError: error => {
               setConfirming(false);
-              toastError(error);
+              toastError('Could not delete the comment', error);
             },
           })
         }
       >
+        {excerptOf(comment.body_md) ? (
+          <blockquote className="border-l-2 border-border-strong pl-3 text-text [overflow-wrap:anywhere]">
+            {excerptOf(comment.body_md)}
+          </blockquote>
+        ) : null}
         <p>
           The comment by <span className="font-medium text-text">{comment.author.name}</span> disappears from {subject}{' '}
           for everyone, and cannot be restored.{' '}
@@ -182,7 +210,7 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
     if (blocked) return;
     if (text !== comment.body_md) {
       // Shown saved at once; a refusal puts the old text back and says why.
-      update.mutate({ id: comment.id, body_md: text }, { onError: e => toastError(e) });
+      update.mutate({ id: comment.id, body_md: text }, { onError: e => toastError('Could not save the comment', e) });
     }
     onDone();
   };
@@ -194,6 +222,7 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
         onChange={setText}
         projectKey={projectKey}
         label="Edit comment"
+        className="sm:-mx-[13px]"
         placeholder="A comment cannot be empty. To remove it, delete it instead."
         autoFocus
         invalid={size.level === 'too_large'}
@@ -202,9 +231,16 @@ function CommentEditForm({ scope, projectKey, comment, onDone }: CommentEditForm
         uploader={uploader}
         footer={
           <>
-            <Button size="sm" onClick={submit} disabled={blocked}>
-              {uploader.busy ? 'Uploading…' : 'Save'} <Kbd className={SUBMIT_KBD}>⌘↵</Kbd>
-            </Button>
+            <PendingButton
+              size="sm"
+              onClick={submit}
+              disabled={blocked}
+              pending={uploader.busy}
+              pendingLabel="Uploading…"
+              after={<Kbd className={SUBMIT_KBD}>⌘↵</Kbd>}
+            >
+              Save
+            </PendingButton>
             <Button size="sm" variant="ghost" onClick={onDone}>
               Cancel
             </Button>
@@ -262,7 +298,7 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
         },
         onError: e => {
           setText(body);
-          setError(isApiError(e) ? e.message : 'The comment could not be posted.');
+          setError(isApiError(e) ? e.message : 'Check your connection.');
         },
       },
     );
@@ -272,28 +308,40 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
     <div className="mt-4 grid grid-cols-[32px_minmax(0,1fr)] gap-3">
       {me ? <MemberAvatar member={me} className="mt-1 size-avatar-lg" /> : <span />}
       <div className="flex min-w-0 flex-col gap-2">
+        {error ? (
+          <FormAlert title="The comment was not posted.">
+            {error} Your text is still here, so you can post it again.
+          </FormAlert>
+        ) : null}
         <MarkdownEditor
           value={text}
           onChange={setText}
           projectKey={projectKey}
           label="Comment"
           placeholder="Write a comment. Type @ to mention someone, # to link an issue."
-          invalid={Boolean(error) || size.level === 'too_large'}
+          invalid={size.level === 'too_large'}
           onSubmit={submit}
           onCancel={empty ? undefined : discard}
           uploader={uploader}
           footer={
             <>
-              <Button size="sm" onClick={submit} disabled={blocked}>
-                {uploader.busy ? 'Uploading…' : 'Add comment'} <Kbd className={SUBMIT_KBD}>⌘↵</Kbd>
-              </Button>
+              <PendingButton
+                size="sm"
+                onClick={submit}
+                disabled={blocked}
+                pending={uploader.busy}
+                pendingLabel="Uploading…"
+                after={<Kbd className={SUBMIT_KBD}>⌘↵</Kbd>}
+              >
+                Add comment
+              </PendingButton>
               {empty ? null : (
                 <Button size="sm" variant="ghost" onClick={discard}>
                   Cancel
                 </Button>
               )}
               {onLogTime ? (
-                <Button size="sm" variant="outline" className="ml-auto" onClick={onLogTime}>
+                <Button size="sm" variant="ghost" className="ml-auto text-text-secondary" onClick={onLogTime}>
                   <Timer /> Add spent time
                 </Button>
               ) : null}
@@ -301,7 +349,6 @@ export function CommentComposer({ scope, projectKey, onLogTime }: CommentCompose
           }
         />
         <MarkdownSizeNote size={size} />
-        {error ? <p className="text-xs text-danger-fg">{error}</p> : null}
       </div>
     </div>
   );

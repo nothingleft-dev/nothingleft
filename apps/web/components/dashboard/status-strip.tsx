@@ -1,10 +1,12 @@
+import { formatCount } from '@lib/numbers';
 import { STATUS_CATEGORIES, type BoardValueCount, type StatusCategory } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const CATEGORY_LABEL: Record<StatusCategory, string> = {
   backlog: 'Backlog',
-  unstarted: 'Open',
+  unstarted: 'Not started',
   started: 'In progress',
   done: 'Done',
   cancelled: 'Cancelled',
@@ -24,10 +26,11 @@ interface StatusStripProps {
   counts: Partial<Record<StatusCategory, number>>;
   /** The legend keeps identity off colour alone; leave it out only where the numbers sit right beside. */
   legend?: boolean;
+  tooltipSide?: 'top' | 'bottom';
   className?: string;
 }
 
-export function StatusStrip({ counts, legend = true, className }: StatusStripProps) {
+export function StatusStrip({ counts, legend = true, tooltipSide = 'top', className }: StatusStripProps) {
   const entries = STATUS_CATEGORIES.map(c => [c, counts[c] ?? 0] as const).filter(([, n]) => n > 0);
   const total = entries.reduce((sum, [, n]) => sum + n, 0);
 
@@ -43,8 +46,8 @@ export function StatusStrip({ counts, legend = true, className }: StatusStripPro
             <TooltipTrigger asChild>
               <i className={cn('block h-full bg-c-solid', CATEGORY_CLASS[category])} style={{ flex: n }} />
             </TooltipTrigger>
-            <TooltipContent>
-              {n} {n === 1 ? 'issue' : 'issues'} {CATEGORY_LABEL[category].toLowerCase()}
+            <TooltipContent side={tooltipSide}>
+              {plural(n, 'issue')} {CATEGORY_LABEL[category].toLowerCase()}
             </TooltipContent>
           </Tooltip>
         ))}
@@ -54,7 +57,7 @@ export function StatusStrip({ counts, legend = true, className }: StatusStripPro
           {entries.map(([category, n]) => (
             <li key={category} className="inline-flex items-center gap-1.5">
               <i className={cn('inline-block size-1.5 rounded-full bg-c-solid', CATEGORY_CLASS[category])} />
-              {CATEGORY_LABEL[category]} <b className="font-medium tabular text-text">{n}</b>
+              {CATEGORY_LABEL[category]} <b className="font-medium tabular text-text">{formatCount(n)}</b>
             </li>
           ))}
         </ul>
@@ -71,6 +74,8 @@ interface StatusDistributionProps {
   /** How a segment's hover reads: `in status Open`, `with priority Critical`, `of type Bug`. */
   field?: 'status' | 'priority' | 'type';
   legend?: boolean;
+  /** Below where a heading sits right above the strip, so the hover never covers it. */
+  tooltipSide?: 'top' | 'bottom';
   className?: string;
 }
 
@@ -80,6 +85,7 @@ export function StatusDistribution({
   noun = 'issues',
   field = 'status',
   legend = true,
+  tooltipSide = 'top',
   className,
 }: StatusDistributionProps) {
   const entries = statuses.filter(s => s.count > 0);
@@ -95,13 +101,13 @@ export function StatusDistribution({
           <Tooltip key={s.name}>
             <TooltipTrigger asChild>
               <i
-                aria-label={`${s.count} ${s.count === 1 ? one : noun} ${phrase} ${s.name}`}
+                aria-label={`${formatCount(s.count)} ${s.count === 1 ? one : noun} ${phrase} ${s.name}`}
                 className={cn('block h-full', `l-${s.color}`, STATUS_TEXTURE[s.category ?? 'started'])}
                 style={{ flex: s.count }}
               />
             </TooltipTrigger>
-            <TooltipContent>
-              {s.count} {s.count === 1 ? one : noun} {phrase} {s.name}
+            <TooltipContent side={tooltipSide}>
+              {formatCount(s.count)} {s.count === 1 ? one : noun} {phrase} {s.name}
             </TooltipContent>
           </Tooltip>
         ))}
@@ -117,7 +123,7 @@ export function StatusDistribution({
                   STATUS_TEXTURE[s.category ?? 'started'],
                 )}
               />
-              {s.name} <b className="font-medium tabular text-text">{s.count}</b>
+              {s.name} <b className="font-medium tabular text-text">{formatCount(s.count)}</b>
             </li>
           ))}
         </ul>

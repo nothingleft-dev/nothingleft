@@ -65,9 +65,12 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
       </label>
 
       <div
+        data-slot="form-input"
         className={cn(
           'flex min-h-control flex-wrap items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1.5',
           'focus-within:border-border-strong focus-within:shadow-(--focus-ring)',
+          rejected.length > 0 &&
+            'border-danger-fg focus-within:border-danger-fg focus-within:shadow-[0_0_0_2px_color-mix(in_oklab,var(--danger-fg)_25%,transparent)]',
           disabled && 'opacity-50',
         )}
       >
@@ -99,6 +102,7 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
         <input
           id={id}
           value={draft}
+          aria-invalid={rejected.length > 0 || undefined}
           disabled={disabled || full}
           onChange={e => {
             setDraft(e.target.value);
@@ -108,14 +112,16 @@ export function EmailChips({ value, onChange, max, disabled, invalid = {} }: Ema
           onPaste={onPaste}
           onBlur={() => commit(draft)}
           placeholder={value.length === 0 ? 'jordan@company.com, sam@company.com' : full ? '' : 'Add another'}
-          className="h-6 min-w-[180px] flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
+          className="h-6 min-w-[180px] flex-1 bg-transparent pl-1 text-[length:inherit] text-text outline-none placeholder:text-text-muted focus-visible:shadow-none"
         />
       </div>
 
       {rejected.length > 0 ? (
         <p className="text-xs text-danger-fg">
-          {rejected.length === 1 ? 'That is not an email address' : 'Those are not email addresses'}:{' '}
-          {rejected.join(', ')}
+          {rejected.length === 1
+            ? 'That is not an email address, so it will not be sent'
+            : 'Those are not email addresses, so they will not be sent'}
+          : {rejected.join(', ')}
         </p>
       ) : (
         <p className="text-sm text-text-secondary">

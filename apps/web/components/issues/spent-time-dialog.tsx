@@ -1,8 +1,15 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { CalendarDays, Check, ChevronsUpDown, Plus, X } from 'lucide-react';
-import { calendarDaysBetween, formatDuration, parseDuration, workingDaysBetween } from '@nothingleft/format';
+import { CalendarDays, ChevronsUpDown, Plus, X } from 'lucide-react';
+import {
+  calendarDaysBetween,
+  emptyLabel,
+  fieldNameInSentence,
+  formatDuration,
+  parseDuration,
+  workingDaysBetween,
+} from '@nothingleft/format';
 import {
   WORK_ITEM_MAX_RECORDS,
   WORK_ITEM_NOTE_MAX_BYTES,
@@ -16,9 +23,11 @@ import {
 import { markdownByteLength } from '@nothingleft/markdown';
 import { Button } from '@components/ui/button';
 import { Duration } from '@components/duration';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
+import { DialogBody } from '@components/dialog-body';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';
 import { FormAlert } from '@components/auth/form-alert';
 import { MonthGrid } from '@components/date-picker';
@@ -37,6 +46,8 @@ import { useLogTime, useUpdateWorkItem, useWorkAuthors } from '@hooks/use-work-i
 import { isApiError } from '@lib/api/errors';
 import { formatCalendarDate, formatCalendarRange, todayCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
 type Mode = 'single' | 'range';
 
@@ -278,134 +289,144 @@ function SpentTimeForm({
         </DialogDescription>
       </DialogHeader>
 
-      {formError ? <FormAlert title={formError} /> : null}
+      <DialogBody className="flex flex-col gap-5">
+        {formError ? <FormAlert title={formError} /> : null}
 
-      <AuthorField
-        author={author}
-        editable={canLogForOthers}
-        people={authors.data ?? []}
-        loading={authors.isPending}
-        error={fieldError('author')}
-        onChange={next => {
-          setServerError(null);
-          setAuthor(next);
-        }}
-      />
-
-      {item ? null : (
-        <Segmented
-          ariaLabel="How to enter dates"
-          value={mode}
-          options={MODES}
+        <AuthorField
+          author={author}
+          editable={canLogForOthers}
+          people={authors.data ?? []}
+          loading={authors.isPending}
+          error={fieldError('author')}
           onChange={next => {
             setServerError(null);
-            setMode(next);
+            setAuthor(next);
           }}
         />
-      )}
 
-      <div className="flex flex-col gap-3">
-        {rows.map((row, index) => {
-          const server = serverRowError(index);
-          const shown = [...(touched ? problems[index]! : []), ...(server ? [server] : [])];
-          return (
-            <RecordRow
-              key={row.id}
-              row={row}
-              mode={mode}
-              index={index}
-              removable={rows.length > 1}
-              problems={shown}
-              onChange={patch => edit(row.id, patch)}
-              onRemove={() => setRows(current => current.filter(r => r.id !== row.id))}
-              week={week}
-            />
-          );
-        })}
         {item ? null : (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="-ml-2 self-start text-brand-text hover:text-brand-text"
-              disabled={rows.length >= WORK_ITEM_MAX_RECORDS}
-              onClick={() => setRows(current => [...current, newRow(mode === 'single' ? today : null)])}
-            >
-              <Plus /> Add another record
-            </Button>
-            {totalMinutes > 0 && (rows.length > 1 || mode === 'range') ? (
-              <span className="text-xs text-text-secondary">
-                {recordCount} {recordCount === 1 ? 'record' : 'records'} ·{' '}
-                <Duration minutes={totalMinutes} calendar={calendar} className="text-text" /> in total
-              </span>
-            ) : null}
-          </div>
+          <Segmented
+            ariaLabel="How to enter dates"
+            value={mode}
+            options={MODES}
+            onChange={next => {
+              setServerError(null);
+              setMode(next);
+            }}
+          />
         )}
-      </div>
 
-      <div className={cn('grid gap-4', liveAttributes.length > 0 && 'sm:grid-cols-2')}>
-        <WorkTypeField
-          value={chosenType}
-          letter={typeRow?.short_label ?? null}
-          options={liveTypes}
-          loading={workTypes.isPending}
-          error={fieldError('work_type')}
-          onChange={next => {
-            setServerError(null);
-            setWorkType(next);
-          }}
-        />
-        {liveAttributes.map(attribute => {
-          const value = attributes[attribute.name] ?? null;
-          return (
-            <WorkTypeField
-              key={attribute.name}
-              label={attribute.name}
-              emptyLabel={`No ${attribute.name}`}
-              value={value}
-              letter={attribute.values.find(v => v.name === value)?.short_label ?? null}
-              options={attribute.values}
-              loading={false}
-              error={fieldError(`attributes.${attribute.name}`)}
-              onChange={next => {
-                setServerError(null);
-                setAttributes(current => ({ ...current, [attribute.name]: next }));
-              }}
-            />
-          );
-        })}
-      </div>
+        <div className="flex flex-col gap-3">
+          {rows.map((row, index) => {
+            const server = serverRowError(index);
+            const shown = [...(touched ? problems[index]! : []), ...(server ? [server] : [])];
+            return (
+              <RecordRow
+                key={row.id}
+                row={row}
+                mode={mode}
+                index={index}
+                removable={rows.length > 1}
+                problems={shown}
+                onChange={patch => edit(row.id, patch)}
+                onRemove={() => setRows(current => current.filter(r => r.id !== row.id))}
+                week={week}
+              />
+            );
+          })}
+          {item ? null : (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="-ml-2 self-start text-text-secondary"
+                disabled={rows.length >= WORK_ITEM_MAX_RECORDS}
+                onClick={() => setRows(current => [...current, newRow(mode === 'single' ? today : null)])}
+              >
+                <Plus /> Add another record
+              </Button>
+              {totalMinutes > 0 && (rows.length > 1 || mode === 'range') ? (
+                <span className="text-xs text-text-secondary">
+                  {plural(recordCount, 'record')} ·{' '}
+                  <Duration minutes={totalMinutes} calendar={calendar} className="text-text" /> in total
+                </span>
+              ) : null}
+            </div>
+          )}
+        </div>
 
-      <div className="flex flex-col gap-1.5">
-        <MarkdownEditor
-          value={note}
-          onChange={next => {
-            if (serverError?.field === 'description_md') setServerError(null);
-            setNote(next);
-          }}
-          projectKey={projectKey}
-          label="Note"
-          placeholder="Describe what you did during this time"
-          invalid={noteTooLarge || Boolean(fieldError('description_md'))}
-          onSubmit={submit}
-          uploader={uploader}
-        />
-        {noteTooLarge || fieldError('description_md') ? (
-          <p role="alert" className="text-xs text-danger-fg">
-            {fieldError('description_md') ?? `A note can be up to ${WORK_ITEM_NOTE_MAX_BYTES / 1024} KB.`}
-          </p>
-        ) : null}
-      </div>
+        <div className={cn('grid gap-4', liveAttributes.length > 0 && 'sm:grid-cols-2')}>
+          <WorkTypeField
+            value={chosenType}
+            letter={typeRow?.short_label ?? null}
+            options={liveTypes}
+            loading={workTypes.isPending}
+            error={fieldError('work_type')}
+            onChange={next => {
+              setServerError(null);
+              setWorkType(next);
+            }}
+          />
+          {liveAttributes.map(attribute => {
+            const value = attributes[attribute.name] ?? null;
+            return (
+              <WorkTypeField
+                key={attribute.name}
+                label={attribute.name}
+                emptyLabel={emptyLabel(attribute.name)}
+                value={value}
+                letter={attribute.values.find(v => v.name === value)?.short_label ?? null}
+                options={attribute.values}
+                loading={false}
+                error={fieldError(`attributes.${attribute.name}`)}
+                onChange={next => {
+                  setServerError(null);
+                  setAttributes(current => ({ ...current, [attribute.name]: next }));
+                }}
+              />
+            );
+          })}
+        </div>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={pending}>
-          {uploader.busy ? 'Uploading…' : pending ? 'Saving…' : 'Save'} <Kbd className={SUBMIT_KBD}>⌘↵</Kbd>
-        </Button>
+        <div className="flex flex-col gap-1.5">
+          <span aria-hidden className="text-sm font-medium text-text-secondary">
+            Note <span className="font-normal text-text-muted">(optional)</span>
+          </span>
+          <MarkdownEditor
+            value={note}
+            onChange={next => {
+              if (serverError?.field === 'description_md') setServerError(null);
+              setNote(next);
+            }}
+            projectKey={projectKey}
+            label="Note"
+            placeholder="Describe what you did during this time"
+            invalid={noteTooLarge || Boolean(fieldError('description_md'))}
+            onSubmit={submit}
+            uploader={uploader}
+          />
+          {noteTooLarge || fieldError('description_md') ? (
+            <p role="alert" className="text-xs text-danger-fg">
+              {fieldError('description_md') ?? `A note can be up to ${WORK_ITEM_NOTE_MAX_BYTES / 1024} KB.`}
+            </p>
+          ) : null}
+        </div>
+      </DialogBody>
+
+      <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-      </div>
+        <PendingButton
+          type="submit"
+          pending={pending || uploader.busy}
+          pendingLabel={uploader.busy ? 'Uploading…' : 'Saving…'}
+          after={<Kbd className={SUBMIT_KBD}>⌘↵</Kbd>}
+        >
+          Save
+        </PendingButton>
+      </DialogFooter>
     </form>
   );
 }
@@ -478,7 +499,7 @@ function RecordRow({ row, mode, index, removable, problems, onChange, onRemove, 
               aria-invalid={dateProblem || undefined}
               aria-describedby={dateProblem ? noteId : undefined}
               className={cn(
-                'justify-start font-normal',
+                'h-control justify-start font-normal',
                 dateProblem && 'border-danger-fg',
                 !(mode === 'single' ? row.date : row.from) && 'text-text-muted',
               )}
@@ -578,7 +599,7 @@ function AuthorField({ author, editable, people, loading, error, onChange }: Aut
               aria-expanded={open}
               aria-labelledby={`${id}-label`}
               aria-invalid={error ? true : undefined}
-              className={cn('justify-start font-normal', error && 'border-danger-fg')}
+              className={cn('h-control justify-start font-normal', error && 'border-danger-fg')}
             >
               {face}
               <ChevronsUpDown className="ml-auto text-text-muted" />
@@ -588,12 +609,13 @@ function AuthorField({ author, editable, people, loading, error, onChange }: Aut
             className="w-(--radix-popover-trigger-width) min-w-[min(280px,calc(100vw-32px))] p-0"
             align="start"
           >
-            <Command>
+            <PickerCommand>
               <CommandInput placeholder="Find a person" />
               <CommandList>
                 {loading ? <PickerSkeleton /> : <CommandEmpty>Nobody in this project can log time.</CommandEmpty>}
                 {people.map(person => (
-                  <CommandItem
+                  <PickerItem
+                    checked={person.username === author.username}
                     key={person.username}
                     value={`${person.name} ${person.username}`}
                     onSelect={() => {
@@ -604,13 +626,10 @@ function AuthorField({ author, editable, people, loading, error, onChange }: Aut
                     <MemberAvatar member={person} className="size-5" />
                     <PersonName person={person} className="min-w-0 flex-1 truncate" />
                     <span className="text-xs text-text-muted">@{person.username}</span>
-                    <Check
-                      className={cn('size-icon-sm', person.username === author.username ? 'opacity-100' : 'opacity-0')}
-                    />
-                  </CommandItem>
+                  </PickerItem>
                 ))}
               </CommandList>
-            </Command>
+            </PickerCommand>
           </PopoverContent>
         </Popover>
       ) : (
@@ -667,7 +686,7 @@ function WorkTypeField({
             aria-labelledby={`${id}-label`}
             aria-invalid={error ? true : undefined}
             className={cn(
-              'justify-start font-normal',
+              'h-control justify-start font-normal',
               error && 'border-danger-fg',
               !value && !loading && 'text-text-muted',
             )}
@@ -688,7 +707,7 @@ function WorkTypeField({
           align="start"
         >
           <ValueCommand
-            placeholder={`Find ${label === 'Type' ? 'a work type' : label}`}
+            placeholder={`Find ${label === 'Type' ? 'a work type' : fieldNameInSentence(label)}`}
             loading={loading}
             selected={value ?? emptyLabel}
             options={[

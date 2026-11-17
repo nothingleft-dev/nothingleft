@@ -38,7 +38,7 @@ const typeClass = (row: BacklogRow) => ({ Bug: 'l-bug', Feature: 'l-feature', Ta
         </li>
         <li>
           <strong>Set a goal and points.</strong> The goal is Markdown. Story points are whole numbers from 0 to 999; an
-          issue without them reads <em>Not estimated</em>.
+          issue without them reads <em>?</em>.
         </li>
         <li>
           <strong>Start it.</strong> It starts on the day you start it and keeps its planned end date, which drives the
@@ -89,7 +89,7 @@ const typeClass = (row: BacklogRow) => ({ Bug: 'l-bug', Feature: 'l-feature', Ta
                   <span aria-hidden="true">{row.type.charAt(0)}</span>
                   <span class="sr-only">{row.type}</span>
                 </span>
-                <span class="pts">{row.points === null ? 'Not estimated' : plural(row.points, 'point')}</span>
+                <span class="pts">{row.points === null ? '?' : plural(row.points, 'point')}</span>
               </li>
             ))}
           </ul>
@@ -118,7 +118,7 @@ const typeClass = (row: BacklogRow) => ({ Bug: 'l-bug', Feature: 'l-feature', Ta
                   <span class="sr-only">{row.type}</span>
                 </span>
                 <span class:list={['pts', { none: row.points === null }]}>
-                  {row.points === null ? 'Not estimated' : plural(row.points, 'point')}
+                  {row.points === null ? '?' : plural(row.points, 'point')}
                 </span>
               </li>
             ))}

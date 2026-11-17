@@ -1,18 +1,20 @@
 import type { MemberRef } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { MemberAvatar } from '@components/issues/member-avatar';
-import { FormerMemberChip, personTitle, deactivatedInk } from '@components/former-member-chip';
+import { PersonName, personTitle } from '@components/former-member-chip';
 import { cn } from '@lib/utils';
 
 interface AssigneeStackProps {
   assignees: readonly MemberRef[];
   /** Show the first person's name beside the avatars. */
   withName?: boolean;
+  /** The first person's Former member or Inactive chip; rows leave it to the tooltip. */
+  chip?: boolean;
   className?: string;
 }
 
 /** Avatars overlapping 4px with a surface ring; a dashed hollow circle when nobody is assigned. */
-export function AssigneeStack({ assignees, withName = true, className }: AssigneeStackProps) {
+export function AssigneeStack({ assignees, withName = true, chip = false, className }: AssigneeStackProps) {
   if (assignees.length === 0) {
     return (
       <span className={cn('inline-flex min-w-0 items-center gap-1.5 text-xs text-text-muted', className)}>
@@ -32,6 +34,7 @@ export function AssigneeStack({ assignees, withName = true, className }: Assigne
 
   const shown = assignees.slice(0, 3);
   const names = assignees.map(personTitle).join(', ');
+  const hidden = assignees.length - shown.length;
 
   return (
     <Tooltip>
@@ -42,16 +45,23 @@ export function AssigneeStack({ assignees, withName = true, className }: Assigne
               <MemberAvatar
                 key={person.username}
                 member={person}
-                className={cn('size-5 ring-[1.5px] ring-surface', i > 0 && '-ml-1')}
+                // The ring is drawn outside the avatar: 2.5px plus the 1.5px ring is the 4px overlap.
+                className={cn('size-5 ring-[1.5px] ring-surface', i > 0 && '-ml-[2.5px]')}
               />
             ))}
+            {!withName && hidden > 0 ? (
+              <span className="-ml-[2.5px] grid h-5 min-w-5 place-items-center rounded-full bg-inset px-1 text-[10px] font-medium tabular text-text-secondary ring-[1.5px] ring-surface">
+                +{hidden}
+              </span>
+            ) : null}
           </span>
           {withName ? (
-            <span className="truncate">
-              <span className={deactivatedInk(assignees[0])}>{assignees[0]!.name}</span>
-              {assignees[0]!.former_member ? <FormerMemberChip className="ml-1.5 align-middle" /> : null}
-              {assignees.length > 1 ? <span className="text-text-muted"> +{assignees.length - 1}</span> : null}
-            </span>
+            <>
+              <PersonName person={assignees[0]!} chip={chip} />
+              {assignees.length > 1 ? (
+                <span className="flex-none tabular text-text-muted">+{assignees.length - 1}</span>
+              ) : null}
+            </>
           ) : null}
         </span>
       </TooltipTrigger>

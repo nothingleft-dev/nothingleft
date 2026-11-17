@@ -67,6 +67,8 @@ export const ACTIVITY_EXPORT_PAGE_SIZE = 1_000;
 // the API, which cannot read the stylesheet - design/DESIGN-SYSTEM.md § 3.4.
 export const AVATAR_PASTEL_BACKGROUNDS = ['ffe3ea', 'e3edff', 'e2f5e9', 'fdf1d4', 'efe6ff'] as const;
 export const AVATAR_INITIALS_TEXT = '151618';
+// Part of the person mark's URL: browsers keep a mark for a year, so a change to how it renders bumps this.
+export const PERSON_MARK_VERSION = 3;
 // Longer than any name, key or organisation name a mark is seeded from.
 export const AVATAR_SEED_MAX_LENGTH = 200;
 // A mark is a pure function of its URL, so it never needs revalidating.

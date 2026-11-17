@@ -7,10 +7,11 @@ import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
 import { EmptyState } from '@components/empty-state';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus, type JobTone } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
-import { ImportErrorsTable, ImportProgress, issues, rows } from '@components/imports/import-results';
+import { ImportErrorsTable, ImportProgress, issues, rows, stoppedSummary } from '@components/imports/import-results';
 import { isImportRunning, useImports } from '@hooks/use-imports';
 import { cn } from '@lib/utils';
 import { formatCount } from '@lib/numbers';
@@ -21,11 +22,16 @@ const STATUS: Record<ImportStatus, [JobTone, string]> = {
   queued: ['waiting', 'Queued'],
   running: ['moving', 'Importing'],
   completed: ['done', 'Done'],
-  failed: ['failed', 'Failed'],
+  failed: ['failed', 'Stopped'],
   expired: ['gone', 'Expired'],
 };
 
-const GRID = 'grid grid-cols-[16px_minmax(0,1fr)_112px_88px_88px_72px_148px_112px] items-center gap-3 px-3';
+// Below 56rem the uploader moves into the opened row; below 48rem each import reads as two lines.
+const GRID =
+  'grid grid-cols-[16px_minmax(0,1fr)_104px_64px_72px_56px_208px_128px] items-center gap-x-6 px-3 @max-4xl:grid-cols-[16px_minmax(0,1fr)_104px_64px_72px_56px_128px] @max-3xl:grid-cols-[16px_minmax(0,1fr)_auto] @max-3xl:gap-x-3';
+const WIDE = '@max-3xl:hidden';
+// The numbers end right-aligned; the text after them starts a little further off so the two do not read as one run.
+const AFTER_NUMBERS = 'pl-2 @max-4xl:pl-0';
 
 interface RecentImportsProps {
   project: string;
@@ -40,11 +46,9 @@ export function RecentImports({ project, onContinue }: RecentImportsProps) {
   if (list.isPending) return <RecentSkeleton />;
   if (list.isError && !list.data) {
     return (
-      <FormAlert title="Recent imports could not be loaded.">
-        <button type="button" onClick={() => void list.refetch()}>
-          Try again
-        </button>
-      </FormAlert>
+      <LoadError onRetry={() => void list.refetch()} detail={errorDetail(list.error)}>
+        Recent imports could not be loaded.
+      </LoadError>
     );
   }
   const jobs = list.data;
@@ -58,19 +62,19 @@ export function RecentImports({ project, onContinue }: RecentImportsProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <div className="min-w-[840px]">
-        <div className={cn(GRID, 'h-7 bg-app text-2xs font-medium text-text-secondary')}>
+    <div className="@container rounded-md border">
+      <div>
+        <div className={cn(GRID, WIDE, 'h-7 rounded-t-md bg-app text-xs font-medium text-text-secondary')}>
           <span />
           <span>File</span>
           <span>Status</span>
           <span className="text-right">Rows</span>
           <span className="text-right">Created</span>
           <span className="text-right">Failed</span>
-          <span>Imported by</span>
-          <span>Uploaded</span>
+          <span className={cn(AFTER_NUMBERS, '@max-4xl:hidden')}>Uploaded by</span>
+          <span className="@max-4xl:pl-2">Uploaded</span>
         </div>
-        <ul className="divide-y divide-border-subtle border-t border-border-subtle">
+        <ul className="divide-y divide-border-subtle border-t border-border-subtle @max-3xl:border-t-0">
           {jobs.map(job => (
             <ImportRow
               key={job.id}
@@ -103,25 +107,35 @@ function ImportRow({ job, expanded, onToggle, onContinue }: ImportRowProps) {
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className={cn(GRID, 'h-row w-full cursor-pointer text-left text-sm hover:bg-hover')}
+        className={cn(
+          GRID,
+          'h-row w-full cursor-pointer text-left text-sm hover:bg-hover @max-3xl:h-auto @max-3xl:gap-y-0.5 @max-3xl:py-2',
+        )}
       >
         <ChevronRight className={cn('size-icon-sm text-text-muted transition-transform', expanded && 'rotate-90')} />
         <span className="truncate font-medium" title={job.filename}>
           {job.filename}
         </span>
         <JobStatus tone={tone} label={label} />
-        <span className="text-right text-text-secondary tabular">{count(job.total_rows)}</span>
-        <span className="text-right text-text-secondary tabular">{ran ? count(job.created_issues) : count(null)}</span>
-        <span className={cn('text-right tabular', job.failed_rows > 0 ? 'text-danger-fg' : 'text-text-secondary')}>
+        <span className={cn(WIDE, 'text-right text-text-secondary tabular')}>{count(job.total_rows)}</span>
+        <span className={cn(WIDE, 'text-right text-text-secondary tabular')}>
+          {ran ? count(job.created_issues) : count(null)}
+        </span>
+        <span className={cn(WIDE, 'text-right tabular', job.failed_rows > 0 ? 'text-text' : 'text-text-secondary')}>
           {ran ? count(job.failed_rows) : count(null)}
         </span>
-        <span className="min-w-0 truncate text-text-secondary">
-          <PersonName person={job.created_by} />
+        <PersonName person={job.created_by} className={cn(AFTER_NUMBERS, 'text-text-secondary @max-4xl:hidden')} />
+        <RelativeTime value={job.created_at} className={cn(WIDE, 'text-text-secondary @max-4xl:pl-2')} />
+        <span className="col-span-2 col-start-2 hidden text-xs text-text-secondary tabular @max-3xl:block">
+          <CompactCounts job={job} ran={ran} />
+          <RelativeTime value={job.created_at} className="whitespace-nowrap" />
         </span>
-        <RelativeTime value={job.created_at} className="text-text-secondary" />
       </button>
       {expanded ? (
-        <div className="flex flex-col gap-3 border-t border-border-subtle bg-app/50 px-9 py-4">
+        <div className="flex flex-col gap-3 border-t border-border-subtle bg-app/50 py-4 pr-3 pl-9 @max-3xl:pl-3">
+          <p className="hidden text-sm text-text-secondary @max-4xl:block">
+            Uploaded by <PersonName person={job.created_by} className="text-text" />
+          </p>
           <ImportDetail job={job} onContinue={onContinue} />
         </div>
       ) : null}
@@ -156,11 +170,8 @@ function ImportDetail({ job, onContinue }: { job: ImportJob; onContinue: () => v
     case 'failed':
       return (
         <>
-          <FormAlert title="The import stopped.">
-            {job.error?.message}{' '}
-            {job.created_issues > 0 ? `${issues(job.created_issues)} were created before it stopped.` : null}
-          </FormAlert>
-          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} />
+          <FormAlert title="The import stopped.">{stoppedSummary(job)}</FormAlert>
+          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} accepted />
         </>
       );
     default:
@@ -168,26 +179,68 @@ function ImportDetail({ job, onContinue }: { job: ImportJob; onContinue: () => v
         <>
           <p className="text-sm text-text-secondary">
             {issues(job.created_issues)} created
-            {job.failed_rows > 0 ? `; ${rows(job.failed_rows)} failed and were skipped:` : ', every row.'}
+            {job.failed_rows > 0 ? `; ${rows(job.failed_rows)} failed and were skipped.` : ', every row.'}
           </p>
-          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} />
+          <ImportErrorsTable errors={job.errors} failed={job.failed_rows} accepted />
         </>
       );
   }
 }
 
-function RecentSkeleton() {
+function CompactCounts({ job, ran }: { job: ImportJob; ran: boolean }) {
+  const parts = [
+    job.total_rows === null ? null : rows(job.total_rows),
+    ran ? `${formatCount(job.created_issues)} created` : null,
+  ].filter(Boolean);
   return (
-    <div className="divide-y divide-border-subtle rounded-md border" role="status" aria-label="Loading imports">
-      {Array.from({ length: 3 }, (_, i) => (
-        <div key={i} className="flex h-row items-center gap-6 px-3">
-          <Skeleton className="h-3 w-40" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="ml-auto h-3 w-12" />
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="h-3 w-24" />
+    <>
+      {parts.join(' · ')}
+      {ran && job.failed_rows > 0 ? (
+        <>
+          {parts.length > 0 ? ' · ' : null}
+          <span className="text-text">{formatCount(job.failed_rows)} failed</span>
+        </>
+      ) : null}
+      {parts.length > 0 || (ran && job.failed_rows > 0) ? ' · ' : null}
+    </>
+  );
+}
+
+export function RecentSkeleton() {
+  return (
+    <div className="@container rounded-md border" role="status" aria-label="Loading imports">
+      <div className={cn(GRID, WIDE, 'h-7 rounded-t-md border-b border-border-subtle bg-app')}>
+        <span />
+        <Skeleton className="h-2.5 w-8" />
+        <Skeleton className="h-2.5 w-10" />
+        <Skeleton className="ml-auto h-2.5 w-8" />
+        <Skeleton className="ml-auto h-2.5 w-11" />
+        <Skeleton className="ml-auto h-2.5 w-9" />
+        <div className={cn(AFTER_NUMBERS, '@max-4xl:hidden')}>
+          <Skeleton className="h-2.5 w-16" />
         </div>
-      ))}
+        <div className="@max-4xl:pl-2">
+          <Skeleton className="h-2.5 w-14" />
+        </div>
+      </div>
+      <div className="divide-y divide-border-subtle">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className={cn(GRID, 'h-row @max-3xl:h-auto @max-3xl:gap-y-1.5 @max-3xl:py-3')}>
+            <span />
+            <Skeleton className="h-3 w-48 max-w-full" />
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className={cn(WIDE, 'ml-auto h-3 w-8')} />
+            <Skeleton className={cn(WIDE, 'ml-auto h-3 w-8')} />
+            <Skeleton className={cn(WIDE, 'ml-auto h-3 w-6')} />
+            <div className={cn(AFTER_NUMBERS, '@max-4xl:hidden')}>
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className={cn(WIDE, '@max-4xl:pl-2')}>
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

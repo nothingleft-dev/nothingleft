@@ -1,7 +1,8 @@
 'use client';
 
 import type { Project } from '@nothingleft/types';
-import { Avatar, AvatarFallback, AvatarImage } from '@components/ui/avatar';
+import { Avatar, AvatarFallback } from '@components/ui/avatar';
+import { AvatarImage } from '@components/avatar-image';
 import { useProjects } from '@hooks/use-projects';
 import { cn } from '@lib/utils';
 

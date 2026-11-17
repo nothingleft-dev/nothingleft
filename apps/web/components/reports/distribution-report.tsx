@@ -18,10 +18,12 @@ import {
   SwitchParam,
   ToggleGroup,
   formatCount,
+  formatShare,
 } from '@components/reports/report-bits';
 import { useReportState } from '@components/reports/report-state';
 import { ChartTooltipBody, HatchDefs, Swatch, svgFill, svgOpacity } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
+import { groupFieldLabel } from '@lib/issue-list/groups';
 import { listHref } from '@lib/issue-list/links';
 import { markPaint, OTHER_FILL, type MarkPaint } from '@lib/reports/colors';
 
@@ -58,8 +60,20 @@ function rowsOf(data: Distribution, sort: Sort): Row[] {
     ...(people ? { person: { avatarUrl: g.avatar_url, nobody: g.value === null } } : {}),
     ...(data.field === 'project' && g.value ? { projectKey: g.value } : {}),
   }));
-  // The API returns the field's own order, which is name order for people: Name keeps it.
-  return sort === 'name' ? rows : rows.toSorted((a, b) => b.amount - a.amount);
+  // The API returns the field's own order, which is name order for people: Name keeps it. An empty group
+  // (Unassigned, No tag) is an absence, so it closes the list rather than ranking among the values.
+  const empty = (i: number) => (data.groups[i]!.value === null ? 1 : 0);
+  const indexed = rows.map((row, i) => ({ row, i }));
+  const ordered =
+    sort === 'name' ? indexed : indexed.toSorted((a, b) => empty(a.i) - empty(b.i) || b.row.amount - a.row.amount);
+  return ordered.map(({ row }) => row);
+}
+
+/** What the second sort means for this field: names for people and tags, the workflow's own order for its fields. */
+function fieldOrderLabel(name: DistributionName, field: string) {
+  if (name !== 'issues-per-field' || ['assignee', 'tag', 'project', 'reporter'].includes(field)) return 'A–Z';
+  if (field === 'status' || field === 'priority') return 'Workflow order';
+  return 'Field order';
 }
 
 const NOUN: Record<string, { one: string; many: string; entries: string }> = {
@@ -87,14 +101,17 @@ function AssigneeStats({ data }: { data: Distribution }) {
       ? [{ label: 'Assignee entries', value: formatCount(data.total_counted) }]
       : []),
     { label: people === 1 ? 'Person assigned' : 'People assigned', value: formatCount(people) },
-    unassigned
-      ? {
-          label: 'Unassigned',
-          value: formatCount(unassigned.count),
-          unit: `${data.total_issues ? Math.round((unassigned.count / data.total_issues) * 1000) / 10 : 0}% of issues`,
-          ...(unassigned.query ? { href: listHref(unassigned.query) as Route } : {}),
-        }
-      : { label: 'Unassigned', value: 'Hidden' },
+    // With Include unassigned off there is no figure, so no cell rather than a word in its place.
+    ...(unassigned
+      ? [
+          {
+            label: 'Unassigned',
+            value: formatCount(unassigned.count),
+            unit: `${data.total_issues ? Math.round((unassigned.count / data.total_issues) * 1000) / 10 : 0}% of issues`,
+            ...(unassigned.query ? { href: listHref(unassigned.query) as Route } : {}),
+          },
+        ]
+      : []),
   ];
   return <StatRow stats={stats} />;
 }
@@ -152,7 +169,7 @@ export function DistributionReport({ name }: { name: DistributionName }) {
             value={sort}
             options={[
               { value: 'count', label: 'Most first' },
-              { value: 'name', label: 'A–Z' },
+              { value: 'name', label: fieldOrderLabel(name, field) },
             ]}
             onChange={v => state.set({ sort: v === 'name' ? 'name' : null })}
           />
@@ -168,6 +185,15 @@ export function DistributionReport({ name }: { name: DistributionName }) {
         </>
       }
       skeleton="bars"
+      skeletonStats={
+        name === 'issues-per-assignee'
+          ? [
+              'Issues',
+              'People assigned',
+              ...(state.get('include_unassigned') === 'true' ? [{ label: 'Unassigned', linked: true as const }] : []),
+            ]
+          : undefined
+      }
       summary={d => (
         <>
           {plural(d.total_issues, 'issue')} {scopeText(d.scope, Boolean(state.get('projects')))}.
@@ -193,13 +219,13 @@ export function DistributionReport({ name }: { name: DistributionName }) {
                   rows={rows}
                   total={d.total_counted}
                   truncated={d.truncated}
-                  heading={NOUN[d.field] ? capitalise(noun.one) : 'Value'}
+                  heading={headingOf(d.field)}
                 />
               </div>
             ) : (
               <>
                 <BarTable
-                  heading={NOUN[d.field] ? capitalise(noun.one) : 'Value'}
+                  heading={headingOf(d.field)}
                   amountHeading="Issues"
                   rows={rows.map(r => ({ ...r, paint: d.palette === 'series' ? null : r.paint, folded: false }))}
                   formatAmount={formatCount}
@@ -224,12 +250,13 @@ export function DistributionReport({ name }: { name: DistributionName }) {
 }
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const headingOf = (field: string) => capitalise(groupFieldLabel(field));
 
 function RowTooltip({ row }: { row: Row }) {
   return (
     <ChartTooltipBody
       rows={[{ key: row.key, paint: row.paint, value: formatCount(row.amount), label: row.label, person: row.person }]}
-      note={`${row.share}% of the total${row.query ? ' · click to open the issues' : ''}`}
+      note={`${formatShare(row.share, row.amount)} of the total${row.query ? ' · click to open the issues' : ''}`}
     />
   );
 }
@@ -324,12 +351,12 @@ export function DistributionTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm tabular">
+      <table className="w-full text-sm [&_td:not(:first-child)]:tabular">
         <thead>
           <tr className="h-8 border-b text-left text-xs text-text-secondary">
             <th className="font-medium">{heading}</th>
-            <th className="w-28 text-right font-medium">{valueLabel}</th>
-            <th className="w-28 text-right font-medium">Share</th>
+            <th className="w-20 pl-3 text-right font-medium">{valueLabel}</th>
+            <th className="w-20 pl-3 text-right font-medium">Share</th>
           </tr>
         </thead>
         <tbody>
@@ -347,10 +374,10 @@ export function DistributionTable({
                   </DrillLink>
                 </span>
               </td>
-              <td className="text-right">
+              <td className="pl-3 text-right font-medium">
                 <DrillLink query={row.query}>{formatCount(row.amount)}</DrillLink>
               </td>
-              <td className="text-right text-text-secondary">{row.share}%</td>
+              <td className="pl-3 text-right text-text-secondary">{formatShare(row.share, row.amount)}</td>
             </tr>
           ))}
         </tbody>

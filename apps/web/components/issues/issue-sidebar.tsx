@@ -2,24 +2,24 @@
 
 import { useState } from 'react';
 import { toastError } from '@components/toast-error';
-import { formatDuration, type WorkCalendar } from '@nothingleft/format';
+import type { WorkCalendar } from '@nothingleft/format';
 import { RESOLVED_STATUS_CATEGORIES, type Issue, type UpdateIssue } from '@nothingleft/types';
 import { Plus } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Meter } from '@components/dashboard/meter';
 import { Duration } from '@components/duration';
-import { MemberAvatar } from '@components/issues/member-avatar';
 import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
-import { SidebarField } from '@components/issues/sidebar-field';
+import { FIELD_PERSON_TEXT, FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
 import { DevelopmentField } from '@components/git/development-field';
-import { NOT_ESTIMATED, SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
+import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import type { TimeTracking } from '@components/issues/issue-activity';
-import { SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
+import { RailHeading, SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
 import { useCustomFields } from '@hooks/use-custom-fields';
 import { PersonName } from '@components/former-member-chip';
+import { AssigneeStack } from '@components/issues/assignee-stack';
 import { useIssueWatchers, useUpdateIssue, type IssueUpdate } from '@hooks/use-issues';
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useSchemaValues } from '@hooks/use-project-schema';
@@ -30,6 +30,7 @@ import { isApiError } from '@lib/api/errors';
 import { formatCalendarDate, todayCalendarDate } from '@lib/datetime';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 type Editor =
   | 'priority'
@@ -79,13 +80,12 @@ export function IssueSidebar({
   const estimationLabel = timeRoleField(customFields.data, 'estimation')?.name ?? 'Estimation';
   const spentLabel = timeRoleField(customFields.data, 'spent_time')?.name ?? 'Spent time';
 
-  const save = (input: IssueUpdate, onError?: (message: string) => void) => {
-    update.mutate(input, {
-      onError: error => {
-        if (onError) onError(error.message);
-        else toastError(error);
-      },
-    });
+  const save = (field: string, input: IssueUpdate) => {
+    const send = () =>
+      update.mutate(input, {
+        onError: error => toastError(`Could not save ${field}`, error, { retry: send }),
+      });
+    send();
   };
 
   const openProps = (editor: Exclude<Editor, null>) => ({
@@ -97,7 +97,7 @@ export function IssueSidebar({
     setEditing(null);
     const current = field === 'status' ? issue.status : field === 'priority' ? issue.priority : issue.type;
     if (current.name === name) return;
-    save({ body: { [field]: name } as UpdateIssue, optimistic: patch });
+    save(field, { body: { [field]: name } as UpdateIssue, optimistic: patch });
   };
 
   const assigneesOpen = editing === 'assignees';
@@ -107,7 +107,7 @@ export function IssueSidebar({
     const after = [...draftAssignees].sort();
     if (JSON.stringify(before) === JSON.stringify(after)) return;
     const people = assignees.data ?? [];
-    save({
+    save('the assignees', {
       body: { assignees: after },
       optimistic: i => ({
         ...i,
@@ -139,7 +139,10 @@ export function IssueSidebar({
   const setDate = (field: 'start_date' | 'due_date', value: string | null) => {
     setEditing(null);
     if (issue[field] === value) return;
-    save({ body: { [field]: value }, optimistic: i => ({ ...i, [field]: value }) });
+    save(field === 'due_date' ? 'the due date' : 'the start date', {
+      body: { [field]: value },
+      optimistic: i => ({ ...i, [field]: value }),
+    });
   };
 
   if (part === 'primary') {
@@ -147,7 +150,8 @@ export function IssueSidebar({
       <div
         role="group"
         aria-label="Key fields"
-        className="mt-4 flex flex-wrap rounded-md border [&>*]:border-r [&>*]:border-border-subtle [&>*:last-child]:border-r-0"
+        // Six, three or two to a row, so a wrapped row is never one cell beside an empty remainder.
+        className="key-strip mt-4 grid-cols-2! @[26rem]:grid-cols-3! @[46rem]:grid-cols-6!"
       >
         <SidebarField
           variant={variant}
@@ -243,14 +247,17 @@ export function IssueSidebar({
             />
           }
         >
-          {issue.assignees.length === 0
-            ? 'Unassigned'
-            : issue.assignees.map(a => (
-                <span key={a.username} className="inline-flex items-center gap-1.5">
-                  <MemberAvatar member={a} className="size-5" />
-                  <PersonName person={a} />
-                </span>
-              ))}
+          {issue.assignees.length === 0 ? (
+            'Unassigned'
+          ) : issue.assignees.length === 1 ? (
+            <PersonName
+              person={issue.assignees[0]!}
+              avatar
+              className={cn('[&>span]:whitespace-normal [&>span]:[overflow-wrap:anywhere]', FIELD_PERSON_TEXT)}
+            />
+          ) : (
+            <AssigneeStack assignees={issue.assignees} withName={false} className="text-sm" />
+          )}
         </SidebarField>
         <SidebarField
           variant={variant}
@@ -267,7 +274,7 @@ export function IssueSidebar({
                 setEditing(null);
                 if ((issue.sprint?.slug ?? null) === slug) return;
                 const next = slug === null ? null : sprints.data?.find(s => s.slug === slug);
-                save({
+                save('the sprint', {
                   body: { sprint: slug },
                   optimistic: i => ({
                     ...i,
@@ -287,11 +294,12 @@ export function IssueSidebar({
           empty={issue.due_date === null}
           contentClassName="w-[284px]"
           {...openProps('due_date')}
-          editor={<DateEditor value={issue.due_date} onChange={v => setDate('due_date', v)} />}
+          editor={<DateEditor value={issue.due_date} timeZone={timeZone} onChange={v => setDate('due_date', v)} />}
         >
           {issue.due_date ? (
             <span
               className={cn(
+                FIELD_TEXT,
                 dueTone === 'overdue' && 'font-medium text-danger-fg',
                 dueTone === 'today' && 'font-medium text-text',
               )}
@@ -313,7 +321,8 @@ export function IssueSidebar({
       aria-label="Issue fields"
       className="flex flex-col gap-0.5 min-[1100px]:sticky min-[1100px]:top-0 min-[1100px]:max-h-[calc(100vh-var(--topbar)-var(--space-5))] min-[1100px]:overflow-y-auto"
     >
-      <SidebarField label="Project" aside={<ProjectMarkByKey projectKey={issue.project.key} size="sm" />}>
+      <SidebarField label="Project">
+        <ProjectMarkByKey projectKey={issue.project.key} className="size-5 rounded-xs" />
         {issue.project.name}
       </SidebarField>
       <SidebarField
@@ -322,13 +331,12 @@ export function IssueSidebar({
         empty={issue.start_date === null}
         contentClassName="w-[284px]"
         {...openProps('start_date')}
-        editor={<DateEditor value={issue.start_date} onChange={v => setDate('start_date', v)} />}
+        editor={<DateEditor value={issue.start_date} timeZone={timeZone} onChange={v => setDate('start_date', v)} />}
       >
         {issue.start_date ? formatCalendarDate(issue.start_date) : 'No start date'}
       </SidebarField>
       <SidebarField
         label="Story points"
-        mono
         disabled={!canEdit}
         empty={issue.story_points === null}
         {...openProps('story_points')}
@@ -353,11 +361,11 @@ export function IssueSidebar({
           />
         }
       >
-        {issue.story_points === null ? NOT_ESTIMATED : issue.story_points}
+        {issue.story_points === null ? '?' : <span className={cn('tabular', FIELD_TEXT)}>{issue.story_points}</span>}
       </SidebarField>
       {issue.story_points_rollup !== null ? (
         <p className="-mt-1.5 px-2 pb-1 text-2xs text-text-secondary">
-          <span className="font-mono tabular">{issue.story_points_rollup}</span> in subtasks
+          <span className="tabular">{issue.story_points_rollup}</span> in subtasks
         </p>
       ) : null}
       {time.enabled ? (
@@ -391,7 +399,11 @@ export function IssueSidebar({
               />
             }
           >
-            {issue.estimate_minutes === null ? '?' : formatDuration(issue.estimate_minutes, calendar)}
+            {issue.estimate_minutes === null ? (
+              '?'
+            ) : (
+              <Duration minutes={issue.estimate_minutes} calendar={calendar} className={FIELD_TEXT} />
+            )}
           </SidebarField>
           <SpentTimeField
             issue={issue}
@@ -408,7 +420,7 @@ export function IssueSidebar({
         <DevelopmentField issue={issue} onOpen={onOpenDevelopment} onLink={onLinkPullRequest} />
       ) : null}
 
-      <div className="mx-2 mt-2 border-t pt-4 pb-1 text-2xs font-medium text-text-muted">Watching</div>
+      <RailHeading>Watching</RailHeading>
       <WatchersField issueKey={issue.key} count={issue.watcher_count} />
       <SidebarField label="Votes">
         <span className="tabular">{issue.vote_count}</span>
@@ -431,8 +443,7 @@ function WatchersField({ issueKey, count }: { issueKey: string; count: number })
         <ul className="flex max-h-72 flex-col overflow-y-auto p-1">
           {(watchers.data ?? []).map(w => (
             <li key={w.username} className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm">
-              <MemberAvatar member={w} className="size-5" />
-              <PersonName person={w} className="flex-1" />
+              <PersonName person={w} avatar className="flex-1" />
               <span className="text-xs text-text-muted">@{w.username}</span>
             </li>
           ))}
@@ -447,7 +458,7 @@ function WatchersField({ issueKey, count }: { issueKey: string; count: number })
         </ul>
       }
     >
-      {count === 0 ? 'Nobody' : `${count} ${count === 1 ? 'person' : 'people'}`}
+      {count === 0 ? 'Nobody' : `${plural(count, 'person', 'people')}`}
     </SidebarField>
   );
 }
@@ -469,27 +480,6 @@ function SpentTimeField({ issue, label, calendar, onLogTime }: SpentTimeFieldPro
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-sm px-2 py-[7px]">
       <span className="text-2xs text-text-muted">{label}</span>
-      <span
-        className={cn(
-          'col-start-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-sm',
-          spent === 0 ? 'text-text-muted' : 'font-mono text-xs tabular text-text',
-        )}
-      >
-        {spent === 0 ? '?' : formatDuration(spent, calendar)}
-        {spent > 0 && estimate !== null && estimate > 0 ? (
-          <span className="font-sans text-2xs text-text-secondary">
-            of <Duration minutes={estimate} calendar={calendar} />
-          </span>
-        ) : null}
-        {over ? (
-          <span className="font-sans text-2xs font-medium text-danger-fg">
-            <span aria-hidden className="mr-1.5 font-normal text-text-muted">
-              ·
-            </span>
-            <Duration minutes={spent - estimate} calendar={calendar} /> over
-          </span>
-        ) : null}
-      </span>
       {onLogTime ? (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -497,7 +487,7 @@ function SpentTimeField({ issue, label, calendar, onLogTime }: SpentTimeFieldPro
               variant="ghost"
               size="icon-xs"
               aria-label="Add spent time"
-              className="col-start-2 row-span-2 row-start-1 text-text-secondary"
+              className="-my-1 text-text-secondary"
               onClick={onLogTime}
             >
               <Plus />
@@ -506,8 +496,29 @@ function SpentTimeField({ issue, label, calendar, onLogTime }: SpentTimeFieldPro
           <TooltipContent>Add spent time</TooltipContent>
         </Tooltip>
       ) : null}
-      {estimate !== null && estimate > 0 ? (
-        <div className={cn('col-start-1 mt-1', over && 'c-red')}>
+      <span
+        className={cn(
+          'col-span-2 flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-sm',
+          spent === 0 ? 'text-text-muted' : 'text-text',
+        )}
+      >
+        {spent === 0 ? '?' : <Duration minutes={spent} calendar={calendar} className="text-xs" />}
+        {spent > 0 && estimate !== null && estimate > 0 ? (
+          <span className="text-2xs text-text-secondary">
+            of <Duration minutes={estimate} calendar={calendar} />
+          </span>
+        ) : null}
+        {over ? (
+          <span className="text-2xs font-medium text-danger-fg">
+            <span aria-hidden className="mr-1.5 font-normal text-text-muted">
+              ·
+            </span>
+            <Duration minutes={spent - estimate} calendar={calendar} /> over
+          </span>
+        ) : null}
+      </span>
+      {spent > 0 && estimate !== null && estimate > 0 ? (
+        <div className={cn('col-span-2 mt-1', over && 'c-red')}>
           <Meter
             ratio={ratio}
             label={`Spent ${Math.round(ratio * 100)}% of the estimate`}

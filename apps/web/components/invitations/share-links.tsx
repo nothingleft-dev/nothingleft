@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Link2, RefreshCw, Users, X } from 'lucide-react';
+import { Link2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { PROJECT_ROLES, type Invitation, type OrgRole, type ProjectRole } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { EmptyState } from '@components/empty-state';
 import { RelativeTime } from '@components/relative-time';
 import { formatDate } from '@lib/datetime';
 import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
+import { cn } from '@lib/utils';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { useApiError } from '@hooks/use-api-error';
 import {
@@ -22,6 +24,7 @@ import {
 } from '@hooks/use-invitations';
 import type { InviteScope } from '@lib/api/invitations';
 import { PROJECT_ROLE_HINTS, PROJECT_ROLE_LABELS, grantedRoleLabel } from '@lib/roles';
+import { PendingButton } from '@components/pending-button';
 
 const PROJECT_OPTIONS: ChoiceOption<ProjectRole>[] = PROJECT_ROLES.map(value => ({
   value,
@@ -40,19 +43,54 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
   const invitations = useInvitations(scope);
   const [projectRole, setProjectRole] = useState<ProjectRole>('contributor');
   const create = useCreateInvitationLink(scope);
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, []);
 
   const links = (invitations.data ?? []).filter(i => i.kind === 'link' && i.status !== 'revoked');
 
   return (
-    <div className="flex flex-col gap-4">
-      {error.summary ? <FormAlert title={error.summary} /> : null}
+    <div className="flex max-w-xl flex-col gap-4">
+      {error.summary ? <FormAlert title="The link was not created.">{error.summary}</FormAlert> : null}
 
+      <div className={cn('flex flex-wrap items-end gap-3', invitations.isError && !invitations.data && 'hidden')}>
+        {scope.kind === 'project' ? (
+          <div className="w-[260px] max-w-full">
+            <ChoiceSelect
+              label="Role for people who join by link"
+              value={projectRole}
+              options={PROJECT_OPTIONS}
+              onChange={setProjectRole}
+              disabled={create.isPending}
+            />
+          </div>
+        ) : null}
+        <PendingButton
+          type="button"
+          variant="outline"
+          pending={create.isPending}
+          pendingLabel="Creating…"
+          onClick={() =>
+            create.mutate(
+              {
+                org_role: orgRole === 'org_admin' ? 'member' : orgRole,
+                ...(scope.kind === 'project' ? { project_role: projectRole } : {}),
+              },
+              { onSuccess: () => toast.success('Share link created.') },
+            )
+          }
+        >
+          <Link2 className="size-icon-sm" />
+          Create link
+        </PendingButton>
+      </div>
       {invitations.isPending ? (
         <div className="flex flex-col gap-2">
           <Skeleton className="h-row w-full rounded-md" />
           <Skeleton className="h-row w-3/4 rounded-md" />
         </div>
+      ) : !invitations.data ? (
+        <LoadError onRetry={() => void invitations.refetch()} detail={errorDetail(invitations.error)}>
+          The share links could not be loaded.
+        </LoadError>
       ) : links.length === 0 ? (
         <EmptyState
           title="No share link yet."
@@ -65,37 +103,6 @@ export function ShareLinks({ scope, orgSlug, orgRole = 'member' }: ShareLinksPro
           ))}
         </ul>
       )}
-
-      <div className="flex flex-wrap items-end gap-3">
-        {scope.kind === 'project' ? (
-          <div className="w-[240px]">
-            <ChoiceSelect
-              label="Link grants"
-              value={projectRole}
-              options={PROJECT_OPTIONS}
-              onChange={setProjectRole}
-              disabled={create.isPending}
-            />
-          </div>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          disabled={create.isPending}
-          onClick={() =>
-            create.mutate(
-              {
-                org_role: orgRole === 'org_admin' ? 'member' : orgRole,
-                ...(scope.kind === 'project' ? { project_role: projectRole } : {}),
-              },
-              { onSuccess: () => toast.success('Share link created.') },
-            )
-          }
-        >
-          <Link2 className="size-icon-sm" />
-          {create.isPending ? 'Creating…' : links.length === 0 ? 'Create a share link' : 'Create another link'}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -117,26 +124,34 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
     }
   };
 
-  const limits = [
-    link.max_uses === null ? 'unlimited uses' : `${link.use_count} of ${link.max_uses} used`,
-    link.expires_at === null ? 'no expiry' : `expires ${formatDate(link.expires_at)}`,
-    link.allowed_email_domain ? `@${link.allowed_email_domain} only` : null,
-  ].filter(Boolean);
+  const facts = [
+    `Joins as ${grantedRoleLabel(link.org_role, link.project_role)}`,
+    link.max_uses === null ? 'Unlimited uses' : `${link.use_count} of ${link.max_uses} used`,
+    link.expires_at === null ? 'No expiry' : `Expires ${formatDate(link.expires_at)}`,
+    link.allowed_email_domain ? `Only @${link.allowed_email_domain} emails` : null,
+  ].filter((fact): fact is string => fact !== null);
 
   return (
     <li className="flex flex-col gap-2 px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-sm bg-inset px-2 py-1 font-mono text-xs text-text-secondary">
+      <div className="flex items-center gap-1 max-sm:flex-wrap">
+        <code className="mr-1 min-w-0 flex-1 truncate rounded-sm bg-inset max-sm:basis-full px-2 py-1 font-mono text-xs text-text-secondary">
           {link.url ?? 'Hidden'}
         </code>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Copy link" onClick={() => void copy()}>
-              {copied ? <Check className="size-icon-sm text-success-fg" /> : <Copy className="size-icon-sm" />}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Copy link"
+              className="min-w-18"
+              onClick={() => void copy()}
+            >
+              {copied ? 'Copied' : 'Copy'}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{copied ? 'Copied' : 'Copy link'}</TooltipContent>
+          <TooltipContent>{copied ? 'Copied' : 'Copy to the clipboard'}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -144,8 +159,8 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
-              aria-label="Rotate link"
+              size="sm"
+              aria-label="Replace link"
               disabled={rotate.isPending}
               onClick={() =>
                 rotate.mutate(link.id, {
@@ -153,47 +168,46 @@ function ShareLinkRow({ link, scope, orgSlug }: { link: Invitation; scope: Invit
                 })
               }
             >
-              <RefreshCw className="size-icon-sm" />
+              Replace
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Rotate — the old address stops working</TooltipContent>
+          <TooltipContent>Issue a new address; the old one stops working</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Revoke link"
-              disabled={revoke.isPending}
-              onClick={() => revoke.mutate(link.id, { onSuccess: () => toast.success('Link revoked.') })}
-            >
-              <X className="size-icon-sm" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Revoke</TooltipContent>
-        </Tooltip>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="Revoke link"
+          disabled={revoke.isPending}
+          onClick={() => revoke.mutate(link.id, { onSuccess: () => toast.success('Link revoked.') })}
+        >
+          Revoke
+        </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-muted">
-        <span className="text-text-secondary">Joins as {grantedRoleLabel(link.org_role, link.project_role)}</span>
-        <span>·</span>
-        <span>{limits.join(' · ')}</span>
+      <ul className="flex flex-wrap items-center gap-y-1 text-xs text-text-secondary">
+        {facts.map((fact, i) => (
+          <li key={fact} className="flex items-center">
+            {i > 0 ? <Dot /> : null}
+            {fact}
+          </li>
+        ))}
         {link.use_count > 0 ? (
-          <>
-            <span>·</span>
+          <li className="flex items-center">
+            <Dot />
             <button
               type="button"
+              aria-expanded={showUses}
               onClick={() => setShowUses(v => !v)}
-              className="font-medium text-text-secondary underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 font-medium text-text-secondary underline decoration-current/45 underline-offset-4 hover:text-text hover:decoration-2"
             >
-              <Users className="mr-1 inline size-3" />
+              <Users className="size-3" />
               {link.use_count} joined
             </button>
-          </>
+          </li>
         ) : null}
-      </div>
+      </ul>
 
       {showUses ? <LinkUses orgSlug={orgSlug} id={link.id} /> : null}
     </li>
@@ -215,5 +229,13 @@ function LinkUses({ orgSlug, id }: { orgSlug: string; id: number }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function Dot() {
+  return (
+    <span aria-hidden className="px-1.5 text-text-muted">
+      ·
+    </span>
   );
 }

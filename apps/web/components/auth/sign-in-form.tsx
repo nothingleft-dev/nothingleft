@@ -3,8 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SignInSchema, type Me, type TwoFactorChallenge } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
-import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
+import { AlertLink, AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -17,11 +16,14 @@ import { signIn } from '@lib/api/auth';
 import { isApiError } from '@lib/api/errors';
 import { viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
+import { PendingButton } from '@components/pending-button';
+import { RateLimitWait } from '@components/rate-limit';
 
 export function SignInForm() {
   const params = useSearchParams();
   const next = params.get('next');
   const deactivated = params.get('deactivated') === '1';
+  const ended = params.get('ended') === '1';
   const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const [expired, setExpired] = useState<string | null>(null);
 
@@ -63,7 +65,14 @@ export function SignInForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <AuthHeading title="Sign in" lede="Welcome back. Use the email you signed up with." />
+      <AuthHeading
+        title="Sign in"
+        lede={
+          ended
+            ? 'Your session ended. Sign in again to go back to where you were.'
+            : 'Welcome back. Use the email you signed up with.'
+        }
+      />
 
       <ProviderButtons verb="sign in" />
 
@@ -77,20 +86,22 @@ export function SignInForm() {
 
       {form.summary ? (
         <FormAlert title={form.summary}>
-          {code === 'auth.account_deactivated' ? (
+          {form.rateLimited ? (
+            <RateLimitWait />
+          ) : code === 'auth.account_deactivated' ? (
             <>
               To reactivate it, <EmailUs /> from the address on the account. Your memberships come back as they were.
             </>
           ) : code === 'auth.account_locked' ? (
             <>
-              Wait, then try again - or <TextLink href="/reset-password">reset your password</TextLink>.
+              Wait, then try again – or <AlertLink href="/reset-password">reset your password</AlertLink>.
             </>
-          ) : (
+          ) : code === 'auth.invalid_credentials' ? (
             <>
-              Check both fields, or <TextLink href="/reset-password">reset your password</TextLink>. Five failed
+              Check both fields, or <AlertLink href="/reset-password">reset your password</AlertLink>. Five failed
               attempts pause sign-in for fifteen minutes.
             </>
-          )}
+          ) : null}
         </FormAlert>
       ) : null}
 
@@ -114,15 +125,21 @@ export function SignInForm() {
           value={form.values.password}
           error={form.errors.password}
           trailing={
-            <TextLink href="/reset-password" quiet className="text-xs">
+            <TextLink href="/reset-password" arrow={false} className="text-xs">
               Forgot?
             </TextLink>
           }
           onChange={e => form.set('password', e.target.value)}
         />
-        <Button type="submit" disabled={form.isPending} className="mt-1 w-full">
-          {form.isPending ? 'Signing in…' : 'Sign in'}
-        </Button>
+        <PendingButton
+          type="submit"
+          className="mt-1 w-full"
+          pending={form.isPending}
+          pendingLabel="Signing in…"
+          disabled={form.waiting}
+        >
+          Sign in
+        </PendingButton>
         <FinePrint>
           Signing in with Google or GitHub for the first time creates an account, and you agree to the{' '}
           <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}

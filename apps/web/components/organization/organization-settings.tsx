@@ -1,18 +1,19 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import type { Me, Organization } from '@nothingleft/types';
 import { PageHeader } from '@components/page-header';
-import { Segmented } from '@components/segmented';
-import { PageSkeleton } from '@components/skeletons';
-import { FormAlert } from '@components/auth/form-alert';
+import { Tabs } from '@components/tabs';
+import { FormSkeleton, PERSON_ROW, RowsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { EmptyState } from '@components/empty-state';
 import { Button } from '@components/ui/button';
 import { SeatBanner } from '@components/invitations/seat-notice';
 import { StorageBanner } from '@components/attachments/storage-banner';
 import { GeneralTab } from '@components/organization/general-tab';
-import { MembersTab } from '@components/organization/members-tab';
+import { MembersSkeleton, MembersTab } from '@components/organization/members-tab';
 import { InvitesTab } from '@components/organization/invites-tab';
 import { AuditTab } from '@components/organization/audit-tab';
 import { PlanTab } from '@components/organization/plan-tab';
@@ -21,10 +22,9 @@ import { DangerTab } from '@components/organization/danger-tab';
 import { TagsTab } from '@components/organization/tags/tags-tab';
 import { ExportsTab } from '@components/organization/exports-tab';
 import { IntegrationsTab } from '@components/organization/integrations/integrations-tab';
-import { useOrganization } from '@hooks/use-organizations';
+import { useOrganization, useOrganizations } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { useProjectRoles } from '@hooks/use-project-roles';
-import { cn } from '@lib/utils';
 
 const TABS = [
   { value: 'general', label: 'General' },
@@ -52,12 +52,15 @@ export function OrganizationSettings() {
   const user = session.status === 'signed-in' ? session.user : null;
   const slug = user?.current_organization_slug ?? null;
   const organization = useOrganization(slug);
+  const organizations = useOrganizations(slug !== null);
+  // The shell's list already knows the role, so the tab set holds while this organisation loads or fails.
+  const membership =
+    organization.data?.membership ?? organizations.data?.find(o => o.slug === slug)?.membership ?? null;
 
   // Anything an admin cannot read answers 404, so the tabs an admin owns are hidden
   // rather than rendered into a wall of errors - permissions.md rule 4.
-  const isAdmin =
-    organization.data?.membership.org_role === 'org_admin' || organization.data?.membership.is_owner === true;
-  const isOwner = organization.data?.membership.is_owner === true;
+  const isAdmin = membership?.org_role === 'org_admin' || membership?.is_owner === true;
+  const isOwner = membership?.is_owner === true;
   // Tags open to a Project Admin of any project too (permissions.md § Tags).
   const roles = useProjectRoles();
   const projectAdmin = roles.isAdmin;
@@ -68,25 +71,27 @@ export function OrganizationSettings() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader
-        title="Organisation"
-        actions={
-          <Segmented
-            ariaLabel="Organisation settings"
-            value={tab}
-            options={visible}
-            onChange={next => router.replace(`/organization?tab=${next}` as Route)}
-          />
-        }
-      />
+      <div className="flex flex-col gap-2">
+        <PageHeader title="Organisation" />
+        <Tabs
+          ariaLabel="Organisation settings"
+          value={tab}
+          options={visible}
+          onChange={next => router.replace(`/organization?tab=${next}` as Route)}
+        />
+      </div>
 
       {session.status === 'loading' || (slug !== null && organization.isPending) || awaitingRoles ? (
-        <PageSkeleton rows={5} />
+        <TabSkeleton tab={tab} />
       ) : null}
 
       {slug === null && session.status === 'signed-in' ? <NoOrganization /> : null}
 
-      {organization.isError ? <FormAlert title="This organisation could not be loaded." /> : null}
+      {organization.isError && !organization.data ? (
+        <LoadError onRetry={() => void organization.refetch()} detail={errorDetail(organization.error)}>
+          This organisation could not be loaded.
+        </LoadError>
+      ) : null}
 
       {organization.data && user && !awaitingRoles ? (
         <OrganizationTabs
@@ -96,6 +101,22 @@ export function OrganizationSettings() {
           isAdmin={isAdmin}
         />
       ) : null}
+    </div>
+  );
+}
+
+function TabSkeleton({ tab }: { tab: Tab }) {
+  return (
+    <div role="status" aria-label="Loading">
+      {tab === 'members' ? (
+        <MembersSkeleton />
+      ) : tab === 'invites' ? (
+        <RowsSkeleton rows={6} columns={PERSON_ROW} />
+      ) : tab === 'audit' || tab === 'tags' ? (
+        <RowsSkeleton rows={8} columns={['avatar', 'lines', 'meta']} />
+      ) : (
+        <FormSkeleton fields={4} />
+      )}
     </div>
   );
 }
@@ -110,9 +131,9 @@ interface OrganizationTabsProps {
 function OrganizationTabs({ organization, user, tab, isAdmin }: OrganizationTabsProps) {
   return (
     // The storage tab's file list is a table of seven columns; the other tabs are forms.
-    <div className={cn('flex flex-col gap-5', tab === 'storage' || tab === 'integrations' ? 'max-w-6xl' : 'max-w-4xl')}>
+    <div className="flex flex-col gap-5">
       {isAdmin ? <SeatBanner seats={organization.seats} /> : null}
-      {tab === 'storage' ? null : <StorageBanner storage={organization.storage} withLink={false} />}
+      {tab === 'storage' ? null : <StorageBanner storage={organization.storage} />}
 
       {tab === 'general' ? <GeneralTab organization={organization} isAdmin={isAdmin} /> : null}
       {tab === 'members' ? <MembersTab organization={organization} isAdmin={isAdmin} /> : null}
@@ -136,7 +157,7 @@ function NoOrganization() {
       description="Create one, or open an invitation link somebody sent you. Nothing is lost - your account and your settings are still here."
       action={
         <Button asChild>
-          <a href="/welcome/organization">Create an organisation</a>
+          <Link href="/welcome/organization">Create an organisation</Link>
         </Button>
       }
     />

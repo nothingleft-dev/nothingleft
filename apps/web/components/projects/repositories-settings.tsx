@@ -9,11 +9,12 @@ import type { GitRepository, ProjectRepository } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Switch } from '@components/ui/switch';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { ConfirmDialog } from '@components/confirm-dialog';
-import { FormAlert } from '@components/auth/form-alert';
+import { EmptyState } from '@components/empty-state';
+import { LoadError, errorDetail } from '@components/query-state';
 import { JobStatus } from '@components/job-status';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
@@ -31,11 +32,14 @@ import {
   useUpdateRepositoryLink,
 } from '@hooks/use-git';
 import { useDebounced } from '@hooks/use-debounced';
-import { WEBHOOK_STATUS, count } from '@lib/git/words';
+import { useProjects } from '@hooks/use-projects';
+import { WEBHOOK_STATUS, count, providerLabel } from '@lib/git/words';
 import { formatDate, formatDateTimeWithZone } from '@lib/datetime';
 import { repositoryLocks } from '@lib/git/repository-locks';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { ReadOnlyNotice } from '@components/projects/read-only-notice';
 
 interface RepositoriesSettingsProps {
   projectKey: string;
@@ -60,9 +64,9 @@ export function RepositoriesSettings({
     <>
       <SettingsSection
         title="Linked repositories"
-        description="Branches, commits and pull requests in these repositories that name one of this project’s issues show on that issue."
+        description="Branches, commits and pull requests that name one of this project’s issues show on that issue. Merged into and Every project belong to the repository, so every project it is linked to shares them."
         actions={
-          canEdit && orgSlug ? (
+          canEdit && orgSlug && !(repositories.isError && !repositories.data) ? (
             <LinkRepositoryPicker
               projectKey={projectKey}
               orgSlug={orgSlug}
@@ -73,16 +77,14 @@ export function RepositoriesSettings({
           ) : null
         }
       >
-        {canEdit ? null : <p className="text-xs text-text-secondary">{readOnlyReason}</p>}
+        {canEdit ? null : <ReadOnlyNotice>{readOnlyReason}</ReadOnlyNotice>}
         {offer ? <TemplateOffer projectKey={projectKey} onDone={() => setOffer(false)} /> : null}
         {repositories.isPending ? (
           <RowsSkeleton />
         ) : repositories.isError && !repositories.data ? (
-          <FormAlert title="The repositories could not be loaded.">
-            <button type="button" onClick={() => void repositories.refetch()}>
-              Try again
-            </button>
-          </FormAlert>
+          <LoadError onRetry={() => void repositories.refetch()} detail={errorDetail(repositories.error)}>
+            The repositories could not be loaded.
+          </LoadError>
         ) : rows.length === 0 ? (
           <NoRepository projectKey={projectKey} canEdit={canEdit} />
         ) : (
@@ -106,25 +108,24 @@ export function RepositoriesSettings({
 function NoRepository({ projectKey, canEdit }: { projectKey: string; canEdit: boolean }) {
   const lower = projectKey.toLowerCase();
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-dashed px-4 py-5">
-      <p className="font-medium">No repository is linked yet.</p>
-      <p className="text-xs text-text-secondary">
-        {canEdit
-          ? 'Link one and every issue of this project can show its development. Then name an issue in any of three places:'
-          : 'Once a Project Admin links one, name an issue in any of three places and it shows on the issue:'}
-      </p>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
-        <dt className="text-text-secondary">A branch name</dt>
-        <dd className="font-mono">feat/{lower}-12-login</dd>
-        <dt className="text-text-secondary">A commit message</dt>
-        <dd className="font-mono">{projectKey}-12: keep the return path</dd>
-        <dt className="text-text-secondary">A pull request title or description</dt>
-        <dd className="font-mono">Fixes {projectKey}-12</dd>
-      </dl>
-      <p className="text-xs text-text-secondary">
-        Nothing git-related shows anywhere in the project until a repository is linked.
-      </p>
-    </div>
+    <EmptyState
+      title="No repository is linked yet."
+      description={
+        canEdit
+          ? 'Link one and every issue of this project can show its development. Name an issue in any of these places:'
+          : 'Once a Project Admin links one, name an issue in any of these places and it shows on the issue:'
+      }
+      action={
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
+          <dt className="text-text-secondary">A branch name</dt>
+          <dd className="font-mono">feat/{lower}-12-login</dd>
+          <dt className="text-text-secondary">A commit message</dt>
+          <dd className="font-mono">{projectKey}-12: keep the return path</dd>
+          <dt className="text-text-secondary">A pull request title or description</dt>
+          <dd className="font-mono">Fixes {projectKey}-12</dd>
+        </dl>
+      }
+    />
   );
 }
 
@@ -171,13 +172,16 @@ function RepositoryRow({
   const update = useUpdateRepositoryLink(projectKey);
   const unlink = useUnlinkRepository(projectKey);
   const [confirming, setConfirming] = useState(false);
-  const shared = repository.projects.filter(k => k !== projectKey);
+  const projects = useProjects({ archived: 'false' });
+  const shared = repository.projects
+    .filter(k => k !== projectKey)
+    .map(k => projects.data?.find(p => p.key === k)?.name ?? k);
   const webhook = WEBHOOK_STATUS[repository.webhook_status];
   const dim = repository.removed || repository.is_archived;
   const patch = (body: Parameters<typeof update.mutate>[0]['body']) =>
     update.mutate(
       { repository: repository.full_name, body: { ...body, connection: repository.connection } },
-      { onError: error => toastError(error) },
+      { onError: error => toastError(`Could not update ${repository.full_name}`, error) },
     );
 
   return (
@@ -199,17 +203,18 @@ function RepositoryRow({
           <HueDot hue={webhook.hue} />
           {webhook.label}
         </span>
-        <span className="ml-auto flex items-center gap-3">
-          <BackfillState repository={repository} />
-          {canEdit ? (
-            <Button variant="ghost" size="xs" className="text-text-secondary" onClick={() => setConfirming(true)}>
-              <Unlink /> Unlink
-            </Button>
-          ) : null}
+        <span aria-hidden className="text-xs text-text-muted">
+          ·
         </span>
+        <BackfillState repository={repository} />
+        {canEdit ? (
+          <Button variant="ghost" size="xs" className="ml-auto text-text-secondary" onClick={() => setConfirming(true)}>
+            <Unlink /> Unlink
+          </Button>
+        ) : null}
       </div>
 
-      <dl className="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-x-4 gap-y-2.5 text-xs">
+      <dl className="grid items-center gap-x-4 gap-y-1.5 text-xs sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-y-2.5">
         <dt className="text-text-secondary">Merged into</dt>
         <dd>
           <span className="flex flex-col gap-1">
@@ -221,7 +226,7 @@ function RepositoryRow({
             {canEdit && locks.branches ? <span className="text-2xs text-text-secondary">{locks.branches}</span> : null}
           </span>
         </dd>
-        <dt className="text-text-secondary">Every project</dt>
+        <dt className="text-text-secondary max-sm:mt-2">Every project</dt>
         <dd className="flex items-center gap-2">
           <Switch
             checked={repository.match_all_projects}
@@ -231,22 +236,22 @@ function RepositoryRow({
           />
           <span className="text-text-secondary">
             {repository.match_all_projects
-              ? 'Names an issue of any project in the organisation.'
-              : 'Names only issues of projects it is linked to.'}
+              ? 'On: matches issues of any project in the organisation.'
+              : 'Off: matches only issues of the projects this repository is linked to.'}
             {canEdit && locks.everyProject ? ` ${locks.everyProject}` : ''}
           </span>
         </dd>
       </dl>
-      <p className="text-2xs text-text-muted">
-        Both belong to the repository, so they change for every project it is linked to
-        {shared.length > 0 ? ` (also ${shared.join(', ')})` : ''}. Linked
+      <p className="text-2xs text-text-secondary">
         {repository.linked_by ? (
           <>
-            {' '}
-            by <PersonName person={repository.linked_by} />
+            Linked by <PersonName person={repository.linked_by} /> ·{' '}
           </>
-        ) : null}{' '}
-        <RelativeTime value={repository.linked_at} className="text-text-muted" />.
+        ) : (
+          'Linked '
+        )}
+        <RelativeTime value={repository.linked_at} />
+        {shared.length > 0 ? ` · Also linked to ${shared.join(', ')}` : null}
       </p>
 
       <ConfirmDialog
@@ -254,13 +259,14 @@ function RepositoryRow({
         onOpenChange={setConfirming}
         title={`Unlink ${repository.full_name}?`}
         confirmLabel="Unlink repository"
+        pendingLabel="Unlinking…"
         pending={unlink.isPending}
         onConfirm={() =>
           unlink
             .mutateAsync({ repository: repository.full_name, connection: repository.connection })
             .then(
               () => toast.success(`${repository.full_name} is no longer linked to ${projectKey}.`),
-              (error: Error) => toastError(error),
+              (error: Error) => toastError(`Could not unlink ${repository.full_name}`, error),
             )
             .finally(() => setConfirming(false))
         }
@@ -296,6 +302,8 @@ function LinkRepositoryPicker({
   const query = useDebounced(q.trim(), 300);
   const available = useGitRepositories(orgSlug, { project: projectKey, ...(query ? { q: query } : {}) }, open);
   const link = useLinkRepository(projectKey);
+  const projects = useProjects({ archived: 'false' }, open);
+  const projectName = (key: string) => projects.data?.find(p => p.key === key)?.name ?? key;
 
   const groups = useMemo(() => {
     const taken = new Set(linked.map(r => `${r.connection} ${r.full_name}`));
@@ -310,9 +318,9 @@ function LinkRepositoryPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button size="sm" disabled={link.isPending}>
-          <Plus /> {link.isPending ? 'Linking…' : 'Link repository'}
-        </Button>
+        <PendingButton size="sm" pending={link.isPending} pendingLabel="Linking…">
+          <Plus /> Link repository
+        </PendingButton>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 max-w-[calc(100vw-32px)] p-0">
         <Command shouldFilter={false}>
@@ -332,7 +340,7 @@ function LinkRepositoryPicker({
               </CommandEmpty>
             )}
             {groups.map(([connection, repositories]) => (
-              <CommandGroup key={connection} heading={connection}>
+              <CommandGroup key={connection} heading={connectionLabel(connection, repositories[0]?.provider)}>
                 {repositories.map(repository => (
                   <CommandItem
                     key={repository.full_name}
@@ -349,7 +357,7 @@ function LinkRepositoryPicker({
                             toast.success(`${repository.full_name} is linked. Its recent history is being read.`);
                             onLinked(linked.length === 0);
                           },
-                          onError: error => toastError(error),
+                          onError: error => toastError(`Could not link ${repository.full_name}`, error),
                         },
                       );
                     }}
@@ -357,7 +365,12 @@ function LinkRepositoryPicker({
                     <ProviderGlyph provider={repository.provider} className="text-text-muted" />
                     <span className="min-w-0 flex-1 truncate font-mono text-xs">{repository.full_name}</span>
                     {repository.projects.length > 0 ? (
-                      <span className="text-2xs text-text-muted">also {repository.projects.join(', ')}</span>
+                      <span
+                        className="max-w-[45%] truncate text-2xs text-text-secondary"
+                        title={repository.projects.join(', ')}
+                      >
+                        Also in {repository.projects.map(projectName).join(', ')}
+                      </span>
                     ) : null}
                   </CommandItem>
                 ))}
@@ -369,7 +382,10 @@ function LinkRepositoryPicker({
           {orgAdmin ? (
             <>
               Not listed?{' '}
-              <Link href={'/organization?tab=integrations' as Route} className="text-text underline">
+              <Link
+                href={'/organization?tab=integrations' as Route}
+                className="action-link rounded-xs font-medium text-text"
+              >
                 Connect another account in Organisation settings
               </Link>
               .
@@ -381,6 +397,11 @@ function LinkRepositoryPicker({
       </PopoverContent>
     </Popover>
   );
+}
+
+function connectionLabel(connection: string, provider: GitRepository['provider'] | undefined): string {
+  const account = connection.includes(':') ? connection.slice(connection.indexOf(':') + 1) : connection;
+  return provider ? `${providerLabel(provider)} · ${account}` : account;
 }
 
 function RowsSkeleton() {

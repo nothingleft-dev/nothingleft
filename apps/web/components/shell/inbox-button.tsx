@@ -4,11 +4,10 @@ import { Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
+import { unreadBadgeText } from '@components/shell/nav-item';
 import { useUnreadCount } from '@hooks/use-notifications';
 import { cn } from '@lib/utils';
-
-const BADGE_MAX = 99;
 
 /** The header's unread count: entries with anything unread, across every organisation. */
 export function InboxButton() {
@@ -30,8 +29,9 @@ export function InboxButton() {
           <Link href="/inbox">
             <Inbox className="size-icon" />
             {count > 0 ? (
-              <span className="absolute top-0.5 right-0 min-w-4 rounded-full bg-brand px-1 text-center text-[10px] leading-4 font-semibold tabular text-on-brand ring-2 ring-surface">
-                {count > BADGE_MAX ? `${BADGE_MAX}+` : count}
+              // From the icon's centre rightwards, so a short count keeps the tray visible and 99+ stays near the box.
+              <span className="absolute top-[3px] left-1/2 h-4 min-w-4 rounded-full bg-brand px-[3px] text-center text-[10px] leading-4 font-semibold tracking-[-0.02em] tabular text-on-brand ring-2 ring-surface">
+                {unreadBadgeText(count)}
               </span>
             ) : null}
           </Link>

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { ChevronRight } from 'lucide-react';
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts';
 import type { WorkCalendar } from '@nothingleft/format';
 import type { BurndownReport as Burndown, Sprint } from '@nothingleft/types';
 import { StatRow, type Stat } from '@components/dashboard/stat-row';
@@ -19,7 +19,9 @@ import {
   UnitToggle,
   type DurationUnit,
 } from '@components/reports/report-bits';
-import { useDefaultProject, useReportState } from '@components/reports/report-state';
+import { useDefaultProject, useNoProjects, useReportState } from '@components/reports/report-state';
+import { EmptyState } from '@components/empty-state';
+import { Button } from '@components/ui/button';
 import { ProjectPicker } from '@components/reports/scope-pickers';
 import {
   AXIS_TICK,
@@ -31,10 +33,12 @@ import {
 } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
 import { useSprints } from '@hooks/use-sprints';
+import { useProjects } from '@hooks/use-projects';
 import { formatCalendarDate, formatCalendarDateShort, formatCalendarRange, todayCalendarDate } from '@lib/datetime';
-import type { MarkPaint } from '@lib/reports/colors';
+import { OFF_DAY_FILL, type MarkPaint } from '@lib/reports/colors';
 import { burndownSprintParam } from '@lib/reports/url';
 import { cn } from '@lib/utils';
+import { plural } from '@lib/numbers';
 
 const line = (fill: string): MarkPaint => ({ fill, hatched: false, faded: false });
 const REMAINING = line('var(--chart-1)');
@@ -71,17 +75,31 @@ const latestDay = (data: Burndown) => data.days.findLast(d => d.remaining !== nu
 export function BurndownReport() {
   const state = useReportState('burndown');
   const project = useDefaultProject(state);
-  const result = useReport('burndown', state.query, project !== null);
   const sprints = useSprints(project);
+  // Asked only once the sprints are known, so a project with none sends no request the API would refuse.
+  const asksActive = !state.query.sprint;
+  const noSprints = asksActive && sprints.data?.length === 0;
+  const result = useReport(
+    'burndown',
+    state.query,
+    project !== null && (!asksActive || (!sprints.isPending && !noSprints)),
+  );
   const sprint = result.data?.sprint.slug ?? state.query.sprint ?? '';
   const unit = durationUnitOf(state.params.get('unit'));
+  const noProjects = useNoProjects();
+  const projects = useProjects();
+  const projectName = projects.data?.find(p => p.key === project)?.name;
 
-  const sprintOptions = (sprints.data ?? [])
+  const STATES = ['active', 'planned', 'completed'];
+  const list = sprints.data ?? [];
+  // Completed sprints newest first: the one just finished is the one most often looked back on.
+  const sprintOptions = list
+    .map((s, i) => ({ s, i }))
     .toSorted(
       (a, b) =>
-        ['active', 'planned', 'completed'].indexOf(a.state) - ['active', 'planned', 'completed'].indexOf(b.state),
+        STATES.indexOf(a.s.state) - STATES.indexOf(b.s.state) || (a.s.state === 'completed' ? b.i - a.i : a.i - b.i),
     )
-    .map(s => ({ value: s.slug, label: s.name, group: SPRINT_GROUP[s.state] }));
+    .map(({ s }) => ({ value: s.slug, label: s.name, group: SPRINT_GROUP[s.state] }));
 
   return (
     <ReportFrame
@@ -94,13 +112,20 @@ export function BurndownReport() {
           <ReportPicker
             label="Sprint"
             value={sprint}
-            fallback={sprint || 'Active sprint'}
+            fallback={sprint || (noSprints ? 'None' : 'Active sprint')}
             options={sprintOptions}
             loading={sprints.isPending && project !== null}
             searchable={sprintOptions.length > 8}
-            disabled={project === null}
+            disabled={project === null || noSprints}
             onChange={slug => project && state.set({ sprint: burndownSprintParam(project, slug), project: null })}
           />
+        </>
+      }
+      display={
+        <>
+          {state.get('measure') === 'remaining_estimate' ? (
+            <UnitToggle value={unit} onChange={u => state.set({ unit: u === 'duration' ? null : u })} />
+          ) : null}
           <ToggleGroup
             label="Measure"
             value={state.get('measure')}
@@ -109,11 +134,6 @@ export function BurndownReport() {
           />
         </>
       }
-      display={
-        state.get('measure') === 'remaining_estimate' ? (
-          <UnitToggle value={unit} onChange={u => state.set({ unit: u === 'duration' ? null : u })} />
-        ) : null
-      }
       pickValue={(field, value) =>
         field === 'sprint' && project
           ? state.set({ sprint: burndownSprintParam(project, value), project: null })
@@ -121,15 +141,46 @@ export function BurndownReport() {
       }
       emptyAction={d =>
         d.sprint.state === 'planned' ? (
-          <Link
-            href={`/projects/${d.sprint.project.key}/backlog` as Route}
-            className="text-xs font-medium text-brand-text hover:underline"
-          >
-            Start it from the backlog
-          </Link>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/projects/${d.sprint.project.key}/backlog` as Route}>Start it from the backlog</Link>
+          </Button>
         ) : null
       }
       skeleton="line"
+      skeletonStats={['Remaining', 'Completed', 'Scope change since the start']}
+      blocked={
+        noProjects ? (
+          <EmptyState
+            title="You are not in any project yet."
+            description="A burndown follows one project’s sprint. Once an admin adds you to a project, its sprints show up here."
+          />
+        ) : undefined
+      }
+      unasked={
+        noSprints && project ? (
+          <EmptyState
+            title={`${projectName ?? project} has no sprints yet.`}
+            description="Plan one in the backlog and start it to follow its burndown."
+            action={
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${project}/backlog` as Route}>Plan a sprint in the backlog</Link>
+              </Button>
+            }
+          />
+        ) : undefined
+      }
+      problemMessage={({ code, validValues }) =>
+        code === 'report.no_active_sprint' && validValues.length === 0
+          ? `${projectName ?? project} has no sprints yet. Plan one in the backlog and start it to follow its burndown.`
+          : undefined
+      }
+      problemFixes={({ code, validValues }) =>
+        code === 'report.no_active_sprint' && validValues.length === 0 && project ? (
+          <Button variant="outline" size="xs" className="bg-surface text-text hover:bg-hover" asChild>
+            <Link href={`/projects/${project}/backlog` as Route}>Plan a sprint in the backlog</Link>
+          </Button>
+        ) : null
+      }
       summary={d =>
         `${d.sprint.name} in ${d.sprint.project.name}${
           d.sprint.start_date && d.sprint.end_date
@@ -138,7 +189,7 @@ export function BurndownReport() {
         } · ${SPRINT_GROUP[d.sprint.state].toLowerCase()}`
       }
     >
-      {d => <BurndownBody data={d} unit={unit} />}
+      {d => <BurndownBody data={d} unit={unit} onMeasure={measure => state.set({ measure })} />}
     </ReportFrame>
   );
 }
@@ -163,14 +214,46 @@ function planSentence(data: Burndown, format: (v: number | null) => string) {
       };
 }
 
-function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
+function BurndownBody({
+  data,
+  unit,
+  onMeasure,
+}: {
+  data: Burndown;
+  unit: DurationUnit;
+  onMeasure: (measure: string) => void;
+}) {
   const format = formatter(data, unit);
+  if (data.unit === 'minutes' && data.days.every(d => !d.scope && !d.remaining)) {
+    return (
+      <EmptyState
+        title="No issue in this sprint has an estimate, so there is no time to burn down."
+        description="Estimate the sprint’s issues, or follow it by story points or by issues."
+        action={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => onMeasure('story_points')}>
+              Story points
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onMeasure('issue_count')}>
+              Issues
+            </Button>
+          </div>
+        }
+      />
+    );
+  }
   const today = todayCalendarDate();
   const { summary } = data;
   const added = summary.scope_added ?? 0;
   const end = data.sprint.end_date;
   const daysTo = end ? Math.round((Date.parse(end) - Date.parse(today)) / 86_400_000) : null;
   const plan = planSentence(data, format);
+  // Ideal burns down what was open on day one; said when that differs from the commitment, so the two reconcile.
+  const firstIdeal = data.days.find(d => d.ideal !== null)?.ideal ?? null;
+  const openAtStart =
+    firstIdeal !== null && summary.start_scope !== null && Math.abs(firstIdeal - summary.start_scope) > 0.05
+      ? firstIdeal
+      : null;
 
   const stats: Stat[] = [
     { label: 'Remaining', value: format(summary.remaining) },
@@ -179,8 +262,7 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
       label: 'Scope change since the start',
       value: (
         <span className={cn(Math.round(added) !== 0 && 'text-warning-fg')}>
-          {added > 0 ? '+' : ''}
-          {Math.round(added) === 0 ? 'None' : format(added)}
+          {Math.round(added) === 0 ? format(0) : `${added > 0 ? '+' : ''}${format(added)}`}
         </span>
       ),
     },
@@ -191,7 +273,7 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
       ? `Finished ${formatCalendarDateShort(data.sprint.completed_at.slice(0, 10))}`
       : data.sprint.state === 'active' && daysTo !== null && end
         ? daysTo > 0
-          ? `${daysTo} ${daysTo === 1 ? 'day' : 'days'} left, ending ${formatCalendarDateShort(end)}`
+          ? `${plural(daysTo, 'day')} left, ending ${formatCalendarDateShort(end)}`
           : daysTo === 0
             ? 'Ends today'
             : `Ended ${formatCalendarDateShort(end)}, ${-daysTo} ${daysTo === -1 ? 'day' : 'days'} ago, and still running`
@@ -205,16 +287,25 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
       <StatRow stats={stats} />
       <p className="text-xs text-text-secondary">
         Committed at the start: <span className="font-medium text-text tabular">{format(summary.start_scope)}</span>
+        {openAtStart !== null ? (
+          <>
+            , with <span className="font-medium text-text tabular">{format(openAtStart)}</span> still to do
+          </>
+        ) : null}
         {timing ? ` · ${timing}` : null}
       </p>
       <ChartLegend
         items={[
           { key: 'remaining', label: 'Remaining', paint: REMAINING, shape: 'line' },
           { key: 'scope', label: 'Scope (total committed)', paint: SCOPE, shape: 'line' },
-          { key: 'ideal', label: 'Ideal', paint: IDEAL, shape: 'line' },
-          { key: 'off', label: 'Non-working day', paint: line('var(--chart-off-day)') },
-          ...(data.days.some(d => d.remaining === null && d.date > (latestDay(data)?.date ?? ''))
-            ? [{ key: 'ahead', label: 'Still to come', paint: line('var(--chart-future)') }]
+          {
+            key: 'ideal',
+            label: openAtStart !== null ? `Ideal, from ${format(openAtStart)}` : 'Ideal',
+            paint: IDEAL,
+            shape: 'line',
+          },
+          ...(data.days.some(d => !d.working_day)
+            ? [{ key: 'off', label: 'Non-working day', paint: line(OFF_DAY_FILL), shape: 'band' as const }]
             : []),
         ]}
       />
@@ -230,14 +321,22 @@ function BurndownBody({ data, unit }: { data: Burndown; unit: DurationUnit }) {
 function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
   const format = formatter(data, unit);
   const peak = Math.max(1, ...data.days.flatMap(d => [d.remaining ?? 0, d.scope ?? 0, d.ideal ?? 0]));
-  const ticks = data.unit === 'minutes' ? unitTicks(peak * 1.05, unit, calendarOf(data)) : niceTicks(peak * 1.05);
+  const ticks =
+    data.unit === 'minutes'
+      ? unitTicks(peak * 1.05, unit, calendarOf(data))
+      : niceTicks(peak * 1.05, undefined, { minStep: data.unit === 'points' ? 0 : 1 });
   const top = ticks.at(-1)!;
-  const rows = data.days.map(d => ({ ...d, shade: d.working_day ? null : top }));
+  // The bridges join recorded days across a day with no figure (a missed nightly snapshot), dashed under the real lines.
+  const rows = data.days.map(d => ({
+    ...d,
+    shade: d.working_day ? null : top,
+    remainingBridge: d.remaining,
+    scopeBridge: d.scope,
+  }));
   // The live point is today in the snapshots' own days, which the viewer's calendar can be a day off.
   const today = data.days.find(d => d.live)?.date ?? null;
   const latest = latestDay(data);
   const lastIndex = latest ? data.days.indexOf(latest) : -1;
-  const future = latest ? data.days.filter(d => d.date > latest.date) : [];
 
   return (
     <ComposedChart
@@ -267,16 +366,7 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
         tickFormatter={(v: number) => format(v)}
         ticks={ticks}
       />
-      <Bar dataKey="shade" fill="var(--chart-off-day)" isAnimationActive={false} activeBar={false} />
-      {future.length > 0 ? (
-        <ReferenceArea
-          x1={future[0]!.date}
-          x2={future.at(-1)!.date}
-          fill="var(--chart-future)"
-          fillOpacity={1}
-          ifOverflow="extendDomain"
-        />
-      ) : null}
+      <Bar dataKey="shade" fill={OFF_DAY_FILL} isAnimationActive={false} activeBar={false} />
       {today ? (
         <ReferenceLine
           x={today}
@@ -286,10 +376,22 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
         />
       ) : null}
       <Line
-        dataKey="ideal"
-        stroke={IDEAL.fill}
-        strokeWidth={2}
-        strokeDasharray="6 4"
+        dataKey="scopeBridge"
+        type="stepAfter"
+        stroke={SCOPE.fill}
+        strokeWidth={1.5}
+        strokeDasharray="3 3"
+        connectNulls
+        dot={false}
+        activeDot={false}
+        isAnimationActive={false}
+      />
+      <Line
+        dataKey="remainingBridge"
+        stroke={REMAINING.fill}
+        strokeWidth={1.5}
+        strokeDasharray="3 3"
+        connectNulls
         dot={false}
         activeDot={false}
         isAnimationActive={false}
@@ -319,6 +421,9 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
               fill="var(--text)"
               fontSize={12}
               fontWeight={600}
+              stroke="var(--bg-surface)"
+              strokeWidth={4}
+              paintOrder="stroke"
             >
               {format(latest.remaining)}
             </text>
@@ -342,6 +447,16 @@ function BurndownChart({ data, unit }: { data: Burndown; unit: DurationUnit }) {
             />
           )
         }
+      />
+      {/* Drawn last, so the plan stays readable where the remaining line runs along it. */}
+      <Line
+        dataKey="ideal"
+        stroke={IDEAL.fill}
+        strokeWidth={2}
+        strokeDasharray="6 4"
+        dot={false}
+        activeDot={false}
+        isAnimationActive={false}
       />
       <Tooltip
         cursor={{ stroke: 'var(--border-strong)', strokeWidth: 1 }}

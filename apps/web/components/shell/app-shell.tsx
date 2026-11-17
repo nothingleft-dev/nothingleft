@@ -2,8 +2,8 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@components/ui/button';
 import { FullPageLoader } from '@components/full-page-loader';
+import { ServerUnreachable } from '@components/server-unreachable';
 import { Sidebar } from '@components/shell/sidebar';
 import { MobileNavigation } from '@components/shell/mobile-navigation';
 import { Topbar } from '@components/shell/topbar';
@@ -50,27 +50,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (session.status === 'error' && isRateLimited(session.error)) return <RateLimitScreen onRetry={session.retry} />;
 
-  if (session.status === 'error') {
-    return (
-      <main className="grid min-h-dvh place-items-center bg-app px-page-x-mobile">
-        <div className="flex max-w-sm flex-col items-start gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">The server could not be reached</h1>
-          <p className="text-text-secondary">Nothing was lost. Check the connection, then try again.</p>
-          <Button onClick={session.retry}>Try again</Button>
-        </div>
-      </main>
-    );
-  }
+  if (session.status === 'error') return <ServerUnreachable onRetry={session.retry} />;
 
   return (
     <CreateIssueProvider>
       <ShellShortcuts />
       <div className="flex h-dvh overflow-hidden">
-        <div className="max-md:hidden">
+        <div className="max-shell:hidden">
           <Sidebar collapsed={collapsed} onToggle={toggle} user={user} data={data} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar navigation={<MobileNavigation user={user} data={data} />} />
+          <Topbar navigation={<MobileNavigation user={user} data={data} />} inOrganization={!data.noOrganization} />
           <main data-scroll-root className="min-h-0 flex-1 overflow-y-auto">
             <div className="px-page-x py-5 max-md:px-page-x-mobile">
               <RateLimitBanner />

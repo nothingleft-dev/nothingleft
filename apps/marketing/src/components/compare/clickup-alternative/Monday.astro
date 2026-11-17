@@ -6,8 +6,7 @@ const total = MONDAY_STEPS.length;
 const dotClass = (status: string) => (status === 'In Progress' ? 'started' : status === 'Fixed' ? 'done' : '');
 const typeLetter = S.log.type.charAt(0);
 const first = S.developer.name.split(' ')[0];
-const pointsText = (points: number | null) =>
-  points === null ? 'Not estimated' : `${points} ${points === 1 ? 'pt' : 'pts'}`;
+const pointsText = (points: number | null) => (points === null ? '?' : `${points} ${points === 1 ? 'pt' : 'pts'}`);
 const added = `${S.ask.added} points were added after the start (${S.ask.addedKeys.join(' and ')})`;
 const statusLine = S.ask.statusCounts.map(entry => `${entry.count} ${entry.status}`).join(', ');
 const inProgressLine = S.ask.inProgress

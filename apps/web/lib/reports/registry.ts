@@ -70,7 +70,7 @@ export const REPORTS: readonly ReportDef[] = [
   },
   {
     name: 'timesheet',
-    title: 'Timesheet',
+    title: 'Timesheets',
     description: 'People by day, with totals both ways and the entries behind every cell.',
     section: 'Time',
     oneProject: false,

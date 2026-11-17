@@ -1,24 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { ChevronDown, Download, X } from 'lucide-react';
 import { ORG_ACTIVITY_KINDS, type OrgActivityKind, type Organization } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { EmptyState } from '@components/empty-state';
 import { RowsSkeleton } from '@components/skeletons';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RelativeTime } from '@components/relative-time';
-import { FormAlert } from '@components/auth/form-alert';
 import { DatePicker } from '@components/date-picker';
-import { ACTIVITY_LABELS, activityDetail, activityLabel } from '@components/organization/activity-labels';
-import { FormerMemberChip, deactivatedInk } from '@components/former-member-chip';
+import {
+  ACTIVITY_LABELS,
+  auditLine,
+  isSystemActivity,
+  systemSentence,
+  type DetailPart,
+} from '@components/organization/activity-labels';
+import { ActivityAvatar } from '@components/organization/activity-avatar';
+import { PersonName } from '@components/former-member-chip';
 import { useActivity, useActivityExport } from '@hooks/use-activity';
 import { useMembers } from '@hooks/use-members';
 import type { ActivityFilters } from '@lib/api/activity';
-import { cn } from '@lib/utils';
-import { MemberAvatar } from '@components/issues/member-avatar';
+import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { LoadMore } from '@components/text-button';
 
 export function AuditTab({ organization }: { organization: Organization }) {
   const [filters, setFilters] = useState<ActivityFilters>({});
@@ -61,71 +69,90 @@ export function AuditTab({ organization }: { organization: Organization }) {
           </Button>
         ) : null}
 
-        <Button
+        <PendingButton
           variant="outline"
           size="sm"
           className="ml-auto"
-          disabled={exportCsv.isPending}
           onClick={() =>
             exportCsv.mutate(filters, {
-              onError: e => toast.error(e instanceof Error ? e.message : 'The export failed.'),
+              onError: e => toastError('Could not download the audit log', e),
             })
           }
+          pending={exportCsv.isPending}
+          pendingLabel="Preparing…"
         >
           <Download className="size-icon-sm" />
-          {exportCsv.isPending ? 'Preparing…' : 'Download CSV'}
-        </Button>
+          Download CSV
+        </PendingButton>
       </div>
 
-      {activity.isError ? <FormAlert title="The audit log could not be loaded." /> : null}
-
       {activity.isPending ? (
-        <RowsSkeleton rows={8} />
+        <RowsSkeleton rows={8} columns={['avatar', 'lines', 'meta']} />
+      ) : !activity.data ? (
+        <LoadError onRetry={() => void activity.refetch()} detail={errorDetail(activity.error)}>
+          The audit log could not be loaded.
+        </LoadError>
       ) : rows.length === 0 ? (
         <EmptyState
           title={filtered ? 'Nothing matches those filters.' : 'Nothing has happened yet.'}
           description={
-            filtered
-              ? 'Widen the dates, or clear the filters to see everything.'
-              : 'Every invitation, role change and project change is recorded here, permanently and without coalescing.'
+            !filtered
+              ? 'Invitations, role changes and project changes appear here. Entries are never edited or merged.'
+              : filters.from !== undefined || filters.to !== undefined
+                ? 'Widen the dates, or clear the filters to see everything.'
+                : 'Clear the filters to see everything.'
+          }
+          action={
+            filtered ? (
+              <Button variant="outline" size="sm" onClick={() => setFilters({})}>
+                Clear the filters
+              </Button>
+            ) : undefined
           }
         />
       ) : (
         <>
           <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
             {rows.map(row => {
-              const detail = activityDetail(row);
+              const { headline, detail } = auditLine(row);
               return (
-                <li key={row.id} className="flex items-center gap-3 px-3 py-2">
-                  <MemberAvatar member={row.actor ?? { name: '-', avatar_url: null }} initialsClassName="text-[10px]" />
+                <li key={row.id} className="flex min-h-row-lg items-center gap-3 px-3 py-1">
+                  <ActivityAvatar row={row} className="size-avatar max-sm:mt-0.5 max-sm:self-start" />
 
-                  <div className="flex min-w-0 flex-1 flex-col leading-5">
-                    <span className="truncate">
-                      <span className={cn('font-medium', deactivatedInk(row.actor))}>
-                        {row.actor?.name ?? 'Somebody no longer here'}
-                      </span>{' '}
-                      {row.actor?.former_member ? <FormerMemberChip className="mr-1 align-middle" /> : null}
-                      {activityLabel(row)}
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate leading-5 max-sm:whitespace-normal">
+                      {isSystemActivity(row) ? (
+                        systemSentence(row)
+                      ) : (
+                        <>
+                          {row.actor ? (
+                            <PersonName person={row.actor} className="max-w-full align-bottom font-medium" />
+                          ) : (
+                            <span className="font-medium">Somebody no longer here</span>
+                          )}{' '}
+                          <Parts parts={headline} code="text-xs" />
+                        </>
+                      )}
                     </span>
-                    {detail ? <span className="truncate font-mono text-xs text-text-muted">{detail}</span> : null}
+                    {detail ? <Detail parts={detail} /> : null}
                   </div>
 
-                  {row.ip ? <span className="font-mono text-xs text-text-muted max-md:hidden">{row.ip}</span> : null}
-                  <RelativeTime value={row.created_at} className="w-24 text-right text-xs" />
+                  <span className="w-28 shrink-0 text-right font-mono text-2xs text-text-secondary max-md:hidden">
+                    {row.ip}
+                  </span>
+                  <RelativeTime
+                    value={row.created_at}
+                    className="w-28 shrink-0 text-right text-xs tabular max-sm:w-auto max-sm:self-start"
+                  />
                 </li>
               );
             })}
           </ul>
 
           {activity.hasNextPage ? (
-            <Button
-              variant="outline"
-              className="self-start"
-              disabled={activity.isFetchingNextPage}
-              onClick={() => void activity.fetchNextPage()}
-            >
-              {activity.isFetchingNextPage ? 'Loading…' : 'Show more'}
-            </Button>
+            <LoadMore pending={activity.isFetchingNextPage} onClick={() => void activity.fetchNextPage()}>
+              Show more
+            </LoadMore>
           ) : null}
         </>
       )}
@@ -150,15 +177,16 @@ function ActorFilter({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" role="combobox" aria-expanded={open} aria-label="Filter by who did it">
-          {value ? `@${value}` : 'Anyone'}
+          <FilterText label="Who" value={value ? `@${value}` : null} fallback="anyone" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[280px] p-0" align="start">
-        <Command shouldFilter={false}>
+        <PickerCommand shouldFilter={false}>
           <CommandInput placeholder="Search members…" value={q} onValueChange={setQ} />
           <CommandList>
             <CommandEmpty>Nobody matches that.</CommandEmpty>
-            <CommandItem
+            <PickerItem
+              checked={value === null}
               value="__anyone"
               onSelect={() => {
                 onChange(null);
@@ -166,10 +194,11 @@ function ActorFilter({
               }}
             >
               Anyone
-            </CommandItem>
+            </PickerItem>
             {(members.data ?? []).map(member => (
-              <CommandItem
+              <PickerItem
                 key={member.username}
+                checked={member.username === value}
                 value={member.username}
                 onSelect={() => {
                   onChange(member.username);
@@ -177,11 +206,11 @@ function ActorFilter({
                 }}
               >
                 <span className="flex-1 truncate">{member.name}</span>
-                <span className="font-mono text-xs text-text-muted">@{member.username}</span>
-              </CommandItem>
+                <span className="font-mono text-2xs text-text-secondary">@{member.username}</span>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -197,11 +226,7 @@ function KindFilter({
   const [open, setOpen] = useState(false);
 
   const label =
-    value.length === 0
-      ? 'Every kind'
-      : value.length === 1
-        ? ACTIVITY_LABELS[value[0] as OrgActivityKind]
-        : `${value.length} kinds`;
+    value.length === 0 ? null : value.length === 1 ? kindName(value[0] as OrgActivityKind) : `${value.length} kinds`;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -212,40 +237,73 @@ function KindFilter({
           role="combobox"
           aria-expanded={open}
           aria-label="Filter by kind"
-          className="max-w-[220px]"
+          className="max-w-[280px]"
         >
-          <span className="truncate">{label}</span>
+          <FilterText label="Kind" value={label} fallback="any" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Filter kinds…" />
           <CommandList>
             <CommandEmpty>No kind matches that.</CommandEmpty>
             {ORG_ACTIVITY_KINDS.map(kind => {
               const on = value.includes(kind);
               return (
-                <CommandItem
+                <PickerItem
                   key={kind}
+                  checked={on}
                   value={`${kind} ${ACTIVITY_LABELS[kind]}`}
                   onSelect={() => onChange(on ? value.filter(k => k !== kind) : [...value, kind])}
                 >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'grid size-4 flex-none place-items-center rounded-xs border text-[9px]',
-                      on && 'border-ink bg-ink text-ink-fg',
-                    )}
-                  >
-                    {on ? '✓' : ''}
-                  </span>
-                  <span className="flex-1 truncate">{ACTIVITY_LABELS[kind]}</span>
-                </CommandItem>
+                  <span className="flex-1 truncate">{kindName(kind)}</span>
+                </PickerItem>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
+  );
+}
+
+const kindName = (kind: OrgActivityKind) => {
+  const label = ACTIVITY_LABELS[kind];
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
+function FilterText({ label, value, fallback }: { label: string; value: string | null; fallback: string }) {
+  return (
+    <>
+      <span className="text-text-secondary">{label}</span>
+      <span className={value ? 'min-w-0 truncate font-medium text-text' : 'text-text-secondary'}>
+        {value ?? fallback}
+      </span>
+      <ChevronDown className="size-3 shrink-0 text-text-secondary" />
+    </>
+  );
+}
+
+function Detail({ parts }: { parts: DetailPart[] }) {
+  return (
+    <span className="truncate text-xs leading-4 text-text-secondary max-sm:whitespace-normal max-sm:break-words">
+      <Parts parts={parts} code="text-2xs" />
+    </span>
+  );
+}
+
+function Parts({ parts, code }: { parts: DetailPart[]; code: string }) {
+  return (
+    <>
+      {parts.map((part, i) =>
+        typeof part === 'string' ? (
+          part
+        ) : (
+          <code key={i} className={`font-mono ${code}`}>
+            {part.code}
+          </code>
+        ),
+      )}
+    </>
   );
 }

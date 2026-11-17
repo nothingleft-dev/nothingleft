@@ -1,18 +1,12 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
+import { ClipboardList, FilePlus2, Scale, UserPlus, type LucideIcon } from 'lucide-react';
 import { ARTICLE_HIERARCHY_MAX_DEPTH, type ArticleNode } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { RadioGroup, RadioGroupItem } from '@components/ui/radio-group';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
@@ -20,10 +14,36 @@ import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { Kbd } from '@components/kbd';
 import { useCreateArticle } from '@hooks/use-articles';
 import { isApiError } from '@lib/api/errors';
-import { STARTERS, starterById, type StarterId } from '@lib/articles/starters';
+import { STARTERS, starterById, type Starter, type StarterId } from '@lib/articles/starters';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 const TOP = '__top__';
+
+const STARTER_ICON: Record<StarterId, LucideIcon> = {
+  runbook: ClipboardList,
+  decision: Scale,
+  onboarding: UserPlus,
+  blank: FilePlus2,
+};
+
+export const starterCardClass =
+  'flex h-full w-full cursor-pointer items-start gap-2.5 rounded-md border bg-surface px-3 py-2.5 text-left hover:border-border-strong hover:bg-hover';
+
+/** The face of a starter, the same in the empty knowledge base and in the New article dialog. */
+export function StarterCardBody({ starter, end }: { starter: Starter; end?: ReactNode }) {
+  const Icon = STARTER_ICON[starter.id];
+  return (
+    <>
+      <Icon aria-hidden className="mt-0.5 size-icon-sm flex-none text-text-secondary" />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-medium">{starter.name}</span>
+        <span className="text-xs text-text-secondary">{starter.description}</span>
+      </span>
+      {end}
+    </>
+  );
+}
 
 export interface NewArticleRequest {
   parent: string | null;
@@ -135,7 +155,7 @@ function NewArticleForm({
         label="Title"
         autoFocus
         value={title}
-        placeholder="Restoring a failed sync"
+        placeholder="e.g. Restoring a failed sync"
         onChange={e => {
           setTitle(e.target.value);
           setTitleError(undefined);
@@ -157,16 +177,12 @@ function NewArticleForm({
             <label
               key={s.id}
               htmlFor={`${id}-${s.id}`}
-              className={cn(
-                'flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 hover:border-border-strong hover:bg-hover',
-                starter === s.id && 'border-border-strong bg-active',
-              )}
+              className={cn(starterCardClass, starter === s.id && 'border-border-strong bg-active hover:bg-active')}
             >
-              <RadioGroupItem id={`${id}-${s.id}`} value={s.id} className="mt-0.5" />
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-medium">{s.name}</span>
-                <span className="text-xs text-text-secondary">{s.description}</span>
-              </span>
+              <StarterCardBody
+                starter={s}
+                end={<RadioGroupItem id={`${id}-${s.id}`} value={s.id} className="mt-0.5" />}
+              />
             </label>
           ))}
         </RadioGroup>
@@ -178,10 +194,14 @@ function NewArticleForm({
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? 'Creating…' : 'Create draft'}
-          <Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>
-        </Button>
+        <PendingButton
+          type="submit"
+          pending={create.isPending}
+          pendingLabel="Creating…"
+          after={<Kbd className="h-4 border-transparent bg-ink-fg/15 text-ink-fg/80">⌘↵</Kbd>}
+        >
+          Create draft
+        </PendingButton>
       </DialogFooter>
     </form>
   );

@@ -33,16 +33,16 @@ export const ROLLUP: Record<GitDevelopmentRollup, { label: string; hue: Hue }> =
 };
 
 export const PR_STATE: Record<GitPullRequestState, { label: string; hue: Hue }> = {
-  open: { label: 'Open', hue: 'green' },
+  open: { label: 'Open', hue: 'gray' },
   draft: { label: 'Draft', hue: 'gray' },
   merged: { label: 'Merged', hue: 'blue' },
-  closed: { label: 'Closed', hue: 'red' },
+  closed: { label: 'Closed', hue: 'gray' },
 };
 
 export const CI_STATE: Record<GitCiState, { label: string; hue: Hue }> = {
-  passing: { label: 'CI passing', hue: 'green' },
+  passing: { label: 'CI passing', hue: 'gray' },
   failing: { label: 'CI failing', hue: 'red' },
-  running: { label: 'CI running', hue: 'amber' },
+  running: { label: 'CI running', hue: 'gray' },
   none: { label: 'No checks', hue: 'gray' },
 };
 
@@ -62,7 +62,8 @@ export const REVIEWER_STATE: Record<GitReviewerState, { label: string; hue: Hue 
 };
 
 export function checkTone(status: GitCheckStatus, conclusion: GitCheckConclusion | null): { label: string; hue: Hue } {
-  if (status !== 'completed') return { label: status === 'queued' ? 'Queued' : 'Running', hue: 'amber' };
+  if (status === 'queued') return { label: 'Queued', hue: 'gray' };
+  if (status !== 'completed') return { label: 'Running', hue: 'amber' };
   switch (conclusion) {
     case 'success':
       return { label: 'Passed', hue: 'green' };
@@ -95,7 +96,7 @@ export const LINK_SOURCE: Record<GitLinkSource, string> = {
 };
 
 export const HEALTH: Record<GitConnectionHealth, { label: string; hue: Hue }> = {
-  active: { label: 'Active', hue: 'green' },
+  active: { label: 'Active', hue: 'gray' },
   failing: { label: 'Failing', hue: 'red' },
   token_expired: { label: 'Token expired', hue: 'red' },
   expiring: { label: 'Token expiring', hue: 'amber' },
@@ -116,7 +117,7 @@ export const CONNECTION_REASON: Record<GitConnectionError, string> = {
 };
 
 export const WEBHOOK_STATUS: Record<GitWebhookStatus, { label: string; hue: Hue }> = {
-  active: { label: 'Webhook active', hue: 'green' },
+  active: { label: 'Webhook active', hue: 'gray' },
   failing: { label: 'Webhook failing', hue: 'red' },
   missing: { label: 'Webhook missing', hue: 'amber' },
   not_applicable: { label: 'Delivered by the app', hue: 'gray' },

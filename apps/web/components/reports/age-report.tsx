@@ -19,6 +19,7 @@ import {
   scopeText,
   SwitchParam,
   formatCount,
+  oneDecimal,
 } from '@components/reports/report-bits';
 import { useReportState } from '@components/reports/report-state';
 import {
@@ -34,10 +35,18 @@ import {
 } from '@components/reports/chart/chart-parts';
 import { useReport } from '@hooks/use-reports';
 import { listHref } from '@lib/issue-list/links';
-import { markPaint } from '@lib/reports/colors';
+import { markPaint, type MarkPaint } from '@lib/reports/colors';
+import { groupFieldLabel } from '@lib/issue-list/groups';
 import { ProjectMarkByKey } from '@components/projects/project-mark';
 
-const days = (n: number) => `${n.toFixed(1)} ${n === 1 ? 'day' : 'days'}`;
+/** `107 days`, `4.5 days`: a tenth of a day is noise once the figure reaches ten. */
+const days = (n: number) => `${n >= 10 ? formatCount(Math.round(n)) : oneDecimal(n)} ${n === 1 ? 'day' : 'days'}`;
+
+const NEUTRAL: MarkPaint = { fill: 'var(--text-muted)', hatched: false, faded: false };
+
+/** People and other series are read by name, so their bars stay neutral; status, category and project keep their colour. */
+const paintOf = (group: AverageAge['groups'][number], palette: AverageAge['palette']) =>
+  palette === 'series' ? null : markPaint(group, palette);
 
 export function AgeReport() {
   const state = useReportState('average-age');
@@ -66,8 +75,9 @@ export function AgeReport() {
         </>
       }
       skeleton="bars"
+      skeletonStats={['Issues', 'Average age', 'Oldest']}
       summary={d =>
-        `${plural(d.overall.count, d.unresolved_only ? 'unresolved issue' : 'issue')} ${scopeText(d.scope, Boolean(state.get('projects')))}, aged from creation to ${
+        `${plural(d.overall.count, d.unresolved_only ? 'unresolved issue' : 'issue')} ${scopeText(d.scope, Boolean(state.get('projects')))}. Age runs from creation to ${
           d.unresolved_only ? 'now' : 'resolution, or to now while open'
         }.`
       }
@@ -100,8 +110,8 @@ export function AgeReport() {
 
 function OldestKey({ issueKey }: { issueKey: string }) {
   return (
-    <Link href={`/issue/${issueKey}` as Route} className="w-fit hover:underline hover:underline-offset-4">
-      <IssueKey issueKey={issueKey} />
+    <Link href={`/issue/${issueKey}` as Route} className="text-link w-fit">
+      <IssueKey issueKey={issueKey} className="text-inherit" />
     </Link>
   );
 }
@@ -113,7 +123,7 @@ function AgeBars({ data }: { data: AverageAge }) {
   const rows = data.groups.map((g, i) => ({
     ...g,
     key: `${g.value ?? g.label}-${i}`,
-    paint: markPaint(g, data.palette),
+    paint: paintOf(g, data.palette) ?? NEUTRAL,
     person: personOf(g, people),
   }));
   return (
@@ -122,7 +132,7 @@ function AgeBars({ data }: { data: AverageAge }) {
       data={rows}
       responsive
       style={{ width: '100%', height: rows.length * 32 + 36 }}
-      margin={{ top: 24, right: 72, bottom: 4, left: 8 }}
+      margin={{ top: 24, right: 88, bottom: 4, left: 8 }}
       barCategoryGap={8}
       accessibilityLayer
     >
@@ -135,7 +145,7 @@ function AgeBars({ data }: { data: AverageAge }) {
         tickLine={false}
         ticks={ticks}
         domain={[0, ticks.at(-1)!]}
-        tickFormatter={(v: number) => `${v}d`}
+        tickFormatter={(v: number) => `${formatCount(v)} ${v === 1 ? 'day' : 'days'}`}
       />
       <YAxis
         type="category"
@@ -188,7 +198,10 @@ function AgeBars({ data }: { data: AverageAge }) {
           position="right"
           fill="var(--text-secondary)"
           fontSize={12}
-          formatter={(v: unknown) => `${Number(v).toFixed(1)}d`}
+          stroke="var(--bg-surface)"
+          strokeWidth={4}
+          paintOrder="stroke"
+          formatter={(v: unknown) => days(Number(v))}
         />
       </Bar>
     </BarChart>
@@ -199,13 +212,16 @@ function AgeTable({ data }: { data: AverageAge }) {
   const people = isPeopleField(data.group_by, data.groups);
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm tabular">
+      <table className="w-full text-sm [&_td:not(:first-child)]:tabular">
         <thead>
           <tr className="h-8 border-b text-left text-xs text-text-secondary">
-            <th className="font-medium">Value</th>
+            <th className="font-medium">{groupFieldLabel(data.group_by ?? '')}</th>
             <th className="w-24 text-right font-medium">Issues</th>
             <th className="w-32 text-right font-medium">Average age</th>
-            <th className="w-48 pl-6 font-medium">Oldest</th>
+            <th className="w-28 pl-6 font-medium">Oldest</th>
+            <th className="w-24 text-right font-medium">
+              <span className="sr-only">Oldest issue’s age</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -213,7 +229,7 @@ function AgeTable({ data }: { data: AverageAge }) {
             <tr key={`${g.value ?? g.label}-${i}`} className="h-row border-b border-border-subtle">
               <td className="max-w-0">
                 <span className="flex min-w-0 items-center gap-2">
-                  <Swatch paint={markPaint(g, data.palette)} />
+                  {data.palette === 'series' ? null : <Swatch paint={markPaint(g, data.palette)} />}
                   {data.palette === 'project' && g.value ? <ProjectMarkByKey projectKey={g.value} /> : null}
                   {people ? <PersonMark name={g.label} {...personOf(g, true)!} /> : null}
                   <DrillLink query={g.query} className="truncate">
@@ -225,12 +241,8 @@ function AgeTable({ data }: { data: AverageAge }) {
                 <DrillLink query={g.query}>{g.count}</DrillLink>
               </td>
               <td className="text-right">{days(g.average_days)}</td>
-              <td className="pl-6">
-                <span className="flex items-center gap-2">
-                  {g.oldest ? <OldestKey issueKey={g.oldest} /> : null}
-                  <span className="text-text-secondary">{days(g.oldest_days)}</span>
-                </span>
-              </td>
+              <td className="pl-6">{g.oldest ? <OldestKey issueKey={g.oldest} /> : null}</td>
+              <td className="text-right text-text-secondary">{days(g.oldest_days)}</td>
             </tr>
           ))}
         </tbody>

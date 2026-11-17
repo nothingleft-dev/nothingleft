@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateProjectKey } from '@nothingleft/format';
-import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { BackButton, StepPanel } from '@components/onboarding/step-panel';
 import { useApiError } from '@hooks/use-api-error';
 import { useCreateProject } from '@hooks/use-projects';
-import { isApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
+import { CreateProjectSchema } from '@nothingleft/types';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 export function ProjectStep() {
   const router = useRouter();
@@ -17,12 +18,11 @@ export function ProjectStep() {
   const [key, setKey] = useState('');
   const [keyEdited, setKeyEdited] = useState(false);
   const create = useCreateProject();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name', 'key']);
+  const local = useFieldProblems(CreateProjectSchema, { name: 'Project name' });
 
   const derived = keyEdited ? key : (generateProjectKey(name) ?? '');
-  // A taken key comes back with a free one in valid_values, so the fix is one click.
-  const suggestion =
-    isApiError(create.error) && create.error.code === 'project.key_taken' ? create.error.validValues?.[0] : undefined;
+  const suggestion = error.code === 'project.key_taken' ? error.validValues[0] : undefined;
 
   return (
     <StepPanel
@@ -32,28 +32,19 @@ export function ProjectStep() {
       footer={
         <>
           <BackButton onClick={() => router.push('/welcome/organization')} disabled={create.isPending} />
-          <Button type="submit" form="project-step" disabled={create.isPending || name.trim() === ''}>
-            {create.isPending ? 'Creating…' : 'Save and continue'}
-          </Button>
+          <PendingButton
+            type="submit"
+            form="project-step"
+            disabled={name.trim() === ''}
+            pending={create.isPending}
+            pendingLabel="Creating…"
+          >
+            Save and continue
+          </PendingButton>
         </>
       }
     >
-      {error.summary ? (
-        <FormAlert title={error.summary}>
-          {suggestion ? (
-            <button
-              type="button"
-              className="font-medium underline"
-              onClick={() => {
-                setKeyEdited(true);
-                setKey(suggestion);
-              }}
-            >
-              Use {suggestion} instead
-            </button>
-          ) : null}
-        </FormAlert>
-      ) : null}
+      {error.summary ? <FormAlert title={error.summary} /> : null}
 
       <form
         id="project-step"
@@ -61,6 +52,7 @@ export function ProjectStep() {
         className="flex flex-col gap-5"
         onSubmit={event => {
           event.preventDefault();
+          if (!local.check({ name })) return;
           create.mutate(
             { name: name.trim(), ...(derived ? { key: derived } : {}) },
             { onSuccess: project => router.push(`/welcome/invite?project=${encodeURIComponent(project.key)}`) },
@@ -72,8 +64,11 @@ export function ProjectStep() {
           autoFocus
           placeholder="Partner Portal"
           value={name}
-          error={error.fields['name']}
-          onChange={e => setName(e.target.value)}
+          error={local.problems['name'] ?? error.fields['name']}
+          onChange={e => {
+            setName(e.target.value);
+            local.clear('name');
+          }}
         />
 
         <Field
@@ -83,6 +78,21 @@ export function ProjectStep() {
           className="font-mono tabular uppercase"
           value={derived}
           error={error.fields['key']}
+          errorAction={
+            suggestion ? (
+              <button
+                type="button"
+                className="action-link font-medium"
+                onClick={() => {
+                  setKeyEdited(true);
+                  setKey(suggestion);
+                  create.reset();
+                }}
+              >
+                Use <span className="font-mono">{suggestion}</span> instead
+              </button>
+            ) : null
+          }
           onChange={e => {
             setKeyEdited(true);
             setKey(e.target.value.toUpperCase());

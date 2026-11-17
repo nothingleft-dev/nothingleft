@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { StatusDot } from '@components/issues/value-marks';
 import { useSchemaValues } from '@hooks/use-project-schema';
@@ -23,6 +24,19 @@ interface StatusPickerProps {
   invalid?: boolean;
   label: string;
   className?: string;
+}
+
+/** The picker's value for a reader who cannot change it. */
+export function StatusText({ projectKey, value }: { projectKey: string; value: string | null }) {
+  const statuses = useSchemaValues(projectKey, 'statuses');
+  const current = (statuses.data ?? []).find(s => !s.is_archived && s.name.toLowerCase() === value?.toLowerCase());
+  if (value === null) return <span className="text-text-secondary">{OFF} off</span>;
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      {current ? <StatusDot category={current.category} color={current.color} /> : null}
+      <span className={cn('truncate', !current && 'text-danger-fg')}>{value}</span>
+    </span>
+  );
 }
 
 /** A project status by name, the archived ones left out: what an automation sets. */
@@ -57,7 +71,7 @@ export function StatusPicker({
         >
           <span className="flex min-w-0 items-center gap-2">
             {current ? <StatusDot category={current.category} color={current.color} /> : null}
-            <span className={cn('truncate', !value && 'text-text-muted', value && !current && 'text-danger-fg')}>
+            <span className={cn('truncate', !value && 'text-text-secondary', value && !current && 'text-danger-fg')}>
               {value ?? (allowOff ? `${OFF} off` : placeholder)}
             </span>
           </span>
@@ -65,12 +79,13 @@ export function StatusPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-60 p-0">
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Find a status" />
           <CommandList>
             {statuses.isPending ? <PickerSkeleton /> : <CommandEmpty>No status matches.</CommandEmpty>}
             {allowOff ? (
-              <CommandItem
+              <PickerItem
+                checked={value === null}
                 value={`${OFF} off`}
                 onSelect={() => {
                   setOpen(false);
@@ -78,11 +93,11 @@ export function StatusPicker({
                 }}
               >
                 <span className="min-w-0 flex-1 text-text-secondary">{OFF} off</span>
-                <Check className={cn('size-icon-sm', value === null ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ) : null}
             {live.map(status => (
-              <CommandItem
+              <PickerItem
+                checked={status.name === current?.name}
                 key={status.name}
                 value={status.name}
                 onSelect={() => {
@@ -92,11 +107,10 @@ export function StatusPicker({
               >
                 <StatusDot category={status.category} color={status.color} />
                 <span className="min-w-0 flex-1 truncate">{status.name}</span>
-                <Check className={cn('size-icon-sm', status.name === current?.name ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );

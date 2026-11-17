@@ -1,5 +1,6 @@
 'use client';
 
+import { Layers } from 'lucide-react';
 import { ProjectMark } from '@components/projects/project-mark';
 import { ReportMultiPicker, ReportPicker } from '@components/reports/report-picker';
 import { useProjects } from '@hooks/use-projects';
@@ -12,6 +13,7 @@ export function ProjectsPicker({ value, onChange }: { value: string; onChange: (
   const options = (projects.data ?? []).map(p => ({
     value: p.key,
     label: p.name,
+    hint: p.key,
     mark: <ProjectMark project={p} size="xs" />,
   }));
   return (
@@ -25,6 +27,7 @@ export function ProjectsPicker({ value, onChange }: { value: string; onChange: (
       none="All projects"
       many={n => `${n} projects`}
       clearLabel="All projects"
+      clearMark={<Layers aria-hidden className="size-4 flex-none text-text-secondary" />}
     />
   );
 }
@@ -35,14 +38,16 @@ export function ProjectPicker({ value, onChange }: { value: string; onChange: (v
     <ReportPicker
       label="Project"
       value={value}
-      fallback={value || 'Choose one'}
+      fallback={value || (projects.data?.length === 0 ? 'None' : 'Choose one')}
       options={(projects.data ?? []).map(p => ({
         value: p.key,
         label: p.name,
+        hint: p.key,
         mark: <ProjectMark project={p} size="xs" />,
       }))}
       loading={projects.isPending}
       searchable={(projects.data?.length ?? 0) > 8}
+      disabled={projects.data?.length === 0}
       onChange={onChange}
     />
   );

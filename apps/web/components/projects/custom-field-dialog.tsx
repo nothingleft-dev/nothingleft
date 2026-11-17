@@ -1,9 +1,9 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Check, ChevronsUpDown, GripVertical, X } from 'lucide-react';
+import { ChevronsUpDown, MoreHorizontal, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { customFieldSlug } from '@nothingleft/format';
+import { customFieldSlug, isCustomFieldSlug } from '@nothingleft/format';
 import {
   CUSTOM_FIELD_DECIMALS_MAX,
   type CreateCustomField,
@@ -15,22 +15,37 @@ import {
   type UpdateCustomField,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@components/ui/command';
+import { CommandEmpty, CommandGroup, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Switch } from '@components/ui/switch';
 import { FormAlert } from '@components/auth/form-alert';
 import { ConfirmDialog } from '@components/confirm-dialog';
+import { DialogBody } from '@components/dialog-body';
 import { LabelColorPicker } from '@components/label-color-picker';
 import { TypeBadge } from '@components/issues/value-marks';
 import { DeleteValueDialog } from '@components/projects/schema-values';
+import {
+  InlineRename,
+  MarkFrame,
+  ReorderGrip,
+  RowChip,
+  archivedLast,
+  markButtonClass,
+  nameColumnClass,
+  rowCellClass,
+} from '@components/projects/value-row';
 import { FieldValue } from '@components/custom-fields/field-value';
 import { FieldEditor } from '@components/custom-fields/field-editors';
 import {
@@ -55,6 +70,8 @@ import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { isApiError } from '@lib/api/errors';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
 const OPTION_COLORS: readonly LabelColor[] = [
   'blue-2',
@@ -68,7 +85,11 @@ const OPTION_COLORS: readonly LabelColor[] = [
 ];
 
 const inputClass =
-  'h-control w-full rounded-md border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg disabled:bg-inset disabled:text-text-secondary';
+  'h-control w-full rounded-md border border-border-strong bg-surface px-3 text-sm text-text placeholder:text-text-muted aria-invalid:border-danger-fg';
+
+// Pickers sit at an input's height and inset, on the same fill and edge, so a column of fields lines up.
+const triggerClass =
+  'w-full justify-start border-border-strong bg-surface px-3 font-normal has-[>svg]:px-3 dark:bg-surface';
 
 interface CustomFieldDialogProps {
   projectKey: string;
@@ -80,7 +101,7 @@ interface CustomFieldDialogProps {
 export function CustomFieldDialog({ projectKey, field, onClose }: CustomFieldDialogProps) {
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100vh-4rem)] gap-0 overflow-y-auto p-0 sm:max-w-xl">
+      <DialogContent className="gap-0 p-0 sm:max-w-xl">
         <FieldForm projectKey={projectKey} field={field} onClose={onClose} />
       </DialogContent>
     </Dialog>
@@ -90,11 +111,14 @@ export function CustomFieldDialog({ projectKey, field, onClose }: CustomFieldDia
 function Row({
   label,
   hint,
+  error,
   htmlFor,
   children,
 }: {
   label: string;
   hint?: ReactNode;
+  /** Takes the hint's place while it shows: the two would say the same thing twice. */
+  error?: string | null;
   htmlFor?: string;
   children: ReactNode;
 }) {
@@ -104,9 +128,14 @@ function Row({
         {label}
       </label>
       {children}
-      {hint ? <div className="text-xs text-text-secondary">{hint}</div> : null}
+      {error ? <FieldError message={error} /> : hint ? <div className="text-xs text-text-secondary">{hint}</div> : null}
     </div>
   );
+}
+
+/** A value that can no longer change, shown as text at a control's height rather than as a disabled input. */
+function Fixed({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn('flex h-control min-w-0 items-center gap-2 text-sm', className)}>{children}</span>;
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -127,11 +156,20 @@ interface DraftOption {
 }
 
 function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
-  const ids = { name: useId(), slug: useId(), empty: useId(), min: useId(), max: useId(), decimals: useId() };
+  const ids = {
+    name: useId(),
+    slug: useId(),
+    empty: useId(),
+    min: useId(),
+    max: useId(),
+    decimals: useId(),
+    range: useId(),
+  };
   const editing = field !== undefined;
   const [name, setName] = useState(field?.name ?? '');
   const [type, setType] = useState<CustomFieldType | null>(field?.type ?? null);
   const [slug, setSlug] = useState('');
+  const [slugLeft, setSlugLeft] = useState(false);
   const [appliesTo, setAppliesTo] = useState<string[]>(field?.applies_to ?? []);
   const [required, setRequired] = useState(field?.is_required ?? false);
   const [defaultValue, setDefaultValue] = useState<CustomFieldValueInput>(field?.default_value ?? null);
@@ -146,7 +184,15 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
   const update = useUpdateCustomField(projectKey);
   const remove = useDeleteCustomField(projectKey);
   const mutation = editing ? update : create;
-  const error = useApiError(mutation.error);
+  const error = useApiError(mutation.error, [
+    'name',
+    'slug',
+    'applies_to',
+    'config',
+    'default_value',
+    'empty_label',
+    'is_required',
+  ]);
 
   const generatedSlug = customFieldSlug(name);
   const options: CustomFieldOption[] = editing
@@ -158,14 +204,27 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
     ...(hasRange(type ?? 'text') && parseNumber(max) !== undefined ? { max: parseNumber(max) } : {}),
     ...(type === 'number' && parseNumber(decimals) !== undefined ? { decimals: parseNumber(decimals) } : {}),
   };
-  const configProblem = Object.values(config).some(v => v !== undefined && !Number.isFinite(v))
-    ? 'Minimum, maximum and decimals must be numbers.'
-    : config.min !== undefined && config.max !== undefined && config.min > config.max
-      ? 'The minimum is above the maximum.'
-      : config.decimals !== undefined &&
-          (!Number.isInteger(config.decimals) || config.decimals < 0 || config.decimals > CUSTOM_FIELD_DECIMALS_MAX)
-        ? `Decimals is a whole number from 0 to ${CUSTOM_FIELD_DECIMALS_MAX}.`
-        : null;
+  const notNumber = (v: number | undefined) => v !== undefined && !Number.isFinite(v);
+  const rangeInverted = config.min !== undefined && config.max !== undefined && config.min > config.max;
+  const decimalsWrong =
+    config.decimals !== undefined &&
+    (notNumber(config.decimals) ||
+      !Number.isInteger(config.decimals) ||
+      config.decimals < 0 ||
+      config.decimals > CUSTOM_FIELD_DECIMALS_MAX);
+  const invalid = {
+    min: notNumber(config.min) || rangeInverted,
+    max: notNumber(config.max) || rangeInverted,
+    decimals: decimalsWrong,
+  };
+  const configProblem =
+    notNumber(config.min) || notNumber(config.max)
+      ? 'Minimum and maximum must be numbers.'
+      : rangeInverted
+        ? 'The minimum is above the maximum.'
+        : decimalsWrong
+          ? `Decimals is a whole number from 0 to ${CUSTOM_FIELD_DECIMALS_MAX}.`
+          : null;
 
   // The default picker edits a field shaped like the one being made.
   const shape: CustomField | null = type
@@ -189,9 +248,15 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
     : null;
 
   const canSave = name.trim() !== '' && type !== null && !configProblem && !mutation.isPending;
+  const slugProblem =
+    !editing && slug.trim() !== '' && !isCustomFieldSlug(slug.trim())
+      ? 'Use a lower-case letter, then letters, digits or hyphens, at most 40 characters.'
+      : null;
 
   const submit = () => {
     if (!canSave || !type) return;
+    setSlugLeft(true);
+    if (slugProblem) return;
     const trimmedEmpty = emptyLabel.trim();
     if (!editing) {
       const body: CreateCustomField = {
@@ -244,11 +309,11 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col gap-5 px-5 py-5">
+      <DialogBody className="m-0 flex flex-col gap-5 p-5">
         {error.summary ? <FormAlert title={error.summary} /> : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Row label="Name" htmlFor={ids.name}>
+        <div className={cn('grid gap-4', !editing && 'sm:grid-cols-2')}>
+          <Row label="Name" htmlFor={ids.name} error={error.fields['name']}>
             <input
               id={ids.name}
               autoFocus
@@ -258,40 +323,61 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
               aria-invalid={Boolean(error.fields['name'])}
               className={inputClass}
             />
-            <FieldError message={error.fields['name']} />
           </Row>
-          <Row label="Type" hint={editing ? 'The type never changes once the field exists.' : undefined}>
-            <TypePicker value={type} disabled={editing} onChange={setType} />
-          </Row>
+          {editing ? null : (
+            <Row label="Type">
+              <TypePicker value={type} onChange={setType} />
+            </Row>
+          )}
         </div>
 
-        <Row
-          label="Slug"
-          htmlFor={ids.slug}
-          hint={
-            editing
-              ? 'The name search uses. It never changes.'
-              : 'The name search uses: lower-case letters, digits and hyphens. Made from the name unless you choose one, and fixed once created.'
-          }
-        >
-          <input
-            id={ids.slug}
-            value={editing ? field.slug : slug}
-            disabled={editing}
-            onChange={e => setSlug(e.target.value.toLowerCase())}
-            placeholder={generatedSlug ?? 'severity'}
-            aria-invalid={Boolean(error.fields['slug'])}
-            className={cn(inputClass, 'font-mono text-xs')}
-          />
-          <FieldError message={error.fields['slug']} />
-        </Row>
+        {editing ? (
+          <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+            <Row label="Type">
+              <Fixed>
+                {(() => {
+                  const meta = FIELD_TYPE_META[field.type];
+                  return (
+                    <>
+                      <meta.icon className="size-icon flex-none text-text-secondary" />
+                      {meta.label}
+                    </>
+                  );
+                })()}
+              </Fixed>
+            </Row>
+            <Row label="Slug">
+              <Fixed className="font-mono text-xs">{field.slug}</Fixed>
+            </Row>
+            <p className="text-xs text-text-secondary sm:col-span-2">
+              Both are fixed once the field exists. Search queries name the field by its slug.
+            </p>
+          </div>
+        ) : (
+          <Row
+            label="Slug"
+            htmlFor={ids.slug}
+            error={(slugLeft ? slugProblem : null) ?? error.fields['slug']}
+            hint="How search queries name the field: lower-case letters, digits and hyphens. Made from the name unless you choose one, and fixed once created."
+          >
+            <input
+              id={ids.slug}
+              value={slug}
+              onChange={e => setSlug(e.target.value.toLowerCase())}
+              onBlur={() => setSlugLeft(true)}
+              placeholder={generatedSlug ?? 'severity'}
+              aria-invalid={Boolean((slugLeft && slugProblem) || error.fields['slug'])}
+              className={cn(inputClass, 'font-mono text-xs')}
+            />
+          </Row>
+        )}
 
         <Row
           label="Applies to"
+          error={error.fields['applies_to']}
           hint={appliesTo.length === 0 ? 'Every issue type. Narrow it so the field does not clutter the others.' : null}
         >
           <AppliesToPicker projectKey={projectKey} value={appliesTo} onChange={setAppliesTo} />
-          <FieldError message={error.fields['applies_to']} />
         </Row>
 
         {type && hasOptions(type) ? (
@@ -323,7 +409,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         ) : null}
 
         {type && hasRange(type) ? (
-          <div className={cn('grid gap-4', type === 'number' ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
+          <div className="grid gap-4 sm:grid-cols-2">
             <Row label="Minimum" htmlFor={ids.min}>
               <input
                 id={ids.min}
@@ -331,6 +417,8 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 value={min}
                 onChange={e => setMin(e.target.value)}
                 placeholder="None"
+                aria-invalid={invalid.min || undefined}
+                aria-describedby={invalid.min ? ids.range : undefined}
                 className={cn(inputClass, 'font-mono text-xs')}
               />
             </Row>
@@ -341,51 +429,64 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 value={max}
                 onChange={e => setMax(e.target.value)}
                 placeholder="None"
+                aria-invalid={invalid.max || undefined}
+                aria-describedby={invalid.max ? ids.range : undefined}
                 className={cn(inputClass, 'font-mono text-xs')}
               />
             </Row>
             {type === 'number' ? (
-              <Row label="Decimals" htmlFor={ids.decimals}>
+              <Row label="Decimals" htmlFor={ids.decimals} hint="Digits after the point. Empty allows any.">
                 <input
                   id={ids.decimals}
                   inputMode="numeric"
                   value={decimals}
                   onChange={e => setDecimals(e.target.value)}
                   placeholder="Any"
+                  aria-invalid={invalid.decimals || undefined}
+                  aria-describedby={invalid.decimals ? ids.range : undefined}
                   className={cn(inputClass, 'font-mono text-xs')}
                 />
               </Row>
             ) : null}
-            <div className="sm:col-span-full">
-              <FieldError message={configProblem ?? error.fields['config']} />
-            </div>
+            {(configProblem ?? error.fields['config']) ? (
+              <p id={ids.range} role="alert" className="text-xs text-danger-fg sm:col-span-full">
+                {configProblem ?? error.fields['config']}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Row label="Default" hint="Filled in on every new issue that does not set the field.">
+          <Row
+            label="Default"
+            error={error.fields['default_value']}
+            hint="Filled in on every new issue that does not set the field."
+          >
             {shape ? (
               <DefaultPicker field={shape} projectKey={projectKey} value={defaultValue} onChange={setDefaultValue} />
             ) : (
-              <p className="flex h-control items-center text-sm text-text-muted">Choose a type first.</p>
+              <p className="flex h-control items-center text-sm text-text-secondary">Choose a type first.</p>
             )}
-            <FieldError message={error.fields['default_value']} />
           </Row>
-          <Row label="Empty label" htmlFor={ids.empty} hint="What an issue shows when the field has no value.">
+          <Row
+            label="Empty label"
+            htmlFor={ids.empty}
+            error={error.fields['empty_label']}
+            hint="What an issue shows when the field has no value."
+          >
             <input
               id={ids.empty}
               value={emptyLabel}
               onChange={e => setEmptyLabel(e.target.value)}
-              placeholder={`No ${name.trim() || 'value'}`}
+              placeholder={emptyLabelOf({ name: name.trim() || 'value', empty_label: null })}
               className={inputClass}
             />
-            <FieldError message={error.fields['empty_label']} />
           </Row>
         </div>
 
         <RequiredSwitch type={type} value={required} onChange={setRequired} />
         <FieldError message={error.fields['is_required']} />
-      </div>
+      </DialogBody>
 
       <DialogFooter className="flex-row items-center border-t px-5 py-3 sm:justify-start">
         {editing ? (
@@ -405,9 +506,9 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
         <Button type="button" variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={!canSave}>
-          {mutation.isPending ? 'Saving…' : editing ? 'Save changes' : 'Add field'}
-        </Button>
+        <PendingButton type="submit" disabled={!canSave} pending={mutation.isPending} pendingLabel="Saving…">
+          {editing ? 'Save changes' : 'Add field'}
+        </PendingButton>
       </DialogFooter>
 
       {editing ? (
@@ -416,6 +517,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
           onOpenChange={setConfirmingDelete}
           title={`Delete ${field.name}?`}
           confirmLabel="Delete field"
+          pendingLabel="Deleting…"
           pending={remove.isPending}
           onConfirm={() =>
             remove.mutate(field.slug, {
@@ -424,7 +526,7 @@ function FieldForm({ projectKey, field, onClose }: CustomFieldDialogProps) {
                 setConfirmingDelete(false);
                 onClose();
               },
-              onError: e => toastError(e),
+              onError: e => toastError(`Could not delete ${field.name}`, e),
             })
           }
         >
@@ -445,7 +547,7 @@ export function DeleteConsequences({ field }: { field: CustomField }) {
         ) : (
           <>
             <b className="font-semibold text-text">
-              {count} {count === 1 ? 'issue loses its value' : 'issues lose their values'}
+              {plural(count, 'issue loses its value', 'issues lose their values')}
             </b>{' '}
             for {field.name}, permanently. The entries it left in issue histories stay.
           </>
@@ -508,7 +610,8 @@ function ArchiveButton({ projectKey, field, onDone }: { projectKey: string; fiel
               );
               onDone();
             },
-            onError: e => toastError(e),
+            onError: e =>
+              toastError(field.is_archived ? `Could not restore ${field.name}` : `Could not archive ${field.name}`, e),
           },
         )
       }
@@ -524,15 +627,7 @@ function ArchiveButton({ projectKey, field, onDone }: { projectKey: string; fiel
   );
 }
 
-function TypePicker({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: CustomFieldType | null;
-  disabled: boolean;
-  onChange: (type: CustomFieldType) => void;
-}) {
+function TypePicker({ value, onChange }: { value: CustomFieldType | null; onChange: (type: CustomFieldType) => void }) {
   const [open, setOpen] = useState(false);
   const meta = value ? FIELD_TYPE_META[value] : null;
   return (
@@ -541,10 +636,11 @@ function TypePicker({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           role="combobox"
           aria-label="Type"
-          disabled={disabled}
-          className="justify-start font-normal disabled:opacity-100 disabled:bg-inset"
+          aria-expanded={open}
+          className={triggerClass}
         >
           {meta ? (
             <>
@@ -552,13 +648,13 @@ function TypePicker({
               {meta.label}
             </>
           ) : (
-            <span className="text-text-muted">Choose a type</span>
+            <span className="text-text-secondary">Choose a type</span>
           )}
-          {disabled ? null : <ChevronsUpDown className="ml-auto text-text-muted" />}
+          <ChevronsUpDown className="ml-auto text-text-secondary" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[320px] p-0">
-        <Command>
+      <PopoverContent align="end" className="w-(--radix-popover-trigger-width) min-w-[24rem] p-0">
+        <PickerCommand>
           <CommandInput placeholder="Find a type" />
           <CommandList className="max-h-[360px]">
             <CommandEmpty>No type matches.</CommandEmpty>
@@ -567,7 +663,9 @@ function TypePicker({
                 {group.types.map(t => {
                   const m = FIELD_TYPE_META[t];
                   return (
-                    <CommandItem
+                    <PickerItem
+                      checked={t === value}
+                      checkClassName="mt-0.5"
                       key={t}
                       value={`${m.label} ${m.hint}`}
                       onSelect={() => {
@@ -579,16 +677,15 @@ function TypePicker({
                       <m.icon className="mt-0.5 text-text-secondary" />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span>{m.label}</span>
-                        <span className="text-xs text-text-muted">{m.hint}</span>
+                        <span className="text-xs text-text-secondary">{m.hint}</span>
                       </span>
-                      <Check className={cn('mt-0.5 size-icon-sm', t === value ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   );
                 })}
               </CommandGroup>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -612,9 +709,11 @@ function AppliesToPicker({
         <Button
           type="button"
           variant="outline"
+          size="sm"
           role="combobox"
           aria-label="Applies to"
-          className="h-auto min-h-(--control) justify-start py-1 font-normal"
+          aria-expanded={open}
+          className={cn(triggerClass, 'h-auto min-h-(--control) py-1')}
         >
           {value.length === 0 ? (
             <span>All types</span>
@@ -631,32 +730,31 @@ function AppliesToPicker({
               })}
             </span>
           )}
-          <ChevronsUpDown className="ml-auto text-text-muted" />
+          <ChevronsUpDown className="ml-auto text-text-secondary" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
-            <CommandItem value="\u0000all" onSelect={() => onChange([])}>
+            <PickerItem checked={value.length === 0} value="\u0000all" onSelect={() => onChange([])}>
               <span className="min-w-0 flex-1">All types</span>
-              <Check className={cn('size-icon-sm', value.length === 0 ? 'opacity-100' : 'opacity-0')} />
-            </CommandItem>
+            </PickerItem>
             {live.map(t => {
               const on = value.includes(t.name);
               return (
-                <CommandItem
+                <PickerItem
+                  checked={on}
                   key={t.name}
                   value={t.name}
                   onSelect={() => onChange(on ? value.filter(v => v !== t.name) : [...value, t.name])}
                 >
                   <TypeBadge type={t} />
                   <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                  <Check className={cn('size-icon-sm', on ? 'opacity-100' : 'opacity-0')} />
-                </CommandItem>
+                </PickerItem>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -695,8 +793,12 @@ function DefaultPicker({
     );
   }
 
+  if (hasOptions(field.type) && field.options.length === 0) {
+    return <p className="flex h-control items-center text-sm text-text-secondary">Add options first.</p>;
+  }
+
   const preview = (() => {
-    if (empty) return <span className="text-text-muted">No default</span>;
+    if (empty) return <span className="text-text-secondary">No default</span>;
     switch (field.type) {
       case 'select':
         return (
@@ -767,15 +869,12 @@ function DefaultPicker({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             aria-label="Default"
-            disabled={(field.type === 'select' || field.type === 'multi_select') && field.options.length === 0}
-            className="min-w-0 flex-1 justify-start overflow-hidden font-normal"
+            className={cn(triggerClass, 'min-w-0 flex-1 overflow-hidden')}
           >
-            {(field.type === 'select' || field.type === 'multi_select') && field.options.length === 0 ? (
-              <span className="text-text-muted">Add options first</span>
-            ) : (
-              preview
-            )}
+            <span className="flex min-w-0 flex-1 items-center overflow-hidden">{preview}</span>
+            <ChevronsUpDown className="text-text-secondary" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className={cn('p-0', field.type === 'markdown' ? 'w-[520px]' : 'w-[284px]')}>
@@ -821,13 +920,18 @@ interface OptionsListProps {
   error?: string | null;
 }
 
-/** The option rows: grip, colour, name, archive and delete — one line each, like the project's value lists. */
+/** The option rows: grip, colour, name and a menu — one line each, like the project's value lists. */
 function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: OptionsListProps) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
-  const rows = options.toSorted((a, b) => a.position - b.position);
+  const order = archivedLast(options);
+  const rows = order.shown;
   const nextColor = OPTION_COLORS[rows.length % OPTION_COLORS.length]!;
+  const moveTo = (name: string, to: number) => {
+    const target = order.live[to];
+    if (target && target.name !== name) onMove(name, order.positionOf(target));
+  };
 
   const add = () => {
     const n = draft.trim();
@@ -840,86 +944,106 @@ function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: Opti
     <div className="flex flex-col gap-2">
       {rows.length > 0 ? (
         <ol className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Options">
-          {rows.map((option, index) => (
-            <li
-              key={option.name}
-              onKeyDown={e => {
-                if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-                e.preventDefault();
-                const to = index + (e.key === 'ArrowUp' ? -1 : 1);
-                if (to >= 0 && to < rows.length) onMove(option.name, to);
-              }}
-              onDragOver={
-                dragging
-                  ? e => {
-                      e.preventDefault();
-                      setOver(index);
-                    }
-                  : undefined
-              }
-              onDrop={
-                dragging
-                  ? e => {
-                      e.preventDefault();
-                      if (dragging !== option.name) onMove(dragging, index);
+          {rows.map((option, index) => {
+            const live = !option.is_archived;
+            return (
+              <li
+                key={option.name}
+                onKeyDown={e => {
+                  if (!live || !e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+                  e.preventDefault();
+                  moveTo(option.name, index + (e.key === 'ArrowUp' ? -1 : 1));
+                }}
+                onDragOver={
+                  dragging && live
+                    ? e => {
+                        e.preventDefault();
+                        setOver(index);
+                      }
+                    : undefined
+                }
+                onDrop={
+                  dragging && live
+                    ? e => {
+                        e.preventDefault();
+                        moveTo(dragging, index);
+                        setDragging(null);
+                        setOver(null);
+                      }
+                    : undefined
+                }
+                className={cn(
+                  'flex min-h-row items-start gap-2 px-2',
+                  dragging === option.name && 'bg-inset',
+                  over === index && dragging !== option.name && 'bg-selected',
+                  !live && 'text-text-secondary',
+                )}
+              >
+                <span className={rowCellClass}>
+                  <ReorderGrip
+                    name={live ? option.name : null}
+                    onDragStart={() => setDragging(option.name)}
+                    onDragEnd={() => {
                       setDragging(null);
                       setOver(null);
-                    }
-                  : undefined
-              }
-              className={cn(
-                'flex h-row items-center gap-2 px-2',
-                dragging === option.name && 'opacity-50',
-                over === index && dragging !== option.name && 'bg-selected',
-                option.is_archived && 'text-text-secondary',
-              )}
-            >
-              <button
-                type="button"
-                draggable
-                aria-label={`Reorder ${option.name}. Alt and the arrow keys move it.`}
-                title="Drag to reorder · Alt+↑/↓"
-                onDragStart={e => {
-                  e.dataTransfer.effectAllowed = 'move';
-                  e.dataTransfer.setData('text/plain', option.name);
-                  setDragging(option.name);
-                }}
-                onDragEnd={() => {
-                  setDragging(null);
-                  setOver(null);
-                }}
-                className="grid size-6 cursor-grab place-items-center rounded-sm text-text-muted hover:bg-hover hover:text-text active:cursor-grabbing"
-              >
-                <GripVertical className="size-3.5" />
-              </button>
-              <OptionColor option={option} onChange={color => onChange(option.name, { color })} />
-              <OptionName name={option.name} onRename={n => onChange(option.name, { name: n })} />
-              <span className="ml-auto flex items-center gap-1">
-                {option.is_archived ? (
-                  <span className="rounded-xs bg-inset px-1.5 text-2xs leading-5 text-text-secondary">Archived</span>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  className="font-normal text-text-secondary"
-                  onClick={() => onChange(option.name, { is_archived: !option.is_archived })}
-                >
-                  {option.is_archived ? 'Unarchive' : 'Archive'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  aria-label={`Delete ${option.name}`}
-                  className="text-text-secondary hover:text-danger-fg"
-                  onClick={() => onDelete(option.name)}
-                >
-                  <X />
-                </Button>
-              </span>
-            </li>
-          ))}
+                    }}
+                  />
+                </span>
+                <span className={cn(rowCellClass, 'w-10')}>
+                  <OptionColor option={option} onChange={color => onChange(option.name, { color })} />
+                </span>
+                <span className={nameColumnClass}>
+                  <InlineRename name={option.name} canEdit onRename={n => onChange(option.name, { name: n })} />
+                </span>
+                <span className={cn(rowCellClass, 'w-18 max-sm:w-auto')}>
+                  {live ? null : <RowChip>Archived</RowChip>}
+                </span>
+                <span className={cn(rowCellClass, 'ml-auto')}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label={`Actions for ${option.name}`}
+                        className="text-text-secondary"
+                      >
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onSelect={() => onChange(option.name, { is_archived: live })}>
+                        {live ? 'Archive' : 'Unarchive'}
+                      </DropdownMenuItem>
+                      {live ? (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Move</DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem disabled={index === 0} onSelect={() => moveTo(option.name, index - 1)}>
+                              Up <span className="ml-auto text-2xs text-text-secondary">Alt ↑</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={index === order.live.length - 1}
+                              onSelect={() => moveTo(option.name, index + 1)}
+                            >
+                              Down <span className="ml-auto text-2xs text-text-secondary">Alt ↓</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      ) : null}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={() => window.setTimeout(() => onDelete(option.name), 0)}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </span>
+              </li>
+            );
+          })}
         </ol>
       ) : null}
       <div className="flex items-center gap-2">
@@ -945,6 +1069,21 @@ function OptionsList({ options, onAdd, onChange, onMove, onDelete, error }: Opti
   );
 }
 
+/** An option's colour, carrying its first letter in the colour's own text ink, as the option reads on an issue. */
+function OptionSwatch({ option }: { option: Pick<CustomFieldOption, 'name' | 'color'> }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        `l-${option.color}`,
+        'grid size-badge-letter flex-none place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg',
+      )}
+    >
+      {option.name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange: (color: LabelColor) => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -954,12 +1093,11 @@ function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange
           type="button"
           aria-label={`Colour for ${option.name}`}
           title="Change colour"
-          className={cn(
-            `l-${option.color}`,
-            'grid size-5 place-items-center rounded-xs bg-c-bg text-[11px] font-semibold text-c-fg hover:ring-2 hover:ring-border-strong',
-          )}
+          className={markButtonClass}
         >
-          a
+          <MarkFrame>
+            <OptionSwatch option={option} />
+          </MarkFrame>
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-3">
@@ -972,44 +1110,6 @@ function OptionColor({ option, onChange }: { option: CustomFieldOption; onChange
         />
       </PopoverContent>
     </Popover>
-  );
-}
-
-function OptionName({ name, onRename }: { name: string; onRename: (name: string) => void }) {
-  const [draft, setDraft] = useState<string | null>(null);
-  if (draft === null) {
-    return (
-      <button
-        type="button"
-        title="Click to rename"
-        onClick={() => setDraft(name)}
-        className="min-w-0 truncate rounded-sm px-1 text-left text-sm hover:bg-hover"
-      >
-        {name}
-      </button>
-    );
-  }
-  const commit = () => {
-    const next = draft.trim();
-    setDraft(null);
-    if (next && next !== name) onRename(next);
-  };
-  return (
-    <input
-      autoFocus
-      aria-label={`Rename ${name}`}
-      value={draft}
-      onChange={e => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          commit();
-        }
-        if (e.key === 'Escape') setDraft(null);
-      }}
-      className="h-control-sm min-w-0 rounded-sm border border-border-strong bg-surface px-1 text-sm text-text"
-    />
   );
 }
 
@@ -1064,6 +1164,18 @@ function SavedOptions({ projectKey, field }: { projectKey: string; field: Custom
           name={deleting.name}
           message={deleting.message}
           targets={deleting.targets}
+          valueNoun="option"
+          markOf={name => {
+            const option = field.options.find(o => o.name === name);
+            return option ? <OptionSwatch option={option} /> : null;
+          }}
+          onArchive={() => {
+            updateOption.mutate(
+              { slug: field.slug, name: deleting.name, body: { is_archived: true } },
+              { onSuccess: ok, onError: fail },
+            );
+            setDeleting(null);
+          }}
           pending={deleteOption.isPending}
           onCancel={() => setDeleting(null)}
           onConfirm={target => onDelete(deleting.name, target)}

@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import type { Organization } from '@nothingleft/types';
+import { UpdateOrganizationSchema, type Organization } from '@nothingleft/types';
 import { parseDuration } from '@nothingleft/format';
-import { Button } from '@components/ui/button';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { SettingsSection } from '@components/settings/section';
@@ -13,6 +12,9 @@ import { useApiError } from '@hooks/use-api-error';
 import { useUpdateOrganization } from '@hooks/use-organizations';
 import { formatDate } from '@lib/datetime';
 import { PersonName } from '@components/former-member-chip';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 type WeekStart = '0' | '1' | '2' | '3' | '4' | '5' | '6';
 
@@ -38,7 +40,8 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
   const [weekStart, setWeekStart] = useState<WeekStart>(String(organization.week_starts_on) as WeekStart);
 
   const update = useUpdateOrganization(organization.slug);
-  const error = useApiError(update.error);
+  const error = useApiError(update.error, ['name', 'slug', 'workday_minutes', 'workweek_days']);
+  const local = useFieldProblems(UpdateOrganizationSchema, { name: 'Name', slug: 'Organisation ID' });
 
   const workdayMinutes = parseDuration(workday);
   const workweekDays = Number(workweek);
@@ -52,16 +55,19 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
     workweekDays !== organization.workweek_days ||
     Number(weekStart) !== organization.week_starts_on;
 
+  if (!isAdmin) return <ReadOnlyGeneral organization={organization} />;
+
   return (
     <div className="flex flex-col gap-5">
-      {error.summary ? <FormAlert title={error.summary} /> : null}
+      <OwnerSection organization={organization} />
+      {error.summary ? <FormAlert title="The organisation was not saved.">{error.summary}</FormAlert> : null}
 
       <form
         noValidate
         className="flex flex-col gap-5"
         onSubmit={event => {
           event.preventDefault();
-          if (workdayBad || workweekBad) return;
+          if (!local.check({ name, slug }) || workdayBad || workweekBad) return;
           update.mutate(
             {
               name,
@@ -79,18 +85,22 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
             <Field
               label="Name"
               value={name}
-              disabled={!isAdmin}
-              error={error.fields['name']}
-              onChange={e => setName(e.target.value)}
+              error={local.problems['name'] ?? error.fields['name']}
+              onChange={e => {
+                setName(e.target.value);
+                local.clear('name');
+              }}
             />
             <Field
               label="Organisation ID"
               className="font-mono"
               value={slug}
-              disabled={!isAdmin}
-              error={error.fields['slug']}
-              hint="Used to identify this workspace. Changing it breaks existing links and integrations that use the old ID."
-              onChange={e => setSlug(e.target.value)}
+              error={local.problems['slug'] ?? error.fields['slug']}
+              hint="Changing it breaks links and integrations that use the old ID."
+              onChange={e => {
+                setSlug(e.target.value);
+                local.clear('slug');
+              }}
             />
           </div>
         </SettingsSection>
@@ -101,7 +111,6 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
               label="Hours in a workday"
               className="font-mono tabular"
               value={workday}
-              disabled={!isAdmin}
               error={workdayBad ? 'Write it as a duration: 8h, or 7h 30m.' : error.fields['workday_minutes']}
               hint={workdayBad ? undefined : `1d = ${hoursAndMinutes(workdayMinutes)}.`}
               onChange={e => setWorkday(e.target.value)}
@@ -111,43 +120,98 @@ export function GeneralTab({ organization, isAdmin }: { organization: Organizati
               className="font-mono tabular"
               inputMode="numeric"
               value={workweek}
-              disabled={!isAdmin}
               error={workweekBad ? 'A number from 1 to 7.' : error.fields['workweek_days']}
               hint={
                 workweekBad || workdayBad
                   ? undefined
-                  : `1w = ${workweekDays} ${workweekDays === 1 ? 'day' : 'days'} (${hoursAndMinutes(workdayMinutes * workweekDays)}).`
+                  : `1w = ${plural(workweekDays, 'day')} (${hoursAndMinutes(workdayMinutes * workweekDays)}).`
               }
               onChange={e => setWorkweek(e.target.value)}
             />
-          </div>
-          <div className="max-w-[260px]">
             <ChoiceSelect
               label="Week starts on"
               value={weekStart}
               options={WEEK_START_OPTIONS}
               onChange={setWeekStart}
-              disabled={!isAdmin}
             />
           </div>
         </SettingsSection>
 
-        {isAdmin ? (
-          <Button type="submit" disabled={!dirty || update.isPending} className="self-start">
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
-        ) : (
-          <p className="text-xs text-text-muted">Only an Org Admin can change these.</p>
-        )}
+        <PendingButton
+          type="submit"
+          disabled={!dirty}
+          className="self-start"
+          pending={update.isPending}
+          pendingLabel="Saving…"
+        >
+          Save changes
+        </PendingButton>
       </form>
+    </div>
+  );
+}
 
-      <SettingsSection title="Owner" description="The one role that cannot be changed from this screen.">
-        <p className="text-xs text-text-secondary">
-          <PersonName person={organization.owner} className="font-medium text-text" />{' '}
-          <span className="font-mono text-text-muted">@{organization.owner.username}</span> · created{' '}
-          {formatDate(organization.created_at)}
-        </p>
+function OwnerSection({ organization }: { organization: Organization }) {
+  return (
+    <SettingsSection title="Owner" description="Only the owner can hand the organisation on, from Danger zone.">
+      <p className="text-sm text-text-secondary">
+        <PersonName person={organization.owner} className="font-medium text-text" />{' '}
+        <span className="font-mono text-xs">@{organization.owner.username}</span> · created{' '}
+        {formatDate(organization.created_at)}
+      </p>
+    </SettingsSection>
+  );
+}
+
+function ReadOnlyGeneral({ organization }: { organization: Organization }) {
+  const day = organization.workday_minutes;
+  const week = organization.workweek_days;
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-text-secondary">Only an Org Admin can change these settings.</p>
+      <SettingsSection title="Identity">
+        <Facts
+          rows={[
+            ['Name', organization.name],
+            [
+              'Organisation ID',
+              <span key="slug" className="font-mono text-xs">
+                {organization.slug}
+              </span>,
+            ],
+            [
+              'Owner',
+              <Fragment key="owner">
+                <PersonName person={organization.owner} />{' '}
+                <span className="font-mono text-xs text-text-secondary">@{organization.owner.username}</span>
+              </Fragment>,
+            ],
+            ['Created', formatDate(organization.created_at)],
+          ]}
+        />
+      </SettingsSection>
+      <SettingsSection title="Working time">
+        <Facts
+          rows={[
+            ['Hours in a workday', hoursAndMinutes(day)],
+            ['Days in a working week', `${plural(week, 'day')} (${hoursAndMinutes(day * week)})`],
+            ['Week starts on', DAYS[organization.week_starts_on] ?? ''],
+          ]}
+        />
       </SettingsSection>
     </div>
+  );
+}
+
+function Facts({ rows }: { rows: [string, ReactNode][] }) {
+  return (
+    <dl className="grid max-w-xl grid-cols-[minmax(0,12rem)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+      {rows.map(([label, value]) => (
+        <Fragment key={label}>
+          <dt className="font-medium text-text-secondary">{label}</dt>
+          <dd className="min-w-0 break-words text-text">{value}</dd>
+        </Fragment>
+      ))}
+    </dl>
   );
 }

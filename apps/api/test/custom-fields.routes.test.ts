@@ -179,7 +179,7 @@ describe('values on issues', () => {
     );
     expect(valueOf(issue, 'review-time')).toBe(90);
     const severity = issue.custom_fields.find((f: { slug: string }) => f.slug === 'severity');
-    expect(severity).toMatchObject({ name: 'Severity', type: 'select', empty_label: 'No Severity' });
+    expect(severity).toMatchObject({ name: 'Severity', type: 'select', empty_label: 'No severity' });
 
     const cleared = await patch(issue.key, { custom_fields: { severity: null, platforms: [], blocking: false } });
     const after = cleared.json().data;

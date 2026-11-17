@@ -6,15 +6,9 @@ import { LinkPullRequestSchema } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { useLinkPullRequest } from '@hooks/use-git';
+import { PendingButton } from '@components/pending-button';
 
 interface LinkPullRequestDialogProps {
   open: boolean;
@@ -40,7 +34,7 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
   const submit = () => {
     const parsed = LinkPullRequestSchema.safeParse({ url: url.trim() });
     if (!parsed.success) {
-      setError('Paste the full address of the pull request, starting with https://.');
+      setError('Paste the full address of the pull request, starting with “https://”.');
       return;
     }
     link.mutate(parsed.data.url, {
@@ -64,8 +58,8 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
       <DialogHeader>
         <DialogTitle>Link a pull request</DialogTitle>
         <DialogDescription>
-          For a pull request that never names {issueKey}. It must belong to a repository this project can reference: one
-          linked to it in project settings, or one set to match every project.
+          Use this when the pull request does not mention {issueKey}. It must be in a repository linked to this project,
+          or in one set to match every project.
         </DialogDescription>
       </DialogHeader>
       <div className="flex flex-col gap-1.5">
@@ -91,9 +85,9 @@ function LinkForm({ issueKey, onDone }: { issueKey: string; onDone: () => void }
         <Button type="button" variant="outline" onClick={onDone} disabled={link.isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={link.isPending || url.trim() === ''}>
-          {link.isPending ? 'Linking…' : 'Link pull request'}
-        </Button>
+        <PendingButton type="submit" disabled={url.trim() === ''} pending={link.isPending} pendingLabel="Linking…">
+          Link
+        </PendingButton>
       </DialogFooter>
     </form>
   );

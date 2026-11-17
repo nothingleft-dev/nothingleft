@@ -83,7 +83,7 @@ describe('POST /v1/issues', () => {
     expect(status.statusCode).toBe(400);
     expect(status.json().error).toMatchObject({ code: 'issue.unknown_status', field: 'status' });
     expect(status.json().error.valid_values).toContain('In Progress');
-    expect(status.json().error.message).toBe(`Unknown status "Done" for project ${KEY}.`);
+    expect(status.json().error.message).toBe(`Unknown status “Done” for project ${KEY}.`);
 
     expect((await create({ estimate: 'soon' })).json().error.code).toBe('issue.invalid_duration');
     expect((await create({ start_date: '2026-10-01', due_date: '2026-09-01' })).json().error.code).toBe(

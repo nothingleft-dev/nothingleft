@@ -28,7 +28,7 @@ export function StepRail({ steps, current }: { steps: readonly FlowStep[]; curre
                 className={cn(
                   'grid size-9 place-items-center rounded-full transition-colors',
                   done && 'bg-ink text-ink-fg',
-                  active && 'bg-surface text-text ring-2 ring-ink',
+                  active && 'border-2 border-ink bg-surface text-text',
                   !done && !active && 'bg-inset text-text-secondary',
                 )}
               >

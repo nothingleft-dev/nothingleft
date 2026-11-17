@@ -42,7 +42,7 @@ the sprint really went even after issues are edited later.
 
 Any issue can carry story points, a whole number from 0 to 999. An issue with subtasks
 also shows the points of everything beneath it added up. Set them, and the sprint, in the
-issue's sidebar or when you create it; an issue without points reads _Not estimated_, one
+issue's sidebar or when you create it; an issue without points reads _?_, one
 in no sprint _Unscheduled_. The issue list can show a _Story points_ and a _Sprint_
 column and group by sprint. Search them with
 `story points: 3 .. 8`, or find the unpointed ones with `story points: {No story points}`.
@@ -76,9 +76,11 @@ resolved. The backlog is last.
   unresolved issues from “…”_ to bring over what is still open in the running sprint (or
   the last planned one).
 - **Start sprint** takes today as the first day unless you pick another, and asks for the
-  last day if the sprint has none. Only one sprint runs at a time.
-- **Finish sprint** lists the backlog and every planned sprint; pick where the unfinished
-  issues go. Nothing is chosen for you.
+  last day if the sprint has none, and says so when the start moves from the planned day. Only
+  one sprint runs at a time: the next planned sprint offers it in its header, later ones in their
+  ⋯ menu.
+- **Finish sprint** lists the backlog and every planned sprint, with the next planned sprint (or
+  the backlog) already picked for the unfinished issues; pick another if you like.
 - A sprint's **⋯** menu edits its name, goal and dates (a running sprint keeps its dates)
   or deletes a planned one.
 

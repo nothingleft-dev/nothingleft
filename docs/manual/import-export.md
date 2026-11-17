@@ -50,7 +50,7 @@ that row fail rather than adding a new one. Add it to the project first, or chan
 
 ### 2. Do a dry run
 
-Choose **Dry run**. It checks every row exactly as creating the issue would, and creates
+Choose **Dry run** once a column maps to the issue title. It checks every row exactly as creating the issue would, and creates
 nothing. It shows the rows in the file, how many would become issues and how many would fail,
 and for each row that would fail, the row number as your spreadsheet shows it (the header is
 row 1), the column, the reason, and the values that would have worked:
@@ -67,12 +67,14 @@ like; changing a column's field sets the dry run aside until you run it again.
 After a dry run, **Import 172 issues** (with the number the dry run found) starts the import.
 The issues are created in the background, and the page shows how many rows are done; you can
 leave it. Rows that fail are skipped and listed with the reason, the rest are created, and the
-page says how many of each when it is done, with **Open the issues** and the failed rows. To
+page says how many of each when it is done - Rows, Created, Failed and Not reached - with **Open
+the issues** and the failed rows. An import that stops early is marked **Stopped** and names the
+rows it did not reach (spreadsheet row numbers), so you can import just those. To
 bring in the skipped rows, fix them in the file and import just those rows.
 
 **Recent imports**, under the import, lists the latest imports into the project by anyone:
 the file, its state, the rows, how many issues were created and how many rows failed, who
-imported it and when. Choose one to open it in place - how far it has got while it runs, the
+uploaded it and when. Choose one to open it in place - how far it has got while it runs, the
 failed rows once it is done, or why it stopped.
 
 The uploaded file is deleted when the import finishes. One that is uploaded but never
@@ -105,7 +107,7 @@ shows that one. Each request is written to the audit log.
 
 The tab lists recent exports with their state (*Queued*, *Building*, *Ready*, *Failed* or
 *Expired*), who asked and when, the size, how many files went in, and the date it can be
-downloaded until. **Download** sits on each ready one. A file count followed by *3 missing*
+downloaded until. **Download** sits on each ready one. A failed one says why it stopped, with **Request again**. A file count followed by *3 missing*
 means three attached files could not be included; `manifest.json` names them.
 
 ## Asking an agent

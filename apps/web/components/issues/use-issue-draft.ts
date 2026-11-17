@@ -18,6 +18,7 @@ import { useCustomFields } from '@hooks/use-custom-fields';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { useDiscardDrafts, useUploader } from '@hooks/use-attachments';
 import { useApiError } from '@hooks/use-api-error';
+import { isApiError } from '@lib/api/errors';
 import { useCreateIssue } from '@hooks/use-issues';
 import { useProjects } from '@hooks/use-projects';
 import { useSprints } from '@hooks/use-sprints';
@@ -155,7 +156,12 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
   const attachmentIds = files.filter(f => description.includes(f.url)).map(f => f.id);
 
   const create = useCreateIssue();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, 'any');
+  // A refusal says what to change; a fault on our side or the network's can only be retried.
+  const fault = create.error !== null && !(isApiError(create.error) && create.error.status < 500);
+  const failure = fault
+    ? 'Could not create the issue. Something went wrong on our side; your draft is kept.'
+    : (error.summary ?? Object.values(error.fields)[0] ?? null);
   const size = checkMarkdownSize(description);
 
   const body: CreateIssue | null = projectKey
@@ -223,6 +229,7 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
   return {
     writable,
     noWritableProject: projects.isSuccess && writable.length === 0,
+    projectsPending: projects.isPending,
     project,
     selectProject,
     title,
@@ -241,7 +248,9 @@ export function useIssueDraft({ routeProject, initial, parent: parentKey = null,
     uploader,
     applicableFields: applicable,
     requiredMissing: showRequired ? requiredMissing : [],
+    typeName,
     error,
+    failure,
     pending: create.isPending,
     canSubmit,
     submit,

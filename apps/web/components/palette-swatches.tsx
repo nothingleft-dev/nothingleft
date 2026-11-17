@@ -25,8 +25,8 @@ export function PaletteSwatches({ value, onChange, label = 'Colour', disabled }:
             onClick={() => onChange(hue)}
             className={cn(
               `c-${hue}`,
-              'size-6 rounded-sm bg-c-mark ring-offset-2 ring-offset-surface transition-shadow disabled:opacity-50',
-              hue === value && 'ring-2 ring-ink',
+              'size-6 rounded-sm bg-c-mark ring-offset-2 ring-offset-surface transition-shadow enabled:hover:ring-2 enabled:hover:ring-border-strong disabled:opacity-50',
+              hue === value && 'ring-2 ring-ink enabled:hover:ring-ink',
             )}
           />
         ))}

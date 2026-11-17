@@ -7,9 +7,9 @@ import { Pencil, X } from 'lucide-react';
 import type { Issue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { Skeleton } from '@components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { IssueKey } from '@components/issue-key';
 import { PickerSkeleton } from '@components/issues/pickers';
 import { TypeBadge } from '@components/issues/value-marks';
@@ -34,7 +34,10 @@ export function IssueParent({ issue, canEdit, picking, onPickingChange }: IssueP
   if (!issue.parent && !picking) return null;
 
   const setParent = (parent: string | null) =>
-    update.mutate({ body: { parent }, optimistic: i => ({ ...i, parent }) }, { onError: error => toastError(error) });
+    update.mutate(
+      { body: { parent }, optimistic: i => ({ ...i, parent }) },
+      { onError: error => toastError(parent ? 'Could not set the parent' : 'Could not remove the parent', error) },
+    );
 
   return (
     <Popover open={picking} onOpenChange={onPickingChange}>
@@ -54,7 +57,7 @@ export function IssueParent({ issue, canEdit, picking, onPickingChange }: IssueP
             <span className="text-text-muted">Choose a parent issue</span>
           )}
           {canEdit && issue.parent ? (
-            <span className="flex opacity-0 group-hover/parent:opacity-100 focus-within:opacity-100">
+            <span className="flex reveal group-hover/parent:opacity-100">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -120,7 +123,7 @@ function ParentCommand({ issue, onPick }: { issue: Issue; onPick: (key: string) 
         {options.map(option => (
           <CommandItem key={option.key} value={option.key} onSelect={() => onPick(option.key)}>
             <TypeBadge type={option.type} />
-            <IssueKey issueKey={option.key} resolved={option.resolved} className="flex-none" />
+            <IssueKey issueKey={option.key} resolved={option.resolved} column />
             <span className={cn('min-w-0 flex-1 truncate', option.resolved && 'text-text-muted')}>{option.title}</span>
           </CommandItem>
         ))}

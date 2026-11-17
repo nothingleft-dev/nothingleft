@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { GitDevelopmentRollup, GitDevelopmentSummary, GitPullRequestState } from '@nothingleft/types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { PR_STATE, ROLLUP, count, type Hue } from '@lib/git/words';
 import { cn } from '@lib/utils';
 
@@ -122,13 +122,10 @@ const PR_ICON: Record<GitPullRequestState, LucideIcon> = {
   closed: GitPullRequestClosed,
 };
 
+/** The card's leading icon already draws the state, so the chip carries the word alone. */
 export function PullRequestStateChip({ state }: { state: GitPullRequestState }) {
   const { label, hue } = PR_STATE[state];
-  return (
-    <HueChip hue={hue} icon={PR_ICON[state]}>
-      {label}
-    </HueChip>
-  );
+  return <HueChip hue={hue}>{label}</HueChip>;
 }
 
 export function PullRequestIcon({ state, className }: { state: GitPullRequestState; className?: string }) {

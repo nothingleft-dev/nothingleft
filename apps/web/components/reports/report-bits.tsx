@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import Link from 'next/link';
 import { formatDuration, type WorkCalendar } from '@nothingleft/format';
 import type { ReportScope } from '@nothingleft/types';
@@ -8,11 +8,11 @@ import { Switch } from '@components/ui/switch';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { listHref } from '@lib/issue-list/links';
 import { cn } from '@lib/utils';
+import { formatCount, plural } from '@lib/numbers';
 
 /**
- * `in Product Platform, Mobile App · view Blocking bugs` — what the figures cover. With no projects
- * picked, the API lists every project the viewer can open, so the sentence says so rather than reading
- * as a filter the picker does not show.
+ * `across 2 projects: Product Platform, Mobile App · saved view Blocking bugs` — what the figures cover.
+ * With no projects picked the API lists every project the viewer can open, so the sentence names them.
  */
 export function scopeText(scope: ReportScope, picked: boolean) {
   const names = scope.projects.map(p => p.name);
@@ -20,25 +20,24 @@ export function scopeText(scope: ReportScope, picked: boolean) {
   const where =
     names.length === 0
       ? 'in every project you can open'
-      : picked
-        ? `in ${names.length <= 3 ? listed : `${listed} projects`}`
-        : names.length === 1
-          ? `in ${listed}, the one project you can open`
-          : `in all ${formatCount(names.length)} projects you can open (${listed})`;
+      : names.length === 1
+        ? `in ${listed}`
+        : picked
+          ? `in ${names.length <= 3 ? listed : `${listed} projects`}`
+          : `across ${formatCount(names.length)} projects: ${listed}`;
   return scope.view ? `${where} · saved view ${scope.view}` : where;
 }
 
-/** `1,284`: thousands separated, as every figure in a report reads. */
-export const formatCount = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-export const plural = (n: number, one: string, many = `${one}s`) => `${formatCount(n)} ${n === 1 ? one : many}`;
+export { formatCount, plural };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+export const DURATION_FACE = 'font-mono text-xs tabular [word-spacing:-0.25em]';
 
 export type DurationUnit = 'duration' | 'days' | 'hours';
 
 export const DURATION_UNITS = [
-  { value: 'duration', label: '1w 1d' },
+  { value: 'duration', label: 'Mixed' },
   { value: 'days', label: 'Days' },
   { value: 'hours', label: 'Hours' },
 ] as const satisfies readonly { value: DurationUnit; label: string }[];
@@ -47,17 +46,41 @@ export const DURATION_UNITS = [
 export const durationUnitOf = (value: string | null): DurationUnit =>
   value === 'days' || value === 'hours' ? value : 'duration';
 
-/** Minutes in the unit the viewer picked: `1w 2d 3h`, `7.4d` or `59h`. Days and weeks are working ones. */
-export function formatMinutes(minutes: number, unit: DurationUnit, calendar: WorkCalendar): string {
-  if (minutes < 0) return `−${formatMinutes(-minutes, unit, calendar)}`;
-  if (unit === 'hours') return `${formatCount(round1(minutes / 60))}h`;
-  if (unit === 'days') return `${formatCount(round1(minutes / calendar.workdayMinutes))}d`;
+/** `1,036.5`: one decimal, thousands grouped. */
+export const oneDecimal = (n: number) => {
+  const [whole, fraction] = round1(n).toFixed(1).split('.');
+  return `${formatCount(Number(whole))}.${fraction}`;
+};
+
+/**
+ * Minutes in the unit the viewer picked: `1w 2d 3h`, `7.4d` or `59h`. Days and weeks are working ones.
+ * `column` keeps one decimal on every day or hour figure, so a column of them lines up.
+ */
+export function formatMinutes(
+  minutes: number,
+  unit: DurationUnit,
+  calendar: WorkCalendar,
+  { column = false }: { column?: boolean } = {},
+): string {
+  if (minutes < 0) return `−${formatMinutes(-minutes, unit, calendar, { column })}`;
+  const decimal = (n: number) => (column ? oneDecimal(n) : formatCount(round1(n)));
+  if (unit === 'hours') return `${decimal(minutes / 60)}h`;
+  if (unit === 'days') return `${decimal(minutes / calendar.workdayMinutes)}d`;
   return minutes === 0 ? '0m' : formatDuration(Math.round(minutes), calendar);
 }
 
+/** A duration in the mono face, as everywhere else in the app; a mono space is wide, so its gaps are tightened. */
+export function Minutes({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn(DURATION_FACE, className)}>{children}</span>;
+}
+
+/** `12.0%`, and `<0.1%` for a share too small to round to one: a column of shares lines up on its point. */
+export const formatShare = (share: number, amount = 1) =>
+  share === 0 && amount > 0 ? '<0.1%' : share === 100 ? '100%' : `${share.toFixed(1)}%`;
+
 /** The working-time convention behind `d` and `w`, which differs per organisation. */
 export const calendarNote = (calendar: WorkCalendar) =>
-  `A day is ${formatCount(round1(calendar.workdayMinutes / 60))}h and a week ${calendar.workweekDays} days, from the organisation's working calendar.`;
+  `A day is ${formatCount(round1(calendar.workdayMinutes / 60))}h and a week ${calendar.workweekDays} days, from the organisation’s working calendar.`;
 
 export function UnitToggle({ value, onChange }: { value: DurationUnit; onChange: (unit: DurationUnit) => void }) {
   return <ToggleGroup label="Units" value={value} options={DURATION_UNITS} onChange={onChange} />;
@@ -72,11 +95,20 @@ export function HueNote({
   const moved = groups.filter(g => g.hue_adjusted);
   if (moved.length === 0) return null;
   const striped = moved.some(g => g.hue_striped);
+  const names = moved.map(g => g.label);
+  const listed =
+    names.length <= 3
+      ? names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+      : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more projects`;
+  const one = moved.length === 1;
   return (
     <p className="text-xs text-text-secondary">
-      {moved.map(g => g.label).join(', ')} {moved.length === 1 ? 'shares its' : 'share their'} colour with an earlier
-      project here, so the chart draws {moved.length === 1 ? 'it' : 'them'} in another
-      {striped ? ', striped once every colour is taken' : ''}. Project settings are unchanged.
+      {listed} {one ? 'is' : 'are'} drawn in another colour here, because an earlier project in this chart has the same
+      colour
+      {striped ? '; once every colour is taken, the next is striped' : ''}. {one ? 'Its' : 'Their'} project colour is
+      unchanged.
     </p>
   );
 }
@@ -129,17 +161,23 @@ export function ToggleGroup<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex items-center rounded-sm border bg-inset p-0.5">
+    // As tall as the outline pickers beside it, so the row keeps one top and bottom edge.
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="flex h-6 flex-none items-stretch gap-px rounded-md border border-border-strong bg-background p-px shadow-xs dark:bg-inset"
+    >
       {options.map(o => (
         <button
           key={o.value}
           type="button"
           role="radio"
           aria-checked={o.value === value}
+          data-state={o.value === value ? 'on' : 'off'}
           onClick={() => onChange(o.value)}
           className={cn(
-            'h-6 rounded-xs px-2 text-xs font-medium text-text-secondary hover:text-text',
-            o.value === value && 'bg-surface text-text shadow-[0_0_0_1px_var(--border-strong)]',
+            'rounded-[5px] px-2 text-xs font-medium whitespace-nowrap text-text-secondary hover:bg-hover hover:text-text',
+            o.value === value && 'bg-active text-text hover:bg-active',
           )}
         >
           {o.label}
@@ -160,7 +198,10 @@ export function SwitchParam({
 }) {
   const id = useId();
   return (
-    <label htmlFor={id} className="flex h-7 cursor-pointer items-center gap-2 px-1 text-xs text-text-secondary">
+    <label
+      htmlFor={id}
+      className="flex h-6 cursor-pointer items-center gap-2 px-1 text-xs whitespace-nowrap text-text-secondary"
+    >
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
       {label}
     </label>
@@ -172,14 +213,21 @@ export function DrillLink({
   query,
   children,
   className,
+  title,
 }: {
   query: string | null;
   children: React.ReactNode;
   className?: string;
+  title?: string;
 }) {
-  if (!query) return <span className={className}>{children}</span>;
+  if (!query)
+    return (
+      <span className={className} title={title}>
+        {children}
+      </span>
+    );
   return (
-    <Link href={listHref(query)} className={cn('text-link', className)}>
+    <Link href={listHref(query)} className={cn('text-link', className)} title={title}>
       {children}
     </Link>
   );

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Timer, Trash2 } from 'lucide-react';
 import { formatDuration } from '@nothingleft/format';
 import type { Issue, MemberRef, WorkItem } from '@nothingleft/types';
+import { LoadError } from '@components/query-state';
 import { Button } from '@components/ui/button';
 import { Duration } from '@components/duration';
 import {
@@ -28,6 +29,8 @@ import { useDeleteWorkItem, useWorkItems } from '@hooks/use-work-items';
 import { formatCalendarDate } from '@lib/datetime';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
+import { LoadMore } from '@components/text-button';
 
 interface IssueSpentTimeProps {
   issue: Issue;
@@ -45,37 +48,54 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   const [editing, setEditing] = useState<WorkItem | null>(null);
   const rows = (records.data?.pages ?? []).flatMap(p => p.data);
   const total = records.data?.pages[0]?.meta.pagination?.total ?? rows.length;
+  const slots = badgeSlots(rows);
+  const over =
+    issue.estimate_minutes !== null && issue.spent_minutes > issue.estimate_minutes
+      ? issue.spent_minutes - issue.estimate_minutes
+      : 0;
 
   if (records.isPending) return <SpentTimeSkeleton />;
   if (records.isError) {
     return (
-      <EmptyState className="mt-3" title="The spent time could not be loaded." description={records.error.message} />
+      <div className="mt-3">
+        <LoadError onRetry={() => void records.refetch()} detail={records.error.message}>
+          The spent time could not be loaded.
+        </LoadError>
+      </div>
     );
   }
 
   const header = (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-xs text-text-secondary">
-      <span>
-        Total{' '}
-        <b className="font-mono text-sm font-medium tabular text-text">
-          {issue.spent_minutes > 0 ? formatDuration(issue.spent_minutes, calendar) : '0m'}
-        </b>
-      </span>
-      {issue.estimate_minutes !== null ? (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 text-xs text-text-secondary">
+      <p className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 sm:gap-x-2">
         <span>
-          of <Duration minutes={issue.estimate_minutes} calendar={calendar} className="text-text" /> estimated
+          Total <Duration minutes={issue.spent_minutes} calendar={calendar} className="text-sm font-medium text-text" />
+          {issue.estimate_minutes !== null ? (
+            <>
+              {' '}
+              of <Duration minutes={issue.estimate_minutes} calendar={calendar} className="text-text" /> estimated
+            </>
+          ) : null}
         </span>
-      ) : null}
-      <span className="text-text-muted">
-        {total} {total === 1 ? 'record' : 'records'}
-      </span>
+        {over > 0 ? (
+          <>
+            <Dot />
+            <span className="text-danger-fg">
+              <Duration minutes={over} calendar={calendar} /> over
+            </span>
+          </>
+        ) : null}
+        <Dot />
+        <span>{plural(total, 'record')}</span>
+      </p>
       {canLog ? (
-        <Button size="sm" variant="outline" className="ml-auto" onClick={onLogTime}>
-          <Plus /> Add spent time
+        <Button size="sm" variant="outline" className="sm:ml-auto" onClick={onLogTime}>
+          <Timer /> Add spent time
         </Button>
       ) : null}
     </div>
   );
+  const legend = slots.map(slot => (slot === TYPE_SLOT ? 'Type' : slot)).join(' · ');
 
   if (rows.length === 0) {
     return (
@@ -90,7 +110,7 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
         action={
           canLog ? (
             <Button size="sm" variant="outline" onClick={onLogTime}>
-              <Plus /> Add spent time
+              <Timer /> Add spent time
             </Button>
           ) : null
         }
@@ -101,27 +121,33 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   return (
     <>
       {header}
+      {legend ? (
+        <p aria-hidden className="pb-1.5 text-2xs text-text-muted max-sm:pl-9 sm:pr-[7.5rem] sm:text-right">
+          {legend}
+        </p>
+      ) : null}
       <ol className="divide-y divide-border-subtle border-y">
         {rows.map(row => (
           <SpentTimeRow
             key={row.id}
             item={row}
             ownIssue={row.issue === issue.key}
+            slots={slots}
             durationText={formatDuration(row.duration_minutes, calendar)}
+            duration={<Duration minutes={row.duration_minutes} calendar={calendar} />}
             onEdit={() => setEditing(row)}
           />
         ))}
       </ol>
       {records.hasNextPage ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-2"
-          disabled={records.isFetchingNextPage}
+        <LoadMore
+          className="mt-2 pl-9"
+          pending={records.isFetchingNextPage}
+          pendingLabel="Loading more…"
           onClick={() => void records.fetchNextPage()}
         >
-          {records.isFetchingNextPage ? 'Loading more…' : 'Show later records'}
-        </Button>
+          Show later records
+        </LoadMore>
       ) : null}
       {me && editing ? (
         <SpentTimeDialog
@@ -141,52 +167,91 @@ export function IssueSpentTime({ issue, canLog, canLogForOthers, me, onLogTime, 
   );
 }
 
+const TYPE_SLOT = '';
+
+// A wrapped line on a phone would start or end on the dot; the wider gap separates there.
+function Dot() {
+  return (
+    <span aria-hidden className="text-text-muted max-sm:hidden">
+      ·
+    </span>
+  );
+}
+
+function EmptySlot() {
+  return (
+    <span aria-hidden className="grid size-badge-letter flex-none place-items-center">
+      <i className="h-px w-1.5 bg-border-strong" />
+    </span>
+  );
+}
+
+/** One column per attribute any row carries, so each attribute's letter sits at the same x on every row. */
+function badgeSlots(rows: WorkItem[]): string[] {
+  const names = new Set<string>();
+  for (const row of rows) for (const a of row.attributes) names.add(a.attribute);
+  return [...(rows.some(r => r.work_type) ? [TYPE_SLOT] : []), ...names];
+}
+
 interface SpentTimeRowProps {
   item: WorkItem;
   ownIssue: boolean;
+  slots: string[];
   durationText: string;
+  duration: ReactNode;
   onEdit: () => void;
 }
 
-function SpentTimeRow({ item, ownIssue, durationText, onEdit }: SpentTimeRowProps) {
+function SpentTimeRow({ item, ownIssue, slots, durationText, duration, onEdit }: SpentTimeRowProps) {
   const onBehalf = item.created_by.username !== item.author.username;
   return (
-    <li className="group/record grid grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3 py-2.5">
-      <MemberAvatar member={item.author} className="mt-0.5 size-6" />
-      <div className="min-w-0">
-        <div className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-text-secondary">
-          <PersonName person={item.author} className="font-medium text-text" />
-          <span>{formatCalendarDate(item.work_date)}</span>
-          {ownIssue ? null : (
-            <Link href={`/issue/${item.issue}` as Route} className="font-mono text-2xs text-text hover:underline">
-              {item.issue}
-            </Link>
-          )}
-          {onBehalf ? (
-            <span className="text-text-muted">
-              logged by <PersonName person={item.created_by} />
-            </span>
-          ) : null}
-        </div>
-        {item.description_md.trim() ? (
-          <Markdown source={item.description_md} variant="comment" className="mt-0.5 max-w-none" />
+    <li className="group/record grid grid-cols-[24px_minmax(0,1fr)_auto] gap-x-3 py-2.5 max-sm:grid-cols-[24px_minmax(0,1fr)]">
+      <MemberAvatar member={item.author} className="mt-0.5 size-6 sm:row-span-2" />
+      <div className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-text-secondary">
+        <PersonName person={item.author} className="font-medium text-text" />
+        <span>{formatCalendarDate(item.work_date)}</span>
+        {ownIssue ? null : (
+          <Link href={`/issue/${item.issue}` as Route} className="font-mono text-2xs text-text hover:underline">
+            {item.issue}
+          </Link>
+        )}
+        {onBehalf ? (
+          <span className="text-text-muted">
+            logged by <PersonName person={item.created_by} />
+          </span>
         ) : null}
       </div>
-      <div className="flex h-6 items-center gap-2">
-        {item.work_type ? (
-          <LetterBadge letter={item.work_type.short_label} label={item.work_type.name} variant="outlined" />
-        ) : null}
-        {item.attributes.map(a => (
-          <LetterBadge
-            key={a.attribute}
-            letter={a.value.short_label}
-            label={`${a.attribute}: ${a.value.name}`}
-            variant="outlined"
-          />
-        ))}
-        <span className="min-w-12 text-right font-mono text-xs font-medium tabular">{durationText}</span>
+      <div className="flex h-6 items-center gap-2 max-sm:col-start-2 max-sm:mt-1 sm:row-span-2">
+        {slots.map(slot => {
+          if (slot === TYPE_SLOT) {
+            return item.work_type ? (
+              <LetterBadge
+                key="type"
+                letter={item.work_type.short_label}
+                label={`Type: ${item.work_type.name}`}
+                variant="outlined"
+              />
+            ) : (
+              <EmptySlot key="type" />
+            );
+          }
+          const value = item.attributes.find(a => a.attribute === slot)?.value;
+          return value ? (
+            <LetterBadge key={slot} letter={value.short_label} label={`${slot}: ${value.name}`} variant="outlined" />
+          ) : (
+            <EmptySlot key={slot} />
+          );
+        })}
+        <span className="text-right text-xs font-medium whitespace-nowrap max-sm:ml-auto sm:w-20">{duration}</span>
         <RecordMenu item={item} durationText={durationText} onEdit={onEdit} />
       </div>
+      {item.description_md.trim() ? (
+        <Markdown
+          source={item.description_md}
+          variant="comment"
+          className="col-start-2 mt-0.5 max-w-none sm:row-start-2"
+        />
+      ) : null}
     </li>
   );
 }
@@ -204,7 +269,7 @@ function RecordMenu({ item, durationText, onEdit }: { item: WorkItem; durationTe
             variant="ghost"
             size="icon-xs"
             aria-label={`Actions for ${durationText} on ${formatCalendarDate(item.work_date)}`}
-            className="text-text-muted opacity-0 group-hover/record:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+            className="text-text-muted reveal group-hover/record:opacity-100"
           >
             <MoreHorizontal />
           </Button>
@@ -228,16 +293,17 @@ function RecordMenu({ item, durationText, onEdit }: { item: WorkItem; durationTe
         onOpenChange={setConfirming}
         title="Delete this record?"
         confirmLabel="Delete record"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() => {
           setConfirming(false);
-          remove.mutate(item, { onError: error => toastError(error) });
+          remove.mutate(item, { onError: error => toastError('Could not delete the record', error) });
         }}
       >
         <p>
-          <span className="font-mono text-text">{durationText}</span> on {formatCalendarDate(item.work_date)} by{' '}
-          <span className="font-medium text-text">{item.author.name}</span> leaves {item.issue}&apos;s spent time. It
-          cannot be restored; the history keeps a line saying it was removed.
+          Remove <span className="font-medium text-text">{item.author.name}</span>&apos;s{' '}
+          <span className="font-mono text-text">{durationText}</span> on {formatCalendarDate(item.work_date)} from{' '}
+          {item.issue}? It cannot be restored; the history keeps a line saying it was removed.
         </p>
       </ConfirmDialog>
     </>

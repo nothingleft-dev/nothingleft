@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Ban } from 'lucide-react';
 import type { StorageUsage } from '@nothingleft/types';
-import { cn } from '@lib/utils';
+import { Button } from '@components/ui/button';
+import { FormAlert } from '@components/auth/form-alert';
 
 export const UPDATE_KEY_HREF = '/organization?tab=storage&setup=update';
 
@@ -20,34 +20,30 @@ interface ByoFailingBannerProps {
 /** The organisation's own bucket refused its key: files there stop opening and uploads pause (file-storage.md § When the key stops working). */
 export function ByoFailingBanner({ storage, bucket, canFix, withAction = true, className }: ByoFailingBannerProps) {
   if (storage?.bring_your_own !== 'failed') return null;
-  const name = bucket ? (
-    <span className="font-mono font-medium">{bucket}</span>
-  ) : (
-    'The organisation’s own storage bucket'
-  );
   return (
-    <div
-      role="alert"
-      className={cn(
-        'flex items-start gap-2.5 rounded-md border border-danger-fg/25 bg-danger-bg px-3 py-2.5 text-danger-fg',
-        className,
-      )}
+    <FormAlert
+      className={className}
+      title={
+        bucket ? (
+          <>
+            <span className="font-mono">{bucket}</span> refused its key.
+          </>
+        ) : (
+          'The organisation’s own storage bucket refused its key.'
+        )
+      }
+      action={
+        canFix && withAction ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={UPDATE_KEY_HREF as Route}>Update key</Link>
+          </Button>
+        ) : undefined
+      }
     >
-      <Ban className="mt-0.5 size-icon-sm flex-none" />
-      <p className="flex-1 text-xs leading-5">
-        {name} refused its key — files there can’t be opened and uploads are paused.{' '}
-        {canFix
-          ? 'Enter a working key for the same bucket to bring them back.'
-          : 'An organisation admin has been emailed and can fix it.'}
-      </p>
-      {canFix && withAction ? (
-        <Link
-          href={UPDATE_KEY_HREF as Route}
-          className="flex-none text-xs leading-5 font-medium underline underline-offset-2 hover:no-underline"
-        >
-          Update key
-        </Link>
-      ) : null}
-    </div>
+      Files there cannot be opened and uploads are paused.{' '}
+      {canFix
+        ? 'Save a working key for the same bucket to bring them back.'
+        : 'An organisation admin has been emailed and can fix it.'}
+    </FormAlert>
   );
 }

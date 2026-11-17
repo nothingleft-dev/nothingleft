@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   STATUS_CATEGORIES,
@@ -15,17 +15,19 @@ import { Checkbox } from '@components/ui/checkbox';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { Switch } from '@components/ui/switch';
-import { Command, CommandGroup, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandGroup, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@components/ui/sheet';
 import { FormAlert } from '@components/auth/form-alert';
 import { Segmented } from '@components/segmented';
-import { StatusPicker } from '@components/projects/automations/status-picker';
+import { StatusPicker, StatusText } from '@components/projects/automations/status-picker';
 import { useCreateAutomation, useUpdateAutomation } from '@hooks/use-automations';
 import { useSchemaValues } from '@hooks/use-project-schema';
 import { isApiError } from '@lib/api/errors';
 import { CATEGORY_LABEL } from '@lib/git/words';
 import { cn } from '@lib/utils';
+import { PendingButton } from '@components/pending-button';
 
 export type EditorTarget = { rule: Automation } | { trigger: AutomationTrigger | null };
 
@@ -34,20 +36,33 @@ interface AutomationEditorProps {
   catalogue: AutomationCatalogue;
   gitEnabled: boolean;
   target: EditorTarget | null;
+  readOnly?: boolean;
+  limitNote?: string | null;
   onClose: () => void;
 }
 
-export function AutomationEditor({ projectKey, catalogue, gitEnabled, target, onClose }: AutomationEditorProps) {
+export function AutomationEditor({
+  projectKey,
+  catalogue,
+  gitEnabled,
+  target,
+  readOnly = false,
+  limitNote = null,
+  onClose,
+}: AutomationEditorProps) {
   return (
     <Sheet open={target !== null} onOpenChange={open => (open ? null : onClose())}>
       <SheetContent className="w-full gap-0 sm:max-w-lg">
-        {target ? (
+        {target && readOnly && 'rule' in target ? (
+          <RuleSummary projectKey={projectKey} catalogue={catalogue} rule={target.rule} onClose={onClose} />
+        ) : target ? (
           <EditorForm
             key={'rule' in target ? target.rule.name : (target.trigger ?? 'new')}
             projectKey={projectKey}
             catalogue={catalogue}
             gitEnabled={gitEnabled}
             target={target}
+            limitNote={limitNote}
             onClose={onClose}
           />
         ) : null}
@@ -79,9 +94,11 @@ function EditorForm({
   catalogue,
   gitEnabled,
   target,
+  limitNote,
   onClose,
 }: AutomationEditorProps & { target: EditorTarget }) {
   const rule = 'rule' in target ? target.rule : null;
+  const blocked = !rule && Boolean(limitNote);
   const [trigger, setTrigger] = useState<AutomationTrigger | null>(
     rule?.trigger ?? ('trigger' in target ? target.trigger : null),
   );
@@ -161,15 +178,36 @@ function EditorForm({
       className="flex h-full min-h-0 flex-col"
     >
       <SheetHeader className="border-b px-5 py-4">
-        <SheetTitle>{rule ? `Edit ${rule.name}` : 'New automation'}</SheetTitle>
+        <SheetTitle>{rule ? `Edit “${rule.name}”` : 'New automation'}</SheetTitle>
         <SheetDescription>
-          When something happens, if the issue fits, set its status. A change an automation makes never fires another
-          one.
+          When something happens, if the issue fits, set its status. A change made by a rule never triggers another
+          rule.
         </SheetDescription>
       </SheetHeader>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-5">
+        {blocked ? <FormAlert tone="warning" title={limitNote!} /> : null}
         {errors.form ? <FormAlert title={errors.form} /> : null}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="automation-name" className="text-text-secondary">
+            Name
+          </Label>
+          <Input
+            id="automation-name"
+            value={name}
+            placeholder="e.g. Close on a fixing commit"
+            aria-invalid={errors.name !== undefined}
+            onChange={event => {
+              setName(event.target.value);
+              setErrors({ ...errors, name: undefined });
+            }}
+          />
+          <p className={cn('text-xs', errors.name ? 'text-danger-fg' : 'text-text-secondary')}>
+            {errors.name ??
+              'Shown in the issue’s history beside each change the rule makes. Left empty, it is named after the rule.'}
+          </p>
+        </div>
 
         <Step title="When">
           <TriggerPicker
@@ -204,8 +242,10 @@ function EditorForm({
         ) : null}
 
         <Step title="Then">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-text-secondary">Set status to</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text-secondary" aria-hidden>
+              Set status to
+            </span>
             <StatusPicker
               projectKey={projectKey}
               value={status}
@@ -215,32 +255,16 @@ function EditorForm({
               }}
               invalid={errors.status !== undefined}
               label="Status it sets"
+              className="h-9 w-full"
             />
           </div>
           {errors.status ? <p className="text-xs text-danger-fg">{errors.status}</p> : null}
         </Step>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="automation-name">Name</Label>
-          <Input
-            id="automation-name"
-            value={name}
-            placeholder="Named after the rule when left empty"
-            aria-invalid={errors.name !== undefined}
-            onChange={event => {
-              setName(event.target.value);
-              setErrors({ ...errors, name: undefined });
-            }}
-          />
-          <p className={cn('text-xs', errors.name ? 'text-danger-fg' : 'text-text-secondary')}>
-            {errors.name ?? 'Shown in the issue’s history beside each change the rule makes.'}
-          </p>
-        </div>
-
         {rule ? (
           <div className="flex flex-col gap-1 rounded-md bg-inset px-3 py-2.5 text-xs">
-            <span className="text-text-muted">As saved</span>
-            <span className="text-text-secondary">{rule.sentence}</span>
+            <span className="font-medium text-text-secondary">As saved</span>
+            <span className="text-text">{rule.sentence}</span>
           </div>
         ) : null}
       </div>
@@ -249,17 +273,64 @@ function EditorForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending || !trigger || !status}>
-          {pending ? 'Saving…' : rule ? 'Save changes' : 'Create automation'}
-        </Button>
+        <PendingButton type="submit" disabled={!trigger || !status || blocked} pending={pending} pendingLabel="Saving…">
+          {rule ? 'Save changes' : 'Create automation'}
+        </PendingButton>
       </SheetFooter>
     </form>
   );
 }
 
+function RuleSummary({
+  projectKey,
+  catalogue,
+  rule,
+  onClose,
+}: {
+  projectKey: string;
+  catalogue: AutomationCatalogue;
+  rule: Automation;
+  onClose: () => void;
+}) {
+  const trigger = catalogue.triggers.find(t => t.key === rule.trigger)?.label ?? rule.trigger;
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <SheetHeader className="border-b px-5 py-4">
+        <SheetTitle>{rule.name}</SheetTitle>
+        <SheetDescription>Only a Project Admin can change this rule.</SheetDescription>
+      </SheetHeader>
+      <dl className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 text-sm">
+        <div className="flex flex-col gap-1">
+          <dt className="font-medium text-text-secondary">When</dt>
+          <dd>{trigger}</dd>
+        </div>
+        <div className="flex flex-col gap-1">
+          <dt className="font-medium text-text-secondary">Sets status to</dt>
+          <dd>
+            <StatusText projectKey={projectKey} value={String(rule.action_params.status)} />
+          </dd>
+        </div>
+        <div className="flex flex-col gap-1">
+          <dt className="font-medium text-text-secondary">The whole rule</dt>
+          <dd>{rule.sentence}</dd>
+        </div>
+        <div className="flex flex-col gap-1">
+          <dt className="font-medium text-text-secondary">State</dt>
+          <dd>{rule.is_enabled ? 'On' : 'Off'}</dd>
+        </div>
+      </dl>
+      <SheetFooter className="flex-row justify-end gap-2 border-t px-5 py-3">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </SheetFooter>
+    </div>
+  );
+}
+
 function Step({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-2.5">
+    <section className="flex flex-col gap-2.5 border-t pt-5">
       <h3 className="text-sm font-semibold">{title}</h3>
       {children}
     </section>
@@ -295,19 +366,22 @@ function TriggerPicker({
           aria-label="What fires the rule"
           className="justify-between font-normal"
         >
-          <span className={cn('truncate', !current && 'text-text-muted')}>{current?.label ?? 'Choose a trigger'}</span>
+          <span className={cn('truncate', !current && 'text-text-secondary')}>
+            {current?.label ?? 'Choose a trigger'}
+          </span>
           <ChevronsUpDown className="size-icon-sm text-text-muted" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-72 p-0">
-        <Command>
+        <PickerCommand>
           <CommandList>
             {groups.map(group => (
               <CommandGroup key={group.heading} heading={group.heading}>
                 {group.triggers.map(t => {
                   const off = t.group === 'git' && !gitEnabled;
                   return (
-                    <CommandItem
+                    <PickerItem
+                      checked={t.key === value}
                       key={t.key}
                       value={t.key}
                       disabled={off}
@@ -318,14 +392,13 @@ function TriggerPicker({
                     >
                       <span className="min-w-0 flex-1 truncate">{t.label}</span>
                       {off ? <span className="text-2xs text-text-muted">link a repository first</span> : null}
-                      <Check className={cn('size-icon-sm', t.key === value ? 'opacity-100' : 'opacity-0')} />
-                    </CommandItem>
+                    </PickerItem>
                   );
                 })}
               </CommandGroup>
             ))}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -348,11 +421,11 @@ function ConditionRow({ name, label, schema, value, fallback, projectKey, onChan
   if (schema.type === 'boolean') {
     const checked = (value ?? fallback ?? false) as boolean;
     return (
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <Switch id={id} checked={checked} onCheckedChange={next => onChange(next)} />
         <Label htmlFor={id} className="font-normal">
           {label}
         </Label>
-        <Switch id={id} checked={checked} onCheckedChange={next => onChange(next)} />
       </div>
     );
   }
@@ -361,13 +434,15 @@ function ConditionRow({ name, label, schema, value, fallback, projectKey, onChan
     const current = (value ?? fallback ?? schema.enum[0]) as string;
     return (
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm">{label}</span>
-        <Segmented
-          ariaLabel={label}
-          value={current}
-          options={schema.enum.map(v => ({ value: v, label: VALUE_LABEL[v] ?? v }))}
-          onChange={onChange}
-        />
+        <span className="text-sm font-medium text-text-secondary">{label}</span>
+        <div className="self-start rounded-md border p-0.5">
+          <Segmented
+            ariaLabel={label}
+            value={current}
+            options={schema.enum.map(v => ({ value: v, label: VALUE_LABEL[v] ?? v }))}
+            onChange={onChange}
+          />
+        </div>
       </div>
     );
   }
@@ -390,7 +465,7 @@ function ConditionRow({ name, label, schema, value, fallback, projectKey, onChan
     const categories = name === 'issue_status_category';
     return (
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-1.5 text-sm">{label}</legend>
+        <legend className="mb-1.5 text-sm font-medium text-text-secondary">{label}</legend>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           {options.map(option => {
             const on = chosen.includes(option);
@@ -408,7 +483,7 @@ function ConditionRow({ name, label, schema, value, fallback, projectKey, onChan
             );
           })}
         </div>
-        {categories && chosen.length === 0 ? <p className="text-xs text-text-muted">Any status category.</p> : null}
+        {categories && chosen.length === 0 ? <p className="text-xs text-text-secondary">Any status category.</p> : null}
       </fieldset>
     );
   }
@@ -441,7 +516,7 @@ function NumberCondition({
   const [draft, setDraft] = useState(String(value ?? fallback ?? ''));
   return (
     <div className="flex items-center justify-between gap-4">
-      <Label htmlFor={id} className="font-normal">
+      <Label htmlFor={id} className="text-text-secondary">
         {label}
       </Label>
       <Input
@@ -473,7 +548,7 @@ function TypeChoice({
   const types = useSchemaValues(projectKey, 'types');
   return (
     <fieldset className="flex flex-col gap-1.5">
-      <legend className="mb-1.5 text-sm">{label}</legend>
+      <legend className="mb-1.5 text-sm font-medium text-text-secondary">{label}</legend>
       <div className="flex flex-wrap gap-x-4 gap-y-2">
         {(types.data ?? []).map(type => (
           <label key={type.name} className="flex items-center gap-2 text-sm">
@@ -488,7 +563,7 @@ function TypeChoice({
           </label>
         ))}
       </div>
-      {value.length === 0 ? <p className="text-xs text-text-muted">Any type.</p> : null}
+      {value.length === 0 ? <p className="text-xs text-text-secondary">Any type.</p> : null}
     </fieldset>
   );
 }
@@ -512,7 +587,7 @@ function ChipsField({
   };
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id} className="font-normal">
+      <Label htmlFor={id} className="text-text-secondary">
         {label}
       </Label>
       <div className="flex flex-wrap items-center gap-1">

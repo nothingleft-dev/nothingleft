@@ -19,7 +19,7 @@ Payments
 ```
 
 The tree sits beside every page of the knowledge base, with your starred articles above it and
-the tags in use below. Fold an article to hide what is under it; the knowledge base remembers
+the most-used tags below. Fold an article to hide what is under it; the knowledge base remembers
 what you folded, on any device.
 
 Drag an article by its grip to reorder it among its neighbours or to move it under another one:
@@ -83,7 +83,7 @@ Deleting an article that has articles under it asks what should happen to them:
 
 A draft someone else is still writing underneath is never deleted by you: it moves up a level.
 
-A deleted article can be restored for 14 days from **Deleted articles**, at the bottom of the
+A deleted article can be restored for 14 days from **Deleted articles**, under the tree in the
 knowledge base's side panel (it appears when there is something you may restore), and anything deleted along with it comes back
 with it - restoring a branch needs the same rights as deleting it. If its address has been taken
 in the meantime it gets a number; if the article it sat under is gone, or the branch would now
@@ -96,7 +96,7 @@ There is no version history: the article shows who changed it last, and when.
 
 Articles use the same tags as issues - one list for the whole organisation. That is the point:
 tag the outage issues and the write-up afterwards `payment-outage`, and one search finds both.
-Tags show as chips under the title; the knowledge base lists the tags in use, with how many
+Tags show as chips under the title; the knowledge base lists the most-used tags (**Show all** for the rest), with how many
 articles carry each, so you can filter with one click. When you tag an article, tags already
 used on articles are offered first, but any tag can be used.
 

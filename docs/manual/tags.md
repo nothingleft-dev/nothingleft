@@ -5,7 +5,8 @@ knowledge base articles. `rca` on a failed payment and `rca` on the write-up aft
 same tag, and `tag: rca` finds both. Adding tags to an issue is described in
 [Issues](./issues.md#tags), and to an article in [Knowledge base](./knowledge-base.md).
 
-This page is about looking after the vocabulary itself.
+A tag is created by adding it to an issue or an article. Org Admins can merge several at once with
+**Merge tags** above the list. This page is about looking after the vocabulary itself.
 
 ## Seeing every tag
 
@@ -27,8 +28,8 @@ updated to the new name, so they keep finding the same issues. A view that only 
 types and sprints of that name.
 
 Choose **Edit** on the tag, type the new name and **Save**. A name another tag already has is
-refused, since two tags cannot share one address: merge them instead. Org Admins get a link
-under the name to do exactly that.
+refused, since two tags cannot share one address, and **Save** stays off until you change it:
+merge them instead. Org Admins get a **Merge into …** button under the name to do exactly that.
 
 ## Recolouring
 

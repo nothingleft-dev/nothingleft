@@ -58,15 +58,17 @@ from.
 Open it from **Inbox** in the sidebar or the inbox icon at the top of every page.
 
 - **One entry per issue.** Twelve changes to ACME-12 are one entry with twelve lines, newest
-  first, not twelve rows. The arrow beside an entry opens its lines in place; **Show all**
-  lists every one when there are more than ten. Articles are entries too, and a sprint starting
+  first, not twelve rows. The count at the end of an entry's first line opens its lines in place;
+  **Show N more** lists the rest when there are more than ten. The second line of an entry shows
+  who it came from: their avatar, or a mark for a merge, a failing check, an automation or a due
+  date. Articles are entries too, and a sprint starting
   or finishing is an entry of its own.
 - **Opening marks read.** Click a line to go to what it is about and mark that notification
   read; click the entry's title to open the issue or article and mark the whole entry read. An
   entry from another organisation switches you into that organisation first.
 - **Filter** by kind (only mentions, say), by project, by organisation when you belong to more
   than one, or to what is unread. The address keeps your filters, so a bookmark reopens them.
-- **Mark read** one notification or a whole entry with the tick that appears on hover, or
+- **Mark read** one notification or a whole entry with the tick at the end of an unread entry or line, or
   everything at once with **Mark all read**. With a kind, project or organisation chosen it
   reads **Mark all matching read** and marks only what matches.
 - The number in the header counts **entries** with anything unread. Your dashboard shows the
@@ -91,7 +93,7 @@ kind you pick one of:
 
 The kinds are grouped into Issues, Comments, Agile, Knowledge base and Development, and every change saves
 as you make it. **Mentioned** is marked *most commonly enabled*: it is the one most people turn
-on. **Reactions** are in-app only. *Turn everything off* at the top switches every email off in
+on. **Reactions** are in-app only. *Turn every email off*, under the digest note, switches every email off in
 one go, and *Undo* in the message that follows puts your choices back. Your choices apply in
 every organisation you belong to. Digests use the time zone in your profile
 (**Settings → Profile**).

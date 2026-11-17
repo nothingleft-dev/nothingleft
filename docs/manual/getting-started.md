@@ -15,8 +15,8 @@ On **Create your account**, choose **Google** or **GitHub**, or fill in your **F
 - **Google or GitHub** sign-ups are verified by the provider, so you carry straight on.
 - **Email and password** sign-ups must confirm the address first. We email you a link that
   works for 24 hours. Until you open it, the next steps show **Confirm your email first**,
-  with **Check verification** and **Resend email**. An unverified account cannot create or
-  join an organisation. If you mistyped the address, sign up again with the right one.
+  with **I’ve confirmed it** and **Resend email**. You can finish your profile meanwhile; an
+  unverified account cannot create or join an organisation. If you mistyped the address, sign up again with the right one.
 
 The rail on the left names the four steps that follow; **Back** returns to an earlier one.
 
@@ -50,7 +50,7 @@ Anyone you add joins the organisation and the new project in one step. There are
 | Way           | How it works                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------- |
 | By email      | Type addresses, pick a **Role in this project** and a **Role in the organisation**, and choose **Send invitations** |
-| By share link | Copy a link that anyone can use to join. You can revoke it at any time                                              |
+| By share link | Copy a link that anyone can use to join as a Member. **Replace** issues a new address and stops the old one; **Revoke** ends it |
 
 Organisation roles are **Org Admin** and **Member**; project roles are **Project Admin**,
 **Contributor** and **Observer**. What each can do is in [Permissions](./permissions.md).
@@ -77,7 +77,7 @@ to be a Contributor or above. The project already has everything an issue needs:
 Defaults are in bold. A Project Admin can change every list and the board; see
 [Issues](./issues.md#project-settings-statuses-priorities-types-work-types).
 
-**Connect an LLM.** Choose **Connect an agent** to let an AI agent file, triage and comment on
+**Connect an agent.** Choose **Connect an agent** to let an AI agent file, triage and comment on
 issues as you. The dialog creates an access token named _Claude Code_ with the `issues:read`,
 `issues:write`, `comments:write` and `time:write` scopes, then shows the config for the agent
 you pick, token filled in, with one **Copy** button. When the agent makes its first call, the
@@ -105,7 +105,7 @@ invited you and the role you will get.
 ### You already have an account
 
 1. Open the link and sign in if you are not already.
-2. A card asks **Join Acme Corporation?** and names the project, who invited you and your
+2. **Review your invitation** shows a card that names the organisation, the project, who invited you and your
    role. Choose **Accept** or **Decline**. Nothing happens to your account until you accept,
    and a share link needs a confirmed email address first.
 3. The confirmation has a button into the project. If you had no username in this

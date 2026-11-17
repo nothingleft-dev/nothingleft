@@ -17,10 +17,7 @@ const PROVIDERS: readonly { value: ByoProvider; line: string }[] = [
 export function ProviderStep({ value, onChange }: { value: ByoProvider; onChange: (next: ByoProvider) => void }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-text-secondary">
-        Where the bucket is. Files uploaded from then on are stored there, in your account and on your bill, and the
-        storage limit no longer applies. Avatars stay in the built-in storage.
-      </p>
+      <p className="text-sm text-text-secondary">Pick where the bucket lives.</p>
       <div role="radiogroup" aria-label="Storage provider" className="grid gap-2 sm:grid-cols-2">
         {PROVIDERS.map(p => {
           const selected = p.value === value;
@@ -33,7 +30,7 @@ export function ProviderStep({ value, onChange }: { value: ByoProvider; onChange
               onClick={() => onChange(p.value)}
               className={cn(
                 'flex items-start gap-3 rounded-md border px-3.5 py-3 text-left transition-colors hover:border-border-strong hover:bg-hover',
-                selected && 'border-text bg-hover hover:border-text',
+                selected && 'border-text bg-hover hover:border-text hover:bg-active',
               )}
             >
               <span
@@ -78,7 +75,7 @@ export function CodeBlock({ value, what, label }: { value: string; what: string;
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 
 /** The one warning the setup screen carries in bold: a key that can only touch one bucket can only ever lose one bucket. */
-function LeastPrivilege({ children }: { children: ReactNode }) {
+function LeastPrivilege({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div
       role="note"
@@ -86,7 +83,7 @@ function LeastPrivilege({ children }: { children: ReactNode }) {
     >
       <ShieldAlert className="mt-0.5 size-icon flex-none" aria-hidden />
       <div className="flex flex-col gap-1 text-sm leading-5">
-        <p className="font-semibold">Grant only these permissions. Never full S3 access.</p>
+        <p className="font-semibold">{title}</p>
         <p>{children}</p>
       </div>
     </div>
@@ -146,7 +143,7 @@ export function PermissionsStep({ provider, bucket, onBucketChange, bucketError 
             reads as missing rather than forbidden. In the AWS console: IAM → Users → Create user, then Add permissions
             → Create inline policy → JSON.
           </p>
-          <LeastPrivilege>
+          <LeastPrivilege title="Grant only these permissions. Never full S3 access.">
             Create a dedicated IAM user for Nothing Left and attach only this policy. The key is stored encrypted and
             never shown again, but a key that can only touch one bucket is one that can only ever lose one bucket.
           </LeastPrivilege>
@@ -160,14 +157,13 @@ export function PermissionsStep({ provider, bucket, onBucketChange, bucketError 
             </li>
             <li>
               Under Specify buckets choose <span className="font-medium text-text">Apply to specific buckets only</span>{' '}
-              and pick {valid ? <span className="font-mono text-text">{name}</span> : 'the bucket'} — no other bucket.
+              and pick {valid ? <span className="font-mono text-text">{name}</span> : 'the bucket'}. No other bucket.
             </li>
             <li>Create the token and keep the page open: its secret is shown only once.</li>
           </ol>
-          <LeastPrivilege>
-            Create a dedicated token for Nothing Left, limited to this one bucket — never a token for your whole account
-            or with Admin permissions. The key is stored encrypted and never shown again, but a key that can only touch
-            one bucket is one that can only ever lose one bucket.
+          <LeastPrivilege title="Never an Admin token or one for every bucket.">
+            Create a dedicated token for Nothing Left, limited to this one bucket. The key is stored encrypted and never
+            shown again, but a key that can only touch one bucket is one that can only ever lose one bucket.
           </LeastPrivilege>
         </>
       )}

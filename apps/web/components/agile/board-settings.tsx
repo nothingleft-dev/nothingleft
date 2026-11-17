@@ -1,27 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowRight, MoreHorizontal, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Board } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@components/ui/dropdown-menu';
 import { Input } from '@components/ui/input';
 import { Label } from '@components/ui/label';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { RowsSkeleton } from '@components/skeletons';
 import { SettingsSection } from '@components/settings/section';
 import { BoardColumnsEditor } from '@components/agile/board-settings-columns';
@@ -29,6 +22,8 @@ import { BoardSwimlanes } from '@components/agile/board-settings-swimlanes';
 import { useBoard, useBoards, useCreateBoard, useDeleteBoard, useUpdateBoard } from '@hooks/use-boards';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
+import { plural } from '@lib/numbers';
 
 interface BoardSettingsProps {
   projectKey: string;
@@ -36,10 +31,13 @@ interface BoardSettingsProps {
   canEdit: boolean;
 }
 
+// Past this many boards the list scrolls, so the chosen board's columns stay near the top of the page.
+const LIST_ROWS = 6;
+
 const SWIMLANE_SUMMARY: Record<Board['swimlane_by'], (b: Board) => string> = {
   none: () => 'No swimlanes',
   values: b => `Swimlanes by ${b.swimlane_field ?? 'value'}`,
-  issues: b => `Swimlanes by ${b.swimlane_types.join(', ') || 'issue'}`,
+  issues: b => (b.swimlane_types.length ? `Swimlanes by issue: ${b.swimlane_types.join(', ')}` : 'Swimlanes by issue'),
 };
 
 export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettingsProps) {
@@ -53,6 +51,16 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
   const [naming, setNaming] = useState<{ mode: 'create' } | { mode: 'rename'; board: Board } | null>(null);
   const [deleting, setDeleting] = useState<Board | null>(null);
   const remove = useDeleteBoard(projectKey);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // A long list scrolls inside its frame; the chosen board stays in sight there.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const row = list?.querySelector<HTMLElement>('[aria-current="true"]')?.closest('li');
+    if (!list || !row) return;
+    if (row.offsetTop < list.scrollTop || row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight)
+      list.scrollTop = row.offsetTop - list.clientHeight / 2 + row.offsetHeight / 2;
+  }, [selected?.slug, list.length]);
 
   const select = (slug: string | null) =>
     router.replace(
@@ -75,34 +83,61 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
       >
         {boards.isPending ? (
           <RowsSkeleton rows={2} />
-        ) : boards.isError ? (
-          <FormAlert title="The boards could not be loaded." />
+        ) : boards.isError && !boards.data ? (
+          <LoadError onRetry={() => void boards.refetch()} detail={errorDetail(boards.error)}>
+            The boards could not be loaded.
+          </LoadError>
         ) : list.length === 0 ? (
           <EmptyState
             title="This project has no board."
             description={canEdit ? 'Create one to follow a sprint as columns of cards.' : undefined}
           />
         ) : (
-          <ul className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Boards">
+          <ul
+            ref={listRef}
+            className={cn(
+              'relative flex flex-col divide-y divide-border-subtle rounded-md border',
+              list.length > LIST_ROWS && 'scroll-fade max-h-[calc(var(--row)*6.5)] overflow-y-auto',
+            )}
+            aria-label="Boards"
+          >
             {list.map(b => {
               const active = b.slug === selected?.slug;
               return (
-                <li key={b.slug} className={cn('flex h-row items-center gap-2 pr-1', active && 'bg-active')}>
+                <li
+                  key={b.slug}
+                  className={cn(
+                    'relative flex h-row flex-none items-center gap-2 pr-1',
+                    active && 'bg-active before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand',
+                  )}
+                >
                   <button
                     type="button"
                     aria-current={active ? 'true' : undefined}
                     onClick={() => select(b.slug)}
-                    className="flex h-full min-w-0 flex-1 items-center gap-3 px-3 text-left hover:bg-hover"
+                    className="grid h-full min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-3 px-3 text-left hover:bg-hover sm:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_15rem]"
                   >
-                    <span className="truncate font-medium">{b.name}</span>
-                    <span className="font-mono text-2xs text-text-muted">{b.slug}</span>
-                    <span className="ml-auto hidden text-xs text-text-secondary sm:inline">
-                      {b.columns.length} {b.columns.length === 1 ? 'column' : 'columns'} ·{' '}
-                      {SWIMLANE_SUMMARY[b.swimlane_by](b)}
+                    <span className="truncate font-medium" title={b.name}>
+                      {b.name}
+                    </span>
+                    <span
+                      className={cn(
+                        'hidden truncate font-mono text-2xs sm:block',
+                        active ? 'text-text-secondary' : 'text-text-muted',
+                      )}
+                      title={b.slug}
+                    >
+                      {b.slug}
+                    </span>
+                    <span className="hidden truncate text-xs whitespace-nowrap text-text-secondary sm:block">
+                      {plural(b.columns.length, 'column')} · {SWIMLANE_SUMMARY[b.swimlane_by](b)}
                     </span>
                   </button>
-                  <Button asChild variant="ghost" size="sm" className="text-text-secondary">
-                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>Open</Link>
+                  <Button asChild variant="ghost" size="sm" className="text-text-secondary hover:text-text">
+                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>
+                      View board
+                      <ArrowRight />
+                    </Link>
                   </Button>
                   {canEdit ? (
                     <DropdownMenu>
@@ -149,6 +184,7 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
         onOpenChange={open => (open ? null : setDeleting(null))}
         title={`Delete the board ${deleting?.name ?? ''}?`}
         confirmLabel="Delete board"
+        pendingLabel="Deleting…"
         pending={remove.isPending}
         onConfirm={() => {
           if (!deleting) return;
@@ -159,7 +195,7 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
               setDeleting(null);
               if (gone.slug === selected?.slug) select(null);
             },
-            onError: error => toastError(error),
+            onError: error => toastError(`Could not delete ${gone.name}`, error),
           });
         }}
       >
@@ -274,9 +310,9 @@ function BoardNameForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : renaming ? 'Rename' : 'Create board'}
-        </Button>
+        <PendingButton type="submit" pending={pending} pendingLabel="Saving…">
+          {renaming ? 'Rename' : 'Create board'}
+        </PendingButton>
       </DialogFooter>
     </form>
   );

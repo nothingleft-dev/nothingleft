@@ -12,7 +12,7 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 768px)');
+    const desktop = window.matchMedia('(min-width: 56.25rem)');
     const closeOnDesktop = () => {
       if (desktop.matches) setOpen(false);
     };
@@ -23,7 +23,7 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Open navigation" className="md:hidden">
+        <Button variant="ghost" size="icon" aria-label="Open navigation" className="shell:hidden">
           <Menu className="size-5" />
         </Button>
       </SheetTrigger>
@@ -32,15 +32,18 @@ export function MobileNavigation({ user, data }: { user: Me | null; data: ShellD
         showCloseButton={false}
         aria-describedby={undefined}
         className="h-dvh w-[min(320px,calc(100vw-32px))] gap-0 bg-app"
+        // The sheet itself takes focus, so the logo link does not open looking hovered or selected.
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+        }}
       >
-        <div className="flex items-center justify-between border-b px-4 py-2">
-          <SheetTitle>Navigation</SheetTitle>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close navigation">
-              <X className="size-5" />
-            </Button>
-          </SheetClose>
-        </div>
+        <SheetTitle className="sr-only">Navigation</SheetTitle>
+        <SheetClose asChild>
+          <Button variant="ghost" size="icon" aria-label="Close navigation" className="absolute top-1.5 right-2 z-10">
+            <X className="size-5" />
+          </Button>
+        </SheetClose>
         <div className="min-h-0 flex-1">
           <Sidebar
             collapsed={false}

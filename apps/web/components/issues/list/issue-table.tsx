@@ -12,11 +12,19 @@ import {
 } from '@nothingleft/types';
 import { Checkbox } from '@components/ui/checkbox';
 import { Skeleton } from '@components/ui/skeleton';
-import { Button } from '@components/ui/button';
+import { LoadMore } from '@components/text-button';
 import { GROUP_GAP, GROUP_HEIGHT, GroupHeader } from '@components/issues/list/group-header';
-import { IssueRow, ROW_HEIGHT, type RowUpdate } from '@components/issues/list/issue-row';
+import { FROZEN_CELL, IssueRow, ROW_HEIGHT, type RowUpdate } from '@components/issues/list/issue-row';
 import { usePhone } from '@hooks/use-media-query';
-import { gridTemplate, tableMinWidth, type ColumnDef } from '@lib/issue-list/columns';
+import {
+  FROZEN_TRACKS,
+  TITLE_MIN,
+  TITLE_MIN_SCROLLING,
+  gridTemplate,
+  rowTemplate,
+  tableMinWidth,
+  type ColumnDef,
+} from '@lib/issue-list/columns';
 import { cn } from '@lib/utils';
 
 type Item =
@@ -67,20 +75,36 @@ export function IssueTable({
   timeZone,
 }: IssueTableProps) {
   const phone = usePhone();
-  const template = gridTemplate(columns);
-  const minWidth = tableMinWidth(columns);
-  // Only a table wider than the page scrolls sideways; its header then stops sticking, which is the price.
+  // A table wider than the page scrolls sideways under a frozen key and title; the header scrolls with it.
   const outerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(false);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const scrolls = wide && !phone;
+  const titleMin = scrolls ? TITLE_MIN_SCROLLING : TITLE_MIN;
+  const template = rowTemplate(columns, titleMin);
+  const minWidth = tableMinWidth(columns, titleMin);
+  const fitWidth = tableMinWidth(columns);
+  const syncScroll = () => {
+    const el = outerRef.current;
+    if (!el) return;
+    if (headerRef.current) headerRef.current.scrollLeft = el.scrollLeft;
+    const left = el.scrollLeft > 0;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setEdges(e => (e.left === left && e.right === right ? e : { left, right }));
+  };
   useEffect(() => {
     const el = outerRef.current;
     if (!el) return;
-    const measure = () => setWide(el.clientWidth < minWidth);
+    const measure = () => {
+      setWide(el.clientWidth < fitWidth);
+      syncScroll();
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [minWidth]);
+  }, [fitWidth]);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const lastPicked = useRef<string | null>(null);
 
@@ -189,7 +213,10 @@ export function IssueTable({
         <button
           type="button"
           onClick={() => onSort(active && direction === 'asc' ? `${key} desc` : active ? '' : `${key} asc`)}
-          className={cn('flex min-w-0 items-center gap-1 rounded-xs hover:text-text', active && 'text-text')}
+          className={cn(
+            '-mx-1 flex min-w-0 items-center gap-1 rounded-xs px-1 hover:bg-hover hover:text-text',
+            active && 'text-text',
+          )}
         >
           <span className="truncate">{def.label}</span>
           {active ? direction === 'asc' ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" /> : null}
@@ -200,197 +227,233 @@ export function IssueTable({
 
   return (
     <div
-      ref={outerRef}
       role="grid"
       aria-rowcount={total}
-      className={cn('relative', wide && !phone && 'overflow-x-auto', stale && 'opacity-60 transition-opacity')}
+      data-scrolled={scrolls && edges.left ? '' : undefined}
+      className={cn('relative', stale && 'is-stale')}
     >
-      <div style={wide && !phone ? { minWidth } : undefined}>
-        {phone ? null : (
+      {phone ? null : (
+        <div ref={headerRef} className={cn('sticky top-0 z-10 bg-surface', scrolls && 'overflow-hidden')}>
           <div
             role="row"
-            style={{ gridTemplateColumns: template }}
-            className="sticky top-0 z-10 grid h-row-dense items-center gap-2 border-b bg-surface px-2 text-2xs font-medium text-text-muted"
+            style={{ gridTemplateColumns: template, minWidth: scrolls ? minWidth : undefined }}
+            className="grid h-row-dense items-center gap-2 border-b pr-2 text-2xs font-medium text-text-muted"
           >
-            <span className="flex items-center">
-              <Checkbox
-                aria-label={allSelected ? 'Clear selection' : 'Select all loaded issues'}
-                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                onCheckedChange={checked => {
-                  const next = new Set(selection);
-                  for (const k of visibleKeys)
-                    if (checked === true) next.add(k);
-                    else next.delete(k);
-                  onSelectionChange(next);
-                }}
+            <div className={FROZEN_CELL} style={{ gridTemplateColumns: FROZEN_TRACKS }}>
+              <span className="flex items-center">
+                <Checkbox
+                  aria-label={allSelected ? 'Clear selection' : 'Select all loaded issues'}
+                  checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                  onCheckedChange={checked => {
+                    const next = new Set(selection);
+                    for (const k of visibleKeys)
+                      if (checked === true) next.add(k);
+                      else next.delete(k);
+                    onSelectionChange(next);
+                  }}
+                  className={cn(
+                    'bg-surface',
+                    !someSelected && 'reveal hover:opacity-100 [[role=grid]:hover_&]:opacity-100',
+                  )}
+                />
+              </span>
+              <button
+                type="button"
+                title="Priority"
+                aria-label="Priority"
+                onClick={() => onSort(nextSort(sort, 'priority'))}
                 className={cn(
-                  'bg-surface',
-                  !someSelected &&
-                    'opacity-0 hover:opacity-100 focus-visible:opacity-100 [[role=grid]:hover_&]:opacity-100',
+                  '-mx-1 rounded-xs px-1 text-left hover:bg-hover hover:text-text',
+                  sort.startsWith('priority') && 'text-text',
                 )}
-              />
-            </span>
-            <button
-              type="button"
-              title="Priority"
-              onClick={() =>
-                onSort(
-                  sort.startsWith('priority') && !sort.endsWith(' desc')
-                    ? 'priority desc'
-                    : sort.startsWith('priority')
-                      ? ''
-                      : 'priority asc',
-                )
-              }
-              className={cn('rounded-xs hover:text-text', sort.startsWith('priority') && 'text-text')}
-            >
-              P
-            </button>
-            <button
-              type="button"
-              title="Type"
-              onClick={() =>
-                onSort(
-                  sort.startsWith('type') && !sort.endsWith(' desc')
-                    ? 'type desc'
-                    : sort.startsWith('type')
-                      ? ''
-                      : 'type asc',
-                )
-              }
-              className={cn('rounded-xs hover:text-text', sort.startsWith('type') && 'text-text')}
-            >
-              T
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                onSort(
-                  sort.startsWith('key') && !sort.endsWith(' desc')
-                    ? 'key desc'
-                    : sort.startsWith('key')
-                      ? ''
-                      : 'key asc',
-                )
-              }
-              className={cn(
-                'flex items-center gap-1 rounded-xs text-left hover:text-text',
-                sort.startsWith('key') && 'text-text',
-              )}
-            >
-              Key
-              {sort.startsWith('key') ? (
-                sort.endsWith(' desc') ? (
-                  <ArrowDown className="size-3" />
-                ) : (
-                  <ArrowUp className="size-3" />
-                )
-              ) : null}
-            </button>
-            <span>Title</span>
+              >
+                P
+              </button>
+              <button
+                type="button"
+                title="Type"
+                aria-label="Type"
+                onClick={() => onSort(nextSort(sort, 'type'))}
+                className={cn(
+                  '-mx-1 rounded-xs px-1 text-left hover:bg-hover hover:text-text',
+                  sort.startsWith('type') && 'text-text',
+                )}
+              >
+                T
+              </button>
+              <button
+                type="button"
+                onClick={() => onSort(nextSort(sort, 'key'))}
+                className={cn(
+                  '-mx-1 flex items-center gap-1 rounded-xs px-1 text-left hover:bg-hover hover:text-text',
+                  sort.startsWith('key') && 'text-text',
+                )}
+              >
+                Key
+                {sort.startsWith('key') ? (
+                  sort.endsWith(' desc') ? (
+                    <ArrowDown className="size-3" />
+                  ) : (
+                    <ArrowUp className="size-3" />
+                  )
+                ) : null}
+              </button>
+              <span>Title</span>
+            </div>
             {columns.map(headerCell)}
           </div>
-        )}
+        </div>
+      )}
 
-        <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-          {virtualizer.getVirtualItems().map(virtualRow => {
-            const item = items[virtualRow.index]!;
-            const style = {
-              position: 'absolute' as const,
-              top: 0,
-              left: 0,
-              width: '100%',
-              transform: `translateY(${virtualRow.start - scrollMargin}px)`,
-            };
-            if (item.kind === 'group') {
+      <div
+        ref={outerRef}
+        data-table-scroll
+        onScroll={scrolls ? syncScroll : undefined}
+        className={cn(scrolls && 'overflow-x-auto')}
+      >
+        <div style={scrolls ? { minWidth } : undefined}>
+          <div ref={listRef} style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+            {virtualizer.getVirtualItems().map(virtualRow => {
+              const item = items[virtualRow.index]!;
+              const style = {
+                position: 'absolute' as const,
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start - scrollMargin}px)`,
+              };
+              if (item.kind === 'group') {
+                return (
+                  <GroupHeader
+                    key={virtualRow.key}
+                    style={style}
+                    group={item.group}
+                    groupBy={groupBy!}
+                    category={item.category}
+                    loaded={item.rows.length}
+                    collapsed={item.collapsed}
+                    onToggle={() => setToggled(t => ({ ...t, [groupKey(item.group.value)]: !item.collapsed }))}
+                  />
+                );
+              }
               return (
-                <GroupHeader
+                <IssueRow
                   key={virtualRow.key}
                   style={style}
-                  group={item.group}
-                  groupBy={groupBy!}
-                  category={item.category}
-                  loaded={item.rows.length}
-                  collapsed={item.collapsed}
-                  onToggle={() => setToggled(t => ({ ...t, [groupKey(item.group.value)]: !item.collapsed }))}
+                  issue={item.issue}
+                  columns={columns}
+                  template={template}
+                  selected={selection.has(item.issue.key)}
+                  selecting={selection.size > 0}
+                  onSelect={select}
+                  canEdit={canEdit(item.issue.project.key)}
+                  onUpdate={onUpdate}
+                  today={today}
+                  timeZone={timeZone}
+                  phone={phone}
                 />
               );
-            }
-            return (
-              <IssueRow
-                key={virtualRow.key}
-                style={style}
-                issue={item.issue}
-                columns={columns}
-                template={template}
-                selected={selection.has(item.issue.key)}
-                selecting={selection.size > 0}
-                onSelect={select}
-                canEdit={canEdit(item.issue.project.key)}
-                onUpdate={onUpdate}
-                today={today}
-                timeZone={timeZone}
-                phone={phone}
-              />
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
 
-      <p className="flex items-center justify-center gap-2 py-5 text-center text-xs text-text-muted">
-        Showing {rows.length} of {total}
-        {hasMore ? (
-          <>
-            <span>·</span>
-            <Button
-              variant="link"
-              size="xs"
-              className="h-auto p-0 text-xs text-text-secondary"
-              onClick={onLoadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </Button>
-          </>
-        ) : null}
-      </p>
+      {scrolls && edges.right ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 right-0 bottom-0 z-20 w-6 bg-linear-to-r from-transparent to-surface"
+        />
+      ) : null}
+
+      {hasMore ? (
+        <LoadMore
+          className="justify-center py-4"
+          pending={loadingMore}
+          onClick={onLoadMore}
+          progress={`Showing ${rows.length} of ${total}`}
+        />
+      ) : null}
     </div>
   );
 }
 
-export function IssueTableSkeleton({ columns, rows = 12 }: { columns: readonly ColumnDef[]; rows?: number }) {
-  const template = gridTemplate(columns);
+/** A header click cycles ascending, descending, then off. */
+const nextSort = (sort: string, key: string) =>
+  sort.startsWith(key) && !sort.endsWith(' desc') ? `${key} desc` : sort.startsWith(key) ? '' : `${key} asc`;
+
+const PHONE_TEMPLATE = 'minmax(64px,auto) minmax(0,1fr) 7rem';
+
+/** Shaped like the table it stands in for: header, a group band per run of rows, cells aligned as the real ones. */
+export function IssueTableSkeleton({ columns, grouped }: { columns: readonly ColumnDef[]; grouped: boolean }) {
+  const phone = usePhone();
+  const template = phone ? PHONE_TEMPLATE : gridTemplate(columns);
+  const runs = grouped ? [5, 7] : [12];
   return (
     <div aria-hidden className="flex flex-col">
-      <div
-        style={{ gridTemplateColumns: template }}
-        className="grid h-row-dense items-center gap-2 border-b px-2 max-md:hidden"
-      >
-        <span />
-        <Skeleton className="h-2.5 w-3" />
-        <Skeleton className="h-2.5 w-3" />
-        <Skeleton className="h-2.5 w-8" />
-        <Skeleton className="h-2.5 w-10" />
-        {columns.map(c => (
-          <Skeleton key={c.id} className="h-2.5 w-12" />
-        ))}
-      </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <div
-          key={i}
-          style={{ gridTemplateColumns: template }}
-          className="grid h-row items-center gap-2 border-b border-border-subtle px-2 max-md:grid-cols-[64px_1fr_100px]"
-        >
-          <span className="max-md:hidden" />
-          <Skeleton className="size-badge-letter rounded-xs max-md:hidden" />
-          <Skeleton className="size-badge-letter rounded-xs max-md:hidden" />
-          <Skeleton className="h-3 w-14" />
-          <Skeleton className="h-3" style={{ width: `${40 + ((i * 23) % 50)}%` }} />
+      {phone ? null : (
+        <div style={{ gridTemplateColumns: template }} className="grid h-row-dense items-center gap-2 border-b px-2">
+          <span />
+          <Skeleton className="h-2.5 w-2" />
+          <Skeleton className="h-2.5 w-2" />
+          <Skeleton className="h-2.5 w-6" />
+          <Skeleton className="h-2.5 w-8" />
           {columns.map(c => (
-            <Skeleton key={c.id} className={cn('h-3 w-16', c.id !== 'status' && 'max-md:hidden')} />
+            <span key={c.id} className={cn('flex', c.align === 'right' && 'justify-end')}>
+              <Skeleton className="h-2.5 w-10" />
+            </span>
           ))}
+        </div>
+      )}
+      {runs.map((count, run) => (
+        <div key={run}>
+          {grouped ? (
+            <div className="pt-3">
+              <div className="flex h-8 items-center gap-2 rounded-sm bg-app px-2">
+                <Skeleton className="size-3 rounded-full" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ) : null}
+          {Array.from({ length: count }, (_, row) => {
+            const i = run * 5 + row;
+            return (
+              <div
+                key={i}
+                style={{ gridTemplateColumns: template }}
+                className="grid h-row items-center gap-2 border-b border-border-subtle px-2 max-md:px-1"
+              >
+                {phone ? null : (
+                  <>
+                    <span />
+                    <Skeleton className="size-badge-letter rounded-xs" />
+                    <Skeleton className="size-badge-letter rounded-xs" />
+                  </>
+                )}
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3" style={{ width: `${40 + ((i * 23) % 50)}%` }} />
+                {phone ? (
+                  <StatusSkeleton />
+                ) : (
+                  columns.map(c => (
+                    <span key={c.id} className={cn('flex min-w-0', c.align === 'right' && 'justify-end')}>
+                      {c.id === 'status' ? <StatusSkeleton /> : <Skeleton className="h-3 w-16" />}
+                    </span>
+                  ))
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
     </div>
+  );
+}
+
+function StatusSkeleton() {
+  return (
+    <span className="flex items-center gap-2">
+      <Skeleton className="size-2 rounded-full" />
+      <Skeleton className="h-3 w-16" />
+    </span>
   );
 }

@@ -7,16 +7,19 @@ import { toast } from 'sonner';
 import type { NotificationFacets } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { EmptyState } from '@components/empty-state';
-import { FormAlert } from '@components/auth/form-alert';
+import { LoadError, errorDetail } from '@components/query-state';
 import { PageHeader } from '@components/page-header';
 import { ReportMultiPicker, ReportPicker, type ReportOption } from '@components/reports/report-picker';
-import { InboxEntry, InboxEntrySkeletons } from '@components/notifications/inbox-entry';
+import { InboxEntry, InboxEntrySkeletons, subjectName, type EntryTarget } from '@components/notifications/inbox-entry';
 import { entryId, useInbox, useMarkRead, useNotificationFacets, useUnreadCount } from '@hooks/use-notifications';
 import type { InboxFilter } from '@lib/api/notifications';
 import { ProjectMark } from '@components/projects/project-mark';
 import { useOrganizations } from '@hooks/use-organizations';
-import { isApiError } from '@lib/api/errors';
 import { AREA_LABELS, KIND_FILTERS, kindsOf, parseKindFilters } from '@lib/notifications/kinds';
+import { toastError } from '@components/toast-error';
+import { plural } from '@lib/numbers';
+import { LoadMore } from '@components/text-button';
+import { cn } from '@lib/utils';
 
 interface InboxState {
   kinds: string[];
@@ -74,10 +77,28 @@ export function InboxPage() {
   const nothingUnreadHere = narrowed
     ? inbox.isSuccess && !inbox.hasNextPage && entries.every(e => e.unread_count === 0)
     : unreadTotal === 0;
+  const emptyInbox = !filtered && inbox.isSuccess && entries.length === 0;
 
-  const onMark = (target: Parameters<typeof mark.mutate>[0]) =>
+  const unreadMeta = () => {
+    if (!unread.data || inbox.isError || emptyInbox) return undefined;
+    if (unreadTotal === 0) return 'Nothing unread';
+    if (!narrowed)
+      return severalOrgs
+        ? `${unreadTotal} unread across ${organizations.length} organisations`
+        : `${unreadTotal} unread`;
+    const orgOnly = state.org !== null && state.project === null && state.kinds.length === 0;
+    const matching = orgOnly
+      ? (unread.data.organizations.find(o => o.slug === state.org)?.count ?? 0)
+      : inbox.isSuccess && !inbox.hasNextPage
+        ? entries.filter(e => e.unread_count > 0).length
+        : null;
+    return matching === null ? undefined : `${matching} of ${unreadTotal} unread`;
+  };
+
+  const onMark = (target: EntryTarget) =>
     mark.mutate(target, {
-      onError: error => toast.error(isApiError(error) ? error.message : 'That could not be marked read. Try again.'),
+      onError: error =>
+        toastError(`Could not mark ${subjectName(target.group)} read`, error, { retry: () => onMark(target) }),
     });
 
   const markAll = () =>
@@ -86,11 +107,9 @@ export function InboxPage() {
       {
         onSuccess: result =>
           toast.success(
-            result.marked === 0
-              ? 'Nothing was unread.'
-              : `Marked ${result.marked} ${result.marked === 1 ? 'notification' : 'notifications'} read.`,
+            result.marked === 0 ? 'Nothing was unread.' : `Marked ${plural(result.marked, 'notification')} read.`,
           ),
-        onError: error => toast.error(isApiError(error) ? error.message : 'Nothing was marked read. Try again.'),
+        onError: error => toastError('Could not mark everything read', error, { retry: markAll }),
       },
     );
 
@@ -98,68 +117,75 @@ export function InboxPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Inbox"
-        meta={unread.data ? (unreadTotal === 0 ? 'Nothing unread' : `${unreadTotal} unread`) : undefined}
+        meta={unreadMeta()}
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={nothingUnreadHere || mark.isPending}
-            onClick={markAll}
-            title={narrowed ? 'Marks everything that matches the filters' : undefined}
-          >
-            {narrowed ? 'Mark all matching read' : 'Mark all read'}
-          </Button>
+          emptyInbox ? undefined : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={nothingUnreadHere || inbox.isError || mark.isPending}
+              onClick={markAll}
+              title={narrowed ? 'Marks everything that matches the filters' : undefined}
+            >
+              {/* Both labels share one cell, so the button keeps its width when a filter changes it. */}
+              <span className="grid justify-items-center">
+                <span className="col-start-1 row-start-1">{narrowed ? 'Mark matching read' : 'Mark all read'}</span>
+                <span aria-hidden className="invisible col-start-1 row-start-1">
+                  {narrowed ? 'Mark all read' : 'Mark matching read'}
+                </span>
+              </span>
+            </Button>
+          )
         }
       />
 
-      <InboxFilters state={state} set={set} facets={facets.data} loading={facets.isPending} severalOrgs={severalOrgs} />
+      {emptyInbox ? null : (
+        <InboxFilters
+          state={state}
+          set={set}
+          facets={facets.data}
+          loading={facets.isPending}
+          severalOrgs={severalOrgs}
+        />
+      )}
 
       {inbox.isPending ? (
         <InboxEntrySkeletons />
       ) : inbox.isError ? (
-        <FormAlert title="Your inbox could not be loaded.">
-          {isApiError(inbox.error) ? `${inbox.error.message} ` : 'The server did not answer. '}
-          Nothing was marked read.{' '}
-          <button type="button" className="font-medium underline" onClick={() => void inbox.refetch()}>
-            Try again
-          </button>
-        </FormAlert>
+        <LoadError onRetry={() => void inbox.refetch()} detail={errorDetail(inbox.error)}>
+          Your inbox could not be loaded.
+        </LoadError>
       ) : entries.length === 0 ? (
         filtered ? (
           <FilteredEmpty state={state} set={set} facets={facets.data} severalOrgs={severalOrgs} />
         ) : (
           <EmptyState
             title="Nothing in your inbox."
-            description="You hear here when someone assigns you an issue, mentions you, or comments on an issue you watch. A change arrives ten minutes after it is made."
+            description="Assignments, mentions, comments, sprints and articles that concern you arrive here. Changes to issues wait ten minutes first, in case they are undone."
             action={
               <Button asChild variant="outline" size="sm">
-                <Link href={'/settings?tab=notifications' as Route}>Choose what you get by email</Link>
+                <Link href={'/settings?tab=notifications' as Route}>Notification settings</Link>
               </Button>
             }
           />
         )
       ) : (
-        <>
-          {!filtered && unreadTotal === 0 ? (
-            <p className="text-sm text-text-secondary">You are up to date: everything here has been read.</p>
-          ) : null}
+        <div>
           <ul className="flex flex-col border-t">
             {entries.map(group => (
               <InboxEntry key={entryId(group)} group={group} showOrganization={severalOrgs} onMark={onMark} />
             ))}
           </ul>
+          {inbox.isFetchingNextPage ? <InboxEntrySkeletons rows={3} more /> : null}
           {inbox.hasNextPage ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              disabled={inbox.isFetchingNextPage}
+            <LoadMore
+              pending={inbox.isFetchingNextPage}
+              pendingLabel="Load more"
               onClick={() => void inbox.fetchNextPage()}
-            >
-              {inbox.isFetchingNextPage ? 'Loading…' : 'Load more'}
-            </Button>
+              className="mt-4"
+            />
           ) : null}
-        </>
+        </div>
       )}
     </div>
   );
@@ -190,36 +216,39 @@ function InboxFilters({
   }));
   const projects = (facets?.projects ?? []).filter(p => !state.org || p.organization.slug === state.org);
   const projectOptions: ReportOption[] = [
-    { value: '', label: 'All projects' },
+    { value: '', label: 'All' },
     ...projects.map(p => ({
       value: projectValue(p.organization.slug, p.key),
-      label: `${p.name} (${p.key})`,
+      label: p.name,
+      hint: p.key,
       group: severalOrgs ? p.organization.name : undefined,
       mark: <ProjectMark project={p} size="xs" />,
     })),
   ];
   const chosenProject = state.project && state.org ? projectValue(state.org, state.project) : '';
   const orgOptions: ReportOption[] = [
-    { value: '', label: 'All organisations' },
+    { value: '', label: 'All' },
     ...(facets?.organizations ?? []).map(o => ({ value: o.slug, label: o.name })),
   ];
 
+  // A chosen project or organisation reads its slug until the facets name it; the longer name can wrap the row.
+  const naming = loading && (state.project !== null || state.org !== null);
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <ReportMultiPicker
-        label="Kind"
-        values={state.kinds}
-        options={kindOptions}
-        onChange={kinds => set({ kinds })}
-        none="All"
-        many={n => `${n} kinds`}
-        clearLabel="Every kind"
-      />
+    <div className={cn('flex flex-wrap items-center gap-2', naming && 'invisible')}>
+      {severalOrgs ? (
+        <ReportPicker
+          label="Organisation"
+          value={state.org ?? ''}
+          options={orgOptions}
+          fallback={state.org ?? 'All'}
+          onChange={value => set({ org: value || null, project: value && value === state.org ? state.project : null })}
+        />
+      ) : null}
       <ReportPicker
         label="Project"
         value={chosenProject}
         options={projectOptions}
-        fallback={state.project ?? 'All projects'}
+        fallback={state.project ?? 'All'}
         loading={loading}
         searchable={projects.length > 8}
         width="w-72"
@@ -229,15 +258,15 @@ function InboxFilters({
           set({ org, project: key });
         }}
       />
-      {severalOrgs ? (
-        <ReportPicker
-          label="Organisation"
-          value={state.org ?? ''}
-          options={orgOptions}
-          fallback={state.org ?? 'All organisations'}
-          onChange={value => set({ org: value || null, project: value && value === state.org ? state.project : null })}
-        />
-      ) : null}
+      <ReportMultiPicker
+        label="Kind"
+        values={state.kinds}
+        options={kindOptions}
+        onChange={kinds => set({ kinds })}
+        none="All"
+        many={n => `${n} kinds`}
+        clearLabel="All"
+      />
       <ReportPicker
         label="Show"
         value={state.unread ? 'unread' : 'all'}
@@ -249,14 +278,14 @@ function InboxFilters({
         onChange={value => set({ unread: value === 'unread' })}
       />
       {state.kinds.length || state.project || state.org || state.unread ? (
-        <Button
-          variant="ghost"
-          size="xs"
-          className="text-text-secondary"
+        // A plain button: the phone rule that lifts every Button to 44 px would leave it taller than the pickers.
+        <button
+          type="button"
+          className="inline-flex h-6 items-center rounded-md px-2 text-xs text-text-secondary hover:bg-hover hover:text-text"
           onClick={() => set({ kinds: [], project: null, org: null, unread: false })}
         >
           Clear filters
-        </Button>
+        </button>
       ) : null}
     </div>
   );
@@ -298,12 +327,12 @@ function FilteredEmpty({
   return (
     <EmptyState
       title={title}
-      description="Widen the filters, or clear them to see the whole inbox."
+      description="Drop a filter to see more."
       action={
         <div className="flex flex-wrap gap-2">
-          {state.kinds.length ? (
-            <Button variant="outline" size="sm" onClick={() => set({ kinds: [] })}>
-              Every kind
+          {state.org && !state.project ? (
+            <Button variant="outline" size="sm" onClick={() => set({ org: null })}>
+              All organisations
             </Button>
           ) : null}
           {state.project ? (
@@ -312,11 +341,12 @@ function FilteredEmpty({
               size="sm"
               onClick={() => set({ project: null, org: severalOrgs ? state.org : null })}
             >
-              Every project
+              All projects
             </Button>
-          ) : state.org ? (
-            <Button variant="outline" size="sm" onClick={() => set({ org: null })}>
-              Every organisation
+          ) : null}
+          {state.kinds.length ? (
+            <Button variant="outline" size="sm" onClick={() => set({ kinds: [] })}>
+              All kinds
             </Button>
           ) : null}
           {state.unread ? (
@@ -324,9 +354,6 @@ function FilteredEmpty({
               Include read
             </Button>
           ) : null}
-          <Button variant="ghost" size="sm" onClick={() => set({ kinds: [], project: null, org: null, unread: false })}>
-            Clear filters
-          </Button>
         </div>
       }
     />

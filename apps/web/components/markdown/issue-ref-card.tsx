@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import type { IssueRef } from '@nothingleft/types';
-import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { IssueKey } from '@components/issue-key';
 import { StatusDot, TypeBadge } from '@components/issues/value-marks';
 
@@ -11,7 +11,7 @@ const CLOSE_DELAY_MS = 150;
 
 interface Shown {
   ref: IssueRef;
-  rect: DOMRect;
+  link: HTMLAnchorElement;
 }
 
 /** Delegated from the rendered markdown: one card for every `PROJ-123` link in the text. */
@@ -29,7 +29,7 @@ export function useIssueRefCard(byKey: ReadonlyMap<string, IssueRef>) {
     const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-issue-key]');
     const ref = link ? byKey.get(link.dataset.issueKey ?? '') : undefined;
     if (!link || !ref) return;
-    schedule(() => setShown({ ref, rect: link.getBoundingClientRect() }), OPEN_DELAY_MS);
+    schedule(() => setShown({ ref, link }), OPEN_DELAY_MS);
   };
   const onPointerOut = (event: SyntheticEvent) => {
     if ((event.target as HTMLElement).closest('a[data-issue-key]')) schedule(() => setShown(null), CLOSE_DELAY_MS);
@@ -47,14 +47,17 @@ export function useIssueRefCard(byKey: ReadonlyMap<string, IssueRef>) {
 
 export function IssueRefCard({ state }: { state: ReturnType<typeof useIssueRefCard> }) {
   const { shown } = state;
-  const rect = shown?.rect;
+  const link = shown?.link;
   return (
     <Popover open={shown !== null} onOpenChange={open => (open ? null : state.dismiss())}>
-      <PopoverAnchor virtualRef={{ current: { getBoundingClientRect: () => rect ?? new DOMRect() } }} />
+      <PopoverAnchor
+        virtualRef={{ current: { getBoundingClientRect: () => link?.getBoundingClientRect() ?? new DOMRect() } }}
+      />
       {shown ? (
         <PopoverContent
-          side="top"
+          side="bottom"
           align="start"
+          sideOffset={8}
           className="w-80 p-3"
           onOpenAutoFocus={e => e.preventDefault()}
           onCloseAutoFocus={e => e.preventDefault()}

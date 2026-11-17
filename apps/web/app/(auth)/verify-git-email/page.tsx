@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: 'Verify a git email', robots: { index
 
 export default function Page() {
   return (
-    <AuthSplit>
+    <AuthSplit panel="none">
       <VerifyGitEmail />
     </AuthSplit>
   );

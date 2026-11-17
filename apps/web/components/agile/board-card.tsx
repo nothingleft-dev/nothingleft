@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
+import { useSchemaValues } from '@hooks/use-project-schema';
+import { useId, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { toast } from 'sonner';
-import { Check, ListChecks, Plus } from 'lucide-react';
+import { ListChecks, Plus } from 'lucide-react';
 import type {
   BoardCard as Card,
   BoardColumnField,
@@ -12,9 +13,10 @@ import type {
   TagRef,
 } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@components/ui/tooltip';
+import { CommandEmpty, CommandInput, CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { MonthGrid } from '@components/date-picker';
 import { IssueKey } from '@components/issue-key';
 import { DueDate } from '@components/issues/due-date';
@@ -31,6 +33,7 @@ import { DevelopmentIcon } from '@components/git/git-marks';
 import { cn } from '@lib/utils';
 import { personTitle } from '@components/former-member-chip';
 import { toastError } from '@components/toast-error';
+import { PendingButton } from '@components/pending-button';
 
 export function SubtaskProgress({ resolved, total }: { resolved: number; total: number }) {
   if (total === 0) return null;
@@ -81,6 +84,14 @@ const own = {
   onDoubleClick: (e: MouseEvent) => e.stopPropagation(),
 };
 
+// Colour marks a departure from the default (DESIGN § 1): only priorities above the project's default get the edge.
+function useRaisedPriority(projectKey: string, name: string) {
+  const priorities = useSchemaValues(projectKey, 'priorities').data;
+  const fallback = priorities?.find(p => p.is_default);
+  const own = priorities?.find(p => p.name === name);
+  return Boolean(own && fallback && own.position < fallback.position);
+}
+
 export function BoardCard({
   card,
   projectKey,
@@ -90,10 +101,13 @@ export function BoardCard({
   overlay = false,
 }: BoardCardProps) {
   const { shown, hidden } = visibleTags(card.tags);
+  const raised = useRaisedPriority(projectKey, card.priority.name);
   return (
     <article
       className={cn(
-        `l-${card.priority.color} flex flex-col gap-2 rounded-md border border-l-[3px] border-l-c-solid bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong hover:border-l-c-solid`,
+        `l-${card.priority.color} flex flex-col gap-2 rounded-md border bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong`,
+        // Drawn inside the 1 px border, so a raised card's text starts where every other card's does.
+        raised && 'border-l-c-solid shadow-[inset_2px_0_0_var(--c-solid)] hover:border-l-c-solid',
         dragging && 'opacity-40',
         overlay && 'rotate-1 shadow-lg',
       )}
@@ -102,7 +116,7 @@ export function BoardCard({
         <a href={`/issue/${card.key}`} target="_blank" rel="noopener" {...own} className="mr-1.5 hover:underline">
           <IssueKey issueKey={card.key} resolved={card.resolved} />
         </a>
-        <span className={cn(card.resolved && 'text-text-muted line-through')}>{card.title}</span>
+        <span className={cn('font-medium', card.resolved && 'text-text-muted line-through')}>{card.title}</span>
       </p>
 
       {shown.length > 0 ? (
@@ -126,12 +140,14 @@ export function BoardCard({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+      <div className="flex min-w-0 items-center gap-x-2.5 text-xs">
         <CardAssignees card={card} projectKey={projectKey} canEdit={canEdit && !overlay} />
         <ValueName value={card.priority} label="Priority" dim={card.resolved} />
         <ValueName value={card.type} label="Type" dim={card.resolved} />
+      </div>
+      <div className="flex h-5 items-center gap-2 text-xs">
         <CardDueDate card={card} today={today} canEdit={canEdit && !overlay} />
-        <span className="ml-auto flex items-center gap-2">
+        <span className="ml-auto flex flex-none items-center gap-2">
           {card.development ? <DevelopmentIcon rollup={card.development} /> : null}
           <SubtaskProgress resolved={card.subtasks.resolved} total={card.subtasks.total} />
           <StoryPoints points={card.story_points} />
@@ -153,9 +169,12 @@ export function ValueName({
   return (
     <span
       aria-label={`${label}: ${value.name}`}
-      className={cn('inline-flex min-w-0 items-center gap-1.5 text-text-secondary', dim && 'opacity-55')}
+      className={cn('inline-flex min-w-0 items-center gap-1.5', dim ? 'text-text-muted' : 'text-text-secondary')}
     >
-      <i aria-hidden className={`l-${value.color} inline-block size-2 flex-none rounded-full bg-c-solid`} />
+      <i
+        aria-hidden
+        className={cn(`l-${value.color} inline-block size-2 flex-none rounded-full bg-c-solid`, dim && 'opacity-55')}
+      />
       <span className="truncate">{value.name}</span>
     </span>
   );
@@ -170,6 +189,7 @@ function useMyUsername() {
 function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: string; canEdit: boolean }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>([]);
+  const [chosenAtOpen, setChosenAtOpen] = useState<string[]>([]);
   const people = useProjectAssignees(open ? projectKey : null);
   const me = useMyUsername();
   const patch = usePatchCard();
@@ -213,18 +233,22 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
         body: { assignees: usernames },
         apply: c => ({ ...c, assignees: usernames.map(u => known.find(p => p.username === u)!).filter(Boolean) }),
       },
-      { onError: e => toastError(e) },
+      { onError: e => toastError(`Could not change the assignees of ${card.key}`, e) },
     );
   };
 
-  const list = [...(people.data ?? [])].sort((a, b) => (a.username === me ? -1 : b.username === me ? 1 : 0));
+  // The people already on the card first, then me; fixed at open so rows do not jump while ticking.
+  const rank = (username: string) => (chosenAtOpen.includes(username) ? 0 : 2) + (username === me ? 0 : 1);
+  const list = [...(people.data ?? [])].sort((a, b) => rank(a.username) - rank(b.username));
 
   return (
     <Popover
       open={open}
       onOpenChange={next => {
-        if (next) setDraft(card.assignees.map(a => a.username));
-        else save(draft);
+        if (next) {
+          setDraft(card.assignees.map(a => a.username));
+          setChosenAtOpen(card.assignees.map(a => a.username));
+        } else save(draft);
         setOpen(next);
       }}
     >
@@ -239,12 +263,13 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-0" {...own}>
-        <Command>
+        <PickerCommand>
           <CommandInput placeholder="Search user" />
           <CommandList>
             {people.isPending ? <PickerSkeleton /> : <CommandEmpty>Nobody in this project matches.</CommandEmpty>}
             {people.isPending ? null : (
-              <CommandItem
+              <PickerItem
+                checked={draft.length === 0}
                 value="Unassigned"
                 onSelect={() => {
                   setDraft([]);
@@ -257,13 +282,13 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
                   className="inline-block size-5 rounded-full border border-dashed border-border-strong"
                 />
                 <span className="flex-1">Unassigned</span>
-                <Check className={cn('size-icon-sm', draft.length === 0 ? 'opacity-100' : 'opacity-0')} />
-              </CommandItem>
+              </PickerItem>
             )}
             {list.map(person => {
               const on = draft.includes(person.username);
               return (
-                <CommandItem
+                <PickerItem
+                  checked={on}
                   key={person.username}
                   value={`${person.name} ${person.username}`}
                   onSelect={() => setDraft(d => (on ? d.filter(u => u !== person.username) : [...d, person.username]))}
@@ -271,12 +296,11 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
                   <MemberAvatar member={person} className="size-5" />
                   <span className="min-w-0 flex-1 truncate">{person.username === me ? 'Me' : person.name}</span>
                   <span className="truncate text-xs text-text-muted">@{person.username}</span>
-                  <Check className={cn('size-icon-sm', on ? 'opacity-100' : 'opacity-0')} />
-                </CommandItem>
+                </PickerItem>
               );
             })}
           </CommandList>
-        </Command>
+        </PickerCommand>
       </PopoverContent>
     </Popover>
   );
@@ -298,7 +322,7 @@ function CardDueDate({ card, today, canEdit }: { card: Card; today: string; canE
     if (value === card.due_date) return;
     patch.mutate(
       { key: card.key, body: { due_date: value }, apply: c => ({ ...c, due_date: value }) },
-      { onError: e => toastError(e) },
+      { onError: e => toastError(`Could not change the due date of ${card.key}`, e) },
     );
   };
 
@@ -361,13 +385,14 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const create = useCreateIssue();
+  const hintId = useId();
 
   if (!open) {
     return (
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-start text-text-secondary opacity-0 group-hover/cell:opacity-100 focus-visible:opacity-100"
+        className="-mt-1 h-7 w-full justify-start text-text-secondary reveal group-hover/cell:opacity-100"
         onClick={() => setOpen(true)}
       >
         <Plus />
@@ -389,7 +414,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
           setTitle('');
           toast.success(`Created ${issue.key}.`);
         },
-        onError: error => toastError(error),
+        onError: error => toastError('Could not create the issue', error),
       },
     );
   };
@@ -397,7 +422,7 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
   return (
     <form
       noValidate
-      className="flex flex-col gap-2 rounded-md border border-border-strong bg-surface p-2"
+      className="flex flex-col gap-2 rounded-md border border-border-strong bg-surface p-2 focus-within:shadow-(--focus-ring)"
       onSubmit={e => {
         e.preventDefault();
         submit();
@@ -415,14 +440,24 @@ export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField 
           }
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Title, then ↵"
+        placeholder="Issue title"
         aria-label="New card title"
-        className="w-full resize-none bg-transparent text-sm text-text placeholder:text-text-muted"
+        aria-describedby={hintId}
+        className="w-full resize-none bg-transparent px-1 py-0.5 text-sm leading-5 text-text placeholder:text-text-muted focus-visible:shadow-none"
       />
+      <p id={hintId} className="-mt-1 px-1 text-2xs text-text-muted">
+        Enter to create · Esc to cancel
+      </p>
       <div className="flex gap-1">
-        <Button type="submit" size="sm" disabled={create.isPending || title.trim() === ''}>
-          {create.isPending ? 'Creating…' : 'Create'}
-        </Button>
+        <PendingButton
+          type="submit"
+          size="sm"
+          disabled={title.trim() === ''}
+          pending={create.isPending}
+          pendingLabel="Creating…"
+        >
+          Create
+        </PendingButton>
         <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
           Cancel
         </Button>

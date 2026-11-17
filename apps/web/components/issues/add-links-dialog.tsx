@@ -1,18 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { Check, CircleAlert, X } from 'lucide-react';
 import { ISSUE_LINK_NAME_VALUES, type IssueLinkName, type IssueRef } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@components/ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { FormAlert } from '@components/auth/form-alert';
 import { ChoiceSelect, type ChoiceOption } from '@components/choice-select';
 import { IssueKey } from '@components/issue-key';
@@ -22,6 +15,8 @@ import { useDebounced } from '@hooks/use-debounced';
 import { useAddIssueLinks } from '@hooks/use-issue-links';
 import { useIssueRefSearch } from '@hooks/use-issues';
 import { isApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
+import { cn } from '@lib/utils';
 
 const HINTS: Record<IssueLinkName, string> = {
   'relates to': 'Connected, with no order between them.',
@@ -93,8 +88,6 @@ function AddLinksForm({
         </DialogDescription>
       </DialogHeader>
 
-      {error ? <FormAlert title={error} /> : null}
-
       <ChoiceSelect
         label="Link"
         value={link}
@@ -107,13 +100,15 @@ function AddLinksForm({
       />
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-text-secondary">Issues</span>
+        <span className="text-sm font-medium text-text-secondary">
+          Issues <span className="font-normal text-text-muted">· pick one or more</span>
+        </span>
         {chosen.length > 0 ? (
           <ul className="flex flex-col divide-y divide-border-subtle rounded-md border">
             {chosen.map(issue => (
-              <li key={issue.key} className="flex h-row items-center gap-2 pr-1 pl-2.5 text-sm">
+              <li key={issue.key} className="flex h-row items-center gap-2 pr-1 pl-2 text-sm">
                 <TypeBadge type={issue.type} />
-                <IssueKey issueKey={issue.key} resolved={issue.resolved} />
+                <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
                 <span className="min-w-0 flex-1 truncate">{issue.title}</span>
                 <Button
                   type="button"
@@ -133,21 +128,24 @@ function AddLinksForm({
         ) : null}
         <LinkTargetSearch
           projectKey={projectKey}
-          exclude={[issueKey, ...chosen.map(i => i.key)]}
+          exclude={[issueKey]}
+          chosen={chosen.map(i => i.key)}
           onPick={issue => {
-            setChosen(c => [...c, issue]);
+            setChosen(c => (c.some(i => i.key === issue.key) ? c.filter(i => i.key !== issue.key) : [...c, issue]));
             add.reset();
           }}
         />
       </div>
 
+      {error ? <FormAlert title={error} /> : null}
+
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={chosen.length === 0 || add.isPending}>
-          {add.isPending ? 'Adding…' : chosen.length > 1 ? `Add ${chosen.length} links` : 'Add link'}
-        </Button>
+        <PendingButton type="submit" disabled={chosen.length === 0} pending={add.isPending} pendingLabel="Adding…">
+          {chosen.length === 1 ? 'Add link' : chosen.length > 1 ? `Add ${chosen.length} links` : 'Add links'}
+        </PendingButton>
       </DialogFooter>
     </form>
   );
@@ -155,12 +153,14 @@ function AddLinksForm({
 
 interface LinkTargetSearchProps {
   projectKey: string | null;
-  /** Keys never offered: the issue itself and those already chosen. */
+  /** Keys never offered, such as the issue itself. */
   exclude: readonly string[];
+  /** Makes the list a multi-select: rows stay after a pick, ticked, and picking one again unpicks it. */
+  chosen?: readonly string[];
   onPick: (issue: IssueRef) => void;
 }
 
-export function LinkTargetSearch({ projectKey, exclude, onPick }: LinkTargetSearchProps) {
+export function LinkTargetSearch({ projectKey, exclude, chosen, onPick }: LinkTargetSearchProps) {
   const [search, setSearch] = useState('');
   const debounced = useDebounced(search.trim(), 200);
   const results = useIssueRefSearch(debounced, projectKey);
@@ -173,30 +173,47 @@ export function LinkTargetSearch({ projectKey, exclude, onPick }: LinkTargetSear
         {results.isPending ? (
           <PickerSkeleton rows={4} />
         ) : results.isError ? (
-          <div role="alert" className="flex items-center justify-between gap-2 px-3 py-4 text-sm text-text-secondary">
-            The search could not run.
+          <div role="alert" className="flex items-center gap-2 px-3 py-3 text-sm">
+            <CircleAlert aria-hidden className="size-icon-sm flex-none text-danger-fg" />
+            <span className="flex-1 text-text-secondary">The search could not run.</span>
             <Button type="button" variant="outline" size="sm" onClick={() => void results.refetch()}>
               Try again
             </Button>
           </div>
         ) : (
-          <CommandEmpty>No issue matches.</CommandEmpty>
+          <CommandEmpty className="px-3 py-3 text-sm text-text-secondary">No issue matches.</CommandEmpty>
         )}
         {options.map(issue => (
           <CommandItem
             key={issue.key}
             value={issue.key}
+            data-checked={chosen ? chosen.includes(issue.key) : undefined}
             onSelect={() => {
               onPick(issue);
-              setSearch('');
+              if (!chosen) setSearch('');
             }}
           >
             <TypeBadge type={issue.type} />
-            <IssueKey issueKey={issue.key} resolved={issue.resolved} className="flex-none" />
+            <IssueKey issueKey={issue.key} resolved={issue.resolved} column />
             <span className="min-w-0 flex-1 truncate">{issue.title}</span>
+            {chosen ? <Tick checked={chosen.includes(issue.key)} /> : null}
           </CommandItem>
         ))}
       </CommandList>
     </Command>
+  );
+}
+
+function Tick({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'grid size-4 flex-none place-items-center rounded-[4px] border border-border-strong',
+        checked && 'border-text bg-text',
+      )}
+    >
+      {checked ? <Check className="size-3 text-surface" strokeWidth={3} /> : null}
+    </span>
   );
 }

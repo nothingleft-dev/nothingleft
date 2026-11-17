@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import type { GitAuthor, GitProviderKind } from '@nothingleft/types';
 import { useClaimGitIdentity } from '@hooks/use-git';
@@ -9,6 +8,8 @@ import { useOrganization } from '@hooks/use-organizations';
 import { useSession } from '@hooks/use-session';
 import { providerLabel } from '@lib/git/words';
 import { toastError } from '@components/toast-error';
+import { TextButton } from '@components/text-button';
+import { cn } from '@lib/utils';
 
 const DISMISSED_KEY = 'nothingleft:git-this-is-me-dismissed';
 
@@ -51,10 +52,12 @@ export function ThisIsMe({
   author,
   provider,
   repositoryUrl,
+  className,
 }: {
   author: GitAuthor;
   provider: GitProviderKind;
   repositoryUrl: string;
+  className?: string;
 }) {
   const session = useSession();
   const user = session.status === 'signed-in' ? session.user : null;
@@ -73,37 +76,42 @@ export function ThisIsMe({
   if (author.member || !plausible || hidden) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-sm bg-inset pr-0.5 pl-1.5 text-2xs text-text-secondary">
-      <button
-        type="button"
-        className="font-medium text-text hover:underline"
-        disabled={claim.isPending}
-        onClick={() =>
-          claim.mutate(
-            { provider, login: login!, ...(baseUrl ? { base_url: baseUrl } : {}) },
-            {
-              onSuccess: () => {
-                toast.success(`@${login} on ${providerLabel(provider)} is now yours. Its work shows under your name.`);
-                setHidden(true);
+    <p className={cn('flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary', className)}>
+      <span>
+        Is <span className="font-medium text-text">@{login}</span> on {providerLabel(provider)} you?
+      </span>
+      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+        <TextButton
+          disabled={claim.isPending}
+          onClick={() =>
+            claim.mutate(
+              { provider, login: login!, ...(baseUrl ? { base_url: baseUrl } : {}) },
+              {
+                onSuccess: () => {
+                  toast.success(
+                    `@${login} on ${providerLabel(provider)} is now yours. Its work shows under your name.`,
+                  );
+                  setHidden(true);
+                },
+                onError: error => toastError(`Could not claim @${login}`, error),
               },
-              onError: error => toastError(error),
-            },
-          )
-        }
-      >
-        This is me
-      </button>
-      <button
-        type="button"
-        aria-label="Not me"
-        className="grid size-4 place-items-center rounded-xs text-text-muted hover:bg-hover hover:text-text"
-        onClick={() => {
-          dismiss(id);
-          setHidden(true);
-        }}
-      >
-        <X className="size-3" />
-      </button>
-    </span>
+            )
+          }
+        >
+          This is me
+        </TextButton>
+        <span aria-hidden className="text-text-muted">
+          ·
+        </span>
+        <TextButton
+          onClick={() => {
+            dismiss(id);
+            setHidden(true);
+          }}
+        >
+          Not me
+        </TextButton>
+      </span>
+    </p>
   );
 }

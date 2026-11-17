@@ -408,7 +408,7 @@ always a text token. Bars are at most 20 px with a 4 px rounded end; tooltips le
   then *committed at the start* and the days left, finished, or how long ago it passed its end
   date. Remaining (`--chart-1`, 2.5 px, dots, the live day hollow, its latest figure labelled),
   Scope (`--chart-2`, 1.5 px, stepped) and Ideal (`--chart-ideal`, 2 px, dashed);
-  non-working days `--chart-off-day`, days still to come `--chart-future`, both quieter than
+  non-working days `--chart-off-day`, quieter than
   the lines; a dotted *Today* rule on the live day (the snapshots' own day, which the viewer's
   calendar can be one off); gaps where a day has no figure; and a *Daily figures* table on
   request, whose scope change and completed are to date. Duration ticks are round in the unit

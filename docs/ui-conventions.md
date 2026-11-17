@@ -97,9 +97,15 @@ MCP, so a human and an agent describe the field identically.
 | Start Date | `No start date` |
 | Estimation | `?` |
 | Spent time | `?` (owner, 25 Sep 2026: the same as Estimation) |
-| Story points | `Not estimated` |
+| Story points | `?` (like Estimation: every empty estimate reads the same) |
 | Sprint | `Unscheduled` |
-| Custom field | per-field `empty_label`, defaulting to `No <field name>` |
+| Custom field | per-field `empty_label`, defaulting to `No <field name>` (see below) |
+
+A custom field or work item attribute with no empty label of its own shows `No` plus its name
+lower-cased inside the sentence: `No severity`, `No vendor reference`; an acronym keeps its
+capitals (`No SLA tier`). One helper renders it for the API, the MCP, search and the web
+(`emptyLabel` in `@nothingleft/format`). Search matches it in any case, so `{No Severity}` in
+an old saved view still means empty.
 
 These are the labels of the issue page sidebar, where the field name sits above the
 value. In the create dialog's chip row, where it does not, an unset estimate reads
@@ -115,7 +121,8 @@ Layout follows the reference screenshots.
 **Header:** breadcrumb `Projects / <Project> / Issues / PROJ-123` with a
 copy-key button. Below it, provenance: *"Created by X about 2 months ago ·
 Updated by Y 12 days ago"*. Right side: star (favourite, implies watch) and
-vote with count.
+vote with count. A reader who cannot edit sees one line under Activity saying so and who can give
+edit access.
 
 **Title row:** title, then inline actions — edit, tag, link, and an overflow
 menu (move, clone, delete, copy link, watch). For someone who may edit it, the title wears the
@@ -147,7 +154,7 @@ render struck through**, so a list of subtasks communicates progress at a
 glance. Beside `Add links` sits `Create subtask`. The star toggles in place; a
 row's `×` (hover, editors only) removes that link without asking, since it is
 one click to add back. `Add links` is a dialog: the link name as a choice with a
-one-line meaning under it, then any number of issues found by key or title; a
+one-line meaning under it, then any number of issues found by key or title; each result has a tick box, a picked issue stays ticked in the list, and picking it again unpicks it; a
 refusal (a `depends on` cycle, a second parent) is shown inside the dialog and
 nothing is linked. With no links, the section says so and offers `Add links`; a
 reader who cannot edit sees no section at all.
@@ -160,10 +167,12 @@ them. `Attach files` action. As built in 1f (owner decisions, 25 Sep 2026):
   listed, M the ones hidden because the description or a live comment already shows
   them (the API's `inline`); *Show* / *Hide* toggles them into the list. There is
   no overflow menu — nothing needs it yet.
+- At 100 % of the storage quota *Attach files* and the editor's attach tool are disabled, with the
+  reason in their tooltip.
 - **No files, no section**, for everyone. *Attach files* is then the paperclip among the
   title-row actions (edit, tag, link), which is always there for someone who may upload.
   The section appears as soon as an upload starts, so its progress has somewhere to show.
-- **Tiles.** Images (PNG, JPEG, GIF, WebP, AVIF) as 192 px thumbnails with name and size
+- **Tiles.** Images (PNG, JPEG, GIF, WebP, AVIF) as thumbnails on a grid that fills the column (about 170–220 px wide) with name and size
   under them; every other file, SVG included, as a download tile — a neutral type square
   (`PDF`, `CSV`), the name and the size. A PDF opens in a new tab; the rest download. The
   tooltip says who attached it, where (*on a comment*, *on spent time*) and when.
@@ -216,7 +225,7 @@ save read as one entry rather than a stream of one-liners:
 ```
 Alex Lee · Updated 3 months ago
     Estimation:    ? → 4h
-    Story points:  Not estimated → 5
+    Story points:  ? → 5
     Priority:      Normal → Major
 ```
 
@@ -243,7 +252,7 @@ Assignees show avatars; Priority and Type show their coloured letter badge
 alongside the name. Tags are not in the sidebar — they sit under the title.
 
 Empty values render as their configured label in the same muted style as a
-real value, never as a blank: `No due date`, `Not estimated`, `?` for an
+real value, never as a blank: `No due date`, `Unassigned`, `?` for an
 unset duration.
 
 **Deleting an issue** asks first — *Delete PP-123?*, naming the issue and stating that it
@@ -273,24 +282,32 @@ Opened with `c` or *Create issue* in the top bar (decided 24 Sep 2026):
   a row until the issue is created. The quick dialog leaves links to the issue page
   (owner, 24 Sep 2026). Tags and links are sent with the create request, so a refused
   link creates nothing.
-- One row of compact chips — Type, Priority, Status, Assignees, Estimation, Start date,
-  Due date, Sprint, Story points — each showing the project default or the empty label until
-  changed. Sprint defaults to the project's running sprint (owner, 3 Nov 2026), so new work
+- Compact chips in two fixed rows — Type, Priority, Status, Assignees; then Estimation, Start
+  date, Due date, Sprint, Story points — and the type's custom fields under a *Custom fields*
+  label. Each shows the project default or its field name until changed; a field with nothing
+  set is a dashed chip with `+`. Sprint defaults to the project's running sprint (owner, 3 Nov 2026), so new work
   lands on the board; choosing *Unscheduled* sends it to the backlog instead. With no sprint
   running it starts unscheduled. The API keeps no default: a create without `sprint` stays
   unscheduled.
 - An expand button opens the same draft at `/new-issue`, a full page with the text on
-  the left and the issue page's field column on the right.
+  the left and the issue page's field column on the right. Below 1100 px Cancel and Create
+  issue stay pinned to the bottom of the window.
+- Create issue stays disabled until the title has text, and says so in its tooltip. A create
+  that fails on our side says so above the footer and keeps the draft; the button is the retry.
 - `⌘/Ctrl + Enter` creates. A toast names the new key with an *Open* action; *Create
   more* keeps the dialog open for the next one.
 
 ## Project value lists
 
-Statuses, priorities, types and work types share one list: drag the grip or press
+Statuses, priorities, types and work types share one list. Archived values go last, without a drag
+handle, dimmed, with the Archived chip in the chip column; every value row's actions are in its ⋯ menu;
+lists with more than one column carry a header row. Drag the grip or press
 `Alt + ↑/↓` to reorder, click the name to rename, click the badge for colour and
 letter, and the row menu for *Make default*, *Archive* and *Delete*. Deleting a value
 issues still use asks where to move them, offering only the values that can receive
-them.
+them. Renaming a value to a name already in use keeps the editor open with the reason under
+it. Anyone who cannot change the lists sees the values and one line saying why, never
+disabled controls.
 
 ## Comment editor
 
@@ -420,7 +437,7 @@ As built in 1e (owner decisions, 25 Sep 2026):
   raw total
 - Collapsible columns, optional WIP limits
 - Swimlanes, including an *Uncategorized Cards* lane
-- Cards: coloured left edge by priority, key, title, assignee avatars,
+- Cards: a coloured left edge for a priority above the project's default (none at or below it), key, title, assignee avatars,
   priority and type dots, due date, subtask progress (`1/3`), inline `+` to
   create in that column
 
@@ -451,8 +468,17 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 - **Column width** (owner, 2 Nov 2026): each column is 280–380 px. Columns widen to fill the
   window up to 380 px and never narrow past 280 px; a board with more columns than fit scrolls
   sideways instead of squeezing its cards. A collapsed column is 40 px.
-- **Column counts** read `count` alone, or `count of total` when a filter hides cards;
-  WIP limits show as `min 2 · max 4`, red over the maximum, amber under the minimum.
+- **More columns than fit**: a 40 px rail beside the board names the next hidden column and its
+  count, read like a collapsed column (`Done · 4 · +2 more`); clicking it scrolls that column into
+  view. The cut column fades at the edge.
+- **Column counts** read `count` alone, or `count of total` when a filter hides cards or the
+  board was cut short (`45 of 1,229`); WIP limits show as `min 2 · max 4`, red over the maximum,
+  amber under the minimum. A collapsed column over its maximum reads `To do · 6 (max 4)`.
+- **Column headers**: name, a check when the column counts as resolved, WIP limits, the count;
+  the collapse control follows the count and shows on hover or focus.
+- **A board that fails to load** keeps the sprint row (from the sprint list) and shows the inline
+  load error under it, no empty frame. **No running sprint**: the next planned sprint is the one
+  primary action (_Open Sprint 1_), the backlog a link.
 - **The strip follows the column field** (owner, 26 Sep 2026): by status on a status board,
   by priority or type on those boards, so it summarises what the columns show.
 - **Page actions are outlined buttons with an icon** (_Backlog_, _Board settings_, _Board_),
@@ -461,45 +487,63 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
 - **Backlog**: the filter bar narrows the backlog container only (default `#Unresolved`);
   sprint sections always list every issue. Rows are dragged by a grip, so the title stays
   a link. _New sprint_ leaves _Add N unresolved issues_ unticked: carrying issues out of
-  a running sprint is a choice, not a default.
+  a running sprint is a choice, not a default. Sprint headers keep fixed slots, right-aligned:
+  the stats (`4 of 15 resolved · 8 of 37 points`, or _No issues_), a progress bar (none for a
+  sprint with no issues; one with no estimates reads `? points`), and, for Project Admins, one
+  action with the ⋯ menu (_Edit sprint_, _Open board_, _Delete sprint_): _Finish sprint_ on the
+  running sprint, _Start sprint_ on the next planned one only (disabled, with the reason in its
+  tooltip, while another runs). Later planned sprints offer _Start sprint_ in their ⋯ menu when
+  nothing runs, and _Start sprint_ says when the start moves (_It starts today, 15 Nov, not the
+  planned 16 Nov._). The board link lives in the page header only. An archived project opens with
+  a one-line archived notice, an Observer's with a read-only line; a row with several assignees
+  shows their avatars and `N people`. The page shows one skeleton until the sprints, roles and
+  project are known, then every section at once.
+  An unestimated row shows `?` in the points chip. A filtered backlog counts `N of M`, and a
+  filter that matches nothing offers _Clear filter_. _New sprint_ suggests the next name in the
+  series. _Finish sprint_ preselects the next planned sprint (else the backlog) and asks nothing
+  when every issue is resolved.
 
 ## Knowledge base
 
 Built in 3.5 (27 Sep 2026); these are the decisions taken building it:
 
 - **Layout.** A 272 px rail beside every knowledge base page, on the surface with a hairline, sticky and
-  scrolling on its own: _Knowledge base_ (home) with `+` for a new article, _Starred_ (the reader's starred
-  articles in this project), _Articles_ (the tree), _Tags_ (the tag cloud) and, at the bottom, _Deleted
-  articles N_ — shown only when there is something the reader may restore, and opening the list in the main
-  column (`?view=deleted`). Below `lg` the rail opens as a sheet.
+  scrolling on its own: _Starred_ (the reader's starred articles in this project), _Articles_ (the tree,
+  with `+` for a new article except on the home page, whose header has _New article_), _Deleted articles N_
+  under the tree — shown only when there is something the reader may restore, and opening the list in the
+  main column (`?view=deleted`) — and _Tags_ (the twelve most-used, then _Show all N_). Below `lg` the rail
+  opens as a sheet.
 - **The tree.** 28 px rows indented 14 px per level, a chevron on rows with children, the open article in
-  `--bg-active` with the 2px accent bar like the navigation. Drafts read in secondary ink with a dashed
-  _Draft_ mark, never a colour. On hover, for someone who may: `+` (a new article under this one, above
+  `--bg-active` with the 2px accent bar like the navigation. Drafts read in secondary ink with a _Draft_
+  mark, never a colour. On hover, for someone who may: `+` (a new article under this one, above
   level 3) and a grip. A drag shows the row beside the pointer; the landing line is the accent, a nest is
   the soft accent with an accent ring, and a place that would pass three levels draws in the danger colour
   and is refused under the row. `Alt` + arrows on a focused title move it without a mouse.
-- **The article page.** _Last updated by X, 3 days ago_ (and _Written by Y_ when that is someone else) with
-  star and the `⋯` menu on the right; the title (click to rename, the address stays), then edit, tag and
-  _Publish_ for a draft; tags as chips in their colour under the title; the body at 15 px in the 72ch column;
-  comments under a hairline. A draft carries a one-line inset notice naming who can see it. The menu holds
+- **The article page.** The title (click to rename, the address stays) with _Publish_ for a draft, then
+  edit, star and the `⋯` menu on the right of the same row; tags as chips in their colour under it; then one
+  line _Written by Y · updated by X 3 days ago_ (_Written by X · updated 3 days ago_ when it is the same
+  person); the body at 15 px in the 72ch column; comments under a hairline. Editing keeps the same column
+  and the contents rail. A draft carries a one-line inset notice naming who can see it. The menu holds
   _New article under this_, _Return to draft_, _Change address_, _Copy link_, _Watch_ and _Delete article_.
 - **Table of contents.** From the body's headings, pinned beside the article from 1280 px wide and only with
-  two or more headings; the heading last scrolled past is marked with an ink rule.
-- **Breadcrumb.** The top bar's crumbs continue into the tree: `Projects / Partner Portal / Knowledge base /
-  Payments / Runbooks / Restoring a failed sync`.
+  two or more headings; the heading last past the top quarter of the view is marked with an ink rule.
+- **Breadcrumb.** The top bar's crumbs continue into the tree; past four crumbs the middle ones fold into one
+  `…` menu: `Projects / Partner Portal / … / Restoring a failed sync`.
 - **New article** asks for the title first, because the address is made from it and a rename never moves
   it; then a starter (Runbook, Decision record, Onboarding guide, Blank) and a place. It is always a draft,
   and opens in the editor. The empty knowledge base offers the same four starters; an Observer reads that
   there are no articles yet.
 - **Deleting** is a dialog that asks up front, when the article has articles under it, whether to _move them
-  up_ (named: under which article, or the top level) or _delete them too_ (_Delete branch_). A refusal shows
+  up_ (named: under which article, or the top level) or _delete them too_ (the button names how many: _Delete 3 articles_). A refusal shows
   in the dialog in the API's words; the deletion toasts _Undo_.
 - **Search** is the issue query bar with the article vocabulary: mono, autocomplete on pause, values
   underlined when wrong with the valid ones one click away. Results are rows with the title, _Draft_, star,
-  parent, who and when last updated, a two-line excerpt and neutral tag chips. `/articles` is the same list
-  in one section per project.
+  parent, who · when last updated, a one-line excerpt and neutral tag chips. An empty knowledge base shows
+  the starters without a search field. `/articles` is the same list
+  in one section per project. An excerpt is the body's prose: headings, tables and code are left out.
 - **The global search box** in the top bar searches issues and articles at once and shows them in two groups
-  with their totals and _See all N_; a group whose vocabulary cannot read the query says so in its place.
+  with their totals and _See all N_. A filter only the other group takes is a quiet note in its place
+  (_Articles have no assignee, so none are shown._); a query neither group can read is an error in both.
 - **Referenced by** sits on the issue page under Links: the articles naming the issue, with _Draft_, parent,
   project key and last update; hidden while there are none.
 
@@ -522,10 +566,23 @@ every chart:
 - **Matrix cells** are *Shade* (grey steps, ink text at ≥ 4.5:1) or *Length* (a hairline bar
   under the count), the viewer's choice; **Gantt bars** are neutral with the status category on
   their left edge, red at the end when overdue.
-- Display choices sit at the right of the picker row as small segmented toggles (*Bar | Pie*,
-  *Table | Stacked*, *Shade | Length*, *Days | Weeks*); parameters are `Label Value ▾` pickers.
+- Display choices sit at the right of the picker row as small segmented toggles as tall as the
+  pickers beside them (*Bar | Pie*,
+  *Table | Stacked*, *Shade | Length*, *Days | Weeks*, *Story points | Issues | Remaining estimate*); parameters are `Label Value ▾` pickers.
+  The chosen option is filled (`--bg-active`, ink text); keyboard focus is the ring, so the two
+  never look alike.
+- A bar table's name column takes its own width up to 320 px, so bars start after the longest
+  name; on phones the bar sits under the name and the figures keep their columns.
 - On phones reports are read-only views: the picker row wraps, charts take the full width, and
-  the matrix, Gantt and timesheet scroll sideways.
+  the matrix and Gantt scroll sideways; the timesheet lists each person's total, and tapping one
+  opens their entries.
+- When a period's days do not fit, the timesheet shows a whole number of day columns and scrolls a
+  column at a time, with Earlier/Later day buttons in the Person header. It opens on the logged
+  days, or on today when today has time.
+- Wide grids scroll inside their frame: the header and total row stay, the name and total columns
+  stay, with a hairline and a soft fade on the inner edge while content is under them.
+- A refused period offers _Use this week_ and _Use this month_ as small outline buttons; a
+  suggestion inside an alert is never tinted.
 
 ## Issue list
 
@@ -557,27 +614,28 @@ As built in 6a (web half, 27 Sep 2026; the owner's choices marked):
   collapsed or on a phone — and the sidebar's Inbox item. Both read
   `GET /v1/notifications/unread-count`, polled at 30 s like every list, and drop at once when
   something is marked read.
-- **One row per entry**, flat and hairline-separated: the unread dot (accent), the key (or an
-  article or sprint icon), the title (medium while anything is unread, secondary once read), a
-  count chip when the entry holds more than one notification, then the newest summary on a
-  second line. Right: the project — prefixed with the organisation only for someone in more
-  than one — and the relative time with its absolute tooltip. A chevron expands the entry in
-  place to its lines (avatar, or a calendar mark for *Due tomorrow* / *Overdue*, which have no
-  actor; the overdue mark is `--danger-fg`); *Show all N* pages the rest through the subject's
-  own list. A former member keeps the *Former member* chip after the sentence.
+- **One row per entry**, flat and hairline-separated: dot · key (or article / sprint icon) ·
+  title (medium while anything is unread, secondary once read), with the actor's avatar or a
+  system mark under the key and the newest summary on the second line · a count-chip column ·
+  place · time · tick. On a phone the key column goes and the key starts the second line. Right: the project — prefixed with the organisation only for someone in more
+  than one — and the relative time with its absolute tooltip. The chip expands the entry in place to its lines (avatar, or a calendar mark for *Due tomorrow* / *Overdue*, which have no
+  actor; the overdue mark is `--danger-fg`); an open entry's second line reads *N notifications,
+  M unread* and its own dot clears. *Show N more* (the count not yet shown) pages the rest through
+  the subject's own list; Load more adds three skeleton entries while it loads. A former member keeps the *Former member* chip after the sentence.
 - **Opening marks read** (owner): clicking a line marks that notification read; clicking the
-  entry's title marks the whole entry. A hover button (always shown on phones) does the same
-  without leaving. An entry from another organisation switches the session there first.
+  entry's title marks the whole entry. A tick at the row's end (muted until hovered) does the same without leaving. An entry from another organisation switches the session there first.
 - **Filters** are the report pickers: *Kind* (several; the kinds as people say them, grouped
   by area, with sprints and articles one choice each and reactions left out until something
   produces them), *Project* (grouped by organisation), *Organisation* (only for someone in more
   than one) and *Show* all or unread only. The URL holds them (`?kind=mentioned,sprint&org=
-  &project=&unread=1`). With a kind, project or organisation chosen the button reads *Mark all
-  matching read* and marks only that.
+  &project=&unread=1`). With a kind, project or organisation chosen the button reads *Mark
+  matching read*, at the same width, and marks only that. An empty inbox shows no filters and no
+  *Mark all read*; the header reads *N unread across M organisations* when the inbox spans several.
 - **States**: skeleton rows; an empty inbox that says what arrives here and links to Settings →
   Notifications; a filter with no result naming it (*No notifications for mentions in Partner
-  Portal.*) with a button per filter to drop it; *Nothing unread* under the unread filter; *You
-  are up to date* above a fully read list; an inline error with *Try again*.
+  Portal.*) with a button per filter to drop it; *Nothing unread* under the unread filter; the
+  header count reads *N of M unread* under a filter; an inline error with *Try again*. Filters run
+  Organisation, Project, Kind, Show, each reading *All* by default.
 - **Dashboard**: My work's rail shows the newest five entries with *Mark all read* (owner).
 - **No `g` shortcut for the inbox** (owner, 27 Sep 2026).
 
@@ -586,7 +644,7 @@ As built in 6a (web half, 27 Sep 2026; the owner's choices marked):
 `/settings?tab=notifications`. An *Email* section first: in-app is always on, email is off until
 chosen, choices apply in every organisation, digests arrive at 9am in the profile's time zone
 (named, with a link to change it) — weekly on Mondays — and only when something unread is
-waiting; *Turn everything off* on its right, with *Undo* in the toast. Then Issues, Comments,
+waiting; *Turn every email off* under that note, with *Undo* in the toast. Then Issues, Comments,
 Agile and Knowledge base from each preference's `area`, one row per kind: its name, when you hear
 it, and a picker of Off / Instant / Daily digest / Weekly digest. *Mentioned* carries a neutral
 outlined *Most commonly enabled* chip; *Reactions* reads *In-app only* instead of a picker.
@@ -607,7 +665,7 @@ at the same settings.
 | `/` | Focus search |
 | `c` | Create issue |
 | `g` then `i` / `b` / `r` | Go to issues / board / reports |
-| `g` then `d` / `p` / `m` | Go to dashboard / projects / my issues |
+| `g` then `d` / `p` / `m` | Go to home / projects / my issues |
 | `Tab` | Complete first search suggestion |
 | `e` | Edit description |
 | `a` | Assign |
@@ -624,6 +682,9 @@ A shortcut appears there only once the thing it drives exists: `g b` arrived wit
 (the current project's board, else the last project visited), `g r` with Phase 5 (the current
 project's reports, else `/reports`). After `g`, the second key must follow within a second.
 Bare keys are ignored while typing, inside a dialog or menu, and with a modifier.
+
+Controls that appear on hover also appear when they take keyboard focus, and are always shown
+on touch screens. Tab strips: ← → move between tabs and select, Home / End jump to the ends.
 
 ## Theming
 

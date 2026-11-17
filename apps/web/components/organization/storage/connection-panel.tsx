@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBytes } from '@nothingleft/format';
 import type { Me, StorageConnection, StorageOverview } from '@nothingleft/types';
@@ -9,6 +10,7 @@ import { FormAlert } from '@components/auth/form-alert';
 import { PersonName } from '@components/former-member-chip';
 import { RelativeTime } from '@components/relative-time';
 import { SettingsSection } from '@components/settings/section';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { StepUpDialog } from '@components/step-up-dialog';
 import { PROVIDER_NAMES } from '@components/organization/storage/byo-steps';
 import { CredentialsForm, validateDraft, type DraftErrors } from '@components/organization/storage/credentials-form';
@@ -18,10 +20,11 @@ import { formatDate } from '@lib/datetime';
 import { env } from '@lib/env';
 import { regionName } from '@lib/storage/aws-regions';
 import { connectBody, draftFrom, type ConnectionDraft } from '@lib/storage/connection';
-import { cn } from '@lib/utils';
+import { JobStatus } from '@components/job-status';
+import { plural } from '@lib/numbers';
 
 const STORAGE_TAB = '/organization?tab=storage';
-const files = (n: number) => `${n} ${n === 1 ? 'file' : 'files'}`;
+const files = (n: number) => `${plural(n, 'file')}`;
 
 interface ConnectionPanelProps {
   slug: string;
@@ -55,17 +58,15 @@ export function ConnectionPanel({
   return (
     <SettingsSection
       title="Your own bucket"
-      description={
-        failing
-          ? 'The bucket refused its key. Files there show as unavailable and uploads are paused until a working key for the same bucket is saved.'
-          : 'Every new file is stored here, and nothing in it counts against a limit.'
-      }
       actions={
         updating ? null : (
           <>
-            <Button variant={failing ? 'default' : 'outline'} size="sm" onClick={() => onUpdatingChange(true)}>
-              Update key
-            </Button>
+            {/* While the key is refused, the alert at the top of the tab carries Update key. */}
+            {failing ? null : (
+              <Button variant="outline" size="sm" onClick={() => onUpdatingChange(true)}>
+                Update key
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -78,24 +79,36 @@ export function ConnectionPanel({
         )
       }
     >
-      <dl className="grid max-w-3xl gap-x-8 gap-y-0 text-sm sm:grid-cols-2">
+      {/* gap-x-8 puts the second column on the third stat's text line above. */}
+      <dl className="grid gap-x-8 text-sm lg:grid-cols-2">
         <Row term="Status">
-          <span className={cn('inline-flex items-center gap-2', failing ? 'text-danger-fg' : 'text-text')}>
-            <span aria-hidden className={cn('size-2 rounded-full', failing ? 'bg-danger-fg' : 'c-green bg-c-solid')} />
-            {failing ? 'Refusing its key' : 'Connected'}
-          </span>
+          <JobStatus tone={failing ? 'failed' : 'ok'} label={failing ? 'Refusing its key' : 'Connected'} />
         </Row>
         <Row term="Provider">{PROVIDER_NAMES[connection.provider]}</Row>
         <Row term="Bucket">
           <span className="font-mono">{connection.bucket}</span>
         </Row>
         <Row term={byRegion ? 'Region' : 'Endpoint'}>
-          <span className={cn('truncate', !byRegion && 'font-mono text-xs')} title={location}>
-            {location}
-          </span>
+          {byRegion ? (
+            <span className="truncate">{location}</span>
+          ) : (
+            <span className="-my-1 flex min-w-0 items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="min-w-0 truncate font-mono text-xs">
+                    {location}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-none font-mono text-xs">{location}</TooltipContent>
+              </Tooltip>
+              <CopyIconButton value={location} what="endpoint" />
+            </span>
+          )}
         </Row>
         <Row term="Access key ID">
-          <span className="truncate font-mono text-xs">{connection.access_key_id}</span>
+          <span className="truncate font-mono text-xs" title={connection.access_key_id}>
+            {connection.access_key_id}
+          </span>
         </Row>
         <Row term="Secret">
           <span className="font-mono text-xs tracking-widest text-text-secondary" aria-label="Hidden">
@@ -110,14 +123,14 @@ export function ConnectionPanel({
               <PersonName person={connection.created_by} />
             </span>
           ) : (
-            '--'
+            <Empty />
           )}
         </Row>
         <Row term="Last checked">
           {connection.checked_at ? (
             <RelativeTime value={connection.checked_at} timeZone={timeZone} className="text-text" />
           ) : (
-            '--'
+            <Empty />
           )}
         </Row>
       </dl>
@@ -143,10 +156,36 @@ export function ConnectionPanel({
 
 function Row({ term, children }: { term: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-baseline justify-between gap-4 border-b border-border-subtle py-2">
-      <dt className="flex-none text-text-secondary">{term}</dt>
-      <dd className="flex min-w-0 justify-end text-right">{children}</dd>
+    <div className="grid min-w-0 grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-4 border-b border-border-subtle py-2">
+      <dt className="text-text-secondary">{term}</dt>
+      <dd className="flex min-w-0">{children}</dd>
     </div>
+  );
+}
+
+const Empty = () => <span className="text-text-muted">—</span>;
+
+function CopyIconButton({ value, what }: { value: string; what: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="size-7 flex-none text-text-secondary"
+          aria-label={copied ? `${what} copied` : `Copy ${what}`}
+          onClick={async () => {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          }}
+        >
+          {copied ? <Check className="size-icon-sm" /> : <Copy className="size-icon-sm" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{copied ? 'Copied' : `Copy ${what}`}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -182,8 +221,9 @@ function UpdateKeyForm({
       <div className="flex flex-col gap-0.5">
         <h3 className="font-medium">Update the key</h3>
         <p className="text-sm text-text-secondary">
-          A new key for {connection.bucket}, with the same permissions. It is checked with a test file before it
-          replaces the old one, so a typo changes nothing. Changing to a different bucket means disconnecting first.
+          A new key for <span className="font-mono">{connection.bucket}</span>, with the same permissions. It is checked
+          with a test file before it replaces the old one, so a typo changes nothing. Changing to a different bucket
+          means disconnecting first.
         </p>
       </div>
       {refusal ? (
@@ -292,29 +332,21 @@ export function DisconnectDialog({ slug, overview, connection, user, open, onOpe
     >
       {everVerified ? (
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
-          <li>The key is forgotten.</li>
           <li>
-            <span className="font-medium text-text">Your files stay in {bucket}</span> — nothing there is deleted — but{' '}
-            {held.files > 0 ? `its ${files(held.files)} (${formatBytes(held.bytes)})` : 'they'} no longer open here.
-            They are listed as files in an earlier bucket.
-          </li>
-          <li>
-            <span className="font-medium text-text">
-              Connect the same bucket again — same account or region, same name — and they open again.
-            </span>{' '}
-            A bucket with the same name in a different account is a different bucket: connecting it does not bring the
-            earlier files back.
+            The key is forgotten. Nothing in <span className="font-mono whitespace-nowrap">{bucket}</span> is deleted,
+            but {held.files > 0 ? `its ${files(held.files)} (${formatBytes(held.bytes)})` : 'its files'} stop opening
+            here until the same bucket, in the same account, is connected again.
           </li>
           <li>
             New uploads use the built-in storage, and the {formatBytes(overview.platform.limit_bytes)} limit applies
-            again. {formatBytes(overview.platform.bytes)} is in it now.
+            again, with {formatBytes(overview.platform.bytes)} in it now.
           </li>
-          <li>Every admin of the organisation gets an email saying so.</li>
+          <li>Every admin of the organisation is emailed.</li>
         </ul>
       ) : (
         <p>
-          The key is forgotten. Nothing was ever stored in {bucket}, and uploads keep using the built-in storage. You
-          can start again at any time.
+          The key is forgotten. Nothing was ever stored in <span className="font-mono">{bucket}</span>, and uploads keep
+          using the built-in storage. You can start again at any time.
         </p>
       )}
     </StepUpDialog>
@@ -326,12 +358,12 @@ export function EarlierBuckets({ buckets }: { buckets: StorageOverview['earlier_
   return (
     <ul className="flex flex-col divide-y divide-border-subtle rounded-md border" aria-label="Earlier buckets">
       {buckets.map(b => (
-        <li key={b.bucket} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-3.5 py-2.5 text-sm">
-          <span className="text-text">
-            {files(b.files)} in <span className="font-mono">{b.bucket}</span> from an earlier connection
+        <li key={b.bucket} className="flex items-baseline gap-4 px-3.5 py-2.5 text-sm">
+          <span className="min-w-0 flex-1 text-pretty">
+            {files(b.files)} in <span className="font-mono break-all">{b.bucket}</span> from an earlier connection.{' '}
+            <span className="text-text-secondary">Connect it again to open {b.files === 1 ? 'it' : 'them'}.</span>
           </span>
-          <span className="text-text-secondary">— connect it again to open them.</span>
-          <span className="ml-auto font-mono text-xs tabular text-text-secondary">{formatBytes(b.bytes)}</span>
+          <span className="flex-none tabular text-text-secondary">{formatBytes(b.bytes)}</span>
         </li>
       ))}
     </ul>

@@ -15,7 +15,7 @@ export interface Shortcut {
 export const SEQUENCE_WINDOW_MS = 1000;
 
 export const GO_TO = {
-  d: { path: '/dashboard', label: 'Go to dashboard' },
+  d: { path: '/dashboard', label: 'Go to home' },
   i: { path: '/issues', label: 'Go to issues' },
   b: { path: '/projects', label: 'Go to board' },
   m: { path: '/my-issues', label: 'Go to my issues' },
@@ -41,7 +41,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: ['a'], action: 'Assign', area: 'Issue page' },
   { keys: ['s'], action: 'Change status', area: 'Issue page' },
   { keys: ['e'], action: 'Edit article', area: 'Knowledge base' },
-  { keys: ['Alt', '↑ / ↓'], action: 'Move the focused article among its neighbours', area: 'Knowledge base' },
+  { keys: ['Alt', '↑ / ↓'], action: 'Move the article up or down', area: 'Knowledge base' },
   { keys: ['Alt', '→'], action: 'Put it under the article above', area: 'Knowledge base' },
   { keys: ['Alt', '←'], action: 'Move it up a level', area: 'Knowledge base' },
   { keys: ['⌘ / Ctrl', '↵'], action: 'Submit comment', area: 'Editor' },

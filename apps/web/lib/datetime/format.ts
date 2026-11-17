@@ -42,6 +42,27 @@ function zoneName(value: Date, timeZone?: string): string | undefined {
   return fallback;
 }
 
+/** The engine's own spelling of a zone, so aliases compare equal (`Asia/Kolkata` and `Asia/Calcutta`). */
+export function canonicalTimeZone(timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-GB', { timeZone }).resolvedOptions().timeZone;
+  } catch {
+    return timeZone;
+  }
+}
+
+/** A zone's offset from UTC at `at`: `{ label: 'UTC+05:30', minutes: 330 }`, `UTC` at zero. */
+export function zoneOffset(timeZone: string, at: Instant = Date.now()): { label: string; minutes: number } {
+  const name =
+    new Intl.DateTimeFormat('en-GB', { timeZone, timeZoneName: 'longOffset' })
+      .formatToParts(toDate(at))
+      .find(p => p.type === 'timeZoneName')?.value ?? 'GMT';
+  const match = /GMT([+-])(\d{2}):(\d{2})/.exec(name);
+  if (!match) return { label: 'UTC', minutes: 0 };
+  const minutes = (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3]));
+  return { label: `UTC${match[1]}${match[2]}:${match[3]}`, minutes };
+}
+
 /** `19 Sep 2026` */
 export function formatDate(value: Instant, timeZone?: string) {
   const parts = dateParts(timeZone).formatToParts(toDate(value));

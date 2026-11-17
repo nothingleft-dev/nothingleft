@@ -1297,7 +1297,7 @@ changes made in one save render as a single entry:
 ```
 Alex Lee · Updated 3 months ago
     Estimation:    ? → 4h
-    Story points:  Not estimated → 5
+    Story points:  ? → 5
     Priority:      Normal → Major
 ```
 

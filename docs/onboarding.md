@@ -97,7 +97,7 @@ This screen is the one every user sees and the one that decides whether they
 come back. It offers three things, in this order:
 
 1. **Create your first issue** — primary action, opens the composer.
-2. **Connect an LLM** — the MCP setup: generate a token, copy the config
+2. **Connect an agent** — the MCP setup: generate a token, copy the config
    block for Claude Desktop or Claude Code, one command to verify.
 3. **Import from CSV** — for people arriving with existing work.
 
@@ -151,8 +151,10 @@ current one, else the most recently joined (decided 24 Sep 2026, 1c).
 Web decisions (24 Sep 2026, 1c web half): the landing is the app's `/` route,
 and signing in with no `next=` goes there. `project` opens the project's issue
 list; `project_list` opens `/projects`. `org_switcher` renders a page listing
-the organisations with the preferred one marked; choosing one switches the
-session and opens `/dashboard`, the same place the sidebar switcher goes.
+the organisations with the preferred one marked; the organisation the session is already in
+leads the list, tagged *Current*, and the lede names it, so the page agrees with the sidebar
+switcher. Choosing one switches the session and opens `/dashboard`, the same place the sidebar
+switcher goes.
 `welcome` opens `/welcome`.
 `no_org` renders the sentence above inside the shell with two actions —
 *Create an organisation* (the welcome flow's organisation step) and a field for

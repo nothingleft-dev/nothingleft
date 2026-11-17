@@ -29,7 +29,7 @@ it is fixed, because every key already handed out would stop working.
 | Assignee             | Any number of people                          | `Unassigned`                   |
 | Estimation           | A duration                                    | `?`                            |
 | Spent time           | The time logged on the issue and its subtasks | `?`                            |
-| Story points         | A whole number, 0–999                         | `Not estimated`                |
+| Story points         | A whole number, 0–999                         | `?`                            |
 | Sprint               | The one sprint the issue is planned into      | `Unscheduled`                  |
 | Start date, Due date | Calendar dates                                | `No start date`, `No due date` |
 | Parent               | The issue this one is a subtask of            | - (none)                       |
@@ -211,7 +211,8 @@ epic shows the whole effort beneath it. Deleting a subtask takes its time off th
 restoring it brings the time back. Moving a subtask to a new parent moves its time too.
 
 The **Spent time** tab lists every record, the subtasks' included (each marked with its
-subtask's key), with the total at the top. You can edit or delete your own records;
+subtask's key), with the total at the top (and how far over the estimate it is, in red). Each record's type and attributes show as letters, one column each, with the column names above them; a dash means the record has none. Hover a letter for its value. You
+can edit or delete your own records;
 Project Admins can edit or delete anyone's, and change whose time a record is. Deleting
 asks first, because a deleted record cannot be brought back. Every addition, change and
 removal is kept in the issue's history.
@@ -369,9 +370,10 @@ search - works the same way.
   resolved statuses start collapsed; click a header to open or close it.
 - **Saved views** sit above the list as tabs, each with its count. Click one
   to run it; type past its query and the tab lets go. _Save view_ keeps the
-  current query, sort and columns under a name; the active tab's menu saves a
-  changed query back into it, renames or re-shares it, or deletes it - for
-  views you may change (see [Searching](./search.md#saved-searches)).
+  current query, sort and columns under a name; the **⋯** button after the tabs
+  saves a changed query back into the active view, renames or re-shares it, or
+  deletes it - for views you may change (see [Searching](./search.md#saved-searches)).
+  Views that do not fit wait behind **N more**.
 - **Edit in place**: click a status, the priority letter or the assignees to
   change them without opening the issue. Sort by clicking a column header;
   choose which columns show from the _Columns_ menu.

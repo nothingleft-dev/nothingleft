@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Pencil } from 'lucide-react';
 import type { CustomField, CustomFieldValueInput, Issue, IssueCustomFieldValue } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import { Popover, PopoverAnchor, PopoverContent } from '@components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { Switch } from '@components/ui/switch';
+import { LoadMore, TextButton } from '@components/text-button';
 import { Markdown } from '@components/markdown/markdown';
-import { SidebarField, useRailPopoverSide } from '@components/issues/sidebar-field';
+import { SidebarField, useRailPopoverAlign } from '@components/issues/sidebar-field';
 import { FieldValue, isEmptyValue } from '@components/custom-fields/field-value';
 import {
   FieldEditor,
@@ -22,6 +23,7 @@ import { useUpdateIssue } from '@hooks/use-issues';
 import { useProjectAssignees } from '@hooks/use-projects';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
 import { isApiError } from '@lib/api/errors';
+import { cn } from '@lib/utils';
 
 /** Values that close their picker the moment they are chosen; a refusal then shows under the row. */
 const closesOnPick = (type: IssueCustomFieldValue['type']) => type === 'select' || type === 'user' || type === 'date';
@@ -38,7 +40,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
   const fields = useCustomFields(projectKey);
   const [open, setOpen] = useState<string | null>(null);
   const [draft, setDraft] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, RowFailure>>({});
   const needsPeople = canEdit && issue.custom_fields.some(e => e.type === 'user' || e.type === 'multi_user');
   const people = useProjectAssignees(needsPeople ? projectKey : null);
   const calendar = useWorkCalendar();
@@ -49,10 +51,10 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
   const entries = issue.custom_fields.filter(e => !bySlug.get(e.slug)?.time_role);
   if (entries.length === 0) return null;
 
-  const setError = (slug: string, message: string | null) =>
+  const setError = (slug: string, failure: RowFailure | null) =>
     setErrors(current => {
       const next = { ...current };
-      if (message) next[slug] = message;
+      if (failure) next[slug] = failure;
       else delete next[slug];
       return next;
     });
@@ -72,7 +74,12 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
       },
       {
         onSuccess: () => closeOnSuccess && setOpen(current => (current === entry.slug ? null : current)),
-        onError: error => setError(entry.slug, isApiError(error) ? error.message : 'Could not save.'),
+        onError: error =>
+          setError(entry.slug, {
+            message: isApiError(error) ? error.message : 'Could not save.',
+            // A refused value would only be refused again; a fault on our side or the network is worth repeating.
+            retry: isApiError(error) && error.status < 500 ? undefined : () => save(entry, value, closeOnSuccess),
+          }),
       },
     );
   };
@@ -93,17 +100,19 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
 
   return (
     <div className="flex flex-col gap-0.5" aria-label="Custom fields">
-      <div className="mx-2 mt-2 border-t pt-4 pb-1 text-2xs font-medium text-text-muted">Fields</div>
+      <RailHeading>Fields</RailHeading>
       {entries.map(entry => {
         const field = bySlug.get(entry.slug);
-        const error = errors[entry.slug] ?? null;
+        const failure = errors[entry.slug] ?? null;
+        const error = failure?.message ?? null;
+        const rowError = <RowError name={entry.name} failure={failure} />;
         const editable = canEdit && field !== undefined;
 
         if (entry.type === 'checkbox') {
           return (
             <div key={entry.slug}>
               <CheckboxRow entry={entry} editable={editable} onChange={on => save(entry, on, false)} />
-              <RowError message={error} />
+              {rowError}
             </div>
           );
         }
@@ -120,7 +129,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
                 onOpenChange={next => openRow(entry, next)}
                 onSave={value => save(entry, value, true)}
               />
-              {open === entry.slug ? null : <RowError message={error} />}
+              {open === entry.slug ? null : rowError}
             </div>
           );
         }
@@ -166,7 +175,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
                 decimals={field?.config.decimals}
               />
             </SidebarField>
-            {open === entry.slug && !closesOnPick(entry.type) ? null : <RowError message={error} />}
+            {open === entry.slug && !closesOnPick(entry.type) ? null : rowError}
           </div>
         );
       })}
@@ -174,10 +183,23 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
   );
 }
 
-function RowError({ message }: { message: string | null }) {
-  return message ? (
+interface RowFailure {
+  message: string;
+  retry?: (() => void) | undefined;
+}
+
+function RowError({ name, failure }: { name: string; failure: RowFailure | null }) {
+  return failure ? (
     <p role="alert" className="-mt-1 px-2 pb-1 text-2xs text-danger-fg">
-      {message}
+      Could not save {name}. {failure.message}
+      {failure.retry ? (
+        <>
+          {' '}
+          <TextButton onClick={failure.retry} className="text-2xs">
+            Try again
+          </TextButton>
+        </>
+      ) : null}
     </p>
   ) : null;
 }
@@ -194,15 +216,13 @@ function CheckboxRow({
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-sm px-2 py-[7px]">
       <span className="text-2xs text-text-muted">{entry.name}</span>
-      <span className="col-start-1 text-sm text-text">{entry.value ? 'Yes' : 'No'}</span>
       {editable ? (
-        <Switch
-          checked={entry.value}
-          onCheckedChange={onChange}
-          aria-label={entry.name}
-          className="col-start-2 row-span-2 row-start-1"
-        />
-      ) : null}
+        <span className="col-start-1 flex h-5 items-center">
+          <Switch checked={entry.value} onCheckedChange={onChange} aria-label={entry.name} />
+        </span>
+      ) : (
+        <span className="col-start-1 text-sm text-text">{entry.value ? 'Yes' : 'No'}</span>
+      )}
     </div>
   );
 }
@@ -219,7 +239,7 @@ interface MarkdownRowProps {
 
 /** Rendered text can hold links, so it sits beside its edit button rather than inside it. */
 function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, onSave }: MarkdownRowProps) {
-  const side = useRailPopoverSide();
+  const align = useRailPopoverAlign();
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
@@ -239,9 +259,7 @@ function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, o
             ) : null}
           </span>
           {entry.value ? (
-            <div className="max-h-48 overflow-y-auto">
-              <Markdown source={entry.value} variant="comment" className="text-sm" />
-            </div>
+            <ClampedMarkdown source={entry.value} />
           ) : editable ? (
             <button
               type="button"
@@ -256,8 +274,8 @@ function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, o
         </div>
       </PopoverAnchor>
       <PopoverContent
-        align="start"
-        side={side}
+        align={align}
+        side="bottom"
         collisionPadding={16}
         className="w-[560px] max-w-[calc(100vw-32px)] p-0"
       >
@@ -271,6 +289,46 @@ function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, o
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+export function RailHeading({ children }: { children: string }) {
+  return <h3 className="mx-2 mt-3 border-t pt-5 pb-1 text-sm font-semibold text-text">{children}</h3>;
+}
+
+/** Eight lines, then a fade and Show all: a long value never slices a line in half. */
+function ClampedMarkdown({ source }: { source: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (!element || expanded) return;
+    const measure = () => setOverflows(element.scrollHeight > element.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [source, expanded]);
+
+  return (
+    <>
+      <div
+        ref={box}
+        className={cn(
+          !expanded && 'max-h-40 overflow-hidden',
+          !expanded && overflows && '[mask-image:linear-gradient(to_bottom,#000_calc(100%-1.5rem),transparent)]',
+        )}
+      >
+        <Markdown source={source} variant="comment" className="text-sm" />
+      </div>
+      {overflows ? (
+        <LoadMore size="xs" className="self-start" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Show less' : 'Show all'}
+        </LoadMore>
+      ) : null}
+    </>
   );
 }
 

@@ -6,6 +6,7 @@ import {
   buildRegistry,
   ISSUE_LINKS,
 } from './registry.ts';
+import { emptyLabel } from '@nothingleft/format';
 
 export type CustomAttributeType = Exclude<AttributeType, 'has' | 'sort' | 'key' | 'project'>;
 
@@ -221,7 +222,7 @@ function customFieldAttribute(field: CustomFieldAttribute): AttributeDefinition 
     sortable: field.type !== 'text',
     shorthand: field.type === 'enum',
     // A checkbox is never empty: unchecked is `No`.
-    ...(field.type === 'boolean' ? {} : { empty: field.empty ?? `No ${field.name}` }),
+    ...(field.type === 'boolean' ? {} : { empty: field.empty ?? emptyLabel(field.name) }),
     custom: true,
   };
 }

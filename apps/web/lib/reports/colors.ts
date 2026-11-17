@@ -19,8 +19,15 @@ const CATEGORY_FILL: Record<StatusCategory, string> = {
 };
 
 export const OTHER_FILL = 'var(--border-strong)';
+/** The matrix's shade ramp and the burndown's non-working day: values live in globals.css. */
+export const HEAT_FILLS = [1, 2, 3, 4, 5].map(n => `var(--heat-${n})`);
+export const OFF_DAY_FILL = 'var(--chart-off-day)';
+/** Unassigned, No tag: an absence is never a hue, so it reads the same in every report. */
+export const NONE_FILL = 'var(--palette-gray-solid)';
 
 interface Paintable {
+  value?: string | null;
+  other?: boolean;
   series: number | null;
   color?: LabelColor | null;
   category?: StatusCategory | null;
@@ -44,6 +51,7 @@ export function markPaint(group: Paintable, palette: ReportPalette): MarkPaint {
       ...(group.hue_striped ? { stripe: group.hue } : {}),
     };
   }
+  if (group.value === null && !group.other) return { fill: NONE_FILL, hatched: false, faded: false };
   if (group.series !== null) return { fill: `var(--chart-${group.series})`, hatched: false, faded: false };
   return { fill: OTHER_FILL, hatched: false, faded: false };
 }

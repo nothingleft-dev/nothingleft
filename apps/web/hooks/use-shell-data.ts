@@ -12,14 +12,24 @@ export interface ProjectNav extends Pick<Project, 'key' | 'name' | 'avatar_url' 
   canAdmin: boolean;
 }
 
+export type ShellListState = 'loading' | 'failed' | 'ready';
+
+const listState = (q: { isPending: boolean; data: unknown }, enabled: boolean): ShellListState =>
+  !enabled || q.data !== undefined ? 'ready' : q.isPending ? 'loading' : 'failed';
+
 export interface ShellData {
   organizations: Organization[];
   /** The organisation list actually arrived: an empty one after a failed request means nothing. */
   organizationsKnown: boolean;
   org: Organization | null;
+  /** Settled with no current organisation: nothing organisation-scoped can be shown. */
+  noOrganization: boolean;
   projects: ProjectNav[];
+  projectsState: ShellListState;
+  retryProjects: () => void;
   canCreateProject: boolean;
   savedViews: SavedView[];
+  savedViewsState: ShellListState;
   counts: { inboxUnread: number; myIssues: number };
   isPending: boolean;
 }
@@ -39,11 +49,15 @@ export function useShellData(user: Me | null): ShellData {
   const unread = useUnreadCount(signedIn);
   const list = organizations.data ?? [];
   const org = list.find(o => o.slug === slug) ?? null;
+  // A disabled query stays `pending` forever, so only the queries that actually run
+  // are allowed to hold the shell in its loading state.
+  const isPending = (signedIn && organizations.isPending) || (slug !== null && projects.isPending);
 
   return {
     organizations: list,
     organizationsKnown: organizations.data !== undefined,
     org,
+    noOrganization: organizations.data !== undefined && org === null && !isPending,
     projects: (projects.data ?? []).map(p => ({
       key: p.key,
       name: p.name,
@@ -52,11 +66,12 @@ export function useShellData(user: Me | null): ShellData {
       avatar_initials: p.avatar_initials,
       canAdmin: p.my_role === 'project_admin',
     })),
+    projectsState: listState(projects, inOrg),
+    retryProjects: () => void projects.refetch(),
     canCreateProject: org !== null && (org.membership.is_owner || org.membership.org_role === 'org_admin'),
     savedViews: savedViews.data ?? [],
+    savedViewsState: listState(savedViews, inOrg),
     counts: { inboxUnread: unread.data?.count ?? 0, myIssues: myIssues.data ?? 0 },
-    // A disabled query stays `pending` forever, so only the queries that actually run
-    // are allowed to hold the shell in its loading state.
-    isPending: (signedIn && organizations.isPending) || (slug !== null && projects.isPending),
+    isPending,
   };
 }

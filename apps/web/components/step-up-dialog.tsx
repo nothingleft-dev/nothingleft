@@ -3,19 +3,13 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import type { Me, OAuthProvider, StepUp } from '@nothingleft/types';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { ReauthButtons } from '@components/auth/provider-buttons';
 import { useApiError } from '@hooks/use-api-error';
 import { isApiError, type ApiError } from '@lib/api/errors';
+import { PendingButton } from '@components/pending-button';
 
 const PROVIDER_LABELS: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 
@@ -67,7 +61,7 @@ export function StepUpDialog({
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [missing, setMissing] = useState<{ current_password?: string; code?: string }>({});
-  const parsed = useApiError(error);
+  const parsed = useApiError(error, ['current_password', 'code']);
   const needsCode = user.has_password && user.two_factor.enabled;
   const reauth = isApiError(error) && error.code === 'auth.recent_sign_in_required';
   const custom = isApiError(error) && !reauth ? renderError?.(error) : undefined;
@@ -96,8 +90,8 @@ export function StepUpDialog({
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-md">
-        <form noValidate onSubmit={onSubmit} className="flex flex-col gap-5">
-          <DialogHeader>
+        <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6">
+          <DialogHeader className="gap-3">
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription asChild>
               <div className="flex flex-col gap-2 text-sm leading-5 text-text-secondary">{children}</div>
@@ -128,7 +122,7 @@ export function StepUpDialog({
                   autoComplete="one-time-code"
                   autoCapitalize="none"
                   spellCheck={false}
-                  className="font-mono"
+                  className="w-48 font-mono tabular"
                   hint="The 6-digit code from your authenticator app, or one of your recovery codes."
                   value={code}
                   error={missing.code ?? parsed.fields['code']}
@@ -157,9 +151,15 @@ export function StepUpDialog({
             <Button type="button" variant="outline" onClick={() => close(false)} disabled={pending}>
               Cancel
             </Button>
-            <Button type="submit" variant={destructive ? 'destructive' : 'default'} disabled={pending || !ready}>
-              {pending ? pendingLabel : confirmLabel}
-            </Button>
+            <PendingButton
+              type="submit"
+              variant={destructive ? 'destructive' : 'default'}
+              disabled={!ready}
+              pending={pending}
+              pendingLabel={pendingLabel}
+            >
+              {confirmLabel}
+            </PendingButton>
           </DialogFooter>
         </form>
       </DialogContent>

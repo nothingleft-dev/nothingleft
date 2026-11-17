@@ -1,7 +1,7 @@
 'use client';
 
+import { RateLimitWait } from '@components/rate-limit';
 import { SignUpSchema } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { AuthHeading, ExternalLink, FinePrint, Swap, TextLink } from '@components/auth/auth-card';
 import { ProviderButtons } from '@components/auth/provider-buttons';
 import { Field } from '@components/auth/field';
@@ -12,6 +12,7 @@ import { enterApp } from '@components/auth/enter-app';
 import { signUp } from '@lib/api/auth';
 import { viewerTimeZone } from '@lib/datetime';
 import { trackAuthConversion } from '@lib/analytics/google-analytics';
+import { PendingButton } from '@components/pending-button';
 
 export function SignUpForm() {
   const form = useAuthForm({
@@ -37,7 +38,7 @@ export function SignUpForm() {
 
       <ProviderButtons verb="sign up" />
 
-      {form.summary ? <FormAlert title={form.summary} /> : null}
+      {form.summary ? <FormAlert title={form.summary}>{form.rateLimited ? <RateLimitWait /> : null}</FormAlert> : null}
 
       <form noValidate className="flex flex-col gap-4" onSubmit={form.onSubmit}>
         <Field
@@ -74,9 +75,15 @@ export function SignUpForm() {
           }
           onChange={e => form.set('password', e.target.value)}
         />
-        <Button type="submit" disabled={form.isPending} className="mt-1 w-full">
-          {form.isPending ? 'Creating your account…' : 'Create account'}
-        </Button>
+        <PendingButton
+          type="submit"
+          className="mt-1 w-full"
+          pending={form.isPending}
+          pendingLabel="Creating your account…"
+          disabled={form.waiting}
+        >
+          Create account
+        </PendingButton>
         <FinePrint>
           By creating an account, or signing up with Google or GitHub, you agree to the{' '}
           <ExternalLink href="https://nothingleft.dev/terms">terms</ExternalLink> &{' '}

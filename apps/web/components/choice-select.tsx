@@ -1,10 +1,11 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { Button } from '@components/ui/button';
-import { Command, CommandItem, CommandList } from '@components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@components/ui/popover';
+import { CommandList } from '@components/ui/command';
+import { PickerCommand, PickerItem } from '@components/picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@components/popover';
 import { cn } from '@lib/utils';
 
 export interface ChoiceOption<T extends string> {
@@ -24,6 +25,10 @@ interface ChoiceSelectProps<T extends string> {
   showHint?: boolean;
   /** For a row that names the choice itself: the label stays for screen readers only. */
   hideLabel?: boolean;
+  /** `end` for a picker at the end of a row, so its list opens over its own column. */
+  align?: 'start' | 'end';
+  /** The value that means "nothing" (Off): shown in secondary ink in the trigger. */
+  quietValue?: T;
   className?: string;
 }
 
@@ -37,6 +42,8 @@ export function ChoiceSelect<T extends string>({
   disabled,
   showHint,
   hideLabel,
+  align = 'start',
+  quietValue,
   className,
 }: ChoiceSelectProps<T>) {
   const id = useId();
@@ -61,39 +68,42 @@ export function ChoiceSelect<T extends string>({
           >
             <span className="flex min-w-0 items-center gap-2">
               {selected?.mark}
-              <span className="truncate">{selected?.label ?? 'Choose a role'}</span>
+              <span className={cn('truncate', value === quietValue && 'text-text-secondary')}>
+                {selected?.label ?? 'Choose a role'}
+              </span>
             </span>
             <ChevronsUpDown className="size-icon-sm shrink-0 text-text-muted" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-(--radix-popover-trigger-width) min-w-[min(280px,calc(100vw-32px))] max-w-[calc(100vw-32px)] p-0"
-          align="start"
+          className="w-(--radix-popover-trigger-width) min-w-[min(320px,calc(100vw-32px))] max-w-[calc(100vw-32px)] p-0"
+          align={align}
         >
-          <Command>
+          <PickerCommand>
             <CommandList>
               {options.map(option => (
-                <CommandItem
+                <PickerItem
                   key={option.value}
                   value={option.value}
+                  checked={option.value === value}
+                  checkClassName="mt-0.5"
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
                   }}
                   className="items-start"
                 >
-                  <Check className={cn('mt-0.5 size-icon-sm', option.value === value ? 'opacity-100' : 'opacity-0')} />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="flex items-center gap-2 font-medium">
                       {option.mark}
                       {option.label}
                     </span>
-                    <span className="text-xs text-text-muted">{option.hint}</span>
+                    <span className="text-xs text-text-secondary">{option.hint}</span>
                   </span>
-                </CommandItem>
+                </PickerItem>
               ))}
             </CommandList>
-          </Command>
+          </PickerCommand>
         </PopoverContent>
       </Popover>
       {showHint && selected ? (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Route } from 'next';
 import { toast } from 'sonner';
@@ -24,6 +24,8 @@ import {
   useScheduleDeletion,
 } from '@hooks/use-organization-lifecycle';
 import { formatDate } from '@lib/datetime';
+import { plural } from '@lib/numbers';
+import { PendingButton } from '@components/pending-button';
 
 type DangerConfirm = 'transfer' | 'delete';
 const DANGER_TAB = '/organization?tab=danger';
@@ -63,7 +65,7 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
   const members = useMembers(slug, { limit: PAGINATION_MAX_LIMIT });
   const offer = useOfferOwnership(slug);
   const cancel = useCancelTransfer(slug);
-  const cancelError = useApiError(cancel.error);
+  const cancelError = useApiError(cancel.error, []);
   const [picked, setTarget] = useState<string | null>(null);
   const [chosenOpen, setOpen] = useState(false);
   const target = picked ?? reopen;
@@ -112,33 +114,38 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
       {cancelError.summary ? <FormAlert title={cancelError.summary} /> : null}
 
       {scheduled ? (
-        <p className="text-sm text-text-secondary">
-          Ownership cannot be handed over while the organisation is scheduled for deletion. Cancel the deletion first.
-        </p>
+        <DangerRow>
+          <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+            Ownership cannot be handed over while the organisation is scheduled for deletion. Cancel the deletion first.
+          </p>
+        </DangerRow>
+      ) : !members.isPending && candidates.length === 0 ? (
+        <DangerRow>
+          <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+            Nobody can receive it yet: the new Owner has to be an active member with a verified email address. Invite
+            someone from the Invites tab.
+          </p>
+        </DangerRow>
       ) : (
-        <div className="flex max-w-lg items-end gap-2 max-sm:flex-col max-sm:items-stretch">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span className="text-sm font-medium text-text-secondary">New owner</span>
-            <MemberPicker
-              people={candidates}
-              value={target}
-              onChange={setTarget}
-              placeholder="Choose a member"
-              label="New owner"
-              loading={members.isPending}
-            />
+        <DangerRow>
+          <div className="flex min-w-0 flex-1 items-center gap-3 max-sm:flex-col max-sm:items-stretch max-sm:gap-1.5">
+            <span className="flex-none text-sm font-medium text-text-secondary">New owner</span>
+            <div className="min-w-0 flex-1 sm:max-w-sm">
+              <MemberPicker
+                people={candidates}
+                value={target}
+                onChange={setTarget}
+                placeholder="Choose a member"
+                label="New owner"
+                loading={members.isPending}
+              />
+            </div>
           </div>
-          <Button size="sm" disabled={chosen === null} onClick={() => setOpen(true)}>
+          <Button size="sm" variant="outline" disabled={chosen === null} onClick={() => setOpen(true)}>
             {transfer ? 'Make a new offer' : 'Transfer ownership'}
           </Button>
-        </div>
+        </DangerRow>
       )}
-      {!scheduled && !members.isPending && candidates.length === 0 ? (
-        <p className="text-sm text-text-secondary">
-          Nobody can receive it yet: the new Owner has to be an active member with a verified email address. Invite
-          someone from the Invites tab.
-        </p>
-      ) : null}
 
       {chosen ? (
         <StepUpDialog
@@ -173,12 +180,12 @@ function TransferSection({ organization, user, reopen, onReopened }: SectionProp
           }
         >
           <ul className="flex list-disc flex-col gap-1.5 pl-5">
-            <li>{chosen.name} gets an email with a link to accept or decline, valid for 7 days.</li>
+            <li>{chosen.name} gets an email to accept or decline, valid for 7&nbsp;days.</li>
+            <li>If they accept, they become the Owner and you stay an Org Admin.</li>
             <li>
-              When they accept, they become the Owner and you stay an Org Admin. If they decline, nothing changes.
-            </li>
-            <li>
-              {transfer ? `This replaces the offer to ${transfer.to.name}.` : 'You can cancel the offer until then.'}
+              {transfer
+                ? `This replaces the offer to ${transfer.to.name}.`
+                : 'You can cancel the offer until they answer.'}
             </li>
           </ul>
         </StepUpDialog>
@@ -191,7 +198,7 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
   const slug = organization.slug;
   const schedule = useScheduleDeletion(slug);
   const cancel = useCancelDeletion(slug);
-  const cancelError = useApiError(cancel.error);
+  const cancelError = useApiError(cancel.error, []);
   const [chosenOpen, setOpen] = useState(false);
   const open = chosenOpen || reopen;
   const [typed, setTyped] = useState('');
@@ -201,40 +208,40 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
   return (
     <SettingsSection
       title="Delete organisation"
-      description={`Deletion is scheduled, not immediate: nothing is removed for ${ORG_DELETION_GRACE_DAYS} days, and you can cancel at any time until then.`}
+      description={
+        deletion
+          ? `Scheduled. Cancel any time before ${formatDate(deletion.deletes_at)}.`
+          : `Deletion is scheduled, not immediate: everything goes ${ORG_DELETION_GRACE_DAYS} days after you confirm, and you can cancel until then.`
+      }
     >
       {cancelError.summary ? <FormAlert title={cancelError.summary} /> : null}
       {deletion ? (
-        <div className="flex items-center gap-4 rounded-md border border-danger-fg/25 bg-danger-bg px-4 py-3 text-danger-fg max-sm:flex-col max-sm:items-start">
+        <DangerRow>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <p className="font-medium">
-              {organization.name} will be deleted on {formatDate(deletion.deletes_at)}
+              {organization.name} will be deleted {daysUntil(deletion.deletes_at)}.
             </p>
-            <p className="text-xs leading-5">
-              Scheduled {formatDate(deletion.scheduled_at)}. Everyone can keep working until then; every member sees a
-              banner with the date.
+            <p className="text-sm text-text-secondary">
+              Scheduled {formatDate(deletion.scheduled_at)}. Everyone can keep working until then.
             </p>
           </div>
-          <Button
+          <PendingButton
             variant="outline"
             size="sm"
-            disabled={cancel.isPending}
             onClick={() =>
               cancel.mutate(undefined, { onSuccess: () => toast.success(`${organization.name} will not be deleted.`) })
             }
+            pending={cancel.isPending}
+            pendingLabel="Cancelling…"
           >
-            {cancel.isPending ? 'Cancelling…' : 'Cancel deletion'}
-          </Button>
-        </div>
+            Cancel deletion
+          </PendingButton>
+        </DangerRow>
       ) : (
-        <div className="flex items-center gap-4 rounded-md border border-danger-fg/25 px-4 py-3 max-sm:flex-col max-sm:items-start">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p className="font-medium">Delete {organization.name}</p>
-            <p className="text-sm text-text-secondary">
-              Projects, issues, comments, articles and files go after {ORG_DELETION_GRACE_DAYS} days. Members’ accounts
-              are unaffected.
-            </p>
-          </div>
+        <DangerRow>
+          <p className="min-w-0 flex-1 text-sm text-pretty text-text-secondary">
+            Projects, issues, comments, articles and files are deleted. Members’ accounts are unaffected.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -243,7 +250,7 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
           >
             Delete organisation
           </Button>
-        </div>
+        </DangerRow>
       )}
 
       <StepUpDialog
@@ -289,16 +296,31 @@ function DeleteSection({ organization, user, reopen, onReopened }: SectionProps 
       >
         <ul className="flex list-disc flex-col gap-1.5 pl-5">
           <li>
-            In {ORG_DELETION_GRACE_DAYS} days its projects, issues, comments, articles and files are deleted, and nobody
-            can open it any more. Files in your own connected bucket are never touched.
+            In {ORG_DELETION_GRACE_DAYS} days everything in it is deleted, except files in your own connected bucket.
           </li>
+          <li>Until then everyone keeps working, and you can cancel at any time.</li>
+          <li>Org Admins get an email now, a reminder the day before, and one when it is done.</li>
           <li>
-            Until then everyone can keep working and sees a banner with the date. You can cancel at any time; you, and
-            every Org Admin, get an email now, a reminder the day before, and another when it is done.
+            A pending ownership offer is cancelled, and the address{' '}
+            <code className="rounded-xs border bg-inset px-1 font-mono text-xs text-text">{slug}</code> is never reused.
           </li>
-          <li>A pending ownership transfer is cancelled. The address {slug} stays reserved and is never reused.</li>
         </ul>
       </StepUpDialog>
     </SettingsSection>
   );
+}
+
+function DangerRow({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-14 items-center gap-4 rounded-md border px-4 py-3 max-sm:flex-col max-sm:items-stretch">
+      {children}
+    </div>
+  );
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+function daysUntil(at: string): string {
+  const days = Math.max(0, Math.ceil((Date.parse(at) - Date.now()) / DAY));
+  return days === 0 ? 'today' : `in ${plural(days, 'day')}`;
 }

@@ -1,12 +1,13 @@
 import {
+  Calculator,
   Calendar,
   CalendarClock,
-  CircleDot,
   FileText,
   Hash,
   Link2,
   ListChecks,
   SquareCheck,
+  SquareChevronDown,
   Timer,
   Type,
   User,
@@ -14,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { CustomField, CustomFieldType } from '@nothingleft/types';
+import { emptyLabel } from '@nothingleft/format';
 
 export interface FieldTypeMeta {
   label: string;
@@ -25,13 +27,13 @@ export const FIELD_TYPE_META: Record<CustomFieldType, FieldTypeMeta> = {
   text: { label: 'Text', hint: 'One line, up to 1,000 characters', icon: Type },
   markdown: { label: 'Markdown', hint: 'Formatted text, up to 16 KB', icon: FileText },
   url: { label: 'URL', hint: 'A web address', icon: Link2 },
-  number: { label: 'Number', hint: 'A number, optionally in a range with set decimals', icon: Hash },
+  number: { label: 'Number', hint: 'A decimal number, optionally in a range', icon: Calculator },
   integer: { label: 'Integer', hint: 'A whole number, optionally in a range', icon: Hash },
   duration: { label: 'Duration', hint: 'Time, as 1w 1d 1h 1m', icon: Timer },
   date: { label: 'Date', hint: 'A calendar date, the same in every timezone', icon: Calendar },
   datetime: { label: 'Date and time', hint: 'A moment, shown in each reader’s timezone', icon: CalendarClock },
   checkbox: { label: 'Checkbox', hint: 'Yes or no', icon: SquareCheck },
-  select: { label: 'Select', hint: 'One option from a list', icon: CircleDot },
+  select: { label: 'Select', hint: 'One option from a list', icon: SquareChevronDown },
   multi_select: { label: 'Multi-select', hint: 'Several options from a list', icon: ListChecks },
   user: { label: 'User', hint: 'One member of the project', icon: User },
   multi_user: { label: 'Multi-user', hint: 'Several members', icon: Users },
@@ -54,7 +56,7 @@ export const isGroupable = (type: CustomFieldType) =>
 export const isSortable = (type: CustomFieldType) => type !== 'text' && type !== 'markdown' && type !== 'url';
 
 export const emptyLabelOf = (field: Pick<CustomField, 'name' | 'empty_label'>) =>
-  field.empty_label ?? `No ${field.name}`;
+  field.empty_label ?? emptyLabel(field.name);
 
 /** Fields a new issue of `typeName` carries: live, applying to the type, and not standing in for Estimation or Spent time. */
 export const fieldsForType = (fields: readonly CustomField[], typeName: string | null) =>

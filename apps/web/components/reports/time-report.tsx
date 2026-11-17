@@ -8,10 +8,12 @@ import { ReportFrame } from '@components/reports/report-frame';
 import { ReportPicker } from '@components/reports/report-picker';
 import {
   calendarNote,
+  DURATION_FACE,
   durationUnitOf,
-  formatCount,
   formatMinutes,
   HueNote,
+  Minutes,
+  plural,
   scopeText,
   UnitToggle,
   type DurationUnit,
@@ -30,11 +32,11 @@ const GROUPS = [
   { value: 'project', label: 'Project' },
 ] as const;
 
-const OTHER_NOUN: Record<string, string> = {
-  work_type: 'work types',
-  user: 'people',
-  issue: 'issues',
-  project: 'projects',
+const OTHER_NOUN: Record<string, readonly [string, string]> = {
+  work_type: ['work type', 'work types'],
+  user: ['person', 'people'],
+  issue: ['issue', 'issues'],
+  project: ['project', 'projects'],
 };
 
 const calendarOf = (data: Time): WorkCalendar => ({
@@ -61,8 +63,9 @@ function rowsOf(data: Time): Row[] {
     key: `${r.value ?? r.label}-${i}`,
     label: data.group_by === 'issue' && r.value ? `${r.value} ${r.label}` : r.label,
     amount: r.spent_minutes,
-    estimate: r.estimate_minutes,
-    difference: r.difference_minutes,
+    // A project or issue whose estimate is zero has none: comparing logged time against it is noise.
+    estimate: r.estimate_minutes || null,
+    difference: r.estimate_minutes ? r.difference_minutes : null,
     share: r.share,
     query: r.query,
     // Colour only where it names something: a project's own; people and work types read by name.
@@ -83,7 +86,7 @@ function rowsOf(data: Time): Row[] {
     const total = data.totals.spent_minutes || 1;
     rows.push({
       key: 'other',
-      label: `Other · ${formatCount(beyond.groups)} ${OTHER_NOUN[data.group_by] ?? 'values'}`,
+      label: `Other · ${plural(beyond.groups, ...(OTHER_NOUN[data.group_by] ?? (['value', 'values'] as const)))}`,
       amount: beyond.minutes,
       estimate: null,
       difference: null,
@@ -118,7 +121,8 @@ export function TimeReport() {
         <>
           <PeriodPicker
             value={{ period: state.params.get('period'), from: state.params.get('from'), to: state.params.get('to') }}
-            resolved={result.data?.scope.period ?? null}
+            resolved={result.isPlaceholderData ? null : (result.data?.scope.period ?? null)}
+            pending={result.isPending || result.isPlaceholderData}
             onChange={v => state.set({ ...v })}
           />
           <ReportPicker
@@ -134,9 +138,9 @@ export function TimeReport() {
       skeleton="bars"
       summary={d => (
         <>
-          <span className="font-medium text-text tabular">
+          <Minutes className="font-medium text-text">
             {formatMinutes(d.totals.spent_minutes, unit, calendarOf(d))}
-          </span>{' '}
+          </Minutes>{' '}
           logged
           {d.scope.period ? ` ${formatCalendarRange(d.scope.period.from, d.scope.period.to)}` : ''} on issues{' '}
           {scopeText(d.scope, Boolean(state.get('projects')))}.
@@ -153,7 +157,8 @@ export function TimeReport() {
               heading={GROUPS.find(g => g.value === d.group_by)?.label ?? 'Value'}
               amountHeading="Spent"
               rows={rows}
-              formatAmount={m => formatMinutes(m, unit, calendar)}
+              formatAmount={m => formatMinutes(m, unit, calendar, { column: true })}
+              amountClassName={DURATION_FACE}
               total={d.totals.spent_minutes}
               columns={withEstimates ? estimateColumns(d, unit, calendar) : []}
             />
@@ -161,10 +166,7 @@ export function TimeReport() {
             <HueNote groups={d.rows} />
             <div className="flex flex-col gap-1 text-xs text-text-secondary">
               {withEstimates && d.estimate_sources.length > 0 ? (
-                <p>
-                  Estimates come from{' '}
-                  {d.estimate_sources.map(s => `${s.project.name}: ${s.field ?? 'Estimation'}`).join(' · ')}.
-                </p>
+                <p>{estimateSourcesText(d.estimate_sources)}</p>
               ) : (
                 <p>
                   An estimate belongs to a whole issue, so a report by person or work type has none. Group by issue or
@@ -172,7 +174,6 @@ export function TimeReport() {
                 </p>
               )}
               {unit !== 'hours' ? <p>{calendarNote(calendar)}</p> : null}
-              <p>Logged time shows where the hours went, not how well anyone worked.</p>
             </div>
           </div>
         );
@@ -181,19 +182,41 @@ export function TimeReport() {
   );
 }
 
+/** Which field each project's estimates come from, said once when every project uses the same one. */
+function estimateSourcesText(sources: Time['estimate_sources']) {
+  const fields = new Set(sources.map(s => s.field ?? 'Estimation'));
+  if (fields.size === 1) {
+    const [field] = fields;
+    return sources.length === 1
+      ? `Estimates come from ${sources[0]!.project.name}’s ${field} field.`
+      : `Estimates come from each project’s ${field} field.`;
+  }
+  return `Estimates come from ${sources.map(s => `${s.project.name}: ${s.field ?? 'Estimation'}`).join(' · ')}.`;
+}
+
 function estimateColumns(data: Time, unit: DurationUnit, calendar: WorkCalendar): BarTableColumn<Row>[] {
-  const format = (m: number) => formatMinutes(m, unit, calendar);
+  const format = (m: number) => formatMinutes(m, unit, calendar, { column: true });
   return [
     {
       heading: 'Estimate',
       cell: row =>
-        row.estimate === null ? <span className="text-text-muted">No estimate</span> : format(row.estimate),
-      total: data.totals.estimate_minutes === null ? null : format(data.totals.estimate_minutes),
+        row.estimate === null ? (
+          <span className="text-text-muted">No estimate</span>
+        ) : (
+          <Minutes>{format(row.estimate)}</Minutes>
+        ),
+      total: data.totals.estimate_minutes ? (
+        <Minutes>{format(data.totals.estimate_minutes)}</Minutes>
+      ) : (
+        <span className="text-text-muted">No estimate</span>
+      ),
     },
     {
       heading: 'Difference',
       cell: row => <Difference minutes={row.estimate === null ? null : row.difference} format={format} />,
-      total: <Difference minutes={data.totals.difference_minutes} format={format} />,
+      total: (
+        <Difference minutes={data.totals.estimate_minutes ? data.totals.difference_minutes : null} format={format} />
+      ),
     },
   ];
 }
@@ -202,9 +225,9 @@ function Difference({ minutes, format }: { minutes: number | null; format: (m: n
   if (minutes === null) return <span className="text-text-muted">–</span>;
   const over = minutes < 0;
   return (
-    <span className={cn(over && 'font-medium text-danger-fg')}>
+    <Minutes className={cn(over && 'font-medium text-danger-fg')}>
       {over ? '−' : minutes > 0 ? '+' : ''}
       {format(Math.abs(minutes))}
-    </span>
+    </Minutes>
   );
 }

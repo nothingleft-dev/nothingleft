@@ -10,9 +10,9 @@ interface EmptyStateProps {
 
 export function EmptyState({ title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-start gap-2 rounded-md border border-dashed px-4 py-6', className)}>
+    <div className={cn('flex flex-col items-start gap-2 rounded-md border px-4 py-6', className)}>
       <p className="font-medium">{title}</p>
-      {description ? <p className="text-xs text-text-muted">{description}</p> : null}
+      {description ? <p className="text-xs text-text-secondary">{description}</p> : null}
       {action ? <div className="pt-1">{action}</div> : null}
     </div>
   );

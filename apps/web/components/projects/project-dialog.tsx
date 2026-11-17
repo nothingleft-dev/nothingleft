@@ -2,60 +2,61 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { PaletteHue, Project } from '@nothingleft/types';
-import { generateProjectKey } from '@nothingleft/format';
+import { CreateProjectSchema, type PaletteHue } from '@nothingleft/types';
+import { generateProjectKey, parseProjectKey } from '@nothingleft/format';
 import { Button } from '@components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@components/dialog';
 import { Field } from '@components/auth/field';
 import { FormAlert } from '@components/auth/form-alert';
 import { PaletteSwatches } from '@components/palette-swatches';
 import { useApiError } from '@hooks/use-api-error';
-import { useCreateProject, useUpdateProject } from '@hooks/use-projects';
-import { isApiError } from '@lib/api/errors';
+import { useCreateProject } from '@hooks/use-projects';
+import { PendingButton } from '@components/pending-button';
+import { useFieldProblems } from '@hooks/use-field-problems';
 
 export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [keyEdited, setKeyEdited] = useState(false);
+  const [keyChecked, setKeyChecked] = useState(false);
   const [color, setColor] = useState<PaletteHue>('blue');
   const create = useCreateProject();
-  const error = useApiError(create.error);
+  const error = useApiError(create.error, ['name', 'key']);
+  const local = useFieldProblems(CreateProjectSchema, { name: 'Name' });
 
   const derived = keyEdited ? key : (generateProjectKey(name) ?? '');
-  const suggestion =
-    isApiError(create.error) && create.error.code === 'project.key_taken' ? create.error.validValues?.[0] : undefined;
+  const suggestion = error.code === 'project.key_taken' ? error.validValues[0] : undefined;
+  const keyProblem =
+    keyChecked && derived.trim() !== '' && parseProjectKey(derived) === null
+      ? 'A key is 2–10 letters and digits.'
+      : undefined;
 
   const close = () => {
     onOpenChange(false);
     setName('');
     setKey('');
     setKeyEdited(false);
+    setKeyChecked(false);
+    local.clear('name');
     create.reset();
   };
 
   return (
     <Dialog open={open} onOpenChange={next => (next ? onOpenChange(true) : close())}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>New project</DialogTitle>
-          <DialogDescription>
-            The key becomes the prefix on every issue in it, so short reads better: PP-14 rather than PARTNER-14.
-          </DialogDescription>
         </DialogHeader>
 
         <form
           id="create-project"
           noValidate
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 pb-2"
           onSubmit={event => {
             event.preventDefault();
+            setKeyChecked(true);
+            const keyValid = derived.trim() === '' || parseProjectKey(derived) !== null;
+            if (!local.check({ name }) || !keyValid) return;
             create.mutate(
               { name: name.trim(), avatar_color: color, ...(derived ? { key: derived } : {}) },
               {
@@ -67,38 +68,43 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
             );
           }}
         >
-          {error.summary ? (
-            <FormAlert title={error.summary}>
-              {suggestion ? (
-                <button
-                  type="button"
-                  className="font-medium underline"
-                  onClick={() => {
-                    setKeyEdited(true);
-                    setKey(suggestion);
-                  }}
-                >
-                  Use {suggestion} instead
-                </button>
-              ) : null}
-            </FormAlert>
-          ) : null}
+          {error.summary ? <FormAlert title={error.summary} /> : null}
 
           <Field
             label="Name"
             autoFocus
-            placeholder="Partner Portal"
+            placeholder="e.g. Partner Portal"
             value={name}
-            error={error.fields['name']}
-            onChange={e => setName(e.target.value)}
+            error={local.problems['name'] ?? error.fields['name']}
+            onChange={e => {
+              setName(e.target.value);
+              local.clear('name');
+            }}
           />
 
           <Field
             label="Key"
-            className="font-mono tabular uppercase"
-            placeholder="PP"
+            className="font-mono tabular uppercase placeholder:font-sans placeholder:normal-case"
+            placeholder="e.g. PP"
+            hint="The prefix on every issue, as in PP-14. Short reads best."
             value={derived}
-            error={error.fields['key']}
+            error={keyProblem ?? error.fields['key']}
+            errorAction={
+              suggestion ? (
+                <button
+                  type="button"
+                  className="action-link font-medium"
+                  onClick={() => {
+                    setKeyEdited(true);
+                    setKey(suggestion);
+                    create.reset();
+                  }}
+                >
+                  Use {suggestion} instead
+                </button>
+              ) : null
+            }
+            onBlur={() => setKeyChecked(true)}
             onChange={e => {
               setKeyEdited(true);
               setKey(e.target.value.toUpperCase());
@@ -112,96 +118,11 @@ export function CreateProjectDialog({ open, onOpenChange }: { open: boolean; onO
           <Button variant="outline" onClick={close} disabled={create.isPending}>
             Cancel
           </Button>
-          <Button type="submit" form="create-project" disabled={create.isPending || name.trim() === ''}>
-            {create.isPending ? 'Creating…' : 'Create project'}
-          </Button>
+          <PendingButton type="submit" form="create-project" pending={create.isPending} pendingLabel="Creating…">
+            Create project
+          </PendingButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-export function ProjectGeneralForm({ project, canEdit }: { project: Project; canEdit: boolean }) {
-  const [name, setName] = useState(project.name);
-  const [key, setKey] = useState(project.key);
-  const [description, setDescription] = useState(project.description_md ?? '');
-  const [color, setColor] = useState<PaletteHue>(project.avatar_color);
-  const update = useUpdateProject(project.key);
-  const error = useApiError(update.error);
-
-  const dirty =
-    name !== project.name ||
-    key !== project.key ||
-    description !== (project.description_md ?? '') ||
-    color !== project.avatar_color;
-
-  return (
-    <form
-      noValidate
-      className="flex max-w-xl flex-col gap-4"
-      onSubmit={event => {
-        event.preventDefault();
-        update.mutate(
-          {
-            name,
-            ...(project.key_editable ? { key } : {}),
-            description_md: description.trim() === '' ? null : description,
-            avatar_color: color,
-          },
-          { onSuccess: () => toast.success('Project saved.') },
-        );
-      }}
-    >
-      {error.summary ? <FormAlert title={error.summary} /> : null}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          label="Name"
-          value={name}
-          disabled={!canEdit}
-          error={error.fields['name']}
-          onChange={e => setName(e.target.value)}
-        />
-        <Field
-          label="Key"
-          className="font-mono tabular uppercase"
-          value={key}
-          disabled={!canEdit}
-          readOnly={!project.key_editable}
-          error={error.fields['key']}
-          hint={
-            project.key_editable
-              ? 'Fixed once the first issue is filed.'
-              : `Fixed: ${project.key}-1 exists, and every key handed out would stop working.`
-          }
-          onChange={e => setKey(e.target.value.toUpperCase())}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="project-description" className="text-xs font-medium text-text-secondary">
-          Description
-        </label>
-        <textarea
-          id="project-description"
-          rows={4}
-          value={description}
-          disabled={!canEdit}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="What this project is for. Markdown works."
-          className="w-full rounded-md border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted hover:border-border-strong focus:border-border-strong disabled:opacity-50"
-        />
-      </div>
-
-      <PaletteSwatches value={color} onChange={setColor} disabled={!canEdit} />
-
-      {canEdit ? (
-        <Button type="submit" disabled={!dirty || update.isPending} className="self-start">
-          {update.isPending ? 'Saving…' : 'Save changes'}
-        </Button>
-      ) : (
-        <p className="text-xs text-text-muted">Only a Project Admin can change these.</p>
-      )}
-    </form>
   );
 }
