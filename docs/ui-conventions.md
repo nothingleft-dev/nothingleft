@@ -248,8 +248,8 @@ spent time alone; with nothing logged, `?`, as Estimation does. The value is the
 epic's includes its subtasks'. When the project's time tracking is off, Estimation and
 Spent time leave the sidebar, the Spent time tab and the composer's *Add spent time*
 disappear, and the create form drops its Estimation chip; nothing logged is lost. Every field is inline-editable without opening a dialog.
-Assignees show avatars; Priority and Type show their coloured letter badge
-alongside the name. Tags are not in the sidebar — they sit under the title.
+Assignees show avatars; in the sidebar Priority and Type show their coloured letter badge
+alongside the name, and in the key-field strip a dot before it, as a board card does (owner, 24 Nov 2026). Tags are not in the sidebar — they sit under the title.
 
 Empty values render as their configured label in the same muted style as a
 real value, never as a blank: `No due date`, `Unassigned`, `?` for an
@@ -437,18 +437,28 @@ As built in 1e (owner decisions, 25 Sep 2026):
   raw total
 - Collapsible columns, optional WIP limits
 - Swimlanes, including an *Uncategorized Cards* lane
-- Cards: a coloured left edge for a priority above the project's default (none at or below it), key, title, assignee avatars,
+- Cards: a coloured left edge for the urgent end of the priority scale, key, title, assignee avatars,
   priority and type dots, due date, subtask progress (`1/3`), inline `+` to
   create in that column
 
 Built in Phase 3 (26 Sep 2026). Decisions taken there:
 
 - **Cards** (revised by the owner, 26 Sep 2026) carry every assignee's avatar (name on
-  hover), the priority and type as a coloured dot and the value's name — not letter
-  badges, which read as noise on a card — the due date or _No due date_, up to three tags
-  as neutral chips (as many as fit about 28 characters, the rest as `+N`), story points as
-  a neutral mono chip (nothing when unpointed) and subtask progress when there are
-  subtasks. Resolved cards strike the key and title through, like list rows.
+  hover), the priority and type as a dot and the value's name — not letter
+  badges, which read as noise on a card — up to three tags
+  as neutral chips (as many as fit about 28 characters, the rest as `+N`), the due date in words
+  (`Due 4 Dec`, `Due today`, `Overdue · 22 Nov`), story points as
+  a neutral mono chip with its unit (`3 pts`; nothing when unpointed) and subtask progress
+  when there are subtasks. Rows, top to bottom: key and title; people, priority, type; tags; the
+  date and the marks. A row with nothing in it is not drawn: an undated card has no date line
+  (owner, 24 Nov 2026), and its _Set due date_ control waits at the end of the values row for the
+  pointer. The type's dot wears its colour; the priority's does only above the project's default
+  and is grey at or below it. The left edge is kept for the urgent end of the scale (owner, 24 Nov
+  2026): a priority two or more steps above the default, or the top one. A card in a column that
+  holds several statuses names its own status in words before the priority, unless that is the
+  column's name. Points with no date or other mark beside them end the values row instead of
+  taking a line. A resolved card
+  strikes its key and steps its title down to secondary ink; the title is never struck.
 - **On a card**, the avatars open the assignee picker (_Unassigned_, _Me_, then the
   project's people) and the due date opens the calendar with _Apply changes_ / _Cancel_,
   for Contributors and up. The key opens the issue in a new tab; a double-click, or `↵` on
@@ -464,23 +474,50 @@ Built in Phase 3 (26 Sep 2026). Decisions taken there:
   do not accept the drop.
 - **Inline creation** is per cell (_New card_ on hover), not per column header: the new
   issue takes the sprint, the column's first status and the lane's value (assignee,
-  priority, type) or parent (issue lanes).
+  priority, type) or parent (issue lanes). On a board with lanes the control is a `+` in the
+  lane's band above the cell, so a lane is as tall as its tallest card and no taller.
 - **Column width** (owner, 2 Nov 2026): each column is 280–380 px. Columns widen to fill the
   window up to 380 px and never narrow past 280 px; a board with more columns than fit scrolls
   sideways instead of squeezing its cards. A collapsed column is 40 px.
-- **More columns than fit**: a 40 px rail beside the board names the next hidden column and its
-  count, read like a collapsed column (`Done · 4 · +2 more`); clicking it scrolls that column into
-  view. The cut column fades at the edge.
+- **More columns than fit**: the columns share the width so a whole number shows, never a cut
+  one, and a 40 px rail beside them (an arrow, how many columns are hidden upright as `+2`, then
+  their names rotated) scrolls the next one into view. At the last column the rail reads _Back to
+  To Do_, so it never leaves and the columns never resize. A column cut mid-scroll fades at the
+  edge.
 - **Column counts** read `count` alone, or `count of total` when a filter hides cards or the
   board was cut short (`45 of 1,229`); WIP limits show as `min 2 · max 4`, red over the maximum,
-  amber under the minimum. A collapsed column over its maximum reads `To do · 6 (max 4)`.
+  amber under the minimum. A limit is always written `min 2 · max 4`, and a column past one says
+  by how much after it (`max 2 · 2 over`, `min 3 · 2 under`); the tooltip is the sentence (_4 cards, 2
+  over the maximum of 2; cards can still be moved here_). A collapsed column shows its count
+  upright over its rotated name, in red with `max 4` under it when over its maximum.
 - **Column headers**: name, a check when the column counts as resolved, WIP limits, the count;
-  the collapse control follows the count and shows on hover or focus.
-- **A board that fails to load** keeps the sprint row (from the sprint list) and shows the inline
-  load error under it, no empty frame. **No running sprint**: the next planned sprint is the one
-  primary action (_Open Sprint 1_), the backlog a link.
+  the collapse control (`«`, as the sidebar's) follows the count and shows on hover or focus; a
+  collapsed column opens with `»`.
+- **Loading, failed and no running sprint share one shell**: the board's frame with its column
+  headers where the loaded board's are, and the filter bar in its place, dimmed and out of reach
+  when there is nothing to filter. Loading draws bars and card blocks; the other two write the
+  column names and put their message at one spot under the headers. A failed board keeps the
+  sprint's dates and days left (from the sprint list) and drops the totals. No running sprint says
+  how many are planned and which is next (_2 sprints planned. Next: Sprint 1, 26 Nov – 9 Dec 2026._);
+  the next planned sprint is the one primary action (_View Sprint 1_), the backlog a link.
 - **The strip follows the column field** (owner, 26 Sep 2026): by status on a status board,
   by priority or type on those boards, so it summarises what the columns show.
+- **The sprint row is three two-line groups**: the sprint (picker, dates over days left), where
+  the cards are (the strip over its legend, which opens with what it counts: _By status_, _By
+  priority_, _By type_), and what is finished, right-aligned (`4 of 15 issues resolved` over `8 of
+  37 points resolved`, the finished figure in ink). Card counts and points never read as one figure
+  in two units.
+- **The sprint picker** lists _All open issues_, the active sprint and the planned ones; finished
+  sprints, newest first, wait behind one row (_Show 7 finished sprints_) unless one of them is on
+  show or the box is being searched.
+- **A card's development mark** is its icon and the state in words (_CI failing_, _Approved_,
+  _Merged_): an icon alone had to be guessed. A resolved card drops the priority edge.
+- **Board settings** are a list beside its editor (24 Nov 2026): the boards on the left with _New
+  board_, the chosen board's name, slug, _View board_ and its ⋯ menu heading the right, then
+  Columns and Swimlanes. Choosing a board never pushes its editor down the page; below 1024 px the
+  list stacks above. The columns table has one track list for its header and rows: order, name,
+  the values the column holds, Min and Max WIP (`–` when unset), Collapsed, _Merge with_, and a
+  bin that deletes the column (the × belongs to a value chip, which it splits out).
 - **Page actions are outlined buttons with an icon** (_Backlog_, _Board settings_, _Board_),
   not bare text, so they read as controls.
 - **Days left** turns `--danger-fg` under three days; `0` reads _Ends today_.

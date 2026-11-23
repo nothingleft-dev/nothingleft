@@ -68,7 +68,7 @@ describe('the default board', () => {
     expect(res.statusCode).toBe(200);
     const [board] = res.json().data;
     expect(board.slug).toBe(KEY.toLowerCase());
-    expect(board.columns.map((c: { name: string }) => c.name)).toEqual(['To do', 'In progress', 'Done']);
+    expect(board.columns.map((c: { name: string }) => c.name)).toEqual(['To Do', 'In Progress', 'Done']);
     expect(board.columns[0].values.map((s: { name: string }) => s.name)).toContain('Open');
     expect(board.columns[2].resolved).toBe(true);
     expect(board.columns[0].resolved).toBe(false);

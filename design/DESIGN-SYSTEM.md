@@ -712,7 +712,8 @@ the create form); it never adds a line, and pasted line breaks become spaces.
 
 **Key-field strip** (option C, owner, 2 Nov 2026): under the tags, one hairline-bordered
 row of cells, label above value: Status, Priority, Type, Assignees, Sprint, Due date. Priority
-and Type wear their letter badge inline before the name. The cells are six, three or two to a row
+and Type wear a dot in their label colour before the name, as Status does and as a board card
+does (owner, 24 Nov 2026); the priority's dot is grey at or below the project's default. The cells are six, three or two to a row
 by the column's width, so a wrapped row is never one cell beside an empty remainder and its
 dividers line up with the row above. Assignees shows one person as avatar and full name
 (wrapping like Sprint), several as the avatar stack alone with `+N`, the names in its tooltip

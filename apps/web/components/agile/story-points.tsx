@@ -11,10 +11,13 @@ const CHIP =
 export function StoryPoints({
   points,
   unestimated = 'none',
+  unit = false,
   className,
 }: {
   points: number | null;
   unestimated?: 'none' | 'mark';
+  /** Says `pts` after the figure where no heading names the column. */
+  unit?: boolean;
   className?: string;
 }) {
   if (points === null && unestimated === 'none') return null;
@@ -27,6 +30,9 @@ export function StoryPoints({
           className={cn(CHIP, 'text-text-secondary', points === null && 'border-dashed', className)}
         >
           {points ?? '?'}
+          {unit && points !== null ? (
+            <span className="ml-1 font-sans font-normal">{points === 1 ? 'pt' : 'pts'}</span>
+          ) : null}
         </span>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

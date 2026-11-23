@@ -10,7 +10,7 @@ import { Skeleton } from '@components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Meter } from '@components/dashboard/meter';
 import { Duration } from '@components/duration';
-import { PriorityBadge, StatusDot, TypeBadge } from '@components/issues/value-marks';
+import { PriorityBadge, StatusDot, TypeBadge, ValueDot } from '@components/issues/value-marks';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
 import { FIELD_PERSON_TEXT, FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
 import { DevelopmentField } from '@components/git/development-field';
@@ -22,7 +22,7 @@ import { PersonName } from '@components/former-member-chip';
 import { AssigneeStack } from '@components/issues/assignee-stack';
 import { useIssueWatchers, useUpdateIssue, type IssueUpdate } from '@hooks/use-issues';
 import { useProjectAssignees } from '@hooks/use-projects';
-import { useSchemaValues } from '@hooks/use-project-schema';
+import { usePriorityRise, useSchemaValues } from '@hooks/use-project-schema';
 import { useSprints } from '@hooks/use-sprints';
 import { useShortcut } from '@hooks/use-shortcut';
 import { useWorkCalendar } from '@hooks/use-work-calendar';
@@ -77,6 +77,7 @@ export function IssueSidebar({
   const calendar = useWorkCalendar();
   const update = useUpdateIssue(issue.key);
   const customFields = useCustomFields(projectKey);
+  const rise = usePriorityRise(projectKey, issue.priority.name);
   const estimationLabel = timeRoleField(customFields.data, 'estimation')?.name ?? 'Estimation';
   const spentLabel = timeRoleField(customFields.data, 'spent_time')?.name ?? 'Spent time';
 
@@ -189,7 +190,10 @@ export function IssueSidebar({
               loading={priorities.isPending}
               onRetry={retryOf(priorities)}
               selected={issue.priority.name}
-              options={(priorities.data ?? []).map(p => ({ name: p.name, mark: <PriorityBadge priority={p} /> }))}
+              options={(priorities.data ?? []).map(p => ({
+                name: p.name,
+                mark: strip ? <ValueDot color={p.color} /> : <PriorityBadge priority={p} />,
+              }))}
               onSelect={name => {
                 const next = priorities.data?.find(p => p.name === name);
                 pick('priority', name, i => (next ? { ...i, priority: next } : i));
@@ -197,7 +201,7 @@ export function IssueSidebar({
             />
           }
         >
-          {strip ? <PriorityBadge priority={issue.priority} /> : null}
+          {strip ? <ValueDot color={issue.priority.color} plain={!rise.raised} /> : null}
           {issue.priority.name}
         </SidebarField>
         <SidebarField
@@ -212,7 +216,10 @@ export function IssueSidebar({
               loading={types.isPending}
               onRetry={retryOf(types)}
               selected={issue.type.name}
-              options={(types.data ?? []).map(t => ({ name: t.name, mark: <TypeBadge type={t} /> }))}
+              options={(types.data ?? []).map(t => ({
+                name: t.name,
+                mark: strip ? <ValueDot color={t.color} /> : <TypeBadge type={t} />,
+              }))}
               onSelect={name => {
                 const next = types.data?.find(t => t.name === name);
                 pick('type', name, i => (next ? { ...i, type: next } : i));
@@ -220,7 +227,7 @@ export function IssueSidebar({
             />
           }
         >
-          {strip ? <TypeBadge type={issue.type} /> : null}
+          {strip ? <ValueDot color={issue.type.color} /> : null}
           {issue.type.name}
         </SidebarField>
         <SidebarField

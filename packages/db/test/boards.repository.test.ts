@@ -20,7 +20,7 @@ describe('boardsRepository tenant isolation', () => {
       expect([...(await repo.slugsInOrg(ctxA))]).toEqual(['ac']);
 
       const layout = await repo.layout(ctxA, [a.id, b.id]);
-      expect(layout.get(a.id)!.columns.map(c => c.name)).toEqual(['To do', 'In progress', 'Done']);
+      expect(layout.get(a.id)!.columns.map(c => c.name)).toEqual(['To Do', 'In Progress', 'Done']);
       expect(layout.get(a.id)!.columns[0]!.value_ids.length).toBeGreaterThan(0);
       expect(layout.get(a.id)!.swimlane_type_ids).toHaveLength(1);
       expect(layout.get(b.id)!.columns).toEqual([]);

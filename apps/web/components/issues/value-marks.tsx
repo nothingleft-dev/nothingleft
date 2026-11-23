@@ -25,6 +25,28 @@ export function StatusDot({ category, color, className }: StatusDotProps) {
   );
 }
 
+/** A priority's or a type's dot, beside its name; `plain` keeps it grey where the value is nothing to flag. */
+export function ValueDot({
+  color,
+  plain = false,
+  className,
+}: {
+  color: LabelColor;
+  plain?: boolean;
+  className?: string;
+}) {
+  return (
+    <i
+      aria-hidden
+      className={cn(
+        'inline-block size-2 flex-none rounded-full bg-c-solid',
+        plain ? 'l-gray-2' : `l-${color}`,
+        className,
+      )}
+    />
+  );
+}
+
 interface ValueMark {
   name: string;
   color: LabelColor;

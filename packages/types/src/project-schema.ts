@@ -158,8 +158,8 @@ export const SEED_WORK_TYPES: readonly { name: string; short_label: string; is_d
 
 // Every new project's board: one column per group of status categories — docs/data-model.md#boards.
 export const SEED_BOARD_COLUMNS: readonly { name: string; categories: readonly StatusCategory[] }[] = [
-  { name: 'To do', categories: ['backlog', 'unstarted'] },
-  { name: 'In progress', categories: ['started'] },
+  { name: 'To Do', categories: ['backlog', 'unstarted'] },
+  { name: 'In Progress', categories: ['started'] },
   { name: 'Done', categories: ['done', 'cancelled'] },
 ];
 // Lanes of the seeded board: the issues of this type, when the project has it.

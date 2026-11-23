@@ -53,7 +53,7 @@ async function boardIn(tx: Queryable, ctx: TenantContext, projectId: number, use
     .returning();
   const [column] = await tx
     .insert(schema.board_columns)
-    .values({ org_id: ctx.orgId, board_id: board!.id, name: 'To do', position: 0 })
+    .values({ org_id: ctx.orgId, board_id: board!.id, name: 'To Do', position: 0 })
     .returning();
   return { board: board!, column: column! };
 }
