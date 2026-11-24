@@ -75,7 +75,7 @@ export function BoardSwimlanes({ projectKey, board, canEdit }: BoardSwimlanesPro
 
   return (
     <SettingsSection
-      title={`Swimlanes · ${board.name}`}
+      title="Swimlanes"
       description="Rows across the board. Cards that fit no row go in Uncategorized, always last."
     >
       <div className="flex flex-col gap-3">

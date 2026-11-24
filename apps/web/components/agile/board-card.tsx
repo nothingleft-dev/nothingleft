@@ -1,9 +1,9 @@
 'use client';
 
-import { useSchemaValues } from '@hooks/use-project-schema';
+import { usePriorityRise } from '@hooks/use-project-schema';
 import { useId, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { toast } from 'sonner';
-import { ListChecks, Plus } from 'lucide-react';
+import { CalendarPlus, ListChecks, Plus } from 'lucide-react';
 import type {
   BoardCard as Card,
   BoardColumnField,
@@ -22,6 +22,7 @@ import { IssueKey } from '@components/issue-key';
 import { DueDate } from '@components/issues/due-date';
 import { MemberAvatar } from '@components/issues/member-avatar';
 import { PickerSkeleton } from '@components/issues/pickers';
+import { ValueDot } from '@components/issues/value-marks';
 import { StoryPoints } from '@components/agile/story-points';
 import { usePatchCard } from '@hooks/use-boards';
 import { useCreateIssue } from '@hooks/use-issues';
@@ -40,7 +41,7 @@ export function SubtaskProgress({ resolved, total }: { resolved: number; total: 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex items-center gap-1 font-mono text-2xs tabular text-text-secondary">
+        <span className="inline-flex flex-none items-center gap-1 font-mono text-2xs tabular text-text-secondary">
           <ListChecks aria-hidden className="size-3.5 text-text-muted" />
           {resolved}/{total}
         </span>
@@ -58,6 +59,8 @@ interface BoardCardProps {
   today: string;
   /** Contributor and up: the assignee and due-date controls open pickers. */
   canEdit?: boolean;
+  /** The card's column holds several statuses, so the card names its own. */
+  showStatus?: boolean;
   dragging?: boolean;
   overlay?: boolean;
 }
@@ -84,12 +87,25 @@ const own = {
   onDoubleClick: (e: MouseEvent) => e.stopPropagation(),
 };
 
-// Colour marks a departure from the default (DESIGN § 1): only priorities above the project's default get the edge.
-function useRaisedPriority(projectKey: string, name: string) {
-  const priorities = useSchemaValues(projectKey, 'priorities').data;
-  const fallback = priorities?.find(p => p.is_default);
-  const own = priorities?.find(p => p.name === name);
-  return Boolean(own && fallback && own.position < fallback.position);
+/** A card's priority and type: a dot and the name, the priority's dot grey at or below the project's default. */
+export function CardValues({
+  projectKey,
+  priority,
+  type,
+  dim,
+}: {
+  projectKey: string;
+  priority: Card['priority'];
+  type: Card['type'];
+  dim: boolean;
+}) {
+  const { raised } = usePriorityRise(projectKey, priority.name);
+  return (
+    <>
+      <ValueName value={priority} label="Priority" dim={dim} plain={!raised} />
+      <ValueName value={type} label="Type" dim={dim} />
+    </>
+  );
 }
 
 export function BoardCard({
@@ -97,17 +113,23 @@ export function BoardCard({
   projectKey,
   today,
   canEdit = false,
+  showStatus = false,
   dragging = false,
   overlay = false,
 }: BoardCardProps) {
   const { shown, hidden } = visibleTags(card.tags);
-  const raised = useRaisedPriority(projectKey, card.priority.name);
+  const { urgent } = usePriorityRise(projectKey, card.priority.name);
+  const editable = canEdit && !overlay;
+  const developing = card.development !== null && card.development !== 'none';
+  // Points alone do not earn a line of their own: they end the values row instead.
+  const footed = card.due_date !== null || developing || card.subtasks.total > 0;
+  const points = <StoryPoints points={card.story_points} unit className="flex-none" />;
   return (
     <article
       className={cn(
-        `l-${card.priority.color} flex flex-col gap-2 rounded-md border bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong`,
-        // Drawn inside the 1 px border, so a raised card's text starts where every other card's does.
-        raised && 'border-l-c-solid shadow-[inset_2px_0_0_var(--c-solid)] hover:border-l-c-solid',
+        `l-${card.priority.color} group/card flex flex-col gap-2 rounded-md border bg-surface px-2.5 py-2 transition-colors select-none hover:border-border-strong`,
+        // Drawn inside the 1 px border, so an edged card's text starts where every other card's does.
+        urgent && !card.resolved && 'border-l-c-solid shadow-[inset_2px_0_0_var(--c-solid)] hover:border-l-c-solid',
         dragging && 'opacity-40',
         overlay && 'rotate-1 shadow-lg',
       )}
@@ -116,9 +138,22 @@ export function BoardCard({
         <a href={`/issue/${card.key}`} target="_blank" rel="noopener" {...own} className="mr-1.5 hover:underline">
           <IssueKey issueKey={card.key} resolved={card.resolved} />
         </a>
-        <span className={cn('font-medium', card.resolved && 'text-text-muted line-through')}>{card.title}</span>
+        <span className={cn('font-medium', card.resolved && 'text-text-secondary')}>{card.title}</span>
       </p>
 
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+        <CardAssignees card={card} projectKey={projectKey} canEdit={editable} />
+        {showStatus ? (
+          <span aria-label={`Status: ${card.status.name}`} className="min-w-0 truncate font-medium text-text-secondary">
+            {card.status.name}
+          </span>
+        ) : null}
+        <CardValues projectKey={projectKey} priority={card.priority} type={card.type} dim={card.resolved} />
+        <span className="ml-auto flex flex-none items-center gap-2">
+          {card.due_date === null && editable ? <CardDueDate card={card} today={today} canEdit /> : null}
+          {footed ? null : points}
+        </span>
+      </div>
       {shown.length > 0 ? (
         <div className="flex min-w-0 items-center gap-1">
           {shown.map(tag => (
@@ -140,41 +175,38 @@ export function BoardCard({
         </div>
       ) : null}
 
-      <div className="flex min-w-0 items-center gap-x-2.5 text-xs">
-        <CardAssignees card={card} projectKey={projectKey} canEdit={canEdit && !overlay} />
-        <ValueName value={card.priority} label="Priority" dim={card.resolved} />
-        <ValueName value={card.type} label="Type" dim={card.resolved} />
-      </div>
-      <div className="flex h-5 items-center gap-2 text-xs">
-        <CardDueDate card={card} today={today} canEdit={canEdit && !overlay} />
-        <span className="ml-auto flex flex-none items-center gap-2">
-          {card.development ? <DevelopmentIcon rollup={card.development} /> : null}
-          <SubtaskProgress resolved={card.subtasks.resolved} total={card.subtasks.total} />
-          <StoryPoints points={card.story_points} />
-        </span>
-      </div>
+      {footed ? (
+        <div className="flex h-5 items-center gap-2 text-xs">
+          {card.due_date !== null ? <CardDueDate card={card} today={today} canEdit={editable} /> : null}
+          <span className="ml-auto flex min-w-0 items-center gap-2">
+            {card.development ? <DevelopmentIcon rollup={card.development} labelled /> : null}
+            <SubtaskProgress resolved={card.subtasks.resolved} total={card.subtasks.total} />
+            {points}
+          </span>
+        </div>
+      ) : null}
     </article>
   );
 }
 
-export function ValueName({
+function ValueName({
   value,
   label,
   dim,
+  plain = false,
 }: {
   value: { name: string; color: LabelColor };
   label: string;
   dim: boolean;
+  /** Nothing to flag: the dot stays grey whatever the value's colour. */
+  plain?: boolean;
 }) {
   return (
     <span
       aria-label={`${label}: ${value.name}`}
-      className={cn('inline-flex min-w-0 items-center gap-1.5', dim ? 'text-text-muted' : 'text-text-secondary')}
+      className="inline-flex min-w-0 items-center gap-1.5 text-text-secondary"
     >
-      <i
-        aria-hidden
-        className={cn(`l-${value.color} inline-block size-2 flex-none rounded-full bg-c-solid`, dim && 'opacity-55')}
-      />
+      <ValueDot color={value.color} plain={plain} className={cn(dim && 'opacity-55')} />
       <span className="truncate">{value.name}</span>
     </span>
   );
@@ -262,9 +294,9 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
           {avatars}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 p-0" {...own}>
+      <PopoverContent align="start" className="w-[22rem] p-0" {...own}>
         <PickerCommand>
-          <CommandInput placeholder="Search user" />
+          <CommandInput placeholder="Find a person" />
           <CommandList>
             {people.isPending ? <PickerSkeleton /> : <CommandEmpty>Nobody in this project matches.</CommandEmpty>}
             {people.isPending ? null : (
@@ -295,7 +327,7 @@ function CardAssignees({ card, projectKey, canEdit }: { card: Card; projectKey: 
                 >
                   <MemberAvatar member={person} className="size-5" />
                   <span className="min-w-0 flex-1 truncate">{person.username === me ? 'Me' : person.name}</span>
-                  <span className="truncate text-xs text-text-muted">@{person.username}</span>
+                  <span className="truncate text-xs text-text-secondary">@{person.username}</span>
                 </PickerItem>
               );
             })}
@@ -310,12 +342,13 @@ function CardDueDate({ card, today, canEdit }: { card: Card; today: string; canE
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<string | null>(card.due_date);
   const patch = usePatchCard();
+  // An undated card has no date line: the control waits at the end of the values row for the pointer.
   const shown = card.due_date ? (
-    <DueDate value={card.due_date} today={today} resolved={card.resolved} />
+    <DueDate value={card.due_date} today={today} resolved={card.resolved} worded />
   ) : (
-    <span className="text-xs text-text-muted">No due date</span>
+    <CalendarPlus aria-hidden className="size-3.5" />
   );
-  if (!canEdit) return shown;
+  if (!canEdit) return card.due_date ? shown : null;
 
   const apply = (value: string | null) => {
     setOpen(false);
@@ -335,7 +368,17 @@ function CardDueDate({ card, today, canEdit }: { card: Card; today: string; canE
       }}
     >
       <PopoverTrigger asChild>
-        <button type="button" {...own} aria-label={`Due date of ${card.key}`} className="rounded-xs hover:underline">
+        <button
+          type="button"
+          {...own}
+          aria-label={`Due date of ${card.key}`}
+          title={card.due_date ? undefined : 'Set due date'}
+          className={
+            card.due_date
+              ? 'rounded-xs hover:underline'
+              : 'grid size-5 flex-none place-items-center rounded-xs text-text-muted reveal group-hover/card:opacity-100 hover:bg-hover hover:text-text'
+          }
+        >
           {shown}
         </button>
       </PopoverTrigger>
@@ -369,6 +412,8 @@ interface NewCardProps {
   value: string;
   lane: BoardLane;
   swimlaneField: string | null;
+  /** On a board with lanes the control waits in the lane's band, so a row is only as tall as its cards. */
+  inBand: boolean;
 }
 
 /** What a lane stands for is given to the new card, so it lands in the cell it was typed in. */
@@ -381,11 +426,31 @@ function laneFields(lane: BoardLane, field: string | null): Partial<CreateIssue>
   return {};
 }
 
-export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField }: NewCardProps) {
+export function NewCard({ projectKey, sprint, field, value, lane, swimlaneField, inBand }: NewCardProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const create = useCreateIssue();
   const hintId = useId();
+
+  if (!open && inBand) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="New card"
+            // The strip under it joins the control to its cell, so the pointer can cross without losing the hover.
+            className="absolute right-2 bottom-full z-[6] mb-1.5 bg-app text-text-secondary reveal group-hover/cell:opacity-100 after:absolute after:inset-x-0 after:top-full after:h-1.5"
+            onClick={() => setOpen(true)}
+          >
+            <Plus className="size-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>New card</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   if (!open) {
     return (

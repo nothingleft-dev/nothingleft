@@ -8,17 +8,28 @@ interface DueDateProps {
   today: string;
   /** A resolved issue's date is history, never overdue. */
   resolved?: boolean;
+  /** Says what the date is (`Due 4 Dec`, `Overdue · 22 Nov`), where no column heading does. */
+  worded?: boolean;
   className?: string;
 }
 
 /** Overdue in danger ink, today in primary, everything else muted; an empty cell is `--`. */
-export function DueDate({ value, today, resolved = false, className }: DueDateProps) {
+export function DueDate({ value, today, resolved = false, worded = false, className }: DueDateProps) {
   // Not tabular: tabular figures give each hyphen a digit's width, and `--` falls apart.
   if (value === null) return <span className={cn('text-xs text-text-muted', className)}>--</span>;
 
   const overdue = !resolved && value < today;
   const isToday = value === today;
-  const label = isToday ? 'Today' : formatCalendarDateShort(value);
+  const date = formatCalendarDateShort(value);
+  const label = worded
+    ? isToday
+      ? 'Due today'
+      : overdue
+        ? `Overdue · ${date}`
+        : `Due ${date}`
+    : isToday
+      ? 'Today'
+      : date;
 
   return (
     <Tooltip>

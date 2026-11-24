@@ -114,8 +114,8 @@ export const DEFAULT_WORK_TYPES = [
 ];
 
 export const DEFAULT_BOARD_COLUMNS: { name: string; categories: StatusCategory[] }[] = [
-  { name: 'To do', categories: ['backlog', 'unstarted'] },
-  { name: 'In progress', categories: ['started'] },
+  { name: 'To Do', categories: ['backlog', 'unstarted'] },
+  { name: 'In Progress', categories: ['started'] },
   { name: 'Done', categories: ['done', 'cancelled'] },
 ];
 

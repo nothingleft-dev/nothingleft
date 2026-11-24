@@ -334,7 +334,7 @@ export const PROJECT_DEFAULTS = [
   },
   { label: 'Priorities', value: 'Show-stopper, Critical, Major, Normal, Minor' },
   { label: 'Types', value: 'Bug, Feature, Task, Epic' },
-  { label: 'Board', value: 'To do, In progress and Done, with a row per epic' },
+  { label: 'Board', value: 'To Do, In Progress and Done, with a row per epic' },
   { label: 'Time tracking', value: 'On, with Development as the default work type' },
   { label: 'Roles', value: 'Observer, Contributor, Project Admin, Org Admin, Org Owner' },
 ];

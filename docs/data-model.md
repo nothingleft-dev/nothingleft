@@ -1626,7 +1626,7 @@ See [frontend-guide.md § Routes](./frontend-guide.md#routes).
   in the lane of its nearest ancestor of such a type. A card with no lane goes in
   *Uncategorized*, always last.
 - Every project is created with one board, named after the project and slugged by its
-  key: **To do** (backlog and unstarted statuses) · **In progress** (started) · **Done**
+  key: **To Do** (backlog and unstarted statuses) · **In Progress** (started) · **Done**
   (done and cancelled), swimlanes by Epic issues when the project has an Epic type
   (`SEED_BOARD_COLUMNS`).
 - At most 20 columns; names ≤ 100 characters; column names unique per board (application layer) and

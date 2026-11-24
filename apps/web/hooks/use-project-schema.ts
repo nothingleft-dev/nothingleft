@@ -21,6 +21,20 @@ export function useSchemaValues<T extends SchemaTable>(projectKey: string | null
   });
 }
 
+/**
+ * How far a priority departs from the project's default, which is all the colour it earns (DESIGN § 1):
+ * `raised` above the default (a coloured dot), `urgent` two or more steps above it or at the top of
+ * the scale (the card's edge too).
+ */
+export function usePriorityRise(projectKey: string | null, name: string) {
+  const priorities = useSchemaValues(projectKey, 'priorities').data;
+  const scale = [...(priorities ?? [])].sort((a, b) => a.position - b.position);
+  const base = scale.findIndex(p => p.is_default);
+  const own = scale.findIndex(p => p.name === name);
+  const raised = base >= 0 && own >= 0 && own < base;
+  return { raised, urgent: raised && (base - own >= 2 || own === 0) };
+}
+
 /** One list per project, for a bulk edit that spans several: names merge, first project's colour wins. */
 export function useSchemaValuesMany<T extends SchemaTable>(projectKeys: readonly string[], table: T) {
   return useQueries({

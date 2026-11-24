@@ -72,7 +72,7 @@ to be a Contributor or above. The project already has everything an issue needs:
 | Priorities | Show-stopper, Critical, Major, **Normal**, Minor                                                           |
 | Types      | **Bug**, Feature, Task, Epic                                                                               |
 | Work types | **Development**, Documentation, Implementation, Investigation, Maintenance, Observation, Testing           |
-| Board      | One board named after the project, with _To do_, _In progress_ and _Done_ columns and a row per epic       |
+| Board      | One board named after the project, with _To Do_, _In Progress_ and _Done_ columns and a row per epic       |
 
 Defaults are in bold. A Project Admin can change every list and the board; see
 [Issues](./issues.md#project-settings-statuses-priorities-types-work-types).

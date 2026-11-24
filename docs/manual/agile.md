@@ -94,7 +94,7 @@ as columns of cards.
 
 - **Columns** are statuses, priorities or types - you choose which in the board's settings.
   A column can hold several values (_Open_ and _Reopened_, say); a status column whose
-  statuses all resolve an issue is marked _resolved_. A value that is on no column has no
+  statuses all resolve an issue is marked _Resolved_. A value that is on no column has no
   cards on the board, and the board says how many issues it hides. Moving a card to another
   column changes that field of the issue - its status, priority or type. Switching a board to
   priorities or types starts it with one column per value.
@@ -112,13 +112,13 @@ as columns of cards.
     in the row of its epic. Cards with no row go in _Uncategorized_, always last.
 - **Collapsed columns.** A column can be set to start collapsed.
 
-Every project starts with one board, named after the project, with three columns - _To
-do_, _In progress_ and _Done_ - and a row per epic. A Project Admin can change it or add
+Every project starts with one board, named after the project, with three columns - _To Do_, _In Progress_ and _Done_ - and a row per epic. A Project Admin can change it or add
 more boards in the project's settings, under **Boards**.
 
-Cards show the issue's key and title, its priority and type, the people on it, the due
-date, up to three tags, story points and subtask progress. The coloured left edge is the
-priority.
+Cards show the issue's key and title, the people on it, its priority and type, up to three
+tags, the due date when there is one, story points and subtask progress. In a column that
+holds several statuses a card also names its own. A coloured left edge marks the most urgent
+priorities.
 
 ### Using the board
 
@@ -139,7 +139,8 @@ the short form.
   board - everything on the issue page works there, and _Back_ closes it. Click the key to
   open the issue in a new tab.
 - **Quick edits.** Click the people on a card to assign someone else or nobody, and the due
-  date (or _No due date_) to pick another day.
+  date to pick another day; a card with no date shows a small calendar button as you point at
+  it.
 - **Moving a card** to another column gives it that column's first value - its status, or
   its priority or type on a board whose columns are those. Cards move
   within their own row; dropping into another swimlane is not possible, because that
@@ -171,15 +172,17 @@ sprint_ section with its goal and points.
 
 ### Board settings
 
-**Settings → Boards** (Project Admins) lists the project's boards - add, rename or delete
-one; deleting a board leaves issues and sprints untouched. For the selected board:
+**Settings → Boards** (Project Admins) lists the project's boards on the left, with _New
+board_ above the list. Pick one and its settings open beside the list: _View board_ and, under
+**⋯**, _Rename_ and _Delete_; deleting a board leaves issues and sprints untouched. For the
+selected board:
 
 - **Columns are identified by** _Status_, _Priority_ or _Type_. Switching rebuilds the
   columns, one per value.
 - **Columns**, one row each, in order. Drag a row by its grip (or Alt+↑/↓) to reorder,
   click the pencil to rename, set _Min_ and _Max WIP_, tick _Collapsed_ to start it folded,
-  and use _Merge with_ to fold another column into this one - a merged column lists its
-  values, and the × on one splits it back out. The × at the end of the row deletes the
+  and use _Merge with_ to fold another column into this one - each column lists the values
+  it holds, and the × on one splits it back out. The bin at the end of the row deletes the
   column. _Add column_ offers the values that are on no column yet.
 - **Swimlanes are identified by** _No swimlanes_, _Values_ of a field (assignee, priority
   or type) or _Issues_ of the types you list (usually _Epic_).

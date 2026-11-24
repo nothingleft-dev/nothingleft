@@ -3946,7 +3946,7 @@ paths:
       description: |
         Manage sprints and boards. Columns map values of `column_field` — status (default),
         priority or type; a value sits in at most one column. Without `columns`: a status board
-        gets To do (backlog and unstarted) · In progress (started) · Done (done and cancelled), a
+        gets To Do (backlog and unstarted) · In Progress (started) · Done (done and cancelled), a
         priority or type board one column per value. Swimlanes: `none`; `values` of
         `swimlane_field` (never the column field: `board.swimlane_same_as_columns`); or `issues` —
         the issues of `swimlane_types` become lanes (default the project's Epic type). Moving a

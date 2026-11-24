@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
@@ -15,8 +15,7 @@ import { Label } from '@components/ui/label';
 import { ConfirmDialog } from '@components/confirm-dialog';
 import { EmptyState } from '@components/empty-state';
 import { LoadError, errorDetail } from '@components/query-state';
-import { RowsSkeleton } from '@components/skeletons';
-import { SettingsSection } from '@components/settings/section';
+import { Skeleton } from '@components/ui/skeleton';
 import { BoardColumnsEditor } from '@components/agile/board-settings-columns';
 import { BoardSwimlanes } from '@components/agile/board-settings-swimlanes';
 import { useBoard, useBoards, useCreateBoard, useDeleteBoard, useUpdateBoard } from '@hooks/use-boards';
@@ -30,9 +29,6 @@ interface BoardSettingsProps {
   selectedSlug: string | null;
   canEdit: boolean;
 }
-
-// Past this many boards the list scrolls, so the chosen board's columns stay near the top of the page.
-const LIST_ROWS = 6;
 
 const SWIMLANE_SUMMARY: Record<Board['swimlane_by'], (b: Board) => string> = {
   none: () => 'No swimlanes',
@@ -51,17 +47,6 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
   const [naming, setNaming] = useState<{ mode: 'create' } | { mode: 'rename'; board: Board } | null>(null);
   const [deleting, setDeleting] = useState<Board | null>(null);
   const remove = useDeleteBoard(projectKey);
-  const listRef = useRef<HTMLUListElement>(null);
-
-  // A long list scrolls inside its frame; the chosen board stays in sight there.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    const row = list?.querySelector<HTMLElement>('[aria-current="true"]')?.closest('li');
-    if (!list || !row) return;
-    if (row.offsetTop < list.scrollTop || row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight)
-      list.scrollTop = row.offsetTop - list.clientHeight / 2 + row.offsetHeight / 2;
-  }, [selected?.slug, list.length]);
-
   const select = (slug: string | null) =>
     router.replace(
       `/projects/${projectKey}/settings?tab=boards${slug ? `&board=${encodeURIComponent(slug)}` : ''}` as Route,
@@ -69,106 +54,106 @@ export function BoardSettings({ projectKey, selectedSlug, canEdit }: BoardSettin
 
   return (
     <>
-      <SettingsSection
-        title="Boards"
-        description="Each board shows one sprint at a time as columns of cards. Pick one to change its columns and swimlanes."
-        actions={
-          canEdit ? (
-            <Button variant="outline" onClick={() => setNaming({ mode: 'create' })}>
-              <Plus />
-              New board
-            </Button>
-          ) : null
-        }
-      >
-        {boards.isPending ? (
-          <RowsSkeleton rows={2} />
-        ) : boards.isError && !boards.data ? (
-          <LoadError onRetry={() => void boards.refetch()} detail={errorDetail(boards.error)}>
-            The boards could not be loaded.
-          </LoadError>
-        ) : list.length === 0 ? (
-          <EmptyState
-            title="This project has no board."
-            description={canEdit ? 'Create one to follow a sprint as columns of cards.' : undefined}
-          />
-        ) : (
-          <ul
-            ref={listRef}
-            className={cn(
-              'relative flex flex-col divide-y divide-border-subtle rounded-md border',
-              list.length > LIST_ROWS && 'scroll-fade max-h-[calc(var(--row)*6.5)] overflow-y-auto',
-            )}
-            aria-label="Boards"
-          >
-            {list.map(b => {
-              const active = b.slug === selected?.slug;
-              return (
-                <li
-                  key={b.slug}
-                  className={cn(
-                    'relative flex h-row flex-none items-center gap-2 pr-1',
-                    active && 'bg-active before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand',
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-current={active ? 'true' : undefined}
-                    onClick={() => select(b.slug)}
-                    className="grid h-full min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-3 px-3 text-left hover:bg-hover sm:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_15rem]"
-                  >
-                    <span className="truncate font-medium" title={b.name}>
-                      {b.name}
-                    </span>
-                    <span
+      <p className="max-w-[72ch] text-sm text-pretty text-text-secondary">
+        Each board shows a sprint, or every open issue, as columns of cards. Pick one to change its columns and
+        swimlanes.
+      </p>
+      {/* The list beside what it selects: choosing a board never pushes its editor down the page. */}
+      <div className="grid gap-x-8 gap-y-5 lg:grid-cols-[13rem_minmax(0,1fr)]">
+        <nav aria-label="Boards" className="flex min-w-0 flex-col gap-2">
+          <div className="flex h-8 items-center gap-2">
+            <h2 className="font-semibold">Boards</h2>
+            {list.length > 0 ? <span className="text-xs text-text-secondary tabular">{list.length}</span> : null}
+            {canEdit ? (
+              <Button variant="outline" size="sm" className="ml-auto" onClick={() => setNaming({ mode: 'create' })}>
+                <Plus />
+                New board
+              </Button>
+            ) : null}
+          </div>
+          {boards.isPending ? (
+            <div className="flex flex-col gap-2 py-1.5">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} className="h-3.5 w-32" />
+              ))}
+            </div>
+          ) : boards.isError && !boards.data ? (
+            <LoadError onRetry={() => void boards.refetch()} detail={errorDetail(boards.error)}>
+              The boards could not be loaded.
+            </LoadError>
+          ) : list.length === 0 ? (
+            <EmptyState
+              title="This project has no board."
+              description={canEdit ? 'Create one to follow a sprint as columns of cards.' : undefined}
+            />
+          ) : (
+            <ul className="flex flex-col gap-px">
+              {list.map(b => {
+                const active = b.slug === selected?.slug;
+                return (
+                  <li key={b.slug}>
+                    <button
+                      type="button"
+                      aria-current={active ? 'true' : undefined}
+                      onClick={() => select(b.slug)}
+                      title={b.name}
                       className={cn(
-                        'hidden truncate font-mono text-2xs sm:block',
-                        active ? 'text-text-secondary' : 'text-text-muted',
+                        'relative flex h-8 w-full items-center rounded-sm px-2.5 text-left text-sm',
+                        active
+                          ? 'bg-active font-medium text-text before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-brand'
+                          : 'text-text-secondary hover:bg-hover hover:text-text',
                       )}
-                      title={b.slug}
                     >
-                      {b.slug}
-                    </span>
-                    <span className="hidden truncate text-xs whitespace-nowrap text-text-secondary sm:block">
-                      {plural(b.columns.length, 'column')} · {SWIMLANE_SUMMARY[b.swimlane_by](b)}
-                    </span>
-                  </button>
-                  <Button asChild variant="ghost" size="sm" className="text-text-secondary hover:text-text">
-                    <Link href={`/projects/${projectKey}/board/${b.slug}/current` as Route}>
-                      View board
-                      <ArrowRight />
-                    </Link>
-                  </Button>
-                  {canEdit ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" aria-label={`${b.name}: more`}>
-                          <MoreHorizontal />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => setNaming({ mode: 'rename', board: b })}>
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(b)}>
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </SettingsSection>
+                      <span className="truncate">{b.name}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </nav>
 
-      {board ? (
-        <>
-          <BoardColumnsEditor key={`columns-${board.slug}`} projectKey={projectKey} board={board} canEdit={canEdit} />
-          <BoardSwimlanes key={`lanes-${board.slug}`} projectKey={projectKey} board={board} canEdit={canEdit} />
-        </>
-      ) : null}
+        {board ? (
+          <div className="flex min-w-0 flex-col gap-5">
+            <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b pb-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <h2 className="truncate text-lg font-semibold" title={board.name}>
+                  {board.name}
+                </h2>
+                <p className="truncate text-xs text-text-secondary">
+                  <span className="font-mono text-2xs">{board.slug}</span> · {plural(board.columns.length, 'column')} ·{' '}
+                  {SWIMLANE_SUMMARY[board.swimlane_by](board)}
+                </p>
+              </div>
+              <div className="ml-auto flex flex-none items-center gap-1">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/projects/${projectKey}/board/${board.slug}/current` as Route}>
+                    View board
+                    <ArrowRight />
+                  </Link>
+                </Button>
+                {canEdit ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon-sm" aria-label={`${board.name}: more`}>
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setNaming({ mode: 'rename', board })}>Rename</DropdownMenuItem>
+                      <DropdownMenuItem variant="destructive" onSelect={() => setDeleting(board)}>
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+            </header>
+            <BoardColumnsEditor key={`columns-${board.slug}`} projectKey={projectKey} board={board} canEdit={canEdit} />
+            <BoardSwimlanes key={`lanes-${board.slug}`} projectKey={projectKey} board={board} canEdit={canEdit} />
+          </div>
+        ) : null}
+      </div>
 
       <BoardNameDialog
         projectKey={projectKey}
@@ -289,7 +274,7 @@ function BoardNameForm({
         <DialogDescription className="text-xs text-text-secondary">
           {renaming
             ? 'Its address changes with the name; old links to it stop working.'
-            : 'It starts with To do, In progress and Done columns, which you can change afterwards.'}
+            : 'It starts with To Do, In Progress and Done columns, which you can change afterwards.'}
         </DialogDescription>
       </DialogHeader>
       <div className="flex flex-col gap-1.5">

@@ -91,21 +91,43 @@ export function summaryCounts(summary: GitDevelopmentSummary, short = false): st
 }
 
 /** The board card's mark: the badge's icon in its hue, the word in the tooltip. */
-export function DevelopmentIcon({ rollup, className }: { rollup: GitDevelopmentRollup; className?: string }) {
+export function DevelopmentIcon({
+  rollup,
+  labelled = false,
+  className,
+}: {
+  rollup: GitDevelopmentRollup;
+  /** Says the state beside the icon, where an icon alone would have to be guessed. */
+  labelled?: boolean;
+  className?: string;
+}) {
   if (rollup === 'none') return null;
   const { label, hue } = ROLLUP[rollup];
   const Icon = ROLLUP_ICON[rollup];
+  const ink = hue === 'gray' ? 'text-text-muted' : `c-${hue} text-c-fg`;
+  if (labelled) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            aria-label={`Development: ${label}`}
+            className={cn('inline-flex h-5 min-w-0 items-center gap-1 text-xs text-text-secondary', className)}
+          >
+            <Icon className={cn('size-3.5 flex-none', ink)} aria-hidden />
+            <span className="truncate">{label}</span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Development: {label}</TooltipContent>
+      </Tooltip>
+    );
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           role="img"
           aria-label={`Development: ${label}`}
-          className={cn(
-            'inline-flex size-5 flex-none items-center justify-center rounded-xs',
-            hue === 'gray' ? 'text-text-muted' : `c-${hue} text-c-fg`,
-            className,
-          )}
+          className={cn('inline-flex size-5 flex-none items-center justify-center rounded-xs', ink, className)}
         >
           <Icon className="size-3.5" aria-hidden />
         </span>

@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronDown, GripVertical, Pencil, X } from 'lucide-react';
+import { Check, ChevronDown, GripVertical, Pencil, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   BOARD_COLUMNS_MAX,
@@ -43,6 +43,15 @@ import { StatusDot } from '@components/issues/value-marks';
 import { useUpdateBoard } from '@hooks/use-boards';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
+
+// One track list for the header and every row, so names, values and limits line up down the table.
+const ROW_GRID = 'grid grid-cols-[48px_minmax(7rem,11rem)_minmax(0,1fr)_64px_64px_72px_112px_32px] gap-x-3';
+
+const VALUES_HEADING: Record<BoardColumnField, string> = {
+  status: 'Statuses',
+  priority: 'Priorities',
+  type: 'Types',
+};
 
 export const COLUMN_FIELD_LABELS: Record<BoardColumnField, string> = {
   status: 'Status',
@@ -165,8 +174,8 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
 
   return (
     <SettingsSection
-      title={`Columns · ${board.name}`}
-      description="Left to right. Moving a card to a column sets that value on the issue; WIP limits warn, they never stop a move."
+      title="Columns"
+      description="Left to right. Moving a card to a column sets the column's first value on the issue; WIP limits warn, they never stop a move."
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 text-sm">
@@ -175,13 +184,14 @@ export function BoardColumnsEditor({ projectKey, board, canEdit }: BoardColumnsE
         </div>
 
         <div className="scroll-fade-x -mx-1 overflow-x-auto px-1">
-          <div role="table" aria-label={`Columns of ${board.name}`} className="flex min-w-[40rem] flex-col">
+          <div role="table" aria-label={`Columns of ${board.name}`} className="flex min-w-[46rem] flex-col">
             <div
               role="row"
-              className="grid grid-cols-[48px_minmax(0,1fr)_88px_88px_88px_120px_32px] items-end gap-x-3 border-b pb-1.5 text-xs font-medium text-text-secondary"
+              className={cn(ROW_GRID, 'items-end border-b pb-1.5 text-xs font-medium text-text-secondary')}
             >
               <span role="columnheader" aria-label="Order" />
               <span role="columnheader">Column</span>
+              <span role="columnheader">{VALUES_HEADING[field]}</span>
               <span role="columnheader">Min WIP</span>
               <span role="columnheader">Max WIP</span>
               <span role="columnheader" className="text-center">
@@ -333,7 +343,6 @@ function ColumnRow({
     disabled: !canEdit,
   });
   const [error, setError] = useState<string | null>(null);
-  const merged = column.values.length > 1 || column.values[0]?.name !== column.name;
 
   const onGripKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (!e.altKey) return;
@@ -351,11 +360,13 @@ function ColumnRow({
       role="row"
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
-        'group/row grid min-h-12 grid-cols-[48px_minmax(0,1fr)_88px_88px_88px_120px_32px] items-center gap-x-3 border-b bg-surface py-1.5 text-sm',
+        ROW_GRID,
+        // Top-aligned on one 32 px line, so a column of many statuses grows down without lifting its name.
+        'group/row min-h-12 items-start border-b bg-surface py-2 text-sm',
         isDragging && 'relative z-10 shadow-md',
       )}
     >
-      <span role="cell" className="flex items-center gap-1 text-text-muted">
+      <span role="cell" className="flex min-h-8 items-center gap-1 text-text-muted">
         {canEdit ? (
           <button
             id={`column-grip-${index}`}
@@ -376,40 +387,45 @@ function ColumnRow({
         <span className="tabular">{index + 1}</span>
       </span>
 
-      <span role="cell" className="flex min-w-0 flex-col gap-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <ColumnName name={column.name} canEdit={canEdit} onRename={name => onRename(name, setError)} />
-          {column.resolved ? (
-            <span className="rounded-xs border px-1.5 text-2xs leading-[18px] font-medium text-text-secondary">
-              resolved
-            </span>
-          ) : null}
-          {merged ? (
-            <span className="flex flex-wrap items-center gap-1">
-              {column.values.map(value => (
-                <span
-                  key={value.name}
-                  className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-inset px-1.5 text-xs text-text-secondary"
-                >
-                  <ValueMark value={value} />
-                  {value.name}
-                  {canEdit && column.values.length > 1 ? (
-                    <button
-                      type="button"
-                      aria-label={`Split ${value.name} into its own column`}
-                      title="Split into its own column"
-                      className="-mr-0.5 grid size-4 place-items-center rounded-xs text-text-muted hover:bg-hover hover:text-text"
-                      onClick={() => onSplit(value)}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  ) : null}
-                </span>
-              ))}
-            </span>
-          ) : null}
-        </span>
+      <span role="cell" className="flex min-h-8 min-w-0 flex-col justify-center gap-1">
+        <ColumnName name={column.name} canEdit={canEdit} onRename={name => onRename(name, setError)} />
         {error ? <span className="text-xs text-danger-fg">{error}</span> : null}
+      </span>
+
+      <span role="cell" className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="flex flex-wrap items-center gap-1">
+          {column.values.map(value => (
+            <span
+              key={value.name}
+              className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-inset px-1.5 text-xs text-text-secondary"
+            >
+              <ValueMark value={value} />
+              {value.name}
+              {canEdit && column.values.length > 1 ? (
+                <button
+                  type="button"
+                  aria-label={`Split ${value.name} into its own column`}
+                  title="Split into its own column"
+                  className="-mr-0.5 grid size-4 place-items-center rounded-xs text-text-muted hover:bg-hover hover:text-text"
+                  onClick={() => onSplit(value)}
+                >
+                  <X className="size-3" />
+                </button>
+              ) : null}
+            </span>
+          ))}
+        </span>
+        {column.resolved ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex h-6 items-center gap-1 rounded-sm border px-1.5 text-xs text-text-secondary">
+                <Check aria-hidden className="size-3.5 text-text-muted" />
+                Resolved
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Cards here count as resolved</TooltipContent>
+          </Tooltip>
+        ) : null}
       </span>
 
       <span role="cell">
@@ -434,7 +450,7 @@ function ColumnRow({
           }}
         />
       </span>
-      <span role="cell" className="flex justify-center">
+      <span role="cell" className="flex min-h-8 items-center justify-center">
         <Checkbox
           checked={column.collapsed_by_default}
           disabled={!canEdit}
@@ -458,7 +474,7 @@ function ColumnRow({
                   onClick={onDelete}
                   className="text-text-secondary"
                 >
-                  <X />
+                  <Trash2 />
                 </Button>
               </span>
             </TooltipTrigger>
@@ -499,7 +515,7 @@ function ColumnName({ name, canEdit, onRename }: { name: string; canEdit: boolea
               setEditing(false);
             }
           }}
-          className="h-8 w-56 rounded-md border border-border-strong bg-surface px-2 text-sm text-text"
+          className="h-8 w-full rounded-md border border-border-strong bg-surface px-2 text-sm text-text"
         />
       </form>
     );
@@ -565,7 +581,7 @@ function WipInput({
       aria-label={label}
       inputMode="numeric"
       value={text}
-      placeholder="None"
+      placeholder="–"
       aria-invalid={invalid}
       title={invalid ? `A whole number from 1 to ${BOARD_WIP_MAX}, or empty for none` : undefined}
       onChange={e => setText(e.target.value)}
@@ -612,7 +628,7 @@ function MergeWith({
                   }}
                 >
                   <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                  <span className="text-2xs text-text-muted">{c.values.map(v => v.name).join(', ')}</span>
+                  <span className="text-2xs text-text-secondary">{c.values.map(v => v.name).join(', ')}</span>
                 </CommandItem>
               ),
             )}

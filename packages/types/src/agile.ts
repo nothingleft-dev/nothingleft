@@ -202,7 +202,7 @@ const ColumnsInputSchema = z.array(BoardColumnInputSchema).min(1).max(BOARD_COLU
 export const CreateBoardSchema = z.object({
   name: BoardNameSchema,
   column_field: z.enum(BOARD_COLUMN_FIELDS).optional(),
-  // Absent: To do · In progress · Done by status category for a status board, one column per value otherwise.
+  // Absent: To Do · In Progress · Done by status category for a status board, one column per value otherwise.
   columns: ColumnsInputSchema.optional(),
   swimlane_by: z.enum(BOARD_SWIMLANES).optional(),
   swimlane_field: z.enum(BOARD_SWIMLANE_FIELDS).nullable().optional(),
