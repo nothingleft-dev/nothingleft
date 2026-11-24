@@ -13,10 +13,9 @@ import {
   Link2,
   ListTree,
   MoreHorizontal,
+  Lock,
   Paperclip,
-  Pencil,
   Star,
-  Tag,
   ThumbsUp,
   Trash2,
 } from 'lucide-react';
@@ -36,7 +35,6 @@ import {
 import { FormAlert } from '@components/auth/form-alert';
 import { LoadError, errorDetail } from '@components/query-state';
 import { ConfirmDialog } from '@components/confirm-dialog';
-import { RelativeTime } from '@components/relative-time';
 import { AttachmentsSection } from '@components/attachments/attachments-section';
 import { MarkdownAttachments } from '@components/markdown/markdown-attachments';
 import { AddLinksDialog } from '@components/issues/add-links-dialog';
@@ -53,7 +51,6 @@ import { IssueSidebar } from '@components/issues/issue-sidebar';
 import { SpentTimeDialog } from '@components/issues/spent-time-dialog';
 import { IssueTags } from '@components/issues/issue-tags';
 import { IssueTitle } from '@components/issues/issue-title';
-import { PersonName } from '@components/former-member-chip';
 import { useIssueAttachments, useStorage, useUploader } from '@hooks/use-attachments';
 import { useDeleteIssue, useIssue, useIssueSignal, useRestoreIssue } from '@hooks/use-issues';
 import { useOrganization } from '@hooks/use-organizations';
@@ -151,31 +148,29 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
   const data = issue.data;
   const createSubtask = () => openCreateIssue({ project: data.project.key, parent: data.key });
   const summary = data.development;
-  // The modal shows the sidebar field only (plan § 13 D); the tab is the full page's.
-  const development =
-    data.project.git_enabled && !modal
-      ? {
-          count: summary
-            ? summary.pull_requests + summary.branches + (summary.pull_requests === 0 ? summary.commits : 0)
-            : 0,
-          panel: (
-            <DevelopmentPanel
-              issueKey={data.key}
-              issueTitle={data.title}
-              projectKey={data.project.key}
-              canLink={canEdit}
-              canAdminProject={role === 'project_admin'}
-              onLink={() => setLinkingPullRequest(true)}
-              timeZone={timeZone}
-            />
-          ),
-        }
-      : null;
+  const development = data.project.git_enabled
+    ? {
+        count: summary
+          ? summary.pull_requests + summary.branches + (summary.pull_requests === 0 ? summary.commits : 0)
+          : 0,
+        panel: (
+          <DevelopmentPanel
+            issueKey={data.key}
+            issueTitle={data.title}
+            projectKey={data.project.key}
+            canLink={canEdit}
+            canAdminProject={role === 'project_admin'}
+            onLink={() => setLinkingPullRequest(true)}
+            timeZone={timeZone}
+          />
+        ),
+      }
+    : null;
 
   return (
     <MarkdownAttachments files={attachments.data ?? []}>
       <div className={PAGE_GRID}>
-        <div className="@container min-w-0">
+        <div data-popover-bounds className="@container min-w-0">
           {archived ? (
             <div className="mb-4">
               <ArchivedNotice>
@@ -184,24 +179,28 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
             </div>
           ) : null}
 
-          <Provenance issue={data} timeZone={timeZone} withKey={modal} />
+          {modal ? (
+            <div className="mb-1 flex items-center gap-0.5">
+              <a
+                href={issuePath(data)}
+                target="_blank"
+                rel="noopener"
+                className="font-mono text-xs font-medium text-text-secondary hover:text-text hover:underline"
+              >
+                {data.key}
+              </a>
+              <CopyIssueButton issueKey={data.key} title={data.title} />
+            </div>
+          ) : null}
 
           <IssueParent issue={data} canEdit={canEdit} picking={pickingParent} onPickingChange={setPickingParent} />
 
           <div className="flex items-start gap-4 max-sm:flex-col max-sm:gap-1">
             <IssueTitle issue={data} canEdit={canEdit} />
-            <div className="mt-0.5 flex flex-none items-center gap-0.5 max-sm:-ml-3.5">
+            <div className="flex flex-none items-center gap-0.5 max-sm:-ml-2">
+              {role && !canEdit && !archived ? <ViewOnly /> : null}
               {canEdit ? (
                 <>
-                  <IconAction label="Edit description" shortcut="e" onClick={() => setEditingDescription(true)}>
-                    <Pencil />
-                  </IconAction>
-                  <IconAction label="Add tag" onClick={() => setTagging(true)}>
-                    <Tag />
-                  </IconAction>
-                  <IconAction label="Add links" onClick={() => setLinking(true)}>
-                    <Link2 />
-                  </IconAction>
                   <IconAction
                     label="Attach files"
                     disabledReason={storage.blocked}
@@ -211,6 +210,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
                   </IconAction>
                 </>
               ) : null}
+              <IssueSignals issue={data} />
               <IssueMenu
                 issue={data}
                 canEdit={canEdit}
@@ -280,11 +280,6 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
             onTabChange={setActivityTab}
             timeZone={timeZone}
           />
-          {role && !canEdit && !archived ? (
-            <p className="mt-6 text-xs text-text-secondary">
-              You can read this issue but not change it. A Project Admin can give you edit access.
-            </p>
-          ) : null}
         </div>
 
         {canEdit ? (
@@ -319,7 +314,7 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
           canEdit={canEdit}
           time={time}
           timeZone={timeZone}
-          onOpenDevelopment={modal ? undefined : () => setActivityTab('development')}
+          onOpenDevelopment={() => setActivityTab('development')}
           onLinkPullRequest={canEdit ? () => setLinkingPullRequest(true) : undefined}
         />
       </div>
@@ -327,53 +322,46 @@ export function IssuePage({ issueKey, variant = 'page' }: { issueKey: string; va
   );
 }
 
-function Provenance({ issue, timeZone, withKey }: { issue: Issue; timeZone?: string; withKey: boolean }) {
+function IssueSignals({ issue }: { issue: Issue }) {
   const signal = useIssueSignal(issue.key);
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
-      {withKey ? (
-        <span className="flex items-center gap-0.5">
-          <a
-            href={issuePath(issue)}
-            target="_blank"
-            rel="noopener"
-            className="font-mono text-xs font-medium text-text hover:underline"
-          >
-            {issue.key}
-          </a>
-          <CopyIssueButton issueKey={issue.key} title={issue.title} />
+    <>
+      <IconAction
+        label={issue.me.starred ? 'Starred - you watch this issue' : 'Star (also watches)'}
+        pressed={issue.me.starred}
+        onClick={() => signal.mutate({ signal: 'star', on: !issue.me.starred })}
+      >
+        <Star className={cn(issue.me.starred && 'fill-current')} />
+      </IconAction>
+      <IconAction
+        label={issue.me.voted ? 'Remove your vote' : 'Vote'}
+        pressed={issue.me.voted}
+        onClick={() => signal.mutate({ signal: 'vote', on: !issue.me.voted })}
+      >
+        <ThumbsUp className={cn(issue.me.voted && 'fill-current')} />
+        {issue.vote_count > 0 ? <span className="text-xs tabular">{issue.vote_count}</span> : null}
+      </IconAction>
+    </>
+  );
+}
+
+/** Why nothing on the page can be changed, without a banner ahead of the title. */
+function ViewOnly() {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="mr-1 inline-flex h-6 items-center gap-1 rounded-sm border px-2 text-2xs font-medium whitespace-nowrap text-text-secondary"
+        >
+          <Lock aria-hidden className="size-3" /> View only
         </span>
-      ) : null}
-      <span>
-        Created by <PersonName person={issue.created_by} className="font-medium text-text" />{' '}
-        <RelativeTime value={issue.created_at} timeZone={timeZone} />
-      </span>
-      <span aria-hidden className="text-text-muted max-sm:hidden">
-        ·
-      </span>
-      <span>
-        Updated by <PersonName person={issue.updated_by} className="font-medium text-text" />{' '}
-        <RelativeTime value={issue.updated_at} timeZone={timeZone} />
-      </span>
-      <span className="ml-auto flex gap-1">
-        <IconAction
-          label={issue.me.starred ? 'Starred - you watch this issue' : 'Star (also watches)'}
-          pressed={issue.me.starred}
-          onClick={() => signal.mutate({ signal: 'star', on: !issue.me.starred })}
-        >
-          <Star className={cn(issue.me.starred && 'fill-current')} />
-        </IconAction>
-        <IconAction
-          label={issue.me.voted ? 'Remove your vote' : 'Vote'}
-          pressed={issue.me.voted}
-          onClick={() => signal.mutate({ signal: 'vote', on: !issue.me.voted })}
-        >
-          <ThumbsUp className={cn(issue.me.voted && 'fill-current')} />
-          <span className="text-xs tabular">{issue.vote_count}</span>
-        </IconAction>
-      </span>
-    </div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-72">
+        You can read this issue but not change it. A Project Admin can give you edit access.
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -410,7 +398,7 @@ function IconAction({ label, shortcut, pressed, disabledReason, onClick, childre
       </TooltipTrigger>
       <TooltipContent className={disabled ? 'max-w-72' : undefined}>
         {disabledReason ?? label}
-        {shortcut && !disabled ? <span className="ml-2 text-text-muted">{shortcut}</span> : null}
+        {shortcut && !disabled ? <span className="ml-2 opacity-70">{shortcut}</span> : null}
       </TooltipContent>
     </Tooltip>
   );
@@ -462,13 +450,13 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
               variant="ghost"
               size="icon-sm"
               aria-label="More actions"
-              className="text-text-secondary max-md:size-control"
+              className="text-text-secondary data-[state=open]:bg-hover data-[state=open]:text-text max-md:size-control"
             >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>More: subtasks, copy link, watch, delete</TooltipContent>
+        <TooltipContent>More actions</TooltipContent>
       </Tooltip>
       <DropdownMenuContent
         align="end"
@@ -513,7 +501,7 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={() => setConfirming(true)} disabled={remove.isPending}>
-              <Trash2 /> Delete issue
+              <Trash2 /> Delete issue…
             </DropdownMenuItem>
           </>
         ) : null}
@@ -528,9 +516,11 @@ function IssueMenu({ issue, canEdit, canDelete, onSetParent, onCreateSubtask }: 
         onConfirm={onDelete}
       >
         <p>
-          <span className="font-medium text-text">{issue.title}</span> is removed from {issue.project.name} for
-          everyone. A Project Admin can restore it from deleted issues for 14 days; after that it is deleted with its
-          history.
+          <span className="font-medium text-text">“{issue.title}”</span> will be removed from {issue.project.name} for
+          everyone.
+        </p>
+        <p>
+          A Project Admin can restore this issue from Deleted issues within 14 days. After that, deletion is permanent.
         </p>
       </ConfirmDialog>
     </DropdownMenu>
@@ -543,18 +533,15 @@ function IssueSkeleton() {
   return (
     <div className={PAGE_GRID} role="status" aria-label="Loading">
       <div className="@container min-w-0">
-        <div className="mb-4 flex h-8 items-center justify-between gap-4">
-          <Skeleton className="h-3 w-96 max-w-[70%]" />
-          <Skeleton className="h-4 w-16" />
-        </div>
-        <div className="flex h-8 items-center">
+        <div className="flex h-8 items-center justify-between gap-4">
           <Skeleton className="h-6 w-2/3" />
+          <Skeleton className="h-4 w-24" />
         </div>
         <div className="mt-2 flex h-5 gap-1.5">
           <Skeleton className="h-5 w-16 rounded-sm" />
           <Skeleton className="h-5 w-12 rounded-sm" />
         </div>
-        <div className="key-strip mt-4 grid-cols-2! @[26rem]:grid-cols-3! @[46rem]:grid-cols-6!">
+        <div className="key-strip mt-4">
           {STRIP_CELLS.map((width, i) => (
             <div key={i} className="flex flex-col gap-0.5 px-3 py-2">
               <span className="flex h-4 items-center">
@@ -571,11 +558,10 @@ function IssueSkeleton() {
           <Skeleton className="h-4 w-5/6 max-w-[60ch]" />
           <Skeleton className="h-4 w-3/5 max-w-[48ch]" />
         </div>
-        <div className="mt-8 flex h-control items-center border-b">
+        <div className="mt-6 flex h-control items-center border-b">
           <Skeleton className="h-3.5 w-12" />
         </div>
-        <Skeleton className="mt-4 h-3.5 w-full max-w-[56ch]" />
-        <div className="mt-8 flex h-control items-center gap-5 border-b">
+        <div className="mt-6 flex h-control items-center gap-5 border-b">
           {['w-14', 'w-8', 'w-20', 'w-20', 'w-14'].map((width, i) => (
             <Skeleton key={i} className={cn('h-3.5', width)} />
           ))}

@@ -17,8 +17,12 @@ import { useIssueLinks, useRemoveIssueLink, useStarLinkedIssue } from '@hooks/us
 import { useIssue } from '@hooks/use-issues';
 import { cn } from '@lib/utils';
 import { toastError } from '@components/toast-error';
-import { TextButton } from '@components/text-button';
 import { LoadError, errorDetail } from '@components/query-state';
+
+// A tab names the rows under it; the link names stay as search and the Add links dialog spell them.
+const PARENT_LINK = 'subtask of';
+const TAB_LABELS: Record<string, string> = { 'parent for': 'Subtasks' };
+const tabLabel = (link: string) => TAB_LABELS[link] ?? linkLabel(link);
 
 interface IssueLinksProps {
   issueKey: string;
@@ -30,16 +34,18 @@ interface IssueLinksProps {
 export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: IssueLinksProps) {
   const links = useIssueLinks(issueKey);
   const issue = useIssue(issueKey).data;
-  // The first tab is the hierarchy's, which the issue already counts; anything else is unknown until it loads.
-  const expected = issue ? (issue.subtasks.total > 0 ? issue.subtasks.total : issue.parent ? 1 : 0) : 0;
-  const groups = links.data ?? [];
+  // The first tab is the subtasks', which the issue already counts; anything else is unknown until it loads.
+  const expected = issue?.subtasks.total ?? 0;
+  // The parent is the line above the title, so it is not listed here a second time.
+  const groups = (links.data ?? []).filter(g => g.link !== PARENT_LINK);
+  const hasParent = (links.data ?? []).length > groups.length;
   const [chosen, setChosen] = useState<string | null>(null);
   const active = groups.find(g => g.link === chosen) ?? groups[0];
 
   if (links.isSuccess && groups.length === 0 && !canEdit) return null;
 
   return (
-    <section className="mt-8" aria-label="Links">
+    <section className="mt-6" aria-label="Links">
       <div className="flex h-control items-center gap-3 border-b">
         <h2 className="flex-none text-sm font-semibold">Links</h2>
         {links.isPending && expected > 0 ? (
@@ -53,8 +59,12 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
             ariaLabel="Link types"
             value={active.link}
             onChange={setChosen}
-            options={groups.map(g => ({ value: g.link, label: linkLabel(g.link), count: g.count }))}
+            options={groups.map(g => ({ value: g.link, label: tabLabel(g.link), count: g.count }))}
           />
+        ) : links.isSuccess ? (
+          <span className="text-xs text-text-secondary">
+            {hasParent ? 'No other linked issues' : 'No linked issues'}
+          </span>
         ) : null}
         {canEdit ? (
           <span className="ml-auto flex flex-none gap-1">
@@ -78,12 +88,7 @@ export function IssueLinks({ issueKey, canEdit, onAddLinks, onCreateSubtask }: I
         </div>
       ) : active ? (
         <LinkRows issueKey={issueKey} group={active} canEdit={canEdit} />
-      ) : (
-        <p className="pt-3 text-xs text-text-secondary">
-          No linked issues. <TextButton onClick={onAddLinks}>Add links</TextButton> to show what this depends on,
-          duplicates or relates to.
-        </p>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -93,7 +98,7 @@ function LinkRows({ issueKey, group, canEdit }: { issueKey: string; group: Issue
   const star = useStarLinkedIssue(issueKey);
 
   return (
-    <ul role="tabpanel" aria-label={linkLabel(group.link)} className="flex flex-col">
+    <ul role="tabpanel" aria-label={tabLabel(group.link)} className="flex flex-col">
       {group.issues.map(issue => (
         <LinkRow
           key={issue.key}
@@ -179,17 +184,8 @@ function LinkRow({ issue, onStar, onRemove, removeLabel }: LinkRowProps) {
   );
 }
 
-// With no rows to expect, one line the height of the empty state most issues end on.
 function LinksSkeleton({ rows }: { rows: number }) {
-  if (rows === 0) {
-    return (
-      <div className="flex h-[30px] items-end" aria-hidden>
-        <span className="flex h-[18px] items-center">
-          <Skeleton className="h-3 w-80 max-w-full" />
-        </span>
-      </div>
-    );
-  }
+  if (rows === 0) return null;
   return (
     <ul aria-hidden className="flex flex-col">
       {Array.from({ length: rows }, (_, i) => (

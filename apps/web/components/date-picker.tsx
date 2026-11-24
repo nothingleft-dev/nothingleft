@@ -155,7 +155,9 @@ export function MonthGrid({ value, onSelect, range }: MonthGridProps) {
               className={cn(
                 'grid h-7 place-items-center rounded-sm text-xs tabular hover:bg-hover',
                 between && 'bg-active',
-                dayIso === todayIso && !selected && 'font-semibold text-brand-text',
+                dayIso === todayIso &&
+                  'relative font-semibold after:absolute after:bottom-0.5 after:size-1 after:rounded-full after:bg-brand',
+                dayIso === todayIso && !selected && 'text-brand-text',
                 selected && 'bg-ink font-medium text-ink-fg hover:bg-ink',
               )}
             >

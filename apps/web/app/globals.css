@@ -552,7 +552,7 @@
   --label-red-2-fg: oklch(0.28 0.06 25);
   --label-red-2-solid: oklch(0.5 0.12 25);
   --label-red-3-bg: oklch(0.636 0.16 23);
-  --label-red-3-fg: oklch(0.974 0.013 12);
+  --label-red-3-fg: oklch(0.223 0.063 24);
   --label-red-3-solid: oklch(0.5 0.12 25);
   --label-red-4-bg: oklch(0.5 0.12 25);
   --label-red-4-fg: oklch(0.97 0.013 25);
@@ -1284,6 +1284,38 @@
   --popover: var(--bg-raised);
   --popover-foreground: var(--text);
   --radius: var(--radius-lg);
+  --edit-cue: var(--border-strong);
+  --tag-tone: 55%;
+}
+
+/* On charcoal the strong border is as faint as a divider, so the edit cue takes the muted ink there. */
+:root[data-theme='dark'] {
+  --edit-cue: var(--text-muted);
+  --tag-tone: 30%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --edit-cue: var(--text-muted);
+    --tag-tone: 30%;
+  }
+}
+
+/* A tag keeps its swatch's hue and its place from pale to deep at part strength over the surface, so a row of
+   tags stays quieter than the title and the status. Its ink is the page's, which reads on every toned swatch. */
+.tag-chip {
+  --tag-bg: color-mix(in oklab, var(--c-bg) var(--tag-tone), var(--bg-surface));
+  background: var(--tag-bg);
+  color: var(--text);
+}
+
+/* The standing cue under an editable value's words: design § 8b. */
+@utility edit-cue {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--edit-cue);
+  text-underline-offset: 5px;
 }
 
 /* 320 px keeps a toast in the issue page's rail at 1440 instead of over the main column's composer. */
@@ -1624,10 +1656,13 @@
   animation-timeline: scroll(self block);
 }
 
-/* Equal columns, so the dividers of a wrapped row line up with the row above; the outer ones are clipped. */
+/* Two, three or six to a row, so a wrapped row is never one cell beside an empty remainder. The strip reads as two
+   groups, what the work is (status, priority, type) and who has it until when (assignees, sprint, due date): one
+   hairline parts them, down the middle at six to a row and across at three. Six in a row give people and sprint
+   names the wider cells: they are the values that wrap. */
 .key-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -1638,6 +1673,34 @@
   box-shadow:
     1px 0 0 var(--border-subtle),
     0 1px 0 var(--border-subtle);
+}
+
+@container (min-width: 26rem) {
+  .key-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .key-strip > * {
+    box-shadow: none;
+  }
+
+  .key-strip > :nth-child(-n + 3) {
+    box-shadow: 0 1px 0 var(--border);
+  }
+}
+
+@container (min-width: 46rem) {
+  .key-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(0, 1.4fr)) minmax(0, 1.1fr);
+  }
+
+  .key-strip > :nth-child(-n + 3) {
+    box-shadow: none;
+  }
+
+  .key-strip > :nth-child(4) {
+    box-shadow: -1px 0 0 var(--border);
+  }
 }
 
 @property --scroll-fade-start {
@@ -2022,6 +2085,16 @@
     overflow-x: auto;
     font-size: var(--text-xs);
     line-height: var(--leading-xs);
+    /* A long line fades at the edge it runs past, so a cut token reads as "scroll", not as the end. */
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--scroll-fade-start),
+      #000 calc(100% - var(--scroll-fade)),
+      transparent
+    );
+    animation: scroll-fade-inline linear both;
+    animation-timeline: scroll(self inline);
   }
 
   .md pre code {
@@ -2229,6 +2302,16 @@
 @layer components {
   .editor-frame:has(.editor-content:focus, textarea:focus) {
     box-shadow: var(--focus-ring);
+  }
+
+  /* The issue description spans its column so code, tables and images can use it; its prose keeps a reading
+     measure, read and edited alike. */
+  .md-wide {
+    max-width: none;
+  }
+
+  .md-wide > :where(p:not(:has(img)), ul, ol, blockquote, h1, h2, h3, h4, h5, h6) {
+    max-width: 76ch;
   }
 
   .editor-frame .editor-content:focus-visible,

@@ -155,7 +155,7 @@ export function MarkdownEditor({
         return true;
       },
       attributes: {
-        class: cn('md editor-content', variant === 'comment' && 'md-comment'),
+        class: cn('md editor-content', variant === 'comment' ? 'md-comment' : 'md-wide'),
         'aria-label': label,
         'aria-multiline': 'true',
         role: 'textbox',

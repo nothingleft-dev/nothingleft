@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { checkMarkdownSize } from '@nothingleft/markdown';
 import type { Issue } from '@nothingleft/types';
+import { Pencil } from 'lucide-react';
 import { Button } from '@components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@components/tooltip';
 import { Kbd } from '@components/kbd';
 import { MarkdownEditor } from '@components/editor/markdown-editor';
 import { Markdown } from '@components/markdown/markdown';
@@ -27,16 +29,12 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
   const source = issue.description_md ?? '';
   const toggle = useToggleIssueTask(issue.key);
 
-  if (editing) {
-    return <DescriptionEditor issue={issue} onDone={() => onEditingChange(false)} />;
-  }
-
-  if (!source.trim()) {
+  if (!editing && !source.trim()) {
     return canEdit ? (
       <button
         type="button"
         onClick={() => onEditingChange(true)}
-        className="mt-4 w-full rounded-md border border-dashed px-3 py-4 text-left text-sm text-text-secondary hover:border-border-strong hover:text-text"
+        className="mt-5 w-full rounded-md border border-dashed px-3 py-4 text-left text-sm text-text-secondary hover:border-border-strong hover:text-text"
       >
         Add a description <Kbd className="ml-1">e</Kbd>
       </button>
@@ -44,16 +42,48 @@ export function IssueDescription({ issue, canEdit, editing, onEditingChange }: I
   }
 
   return (
-    <Markdown
-      source={source}
-      className="mt-4 max-w-none"
-      onToggleTask={
-        canEdit
-          ? (index, checked) =>
-              toggle.mutate({ index, checked }, { onError: error => toastError('Could not update the task', error) })
-          : undefined
-      }
-    />
+    <section className="mt-5" aria-labelledby="issue-description">
+      <div className="flex h-7 items-center justify-between gap-3">
+        <h2 id="issue-description" className="text-sm font-semibold">
+          Description
+        </h2>
+        {canEdit && !editing ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="xs"
+                aria-label="Edit description"
+                className="text-text-secondary"
+                onClick={() => onEditingChange(true)}
+              >
+                <Pencil /> Edit
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Edit description <span className="ml-2 opacity-70">e</span>
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
+      {editing ? (
+        <DescriptionEditor issue={issue} onDone={() => onEditingChange(false)} />
+      ) : (
+        <Markdown
+          source={source}
+          className="md-wide mt-1"
+          onToggleTask={
+            canEdit
+              ? (index, checked) =>
+                  toggle.mutate(
+                    { index, checked },
+                    { onError: error => toastError('Could not update the task', error) },
+                  )
+              : undefined
+          }
+        />
+      )}
+    </section>
   );
 }
 
@@ -82,7 +112,7 @@ function DescriptionEditor({ issue, onDone }: { issue: Issue; onDone: () => void
   };
 
   return (
-    <div className="mt-4 flex flex-col gap-2">
+    <div className="mt-1 flex flex-col gap-2">
       <MarkdownEditor
         // Bleeds by its padding and border, so the text keeps the x it has when read.
         className="sm:-mx-[13px]"

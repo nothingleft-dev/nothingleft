@@ -18,7 +18,7 @@ export function IssueReferencedBy({ issueKey, timeZone }: { issueKey: string; ti
   if (!articles.isSuccess || articles.data.length === 0) return null;
 
   return (
-    <section className="mt-8" aria-labelledby="referenced-by">
+    <section className="mt-6" aria-labelledby="referenced-by">
       <div className="flex min-h-control items-center gap-2 border-b">
         <h2 id="referenced-by" className="text-sm font-semibold">
           Referenced by

@@ -119,16 +119,32 @@ empty value and never a label; display is the client's concern.
 Layout follows the reference screenshots.
 
 **Header:** breadcrumb `Projects / <Project> / Issues / PROJ-123` with a
-copy-key button. Below it, provenance: *"Created by X about 2 months ago ·
-Updated by Y 12 days ago"*. Right side: star (favourite, implies watch) and
-vote with count. A reader who cannot edit sees one line under Activity saying so and who can give
-edit access.
+copy-key button. The page opens on the title: nothing sits above it but the *Subtask of*
+line and, in an archived project, the archived notice. Who created the issue and who last
+changed it are the last two lines of the field rail (*Created Alex Lee · 12 Sep 2026*,
+*Updated Casey Kim · 6 hours ago*; *Updated* is left out while it only repeats the
+creation), because both events are also the first and last entries of Activity (24 Nov 2026).
 
-**Title row:** title, then inline actions — edit, tag, link, and an overflow
-menu (move, clone, delete, copy link, watch). For someone who may edit it, the title wears the
+**Title row:** title, then one group of actions on its first line — attach files, star
+(favourite, implies watch), vote with its count once there is one, and an overflow menu
+(create subtask, set parent, copy link, watch, delete). Nothing in the row edits the
+description, and nothing in it repeats a control that sits where its content is: tags are
+added from the `+` after the chips, links from the Links section (24 Nov 2026). A reader who
+cannot edit sees a *View only* chip at the head of that group, with who can give edit access
+in its tooltip. For someone who may edit it, the title wears the
 sidebar's standing cue — a dotted rule under the text, darker on hover, with *Click to
-rename* in a tooltip — and the description editor spans the whole main column with a
-320 px minimum text area (owner, 25 Sep 2026).
+rename* in a tooltip. A title past 70 characters steps down to 22 px and breaks after `_`
+and `/` before it breaks inside a word; past six lines it is cut with *Show full title*. A
+title of three lines or more trades the rule for one small pencil after its last word: a
+dotted line under every line of a long title is noise (owner, 24 Nov 2026).
+
+**Description:** its own *Description* heading with *Edit* (`e`) at the right end of the
+row, so the pencil that edits the description sits on the description. The text itself is
+never click-to-edit: people select and copy from it. Its prose (paragraphs, lists, quotes,
+headings) keeps a reading measure of 76 characters while code blocks, tables and images use
+the whole column; the editor wraps the same way (owner, 24 Nov 2026). With no description an editor sees
+*Add a description* in its place, and a reader nothing. The description editor spans the
+whole main column with a 320 px minimum text area (owner, 25 Sep 2026).
 
 **Parent:** a *Subtask of* line above the title — type badge, key (struck through when
 resolved) and title — with change and remove on hover. The overflow menu offers *Set
@@ -143,12 +159,17 @@ title row) opens a searchable picker of the organisation's tags; selecting one t
 it. A name that matches no tag offers *Create*, which asks for its colour from the same
 8 × 5 label grid statuses and types use before creating it (owner, 24 Sep 2026; the 40
 label colours replaced the 14 hues for tags the same day). The chip's `×` appears on hover or
-focus, only for people who may remove it.
-
-**Body:** rendered markdown description, inline-editable.
+focus, only for people who may remove it. The row is one line: the chips that fit, each at
+most 160 px wide with its full name in the tooltip, then `+N` for the rest, which opens them
+all in place (*Show fewer* closes them again). A chip wears its tag's colour at part strength
+with the page's ink (DESIGN-SYSTEM.md § Tag), so the colour a person picked is the chip's hue,
+not its loudness.
 
 **Links section:** tabbed by link type with counts — `Relates to 1`,
-`Parent for 3` — and an `Add links` action. Each linked issue shows its star,
+`Subtasks 3` — and an `Add links` action. A tab names the rows under it, so `parent for`
+reads `Subtasks`; everywhere a link is named as a relation (the Add links dialog, search,
+history, the MCP) it keeps its own name. The parent has no tab: it is the *Subtask of* line
+above the title, and listing it again under Links said the same thing twice. Each linked issue shows its star,
 a coloured type badge, its key, and its title. **Keys of resolved issues
 render struck through**, so a list of subtasks communicates progress at a
 glance. Beside `Add links` sits `Create subtask`. The star toggles in place; a
@@ -156,7 +177,8 @@ row's `×` (hover, editors only) removes that link without asking, since it is
 one click to add back. `Add links` is a dialog: the link name as a choice with a
 one-line meaning under it, then any number of issues found by key or title; each result has a tick box, a picked issue stays ticked in the list, and picking it again unpicks it; a
 refusal (a `depends on` cycle, a second parent) is shown inside the dialog and
-nothing is linked. With no links, the section says so and offers `Add links`; a
+nothing is linked. With no links, the section is its heading row alone — *Links · No linked
+issues* (*No other linked issues* on a subtask), with `Create subtask` and `Add links` at its right end; a
 reader who cannot edit sees no section at all.
 
 **Attachments section:** count, plus a *Hidden files N* note for attachments
@@ -170,7 +192,7 @@ them. `Attach files` action. As built in 1f (owner decisions, 25 Sep 2026):
 - At 100 % of the storage quota *Attach files* and the editor's attach tool are disabled, with the
   reason in their tooltip.
 - **No files, no section**, for everyone. *Attach files* is then the paperclip among the
-  title-row actions (edit, tag, link), which is always there for someone who may upload.
+  title-row actions, which is always there for someone who may upload.
   The section appears as soon as an upload starts, so its progress has somewhere to show.
 - **Tiles.** Images (PNG, JPEG, GIF, WebP, AVIF) as thumbnails on a grid that fills the column (about 170–220 px wide) with name and size
   under them; every other file, SVG included, as a download tile — a neutral type square
@@ -241,7 +263,16 @@ line, or none. See [data-model.md](./data-model.md).
 
 **Fields** (2 Nov 2026): Status, Priority, Type, Assignee, Sprint and Due Date in a strip under
 the title; Project, Start date, Story points, Estimation, Spent time (with a `+` to log time),
-then any custom fields in the sidebar beside the issue (DESIGN-SYSTEM.md § Issue page). As built in 1e (25 Sep 2026): Spent time reads `3h of 4h` with a
+then any custom fields under a *Custom fields* heading, Development, Watchers and the two
+provenance lines in the sidebar beside the issue (DESIGN-SYSTEM.md § Issue page). The strip
+reads as two groups, what the work is and who has it until when, parted by its one inner
+hairline; the due date picker names the start date (*Starts 21 Nov 2026*) and the start date
+picker the due date, so the pair is seen together where either is changed. A due date that is
+today or overdue says so in its label (*Due today*; *Overdue*, in the danger colour with its
+date), so the date stays one line. Several assignees show the first person's avatar and first name, then
+`+N` for the others, with every name in the tooltip (owner, 24 Nov 2026). Watchers opens
+the list of people; it wears a chevron, not the edit cue, because nothing there is edited.
+The vote count lives on the vote button only. As built in 1e (25 Sep 2026): Spent time reads `3h of 4h` with a
 4px meter under it; past the estimate the meter turns red and `· 1h over` follows in
 the danger colour — the one place the field wears colour. With no estimate it shows the
 spent time alone; with nothing logged, `?`, as Estimation does. The value is the rollup, so an
@@ -255,8 +286,9 @@ Empty values render as their configured label in the same muted style as a
 real value, never as a blank: `No due date`, `Unassigned`, `?` for an
 unset duration.
 
-**Deleting an issue** asks first — *Delete PP-123?*, naming the issue and stating that it
-leaves the project for everyone and can be restored for 14 days — and then goes at once,
+**Deleting an issue** asks first — *Delete PP-123?*, quoting the title and stating that it
+will be removed from the project for everyone and that a Project Admin can restore it for 14
+days — and then goes at once,
 with a toast offering *Undo*. Revised 24 Sep 2026 at the owner's request: a deletion is
 still reversible, but it is the one action on the page that removes something other people
 are looking at, so it is confirmed like every other action that affects other people
@@ -264,8 +296,11 @@ are looking at, so it is confirmed like every other action that affects other pe
 time, under project settings → *Deleted issues*. Archiving a project is confirmed the same
 way, wherever it is offered.
 
-**Archived projects** show a one-line notice above the provenance; every field is
+**Archived projects** show a one-line notice above the title; every field is
 read-only, while star, vote and watch keep working.
+
+**Sections** follow one rhythm: 20 px from the strip to the description, 24 px between
+Description, Links, Attachments and Activity.
 
 ## Create-issue dialog
 

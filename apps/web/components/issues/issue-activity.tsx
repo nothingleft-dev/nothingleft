@@ -232,7 +232,7 @@ export function IssueActivitySection({
   const tabs = TABS.filter(t => (t.value !== 'time' || time.enabled) && (t.value !== 'development' || development));
 
   return (
-    <section className="mt-8" aria-label="Activity">
+    <section className="mt-6" aria-label="Activity">
       <div className="flex h-control items-center gap-3 border-b">
         <h2 className="flex-none text-sm font-semibold max-md:sr-only">Activity</h2>
         <Tabs
@@ -252,7 +252,6 @@ export function IssueActivitySection({
               ) : undefined,
           }))}
         />
-        <span className="ml-auto flex-none text-xs whitespace-nowrap text-text-muted max-sm:hidden">Oldest first</span>
       </div>
 
       {tab === 'comments' ? (

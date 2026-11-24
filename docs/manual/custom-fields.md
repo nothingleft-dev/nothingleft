@@ -62,11 +62,12 @@ third project is refused; choose another slug for it.
 
 ## Filling in fields
 
-Fields appear in the issue's sidebar under **Fields**, below the standard ones, in your chosen
+Fields appear in the issue's sidebar under **Custom fields**, below the standard ones, in your chosen
 order, with a picker to match the type: a calendar for a date, a calendar and a time for a
 date and time, a searchable list for options and people, a switch for a checkbox, and the
-`1w 1d 1h 1m` box for a duration, as for Estimation. A markdown field shows its text, and the
-pencil beside its name opens the editor. Multi-select and multi-user fields save when their
+`1w 1d 1h 1m` box for a duration, as for Estimation. A markdown field shows the start of its
+text with **Show more** for the rest, and a URL field shows a link that opens in a new tab;
+for both, click the field's name to open the editor. Multi-select and multi-user fields save when their
 picker closes, so choosing three options is one change. Anyone who can edit the issue
 (Contributor and up) can set them. People fields offer the members who can open the issue.
 

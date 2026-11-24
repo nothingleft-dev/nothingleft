@@ -10,11 +10,21 @@ interface AssigneeStackProps {
   withName?: boolean;
   /** The first person's Former member or Inactive chip; rows leave it to the tooltip. */
   chip?: boolean;
+  /** One avatar and a first name, then `+N` for everyone else: a single way to count, where the cell is narrow. */
+  short?: boolean;
+  nameClassName?: string;
   className?: string;
 }
 
 /** Avatars overlapping 4px with a surface ring; a dashed hollow circle when nobody is assigned. */
-export function AssigneeStack({ assignees, withName = true, chip = false, className }: AssigneeStackProps) {
+export function AssigneeStack({
+  assignees,
+  withName = true,
+  chip = false,
+  short = false,
+  nameClassName,
+  className,
+}: AssigneeStackProps) {
   if (assignees.length === 0) {
     return (
       <span className={cn('inline-flex min-w-0 items-center gap-1.5 text-xs text-text-muted', className)}>
@@ -32,7 +42,7 @@ export function AssigneeStack({ assignees, withName = true, chip = false, classN
     );
   }
 
-  const shown = assignees.slice(0, 3);
+  const shown = assignees.slice(0, short ? 1 : 3);
   const names = assignees.map(personTitle).join(', ');
   const hidden = assignees.length - shown.length;
 
@@ -57,7 +67,12 @@ export function AssigneeStack({ assignees, withName = true, chip = false, classN
           </span>
           {withName ? (
             <>
-              <PersonName person={assignees[0]!} chip={chip} />
+              <PersonName
+                person={assignees[0]!}
+                chip={chip}
+                className={nameClassName}
+                {...(short ? { label: assignees[0]!.name.split(' ')[0]! } : {})}
+              />
               {assignees.length > 1 ? (
                 <span className="flex-none tabular text-text-muted">+{assignees.length - 1}</span>
               ) : null}

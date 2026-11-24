@@ -77,7 +77,7 @@ export function AttachmentsSection({
   return (
     <section
       className={cn(
-        'mt-8 rounded-md @container',
+        'mt-6 rounded-md @container',
         dragging && 'bg-hover outline-2 outline-offset-4 outline-dashed outline-border-strong',
       )}
       aria-label="Attachments"

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { toastError } from '@components/toast-error';
 import type { WorkCalendar } from '@nothingleft/format';
-import { RESOLVED_STATUS_CATEGORIES, type Issue, type UpdateIssue } from '@nothingleft/types';
+import { RESOLVED_STATUS_CATEGORIES, type Issue, type MemberRef, type UpdateIssue } from '@nothingleft/types';
 import { Plus } from 'lucide-react';
 import { Button } from '@components/ui/button';
 import { Skeleton } from '@components/ui/skeleton';
@@ -12,11 +12,12 @@ import { Meter } from '@components/dashboard/meter';
 import { Duration } from '@components/duration';
 import { PriorityBadge, StatusDot, TypeBadge, ValueDot } from '@components/issues/value-marks';
 import { AssigneeCommand, DateEditor, EstimateEditor, ValueCommand, retryOf } from '@components/issues/pickers';
-import { FIELD_PERSON_TEXT, FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
+import { FIELD_NAME_TEXT, FIELD_PERSON_TEXT, FIELD_TEXT, SidebarField } from '@components/issues/sidebar-field';
 import { DevelopmentField } from '@components/git/development-field';
 import { SprintCommand, StoryPointsEditor, UNSCHEDULED } from '@components/agile/sprint-field';
 import type { TimeTracking } from '@components/issues/issue-activity';
-import { RailHeading, SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
+import { SidebarCustomFields, timeRoleField } from '@components/custom-fields/sidebar-fields';
+import { RelativeTime } from '@components/relative-time';
 import { useCustomFields } from '@hooks/use-custom-fields';
 import { PersonName } from '@components/former-member-chip';
 import { AssigneeStack } from '@components/issues/assignee-stack';
@@ -123,6 +124,7 @@ export function IssueSidebar({
   };
   const strip = part === 'primary';
   const variant = strip ? 'strip' : 'rail';
+  const [railRef, railTop] = useRailStickyTop();
   useShortcut('s', () => setEditing('status'), strip && canEdit && editing === null);
   useShortcut('a', openAssignees, strip && canEdit && editing === null);
 
@@ -146,14 +148,12 @@ export function IssueSidebar({
     });
   };
 
+  // Creating an issue also stamps its update; a second row would only repeat the first.
+  const untouched = Date.parse(issue.updated_at) - Date.parse(issue.created_at) < 60_000;
+
   if (part === 'primary') {
     return (
-      <div
-        role="group"
-        aria-label="Key fields"
-        // Six, three or two to a row, so a wrapped row is never one cell beside an empty remainder.
-        className="key-strip mt-4 grid-cols-2! @[26rem]:grid-cols-3! @[46rem]:grid-cols-6!"
-      >
+      <div role="group" aria-label="Key fields" className="key-strip mt-4">
         <SidebarField
           variant={variant}
           label="Status"
@@ -161,7 +161,7 @@ export function IssueSidebar({
           {...openProps('status')}
           editor={
             <ValueCommand
-              placeholder="Change status"
+              placeholder="Find a status"
               loading={statuses.isPending}
               onRetry={retryOf(statuses)}
               selected={issue.status.name}
@@ -176,7 +176,7 @@ export function IssueSidebar({
           }
         >
           <StatusDot category={issue.status.category} color={issue.status.color} />
-          {issue.status.name}
+          <span className={cn('font-medium', FIELD_TEXT)}>{issue.status.name}</span>
         </SidebarField>
         <SidebarField
           label="Priority"
@@ -186,7 +186,7 @@ export function IssueSidebar({
           {...openProps('priority')}
           editor={
             <ValueCommand
-              placeholder="Change priority"
+              placeholder="Find a priority"
               loading={priorities.isPending}
               onRetry={retryOf(priorities)}
               selected={issue.priority.name}
@@ -212,7 +212,7 @@ export function IssueSidebar({
           {...openProps('type')}
           editor={
             <ValueCommand
-              placeholder="Change type"
+              placeholder="Find a type"
               loading={types.isPending}
               onRetry={retryOf(types)}
               selected={issue.type.name}
@@ -263,7 +263,12 @@ export function IssueSidebar({
               className={cn('[&>span]:whitespace-normal [&>span]:[overflow-wrap:anywhere]', FIELD_PERSON_TEXT)}
             />
           ) : (
-            <AssigneeStack assignees={issue.assignees} withName={false} className="text-sm" />
+            <AssigneeStack
+              assignees={issue.assignees}
+              short
+              nameClassName={cn('text-text', FIELD_NAME_TEXT)}
+              className="text-sm"
+            />
           )}
         </SidebarField>
         <SidebarField
@@ -299,9 +304,24 @@ export function IssueSidebar({
           label="Due date"
           disabled={!canEdit}
           empty={issue.due_date === null}
+          // The label says it, so the date stays one line and the strip one height.
+          labelAs={
+            dueTone === 'overdue' ? (
+              <span className="font-medium text-danger-fg">Overdue</span>
+            ) : dueTone === 'today' ? (
+              <span className="font-medium text-text">Due today</span>
+            ) : undefined
+          }
           contentClassName="w-[284px]"
           {...openProps('due_date')}
-          editor={<DateEditor value={issue.due_date} timeZone={timeZone} onChange={v => setDate('due_date', v)} />}
+          editor={
+            <DateEditor
+              value={issue.due_date}
+              timeZone={timeZone}
+              onChange={v => setDate('due_date', v)}
+              note={issue.start_date ? `Starts ${formatCalendarDate(issue.start_date)}` : undefined}
+            />
+          }
         >
           {issue.due_date ? (
             <span
@@ -312,7 +332,6 @@ export function IssueSidebar({
               )}
             >
               {formatCalendarDate(issue.due_date)}
-              {dueTone === 'today' ? ', today' : dueTone === 'overdue' ? ', overdue' : ''}
             </span>
           ) : (
             'No due date'
@@ -324,9 +343,11 @@ export function IssueSidebar({
 
   return (
     <aside
+      ref={railRef}
       id="issue-fields"
       aria-label="Issue fields"
-      className="flex flex-col gap-0.5 min-[1100px]:sticky min-[1100px]:top-0 min-[1100px]:max-h-[calc(100vh-var(--topbar)-var(--space-5))] min-[1100px]:overflow-y-auto"
+      style={{ top: railTop }}
+      className="flex flex-col gap-0.5 min-[1100px]:sticky"
     >
       <SidebarField label="Project">
         <ProjectMarkByKey projectKey={issue.project.key} className="size-5 rounded-xs" />
@@ -338,7 +359,14 @@ export function IssueSidebar({
         empty={issue.start_date === null}
         contentClassName="w-[284px]"
         {...openProps('start_date')}
-        editor={<DateEditor value={issue.start_date} timeZone={timeZone} onChange={v => setDate('start_date', v)} />}
+        editor={
+          <DateEditor
+            value={issue.start_date}
+            timeZone={timeZone}
+            onChange={v => setDate('start_date', v)}
+            note={issue.due_date ? `Due ${formatCalendarDate(issue.due_date)}` : undefined}
+          />
+        }
       >
         {issue.start_date ? formatCalendarDate(issue.start_date) : 'No start date'}
       </SidebarField>
@@ -427,13 +455,58 @@ export function IssueSidebar({
         <DevelopmentField issue={issue} onOpen={onOpenDevelopment} onLink={onLinkPullRequest} />
       ) : null}
 
-      <RailHeading>Watching</RailHeading>
+      <div className="mx-2 mt-3 border-t pt-3" />
       <WatchersField issueKey={issue.key} count={issue.watcher_count} />
-      <SidebarField label="Votes">
-        <span className="tabular">{issue.vote_count}</span>
-      </SidebarField>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 px-2 pt-2 pb-1 text-2xs">
+        <Provenance label="Created" person={issue.created_by} at={issue.created_at} timeZone={timeZone} />
+        {untouched ? null : (
+          <Provenance label="Updated" person={issue.updated_by} at={issue.updated_at} timeZone={timeZone} />
+        )}
+      </dl>
     </aside>
   );
+}
+
+interface ProvenanceProps {
+  label: string;
+  person: MemberRef;
+  at: string;
+  timeZone?: string | undefined;
+}
+
+function Provenance({ label, person, at, timeZone }: ProvenanceProps) {
+  return (
+    <>
+      <dt className="text-text-muted">{label}</dt>
+      <dd className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-text-secondary">
+        <PersonName person={person} className="text-text" />
+        <span aria-hidden>·</span>
+        <RelativeTime value={at} {...(timeZone ? { timeZone } : {})} className="text-text-secondary" />
+      </dd>
+    </>
+  );
+}
+
+/** Taller than its scroller, the rail sticks by its end, so the page's one scroll reaches every field. */
+function useRailStickyTop() {
+  const rail = useRef<HTMLElement>(null);
+  const [top, setTop] = useState(0);
+
+  useLayoutEffect(() => {
+    const element = rail.current;
+    if (!element) return;
+    let scroller = element.parentElement;
+    while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+    const room = scroller ?? document.documentElement;
+    const measure = () => setTop(Math.min(0, room.clientHeight - element.offsetHeight - 24));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    observer.observe(room);
+    return () => observer.disconnect();
+  }, []);
+
+  return [rail, top] as const;
 }
 
 function WatchersField({ issueKey, count }: { issueKey: string; count: number }) {
@@ -443,9 +516,11 @@ function WatchersField({ issueKey, count }: { issueKey: string; count: number })
   return (
     <SidebarField
       label="Watchers"
+      cue="open"
       empty={count === 0}
       open={open}
       onOpenChange={setOpen}
+      disabled={count === 0}
       editor={
         <ul className="flex max-h-72 flex-col overflow-y-auto p-1">
           {(watchers.data ?? []).map(w => (

@@ -347,7 +347,7 @@
   --label-gray-5-bg: oklch(0.38 0.005 260); --label-gray-5-fg: oklch(0.97 0.001 260); --label-gray-5-solid: oklch(0.38 0.005 260);
   --label-red-1-bg: oklch(0.91 0.046 25); --label-red-1-fg: oklch(0.28 0.060 25); --label-red-1-solid: oklch(0.50 0.120 25);
   --label-red-2-bg: oklch(0.83 0.094 25); --label-red-2-fg: oklch(0.28 0.060 25); --label-red-2-solid: oklch(0.50 0.120 25);
-  --label-red-3-bg: oklch(0.636 0.160 23); --label-red-3-fg: oklch(0.974 0.013 12); --label-red-3-solid: oklch(0.50 0.120 25);
+  --label-red-3-bg: oklch(0.636 0.160 23); --label-red-3-fg: oklch(0.223 0.063 24); --label-red-3-solid: oklch(0.50 0.120 25);
   --label-red-4-bg: oklch(0.50 0.120 25); --label-red-4-fg: oklch(0.97 0.013 25); --label-red-4-solid: oklch(0.50 0.120 25);
   --label-red-5-bg: oklch(0.38 0.080 25); --label-red-5-fg: oklch(0.97 0.013 25); --label-red-5-solid: oklch(0.38 0.080 25);
   --label-orange-1-bg: oklch(0.91 0.054 55); --label-orange-1-fg: oklch(0.28 0.060 55); --label-orange-1-solid: oklch(0.50 0.120 55);

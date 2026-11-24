@@ -314,7 +314,7 @@ function StatusEditor({
   const statuses = useSchemaValues(issue.project.key, 'statuses');
   return (
     <ValueCommand
-      placeholder="Change status"
+      placeholder="Find a status"
       loading={statuses.isPending}
       onRetry={retryOf(statuses)}
       failure="The statuses could not be loaded."
@@ -371,7 +371,7 @@ function PriorityEditor({
   const priorities = useSchemaValues(issue.project.key, 'priorities');
   return (
     <ValueCommand
-      placeholder="Change priority"
+      placeholder="Find a priority"
       loading={priorities.isPending}
       onRetry={retryOf(priorities)}
       failure="The priorities could not be loaded."

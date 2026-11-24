@@ -63,10 +63,11 @@ description is getting long; it still saves. Mention a teammate with
 `@username` and they are recorded as mentioned. Type another issue's key,
 such as `ACME-12`, and it becomes a link; once that issue is resolved, its key
 is shown struck through. Task-list checkboxes (`- [ ] write release notes`)
-can be ticked straight from the rendered text by anyone who may edit it.
+can be ticked straight from the rendered text by anyone who may edit it. To change a
+description, press **Edit** at the right of its _Description_ heading, or `e`.
 
 **Who and when.** Every issue shows who created it, who last updated it, and
-when. Changes to your own star, vote or watch do not count as updates. A new
+when, as the last two lines of its fields. Changes to your own star, vote or watch do not count as updates. A new
 comment moves the _updated_ time but not _updated by_, which always names the
 last person to change the issue itself.
 
@@ -248,7 +249,7 @@ A _depends on_ chain can never loop back on itself: if ACME-3 depends on
 ACME-2, and ACME-2 on ACME-1, then ACME-1 cannot depend on ACME-3. Linking
 the same two issues twice is refused, whichever end you start from.
 
-The issue page groups links by kind with a count - _Parent for 3_,
+The issue page groups links by kind with a count - _Subtasks 3_,
 _Relates to 1_ - and shows each linked issue's key, struck through once it is
 resolved. Issues in projects you cannot open are left out. Contributors and
 above can add and remove links and set parents.
@@ -272,10 +273,11 @@ the same grid statuses and types use - pick one, or one is chosen for you. Colon
 work. Contributors and above can add and remove tags; tags appear under the
 issue's title. You can also add tags, and links, while creating an issue.
 
-Press **+** after the tags (or the tag icon beside the title) to pick from the
+Press **+** after the tags to pick from the
 organisation's tags; pick one again to take it off. To make a new one, type its name,
 choose **Create**, then pick its colour from the same grid statuses and types use.
-Point at a tag and press **×** to remove it.
+Point at a tag and press **×** to remove it. An issue with more tags than fit on one line
+shows the rest behind **+N**; press it to see them all.
 
 You can tag a new issue while creating it, with the tag icon beside its title. On the
 full-page form the link icon next to it adds links too; if one of them cannot be made,

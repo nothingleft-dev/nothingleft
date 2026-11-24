@@ -30,7 +30,8 @@ const SECTIONS = [
 export function ProjectNavItem({ project, collapsed }: { project: ProjectNav; collapsed: boolean }) {
   const pathname = usePathname();
   const base = `/projects/${project.key}` as const;
-  const within = pathname.startsWith(`${base}/`);
+  const onIssue = pathname.startsWith(`/issue/${project.key}-`);
+  const within = onIssue || pathname.startsWith(`${base}/`);
   const [open, setOpen] = useState(within);
   // Entering a project opens its group once; after that the chevron is the person's to toggle.
   const [wasWithin, setWasWithin] = useState(within);
@@ -65,7 +66,12 @@ export function ProjectNavItem({ project, collapsed }: { project: ProjectNav; co
         <ul className="ml-[22px] border-l pl-1.5">
           {sectionsOf(project, base).map(({ label, href }) => (
             <li key={href}>
-              <NavItem href={href as Route} label={label} size="sub" />
+              <NavItem
+                href={href as Route}
+                label={label}
+                size="sub"
+                {...(onIssue ? { active: href === `${base}/issues` } : {})}
+              />
             </li>
           ))}
         </ul>

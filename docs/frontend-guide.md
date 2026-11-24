@@ -567,6 +567,14 @@ the pieces fit:
 
 - Rail editors open `side="bottom"`, `align="end"` beside the issue (`useRailPopoverAlign`). A raw
   `<input>` in an editor carries `data-slot="input"` so the shared invalid border and ring apply.
+  A strip picker takes the issue column (`data-popover-bounds`) as its collision boundary, so the
+  last cells' open inside the column instead of across the rail.
+- The rail has no scroll of its own. `useRailStickyTop` (`issue-sidebar.tsx`) gives a rail taller
+  than its scroller a negative sticky `top`, so it moves with the page until its end is in view;
+  it measures the nearest scrolling ancestor, which is the dialog when the issue is a modal.
+- The title, tags and edit cue: `IssueTitle` steps a long title down and adds a break chance after
+  `_` and `/`; `IssueTags` measures a hidden copy of the row to know how many chips fit beside `+N`;
+  the dotted cue is the `edit-cue` utility in `globals.css`, whose colour (`--edit-cue`) differs by theme.
 
 - **Every sidebar field is a `SidebarField`**: label over value, the whole row a
   Popover trigger whose body is one of the `pickers.tsx` Commands. A field saves when
