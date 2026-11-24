@@ -87,9 +87,10 @@ for (const theme of ['light', 'dark']) console.log(theme, order.map(n => out[the
 export const labelFamilies = { gray: 260, red: 25, orange: 55, yellow: 90, green: 145, teal: 185, blue: 255, pink: 350 };
 const labelSteps = [[0.91, 0.06], [0.83, 0.1], [0.7, 0.14], [0.5, 0.12], [0.38, 0.08]];
 const labelChroma = { gray: 0.06, yellow: 0.9 };
-// Owner-chosen priority colours (24 Sep 2026), kept exactly, text included.
+// Owner-chosen priority colours (24 Sep 2026), kept exactly, text included. `red-3` keeps its fill and takes dark
+// ink (24 Nov 2026): the pale ink it came with was 3.4:1 on it.
 const labelOverrides = {
-  'red-3': ['#db5c5c', '#fff3f4'],
+  'red-3': ['#db5c5c', '#330c0c'],
   'pink-3': ['#ee4ba7', '#330920'],
   'yellow-2': ['#f5d273', '#473a27'],
   'green-1': ['#b8e7bc', '#375239'],

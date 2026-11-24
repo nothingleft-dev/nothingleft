@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { slugify } from '@nothingleft/format';
 import { DEFAULT_LABEL_COLOR, type Issue, type LabelColor, type TagContext, type TagRef } from '@nothingleft/types';
@@ -29,6 +29,25 @@ interface IssueTagsProps {
 
 export function IssueTags({ issue, canEdit, pickerOpen, onPickerOpenChange }: IssueTagsProps) {
   const tag = useIssueTag(issue.key);
+  const [expanded, setExpanded] = useState(false);
+  const measure = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(issue.tags.length);
+
+  // One row: the chips that fit beside the count and the add button; the rest wait behind `+N`.
+  useLayoutEffect(() => {
+    const row = measure.current;
+    if (!row) return;
+    const count = () => {
+      const chips = [...row.children] as HTMLElement[];
+      const top = chips[0]?.offsetTop ?? 0;
+      setFit(Math.max(1, chips.filter(chip => chip.offsetTop === top).length));
+    };
+    count();
+    const observer = new ResizeObserver(count);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [issue.tags]);
+
   if (issue.tags.length === 0 && !canEdit) return null;
 
   // Applied by the name as typed, so a new tag keeps its capitals; removed by slug.
@@ -38,11 +57,35 @@ export function IssueTags({ issue, canEdit, pickerOpen, onPickerOpenChange }: Is
       { onError: error => toastError(on ? `Could not add ${t.name}` : `Could not remove ${t.name}`, error) },
     );
 
+  const hidden = issue.tags.length - fit;
+  const shown = expanded || hidden <= 0 ? issue.tags : issue.tags.slice(0, fit);
+
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Tags">
-      {issue.tags.map(t => (
+    <div className="relative mt-2 flex flex-wrap items-center gap-1" aria-label="Tags">
+      <div
+        ref={measure}
+        aria-hidden
+        inert
+        className="invisible absolute top-0 left-0 flex h-5 w-[calc(100%-6rem)] flex-wrap gap-1 overflow-hidden"
+      >
+        {issue.tags.map(t => (
+          <TagChip key={t.slug} tag={t} />
+        ))}
+      </div>
+      {shown.map(t => (
         <TagChip key={t.slug} tag={t} onRemove={canEdit ? () => change(t, false) : undefined} />
       ))}
+      {hidden > 0 ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={expanded ? undefined : `Show ${hidden} more ${hidden === 1 ? 'tag' : 'tags'}`}
+          onClick={() => setExpanded(!expanded)}
+          className="inline-flex h-5 items-center rounded-sm border border-border-strong px-1.5 text-2xs font-medium tabular text-text-secondary hover:bg-hover hover:text-text"
+        >
+          {expanded ? 'Show fewer' : `+${hidden}`}
+        </button>
+      ) : null}
       {canEdit ? (
         <TagPicker
           applied={issue.tags}
@@ -61,20 +104,22 @@ export function TagChip({ tag, onRemove }: { tag: TagRef; onRemove?: () => void 
     <span
       className={cn(
         `l-${tag.color}`,
-        'group/tag relative inline-flex h-5 items-center rounded-sm bg-c-bg px-2 text-2xs font-medium text-c-fg',
+        'tag-chip group/tag relative inline-flex h-5 max-w-40 min-w-0 items-center rounded-sm px-1.5 text-2xs font-medium',
         // Touch has no hover, so the × is always there and keeps its own room.
         onRemove && '[@media(hover:none)]:pr-5',
       )}
     >
-      {tag.name}
+      <span className="truncate" title={tag.name}>
+        {tag.name}
+      </span>
       {onRemove ? (
         <button
           type="button"
           aria-label={`Remove tag ${tag.name}`}
           onClick={onRemove}
-          className="group/x absolute inset-y-0 right-0 grid w-5 place-items-center rounded-r-sm bg-c-bg reveal group-hover/tag:opacity-100 before:absolute before:inset-y-0 before:-left-1.5 before:w-1.5 before:bg-linear-to-r before:from-transparent before:to-c-bg [@media(hover:none)]:before:hidden"
+          className="group/x absolute inset-y-0 right-0 grid w-5 place-items-center rounded-r-sm bg-(--tag-bg) reveal group-hover/tag:opacity-100 before:absolute before:inset-y-0 before:-left-1.5 before:w-1.5 before:bg-linear-to-r before:from-transparent before:to-(--tag-bg) [@media(hover:none)]:before:hidden"
         >
-          <span className="grid size-3.5 place-items-center rounded-xs group-hover/x:bg-c-fg/15">
+          <span className="grid size-3.5 place-items-center rounded-xs group-hover/x:bg-text/15">
             <X className="size-3" />
           </span>
         </button>

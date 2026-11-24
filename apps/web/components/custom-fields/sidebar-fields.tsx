@@ -1,9 +1,8 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { ExternalLink, Pencil } from 'lucide-react';
 import type { CustomField, CustomFieldValueInput, Issue, IssueCustomFieldValue } from '@nothingleft/types';
-import { Button } from '@components/ui/button';
 import { Popover, PopoverAnchor, PopoverContent } from '@components/popover';
 import { Switch } from '@components/ui/switch';
 import { LoadMore, TextButton } from '@components/text-button';
@@ -100,7 +99,7 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
 
   return (
     <div className="flex flex-col gap-0.5" aria-label="Custom fields">
-      <RailHeading>Fields</RailHeading>
+      <RailHeading>Custom fields</RailHeading>
       {entries.map(entry => {
         const field = bySlug.get(entry.slug);
         const failure = errors[entry.slug] ?? null;
@@ -120,15 +119,73 @@ export function SidebarCustomFields({ issue, canEdit, timeZone }: SidebarCustomF
         if (entry.type === 'markdown') {
           return (
             <div key={entry.slug}>
-              <MarkdownRow
-                entry={entry}
+              <BlockRow
+                name={entry.name}
+                verb="edit"
                 editable={editable}
-                projectKey={projectKey}
                 open={open === entry.slug}
-                error={error}
                 onOpenChange={next => openRow(entry, next)}
-                onSave={value => save(entry, value, true)}
-              />
+                contentClassName="w-[560px]"
+                editor={
+                  <MarkdownValueEditor
+                    label={entry.name}
+                    value={entry.value}
+                    projectKey={projectKey}
+                    error={error}
+                    onSave={value => save(entry, value, true)}
+                    onCancel={() => setOpen(null)}
+                  />
+                }
+              >
+                {entry.value ? (
+                  <ClampedMarkdown source={entry.value} />
+                ) : (
+                  <span
+                    className={cn(
+                      'self-start text-sm text-text-muted',
+                      editable && 'edit-cue group-hover/field:decoration-text-secondary',
+                    )}
+                  >
+                    {entry.empty_label}
+                  </span>
+                )}
+              </BlockRow>
+              {open === entry.slug ? null : rowError}
+            </div>
+          );
+        }
+
+        if (entry.type === 'url' && entry.value && field) {
+          return (
+            <div key={entry.slug}>
+              <BlockRow
+                name={entry.name}
+                verb="change"
+                editable={editable}
+                open={open === entry.slug}
+                onOpenChange={next => openRow(entry, next)}
+                contentClassName={cn('w-[280px]', editorWidth(entry))}
+                editor={
+                  <FieldEditor
+                    field={field}
+                    value={inputOf(entry)}
+                    people={people.data ?? []}
+                    peopleLoading={people.isPending}
+                    calendar={calendar}
+                    projectKey={projectKey}
+                    timeZone={timeZone}
+                    error={error}
+                    onSave={next => {
+                      if (JSON.stringify(next) === JSON.stringify(inputOf(entry))) return setOpen(null);
+                      save(entry, next, true);
+                    }}
+                    onToggle={setDraft}
+                    onCancel={() => setOpen(null)}
+                  />
+                }
+              >
+                <UrlLink url={entry.value} />
+              </BlockRow>
               {open === entry.slug ? null : rowError}
             </div>
           );
@@ -227,68 +284,86 @@ function CheckboxRow({
   );
 }
 
-interface MarkdownRowProps {
-  entry: { name: string; value: string | null; empty_label: string };
+interface BlockRowProps {
+  name: string;
+  /** Names the label button: `edit` for text, `change` for a value picked or typed in one field. */
+  verb: 'edit' | 'change';
   editable: boolean;
-  projectKey: string;
   open: boolean;
-  error: string | null;
   onOpenChange: (open: boolean) => void;
-  onSave: (value: string | null) => void;
+  contentClassName: string;
+  editor: ReactNode;
+  children: ReactNode;
 }
 
-/** Rendered text can hold links, so it sits beside its edit button rather than inside it. */
-function MarkdownRow({ entry, editable, projectKey, open, error, onOpenChange, onSave }: MarkdownRowProps) {
+/** A row whose value can hold links: its editor opens from the label and from any click that is not on one. */
+function BlockRow({ name, verb, editable, open, onOpenChange, contentClassName, editor, children }: BlockRowProps) {
   const align = useRailPopoverAlign();
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
-        <div className="group/md flex flex-col gap-1 rounded-sm px-2 py-[7px]">
-          <span className="flex items-center gap-1.5 text-2xs text-text-muted">
-            {entry.name}
-            {editable ? (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`${entry.name}: edit`}
-                className="-my-1 ml-auto size-5 text-text-secondary"
-                onClick={() => onOpenChange(true)}
-              >
-                <Pencil className="size-3" />
-              </Button>
-            ) : null}
-          </span>
-          {entry.value ? (
-            <ClampedMarkdown source={entry.value} />
-          ) : editable ? (
+        <div
+          data-state={open ? 'open' : 'closed'}
+          onClick={
+            editable
+              ? event => {
+                  if (!(event.target as HTMLElement).closest('a, button, input')) onOpenChange(true);
+                }
+              : undefined
+          }
+          className={cn(
+            'flex flex-col gap-0.5 rounded-sm px-2 py-[7px]',
+            editable && 'group/field cursor-pointer hover:bg-hover data-[state=open]:bg-hover',
+          )}
+        >
+          {editable ? (
             <button
               type="button"
+              aria-label={`${name}: ${verb}`}
               onClick={() => onOpenChange(true)}
-              className="self-start text-left text-sm text-text-muted underline decoration-border-strong decoration-dotted underline-offset-[5px] hover:decoration-text-secondary"
+              className="flex items-center gap-1.5 self-start rounded-xs text-left text-2xs text-text-muted"
             >
-              {entry.empty_label}
+              {name}
+              <Pencil
+                aria-hidden
+                className="size-2.5 opacity-0 transition-opacity duration-(--dur-fast) group-hover/field:opacity-100 group-data-[state=open]/field:opacity-100 [button:focus-visible>&]:opacity-100"
+              />
             </button>
           ) : (
-            <span className="text-sm text-text-muted">{entry.empty_label}</span>
+            <span className="text-2xs text-text-muted">{name}</span>
           )}
+          {children}
         </div>
       </PopoverAnchor>
       <PopoverContent
         align={align}
         side="bottom"
         collisionPadding={16}
-        className="w-[560px] max-w-[calc(100vw-32px)] p-0"
+        className={cn('max-w-[calc(100vw-32px)] p-0', contentClassName)}
       >
-        <MarkdownValueEditor
-          label={entry.name}
-          value={entry.value}
-          projectKey={projectKey}
-          error={error}
-          onSave={onSave}
-          onCancel={() => onOpenChange(false)}
-        />
+        {editor}
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** An address is a link first: it opens in a new tab, and the label is what changes it. */
+function UrlLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group/url self-start text-sm text-text [overflow-wrap:anywhere] hover:underline"
+    >
+      {url.split(/(?<=\/)/).map((part, i) => (
+        <Fragment key={i}>
+          {i > 0 ? <wbr /> : null}
+          {part}
+        </Fragment>
+      ))}
+      <ExternalLink aria-label="opens in a new tab" className="ml-1 inline size-3 align-[-1px] text-text-muted" />
+    </a>
   );
 }
 
@@ -296,7 +371,7 @@ export function RailHeading({ children }: { children: string }) {
   return <h3 className="mx-2 mt-3 border-t pt-5 pb-1 text-sm font-semibold text-text">{children}</h3>;
 }
 
-/** Eight lines, then a fade and Show all: a long value never slices a line in half. */
+/** Four lines, then a fade and Show more: a long note never pushes the fields under it out of view. */
 function ClampedMarkdown({ source }: { source: string }) {
   const box = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
@@ -317,15 +392,15 @@ function ClampedMarkdown({ source }: { source: string }) {
       <div
         ref={box}
         className={cn(
-          !expanded && 'max-h-40 overflow-hidden',
+          !expanded && 'max-h-20 overflow-hidden',
           !expanded && overflows && '[mask-image:linear-gradient(to_bottom,#000_calc(100%-1.5rem),transparent)]',
         )}
       >
         <Markdown source={source} variant="comment" className="text-sm" />
       </div>
       {overflows ? (
-        <LoadMore size="xs" className="self-start" onClick={() => setExpanded(!expanded)}>
-          {expanded ? 'Show less' : 'Show all'}
+        <LoadMore size="xs" className="mt-0.5 mb-2 self-start" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Show less' : 'Show more'}
         </LoadMore>
       ) : null}
     </>

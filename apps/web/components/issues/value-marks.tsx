@@ -39,8 +39,8 @@ export function ValueDot({
     <i
       aria-hidden
       className={cn(
-        'inline-block size-2 flex-none rounded-full bg-c-solid',
-        plain ? 'l-gray-2' : `l-${color}`,
+        'inline-block size-2 flex-none rounded-full',
+        plain ? 'bg-border-strong' : `l-${color} bg-c-solid`,
         className,
       )}
     />

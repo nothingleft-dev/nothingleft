@@ -222,14 +222,17 @@ interface DateEditorProps {
   onChange: (value: string | null) => void;
   /** The viewer's zone, so Today is their calendar day. */
   timeZone?: string | undefined;
+  /** A line of context beside the actions, such as the issue's start date under its due date. */
+  note?: string | undefined;
 }
 
-export function DateEditor({ value, onChange, timeZone }: DateEditorProps) {
+export function DateEditor({ value, onChange, timeZone, note }: DateEditorProps) {
   const today = todayCalendarDate(timeZone);
   return (
     <div className="flex flex-col gap-2 p-3">
       <MonthGrid value={value} onSelect={onChange} />
-      <div className="flex justify-end gap-1 border-t pt-2">
+      <div className="flex items-center justify-end gap-1 border-t pt-2">
+        {note ? <span className="mr-auto pl-1 text-2xs text-text-secondary">{note}</span> : null}
         {value !== today ? (
           <Button type="button" size="xs" variant="ghost" className="h-7" onClick={() => onChange(today)}>
             Today

@@ -116,7 +116,8 @@ the organisation.
 | Add or remove other watchers     |    ❌    |     ✅      |      ✅       |    ✅     |    ✅     |
 
 - Star, watch and vote are personal and change nothing anyone else works with, so Observers
-  have them. Everything that changes an issue is closed to Observers.
+  have them. Everything that changes an issue is closed to Observers, and the issue page says
+  so with a _View only_ label beside the title.
 - A link is checked on the issue you link from. The other issue only has to be one you can
   read, and it may be in another project.
 - Ticking a checkbox in an issue's description is a change to its fields.
